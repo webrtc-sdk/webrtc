@@ -35,6 +35,9 @@ NS_ASSUME_NONNULL_BEGIN
  */
 @property(nonatomic, assign) BOOL isInterrupted;
 
+/** if the current category could allow recording */
+@property(nonatomic, assign) BOOL isRecordingEnabled;
+
 /** Adds the delegate to the list of delegates, and places it at the front of
  *  the list. This delegate will be notified before other delegates of
  *  audio events.
