@@ -15,7 +15,7 @@ extern "C" {
 #endif
 
 // (VideoEncoderFactory primary, VideoEncoderFactory fallback, VideoCodecInfo info)
-JNIEXPORT jlong JNICALL Java_org_webrtc_SimulcastVideoEncoder_nativeCreateEncoder(JNIEnv *env, jclass klass, jlong webrtcEnvRef, jobject primary, jobject fallback, jobject info) {
+JNIEXPORT jlong JNICALL Java_org_webrtc_SimulcastVideoEncoder_nativeCreateEncoder(JNIEnv *env, jclass klass, jobject primary, jobject fallback, jobject info) {
     RTC_LOG(LS_INFO) << "Create simulcast video encoder";
     JavaParamRef<jobject> info_ref(info);
     SdpVideoFormat format = VideoCodecInfoToSdpVideoFormat(env, info_ref);
@@ -23,7 +23,6 @@ JNIEXPORT jlong JNICALL Java_org_webrtc_SimulcastVideoEncoder_nativeCreateEncode
     // TODO: 影響は軽微だが、リークする可能性があるので将来的に修正したい
     // https://github.com/shiguredo-webrtc-build/webrtc-build/pull/16#pullrequestreview-600675795
     return NativeToJavaPointer(std::make_unique<SimulcastEncoderAdapter>(
-			    *reinterpret_cast<const webrtc::Environment*>(webrtcEnvRef),
 			    JavaToNativeVideoEncoderFactory(env, primary).release(),
 			    JavaToNativeVideoEncoderFactory(env, fallback).release(),
 			    format).release());

@@ -2,7 +2,7 @@ package org.webrtc;
 
 public class SimulcastVideoEncoder extends WrappedNativeVideoEncoder {
 
-    static native long nativeCreateEncoder(long webrtcEnvRef, VideoEncoderFactory primary, VideoEncoderFactory fallback, VideoCodecInfo info);
+    static native long nativeCreateEncoder(VideoEncoderFactory primary, VideoEncoderFactory fallback, VideoCodecInfo info);
 
     VideoEncoderFactory primary;
     VideoEncoderFactory fallback;
@@ -15,8 +15,8 @@ public class SimulcastVideoEncoder extends WrappedNativeVideoEncoder {
     }
 
     @Override
-    public long createNative(long webrtcEnvRef) {
-        return nativeCreateEncoder(webrtcEnvRef, primary, fallback, info);
+    public long createNativeVideoEncoder() {
+        return nativeCreateEncoder(primary, fallback, info);
     }
 
     @Override
