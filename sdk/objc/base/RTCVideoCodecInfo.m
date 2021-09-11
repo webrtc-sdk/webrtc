@@ -14,6 +14,7 @@
 
 @synthesize name = _name;
 @synthesize parameters = _parameters;
+@synthesize scalabilityModes = _scalabilityModes;
 
 - (instancetype)initWithName:(NSString *)name {
   return [self initWithName:name parameters:nil];
@@ -24,15 +25,29 @@
   if (self = [super init]) {
     _name = name;
     _parameters = (parameters ? parameters : @{});
+    _scalabilityModes = @[];
   }
 
   return self;
 }
 
+- (instancetype)initWithName:(NSString *)name
+                  parameters:(nullable NSDictionary<NSString *, NSString *> *)parameters
+             scalabilityModes:(nullable NSArray<NSString *> *)scalabilityModes {
+    if (self = [super init]) {
+      _name = name;
+      _parameters = (parameters ? parameters : @{});
+      _scalabilityModes = (scalabilityModes ? scalabilityModes : @[]);
+    }
+
+    return self;
+  }
+
 - (BOOL)isEqualToCodecInfo:(RTC_OBJC_TYPE(RTCVideoCodecInfo) *)info {
   if (!info ||
       ![self.name isEqualToString:info.name] ||
-      ![self.parameters isEqualToDictionary:info.parameters]) {
+      ![self.parameters isEqualToDictionary:info.parameters] ||
+      ![self.scalabilityModes isEqualToArray:info.scalabilityModes]) {
     return NO;
   }
   return YES;

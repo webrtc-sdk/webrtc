@@ -723,6 +723,7 @@ if (is_ios || is_mac) {
       ]
 
       deps = [
+        ":simulcast",
         ":base_objc",
         ":native_video",
         ":videocodec_objc",
@@ -822,6 +823,22 @@ if (is_ios || is_mac) {
       ]
     }
 
+    rtc_library("simulcast") {
+      sources = [
+        "objc/components/video_codec/RTCVideoEncoderFactorySimulcast.h",
+        "objc/components/video_codec/RTCVideoEncoderFactorySimulcast.mm",
+        "objc/api/video_codec/RTCVideoEncoderSimulcast.h",
+        "objc/api/video_codec/RTCVideoEncoderSimulcast.mm",
+      ]
+
+      deps = [
+        ":base_objc",
+        ":wrapped_native_codec_objc",
+        "../media:rtc_media_base",
+        "../media:rtc_simulcast_encoder_adapter",
+      ]
+    }
+  
     rtc_library("mediaconstraints_objc") {
       configs += [ "..:no_global_constructors" ]
       sources = [
@@ -1368,6 +1385,9 @@ if (is_ios || is_mac) {
           "objc/api/video_codec/RTCVideoEncoderAV1.h",
           "objc/api/video_frame_buffer/RTCNativeI420Buffer.h",
           "objc/api/video_frame_buffer/RTCNativeMutableI420Buffer.h",
+          # Added for Simulcast support
+          "objc/components/video_codec/RTCVideoEncoderFactorySimulcast.h",
+          "objc/api/video_codec/RTCVideoEncoderSimulcast.h",
         ]
 
         if (!build_with_chromium) {
@@ -1518,6 +1538,9 @@ if (is_ios || is_mac) {
           "objc/components/video_codec/RTCVideoEncoderH264.h",
           "objc/components/video_frame_buffer/RTCCVPixelBuffer.h",
           "objc/helpers/RTCDispatcher.h",
+          # Added for Simulcast support
+          "objc/components/video_codec/RTCVideoEncoderFactorySimulcast.h",
+          "objc/api/video_codec/RTCVideoEncoderSimulcast.h",
         ]
         if (!build_with_chromium) {
           sources += [
