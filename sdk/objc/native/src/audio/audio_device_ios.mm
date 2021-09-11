@@ -61,6 +61,16 @@ namespace ios_adm {
 const UInt16 kFixedPlayoutDelayEstimate = 30;
 const UInt16 kFixedRecordDelayEstimate = 30;
 
+enum AudioDeviceMessageType : uint32_t {
+  kMessageTypeInterruptionBegin,
+  kMessageTypeInterruptionEnd,
+  kMessageTypeValidRouteChange,
+  kMessageTypeCanPlayOrRecordChange,
+  kMessageTypePlayoutGlitchDetected,
+  kMessageOutputVolumeChange,
+  kMessageTypeAudioWillRecord,
+};
+
 using ios::CheckAndLogError;
 
 #if !defined(NDEBUG)
@@ -360,6 +370,11 @@ void AudioDeviceIOS::OnChangedOutputVolume() {
   thread_->PostTask(SafeTask(safety_, [this] { HandleOutputVolumeChange(); }));
 }
 
+void AudioDeviceIOS::OnAudioWillRecord() {
+  RTC_DCHECK(thread_);
+  thread_->Post(RTC_FROM_HERE, this, kMessageTypeAudioWillRecord);
+}
+
 OSStatus AudioDeviceIOS::OnDeliverRecordedData(AudioUnitRenderActionFlags* flags,
                                                const AudioTimeStamp* time_stamp,
                                                UInt32 bus_number,
@@ -445,7 +460,7 @@ OSStatus AudioDeviceIOS::OnGetPlayoutData(AudioUnitRenderActionFlags* flags,
       // Exclude extreme delta values since they do most likely not correspond
       // to a real glitch. Instead, the most probable cause is that a headset
       // has been plugged in or out. There are more direct ways to detect
-      // audio device changes (see HandleValidRouteChange()) but experiments
+      // audio device changes (see ValidRouteChange()) but experiments
       // show that using it leads to more complex implementations.
       // TODO(henrika): more tests might be needed to come up with an even
       // better upper limit.
@@ -465,6 +480,34 @@ OSStatus AudioDeviceIOS::OnGetPlayoutData(AudioUnitRenderActionFlags* flags,
       rtc::ArrayView<int16_t>(static_cast<int16_t*>(audio_buffer->mData), num_frames),
       kFixedPlayoutDelayEstimate);
   return noErr;
+}
+
+void AudioDeviceIOS::OnMessage(rtc::Message* msg) {
+  switch (msg->message_id) {
+    case kMessageTypeInterruptionBegin:
+      HandleInterruptionBegin();
+      break;
+    case kMessageTypeInterruptionEnd:
+      HandleInterruptionEnd();
+      break;
+    case kMessageTypeValidRouteChange:
+      HandleValidRouteChange();
+      break;
+    case kMessageTypeCanPlayOrRecordChange: {
+      rtc::TypedMessageData<bool>* data = static_cast<rtc::TypedMessageData<bool>*>(msg->pdata);
+      HandleCanPlayOrRecordChange(data->data());
+      delete data;
+      break;
+    }
+    case kMessageTypePlayoutGlitchDetected:
+      HandlePlayoutGlitchDetected();
+      break;
+    case kMessageOutputVolumeChange:
+      HandleOutputVolumeChange();
+      break;
+    case kMessageTypeAudioWillRecord:
+      HandleAudioWillRecord();
+  }
 }
 
 void AudioDeviceIOS::HandleInterruptionBegin() {
@@ -631,6 +674,61 @@ void AudioDeviceIOS::HandleOutputVolumeChange() {
   // Store time of this detection so it can be used to defer detection of
   // glitches too close in time to this event.
   last_output_volume_change_time_ = rtc::TimeMillis();
+}
+
+void AudioDeviceIOS::HandleAudioWillRecord() {
+  RTC_DCHECK_RUN_ON(&thread_checker_);
+
+  LOGI() << "HandleAudioWillRecord";
+
+  // If we don't have an audio unit yet, or the audio unit is uninitialized,
+  // there is no work to do.
+  if (!audio_unit_ || audio_unit_->GetState() < VoiceProcessingAudioUnit::kInitialized) {
+    return;
+  }
+
+  // The audio unit is already initialized or started.
+  // Check to see if the sample rate or buffer size has changed.
+  RTC_OBJC_TYPE(RTCAudioSession)* session = [RTC_OBJC_TYPE(RTCAudioSession) sharedInstance];
+  const double session_sample_rate = session.sampleRate;
+
+  // Extra sanity check to ensure that the new sample rate is valid.
+  if (session_sample_rate <= 0.0) {
+    RTCLogError(@"Sample rate is invalid: %f", session_sample_rate);
+    LOGI() << "Sample rate is invalid " << session_sample_rate;
+    return;
+  }
+  // We need to adjust our format and buffer sizes.
+  // The stream format is about to be changed and it requires that we first
+  // stop and uninitialize the audio unit to deallocate its resources.
+  RTCLog(@"Stopping and uninitializing audio unit to adjust buffers.");
+  bool restart_audio_unit = false;
+  if (audio_unit_->GetState() == VoiceProcessingAudioUnit::kStarted) {
+    audio_unit_->Stop();
+    restart_audio_unit = true;
+    PrepareForNewStart();
+  }
+  if (audio_unit_->GetState() == VoiceProcessingAudioUnit::kInitialized) {
+    audio_unit_->Uninitialize();
+  }
+
+  // Allocate new buffers given the new stream format.
+  SetupAudioBuffersForActiveAudioSession();
+
+  // Initialize the audio unit again with the new sample rate.
+  RTC_DCHECK_EQ(playout_parameters_.sample_rate(), session_sample_rate);
+  if (!audio_unit_->Initialize(session_sample_rate)) {
+    RTCLogError(@"Failed to initialize the audio unit with sample rate: %f", session_sample_rate);
+    return;
+  }
+
+  // Restart the audio unit if it was already running.
+  if (restart_audio_unit && !audio_unit_->Start()) {
+    RTCLogError(@"Failed to start audio unit with sample rate: %f", session_sample_rate);
+    return;
+  }
+
+  LOGI() << "Successfully enabled audio unit for recording.";
 }
 
 void AudioDeviceIOS::UpdateAudioDeviceBuffer() {
