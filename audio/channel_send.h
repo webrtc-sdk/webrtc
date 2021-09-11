@@ -95,6 +95,8 @@ class ChannelSendInterface {
   virtual bool SendTelephoneEventOutband(int event, int duration_ms) = 0;
   virtual void OnBitrateAllocation(BitrateAllocationUpdate update) = 0;
   virtual int GetTargetBitrate() const = 0;
+
+  virtual bool InputMute() const = 0;
   virtual void SetInputMute(bool muted) = 0;
 
   virtual void ProcessAndEncodeAudio(
