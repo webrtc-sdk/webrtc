@@ -43,7 +43,8 @@ class AudioDeviceModuleImpl : public AudioDeviceModuleForTest {
   int32_t AttachAudioBuffer();
 
   AudioDeviceModuleImpl(AudioLayer audio_layer,
-                        TaskQueueFactory* task_queue_factory);
+                        TaskQueueFactory* task_queue_factory,
+                        bool bypass_voice_processing = false);
   ~AudioDeviceModuleImpl() override;
 
   // Retrieve the currently utilized audio layer
@@ -145,6 +146,10 @@ class AudioDeviceModuleImpl : public AudioDeviceModuleForTest {
   int GetRecordAudioParameters(AudioParameters* params) const override;
 #endif  // WEBRTC_IOS
 
+  int32_t SetAudioDeviceSink(AudioDeviceSink* sink) const override;
+  int32_t GetPlayoutDevice() const override;
+  int32_t GetRecordingDevice() const override;
+
 #if defined(WEBRTC_ANDROID)
   // Only use this acccessor for test purposes on Android.
   AudioManager* GetAndroidAudioManagerForTest() {
@@ -165,7 +170,9 @@ class AudioDeviceModuleImpl : public AudioDeviceModuleForTest {
   AudioLayer audio_layer_;
   PlatformType platform_type_ = kPlatformNotSupported;
   bool initialized_ = false;
-#if defined(WEBRTC_ANDROID)
+#if defined(WEBRTC_IOS)
+  bool bypass_voice_processing_;
+#elif defined(WEBRTC_ANDROID)
   // Should be declared first to ensure that it outlives other resources.
   std::unique_ptr<AudioManager> audio_manager_android_;
 #endif

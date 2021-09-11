@@ -943,6 +943,11 @@ if (is_ios || is_mac) {
       ]
       configs += [ "..:no_global_constructors" ]
       sources = [
+        "objc/api/peerconnection/RTCAudioDeviceModule.h",
+        "objc/api/peerconnection/RTCAudioDeviceModule+Private.h",
+        "objc/api/peerconnection/RTCAudioDeviceModule.mm",
+        "objc/api/peerconnection/RTCIODevice.h",
+        "objc/api/peerconnection/RTCIODevice.mm",
         "objc/api/peerconnection/RTCAudioSource+Private.h",
         "objc/api/peerconnection/RTCAudioSource.h",
         "objc/api/peerconnection/RTCAudioSource.mm",
@@ -1308,6 +1313,8 @@ if (is_ios || is_mac) {
           "objc/helpers/RTCCameraPreviewView.h",
           "objc/helpers/RTCDispatcher.h",
           "objc/helpers/UIDevice+RTCDevice.h",
+          "objc/api/peerconnection/RTCAudioDeviceModule.h",
+          "objc/api/peerconnection/RTCIODevice.h",
           "objc/api/peerconnection/RTCAudioSource.h",
           "objc/api/peerconnection/RTCAudioTrack.h",
           "objc/api/peerconnection/RTCConfiguration.h",
@@ -1422,6 +1429,8 @@ if (is_ios || is_mac) {
         output_name = "WebRTC"
 
         sources = [
+          "objc/api/peerconnection/RTCAudioDeviceModule.h",
+          "objc/api/peerconnection/RTCIODevice.h",
           "objc/api/peerconnection/RTCAudioSource.h",
           "objc/api/peerconnection/RTCAudioTrack.h",
           "objc/api/peerconnection/RTCCertificate.h",

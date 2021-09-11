@@ -540,8 +540,7 @@ ABSL_CONST_INIT thread_local bool mutex_locked = false;
       RTCLog(@"Audio route changed: OldDeviceUnavailable");
       break;
     case AVAudioSessionRouteChangeReasonCategoryChange:
-      RTCLog(@"Audio route changed: CategoryChange to :%@",
-             self.session.category);
+      RTCLog(@"Audio route changed: CategoryChange to :%@", self.session.category);
       break;
     case AVAudioSessionRouteChangeReasonOverride:
       RTCLog(@"Audio route changed: Override");
