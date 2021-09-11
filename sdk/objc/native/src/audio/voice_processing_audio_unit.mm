@@ -112,19 +112,6 @@ bool VoiceProcessingAudioUnit::Init() {
     return false;
   }
 
-  // Enable input on the input scope of the input element.
-  UInt32 enable_input = 1;
-  result = AudioUnitSetProperty(vpio_unit_, kAudioOutputUnitProperty_EnableIO,
-                                kAudioUnitScope_Input, kInputBus, &enable_input,
-                                sizeof(enable_input));
-  if (result != noErr) {
-    DisposeAudioUnit();
-    RTCLogError(@"Failed to enable input on input scope of input element. "
-                 "Error=%ld.",
-                (long)result);
-    return false;
-  }
-
   // Enable output on the output scope of the output element.
   UInt32 enable_output = 1;
   result = AudioUnitSetProperty(vpio_unit_, kAudioOutputUnitProperty_EnableIO,
@@ -204,6 +191,27 @@ bool VoiceProcessingAudioUnit::Initialize(Float64 sample_rate) {
 #if !defined(NDEBUG)
   LogStreamDescription(format);
 #endif
+
+  // Enable input on the input scope of the input element.
+  // keep it disabled if audio session is configured for playback only
+  AVAudioSession* session = [AVAudioSession sharedInstance];
+  UInt32 enable_input = 0;
+  if ([session.category isEqualToString: AVAudioSessionCategoryPlayAndRecord] ||
+      [session.category isEqualToString: AVAudioSessionCategoryRecord]) {
+    enable_input = 1;
+  }
+  RTCLog(@"Initializing AudioUnit, category=%@, enable_input=%d", session.category, enable_input);
+  // LOGI() << "Initialize" << session.category << ", enable_input=" << enable_input;
+  result = AudioUnitSetProperty(vpio_unit_, kAudioOutputUnitProperty_EnableIO,
+                                kAudioUnitScope_Input, kInputBus, &enable_input,
+                                sizeof(enable_input));
+  if (result != noErr) {
+    DisposeAudioUnit();
+    RTCLogError(@"Failed to enable input on input scope of input element. "
+                 "Error=%ld.",
+                (long)result);
+    return false;
+  }
 
   // Set the format on the output scope of the input element/bus.
   result =
