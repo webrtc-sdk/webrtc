@@ -49,17 +49,18 @@
   // everything we can.
   NSError *error = nil;
 
-  if (self.category != configuration.category || self.mode != configuration.mode ||
+  if (self.category != configuration.category ||
       self.categoryOptions != configuration.categoryOptions) {
-    NSError *configuringError = nil;
+    NSError *categoryError = nil;
     if (![self setCategory:configuration.category
-                      mode:configuration.mode
-                   options:configuration.categoryOptions
-                     error:&configuringError]) {
-      RTCLogError(@"Failed to set category and mode: %@", configuringError.localizedDescription);
-      error = configuringError;
+               withOptions:configuration.categoryOptions
+                     error:&categoryError]) {
+      RTCLogError(@"Failed to set category to %@: %@",
+                  self.category,
+                  categoryError.localizedDescription);
+      error = categoryError;
     } else {
-      RTCLog(@"Set category to: %@, mode: %@", configuration.category, configuration.mode);
+      RTCLog(@"Set category to: %@", configuration.category);
     }
   }
 

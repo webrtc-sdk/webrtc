@@ -39,8 +39,8 @@ RTC_OBJC_EXPORT
 // Executes low-level API's in sequence to switch the device
 // Use outputDevice / inputDevice property unless you need to know if setting the device is
 // successful.
-- (BOOL)trySetOutputDevice:(nullable RTC_OBJC_TYPE(RTCIODevice) *)device;
-- (BOOL)trySetInputDevice:(nullable RTC_OBJC_TYPE(RTCIODevice) *)device;
+- (BOOL)trySetOutputDevice:(nullable RTCIODevice *)device;
+- (BOOL)trySetInputDevice:(nullable RTCIODevice *)device;
 
 - (BOOL)setDevicesUpdatedHandler: (nullable RTCOnAudioDevicesDidUpdate) handler;
 

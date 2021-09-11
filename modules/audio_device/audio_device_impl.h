@@ -24,6 +24,7 @@
 namespace webrtc {
 
 class AudioDeviceGeneric;
+class AudioManager;
 
 class AudioDeviceModuleImpl : public AudioDeviceModuleForTest {
  public:
@@ -34,12 +35,7 @@ class AudioDeviceModuleImpl : public AudioDeviceModuleForTest {
     kPlatformLinux = 3,
     kPlatformMac = 4,
     kPlatformAndroid = 5,
-    kPlatformIOS = 6,
-    // Fuchsia isn't fully supported, as there is no implementation for
-    // AudioDeviceGeneric which will be created for Fuchsia, so
-    // `CreatePlatformSpecificObjects()` call will fail unless usable
-    // implementation will be provided by the user.
-    kPlatformFuchsia = 7,
+    kPlatformIOS = 6
   };
 
   int32_t CheckPlatform();
@@ -49,12 +45,6 @@ class AudioDeviceModuleImpl : public AudioDeviceModuleForTest {
   AudioDeviceModuleImpl(AudioLayer audio_layer,
                         TaskQueueFactory* task_queue_factory,
                         bool bypass_voice_processing = false);
-  // If `create_detached` is true, created ADM can be used on another thread
-  // compared to the one on which it was created. It's useful for testing.
-  AudioDeviceModuleImpl(AudioLayer audio_layer,
-                        std::unique_ptr<AudioDeviceGeneric> audio_device,
-                        TaskQueueFactory* task_queue_factory,
-                        bool create_detached);
   ~AudioDeviceModuleImpl() override;
 
   // Retrieve the currently utilized audio layer
@@ -160,6 +150,12 @@ class AudioDeviceModuleImpl : public AudioDeviceModuleForTest {
   int32_t GetPlayoutDevice() const override;
   int32_t GetRecordingDevice() const override;
 
+#if defined(WEBRTC_ANDROID)
+  // Only use this acccessor for test purposes on Android.
+  AudioManager* GetAndroidAudioManagerForTest() {
+    return audio_manager_android_.get();
+  }
+#endif
   AudioDeviceBuffer* GetAudioDeviceBuffer() { return &audio_device_buffer_; }
 
   int RestartPlayoutInternally() override { return -1; }
@@ -176,6 +172,9 @@ class AudioDeviceModuleImpl : public AudioDeviceModuleForTest {
   bool initialized_ = false;
 #if defined(WEBRTC_IOS)
   bool bypass_voice_processing_;
+#elif defined(WEBRTC_ANDROID)
+  // Should be declared first to ensure that it outlives other resources.
+  std::unique_ptr<AudioManager> audio_manager_android_;
 #endif
   AudioDeviceBuffer audio_device_buffer_;
   std::unique_ptr<AudioDeviceGeneric> audio_device_;

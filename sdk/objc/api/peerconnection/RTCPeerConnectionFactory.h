@@ -14,7 +14,6 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@class RTC_OBJC_TYPE(RTCRtpCapabilities);
 @class RTC_OBJC_TYPE(RTCAudioSource);
 @class RTC_OBJC_TYPE(RTCAudioTrack);
 @class RTC_OBJC_TYPE(RTCConfiguration);
@@ -25,10 +24,6 @@ NS_ASSUME_NONNULL_BEGIN
 @class RTC_OBJC_TYPE(RTCVideoTrack);
 @class RTC_OBJC_TYPE(RTCPeerConnectionFactoryOptions);
 @class RTC_OBJC_TYPE(RTCAudioDeviceModule);
-@class RTC_OBJC_TYPE(RTCRtpCapabilities);
-
-typedef NS_ENUM(NSInteger, RTCRtpMediaType);
-
 @protocol RTC_OBJC_TYPE
 (RTCPeerConnectionDelegate);
 @protocol RTC_OBJC_TYPE
@@ -39,8 +34,6 @@ typedef NS_ENUM(NSInteger, RTCRtpMediaType);
 (RTCSSLCertificateVerifier);
 @protocol RTC_OBJC_TYPE
 (RTCAudioDevice);
-@protocol RTC_OBJC_TYPE
-(RTCAudioProcessingModule);
 
 RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCPeerConnectionFactory) : NSObject
@@ -63,23 +56,10 @@ RTC_OBJC_EXPORT
 - (instancetype)
     initWithBypassVoiceProcessing:(BOOL)bypassVoiceProcessing
                    encoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoEncoderFactory)>)encoderFactory
-                   decoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoDecoderFactory)>)decoderFactory
-            audioProcessingModule:
-                (nullable id<RTC_OBJC_TYPE(RTCAudioProcessingModule)>)audioProcessingModule;
+                   decoderFactory:
+                       (nullable id<RTC_OBJC_TYPE(RTCVideoDecoderFactory)>)decoderFactory;
 
-@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioDeviceModule) *audioDeviceModule;
-
-/**
- * Valid kind values are kRTCMediaStreamTrackKindAudio and
- * kRTCMediaStreamTrackKindVideo.
- */
-- (RTC_OBJC_TYPE(RTCRtpCapabilities) *)rtpSenderCapabilitiesForKind:(NSString *)kind;
-
-/**
- * Valid kind values are kRTCMediaStreamTrackKindAudio and
- * kRTCMediaStreamTrackKindVideo.
- */
-- (RTC_OBJC_TYPE(RTCRtpCapabilities) *)rtpReceiverCapabilitiesForKind:(NSString *)kind;
+@property(nonatomic, readonly) RTCAudioDeviceModule *audioDeviceModule;
 
 /** Initialize an RTCAudioSource with constraints. */
 - (RTC_OBJC_TYPE(RTCAudioSource) *)audioSourceWithConstraints:

@@ -77,7 +77,7 @@ class AudioDeviceSink : public webrtc::AudioDeviceSink {
   });
 }
 
-- (RTC_OBJC_TYPE(RTCIODevice) *)outputDevice {
+- (RTCIODevice *)outputDevice {
   return _workerThread->BlockingCall([self] {
 
     NSArray<RTC_OBJC_TYPE(RTCIODevice) *> *devices = [self _outputDevices];
@@ -92,11 +92,11 @@ class AudioDeviceSink : public webrtc::AudioDeviceSink {
   });
 }
 
-- (void)setOutputDevice: (RTC_OBJC_TYPE(RTCIODevice) *)device {
+- (void)setOutputDevice: (RTCIODevice *)device {
   [self trySetOutputDevice: device];
 }
 
-- (BOOL)trySetOutputDevice: (RTC_OBJC_TYPE(RTCIODevice) *)device {
+- (BOOL)trySetOutputDevice: (RTCIODevice *)device {
 
   return _workerThread->BlockingCall([self, device] {
 
@@ -108,7 +108,7 @@ class AudioDeviceSink : public webrtc::AudioDeviceSink {
     }
 
     if (device != nil) {
-      index = [devices indexOfObjectPassingTest:^BOOL(RTC_OBJC_TYPE(RTCIODevice) *e, NSUInteger i, BOOL *stop) {
+      index = [devices indexOfObjectPassingTest:^BOOL(RTCIODevice *e, NSUInteger i, BOOL *stop) {
         return (*stop = [e.deviceId isEqualToString:device.deviceId]);
       }];
       if (index == NSNotFound) {
@@ -129,7 +129,7 @@ class AudioDeviceSink : public webrtc::AudioDeviceSink {
   });
 }
 
-- (RTC_OBJC_TYPE(RTCIODevice) *)inputDevice {
+- (RTCIODevice *)inputDevice {
 
   return _workerThread->BlockingCall([self] {
   
@@ -145,11 +145,11 @@ class AudioDeviceSink : public webrtc::AudioDeviceSink {
   });
 }
 
-- (void)setInputDevice: (RTC_OBJC_TYPE(RTCIODevice) *)device {
+- (void)setInputDevice: (RTCIODevice *)device {
   [self trySetInputDevice: device];
 }
 
-- (BOOL)trySetInputDevice: (RTC_OBJC_TYPE(RTCIODevice) *)device {
+- (BOOL)trySetInputDevice: (RTCIODevice *)device {
 
   return _workerThread->BlockingCall([self, device] {
 
@@ -161,7 +161,7 @@ class AudioDeviceSink : public webrtc::AudioDeviceSink {
     }
 
     if (device != nil) {
-      index = [devices indexOfObjectPassingTest:^BOOL(RTC_OBJC_TYPE(RTCIODevice) *e, NSUInteger i, BOOL *stop) {
+      index = [devices indexOfObjectPassingTest:^BOOL(RTCIODevice *e, NSUInteger i, BOOL *stop) {
         return (*stop = [e.deviceId isEqualToString:device.deviceId]);
       }];
       if (index == NSNotFound) {
@@ -261,7 +261,7 @@ class AudioDeviceSink : public webrtc::AudioDeviceSink {
       _native->PlayoutDeviceName(i, name, guid);
       NSString *strGUID = [[NSString alloc] initWithCString:guid encoding:NSUTF8StringEncoding];
       NSString *strName = [[NSString alloc] initWithCString:name encoding:NSUTF8StringEncoding];
-      RTC_OBJC_TYPE(RTCIODevice) *device = [[RTC_OBJC_TYPE(RTCIODevice) alloc] initWithType:RTCIODeviceTypeOutput deviceId:strGUID name:strName];
+      RTCIODevice *device = [[RTCIODevice alloc] initWithType:RTCIODeviceTypeOutput deviceId:strGUID name:strName];
       [result addObject: device];
     }
   }
@@ -283,7 +283,7 @@ class AudioDeviceSink : public webrtc::AudioDeviceSink {
       _native->RecordingDeviceName(i, name, guid);
       NSString *strGUID = [[NSString alloc] initWithCString:guid encoding:NSUTF8StringEncoding];
       NSString *strName = [[NSString alloc] initWithCString:name encoding:NSUTF8StringEncoding];
-      RTC_OBJC_TYPE(RTCIODevice) *device = [[RTC_OBJC_TYPE(RTCIODevice) alloc] initWithType:RTCIODeviceTypeInput deviceId:strGUID name:strName];
+      RTCIODevice *device = [[RTCIODevice alloc] initWithType:RTCIODeviceTypeInput deviceId:strGUID name:strName];
       [result addObject: device];
     }
   }
