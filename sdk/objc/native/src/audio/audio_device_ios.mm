@@ -61,16 +61,6 @@ namespace ios_adm {
 const UInt16 kFixedPlayoutDelayEstimate = 30;
 const UInt16 kFixedRecordDelayEstimate = 30;
 
-enum AudioDeviceMessageType : uint32_t {
-  kMessageTypeInterruptionBegin,
-  kMessageTypeInterruptionEnd,
-  kMessageTypeValidRouteChange,
-  kMessageTypeCanPlayOrRecordChange,
-  kMessageTypePlayoutGlitchDetected,
-  kMessageOutputVolumeChange,
-  kMessageTypeAudioWillRecord,
-};
-
 using ios::CheckAndLogError;
 
 #if !defined(NDEBUG)
@@ -372,7 +362,7 @@ void AudioDeviceIOS::OnChangedOutputVolume() {
 
 void AudioDeviceIOS::OnAudioWillRecord() {
   RTC_DCHECK(thread_);
-  thread_->Post(RTC_FROM_HERE, this, kMessageTypeAudioWillRecord);
+  thread_->PostTask(SafeTask(safety_, [this] { HandleAudioWillRecord(); }));
 }
 
 OSStatus AudioDeviceIOS::OnDeliverRecordedData(AudioUnitRenderActionFlags* flags,
@@ -480,34 +470,6 @@ OSStatus AudioDeviceIOS::OnGetPlayoutData(AudioUnitRenderActionFlags* flags,
       rtc::ArrayView<int16_t>(static_cast<int16_t*>(audio_buffer->mData), num_frames),
       kFixedPlayoutDelayEstimate);
   return noErr;
-}
-
-void AudioDeviceIOS::OnMessage(rtc::Message* msg) {
-  switch (msg->message_id) {
-    case kMessageTypeInterruptionBegin:
-      HandleInterruptionBegin();
-      break;
-    case kMessageTypeInterruptionEnd:
-      HandleInterruptionEnd();
-      break;
-    case kMessageTypeValidRouteChange:
-      HandleValidRouteChange();
-      break;
-    case kMessageTypeCanPlayOrRecordChange: {
-      rtc::TypedMessageData<bool>* data = static_cast<rtc::TypedMessageData<bool>*>(msg->pdata);
-      HandleCanPlayOrRecordChange(data->data());
-      delete data;
-      break;
-    }
-    case kMessageTypePlayoutGlitchDetected:
-      HandlePlayoutGlitchDetected();
-      break;
-    case kMessageOutputVolumeChange:
-      HandleOutputVolumeChange();
-      break;
-    case kMessageTypeAudioWillRecord:
-      HandleAudioWillRecord();
-  }
 }
 
 void AudioDeviceIOS::HandleInterruptionBegin() {
@@ -677,7 +639,7 @@ void AudioDeviceIOS::HandleOutputVolumeChange() {
 }
 
 void AudioDeviceIOS::HandleAudioWillRecord() {
-  RTC_DCHECK_RUN_ON(&thread_checker_);
+  RTC_DCHECK_RUN_ON(&io_thread_checker_);
 
   LOGI() << "HandleAudioWillRecord";
 
