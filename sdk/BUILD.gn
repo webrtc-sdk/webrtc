@@ -676,6 +676,7 @@ if (is_ios || is_mac) {
 
       deps = [
         ":av1",
+        ":simulcast",
         ":base_objc",
         ":native_video",
         ":videocodec_objc",
@@ -756,6 +757,22 @@ if (is_ios || is_mac) {
         defines += [ "RTC_USE_LIBAOM_AV1_ENCODER" ]
         deps += [ "../modules/video_coding/codecs/av1:libaom_av1_encoder" ]
       }
+    }
+
+    rtc_library("simulcast") {
+      sources = [
+        "objc/components/video_codec/RTCVideoEncoderFactorySimulcast.h",
+        "objc/components/video_codec/RTCVideoEncoderFactorySimulcast.mm",
+        "objc/api/video_codec/RTCVideoEncoderSimulcast.h",
+        "objc/api/video_codec/RTCVideoEncoderSimulcast.mm",
+      ]
+
+      deps = [
+        ":base_objc",
+        ":wrapped_native_codec_objc",
+        "../media:rtc_media_base",
+        "../media:rtc_simulcast_encoder_adapter",
+      ]
     }
 
     # Build the PeerConnectionFactory without audio/video support.
@@ -1250,6 +1267,7 @@ if (is_ios || is_mac) {
           "objc/components/video_codec/RTCVideoDecoderH264.h",
           "objc/components/video_codec/RTCVideoEncoderFactoryH264.h",
           "objc/components/video_codec/RTCVideoEncoderH264.h",
+          "objc/components/video_codec/RTCVideoEncoderFactorySimulcast.h",
           "objc/components/video_frame_buffer/RTCCVPixelBuffer.h",
           "objc/helpers/RTCCameraPreviewView.h",
           "objc/helpers/RTCDispatcher.h",
@@ -1297,6 +1315,7 @@ if (is_ios || is_mac) {
           "objc/api/video_codec/RTCVideoEncoderVP8.h",
           "objc/api/video_codec/RTCVideoEncoderVP9.h",
           "objc/api/video_codec/RTCVideoEncoderAV1.h",
+          "objc/api/video_codec/RTCVideoEncoderSimulcast.h",
           "objc/api/video_frame_buffer/RTCNativeI420Buffer.h",
           "objc/api/video_frame_buffer/RTCNativeMutableI420Buffer.h",
         ]
