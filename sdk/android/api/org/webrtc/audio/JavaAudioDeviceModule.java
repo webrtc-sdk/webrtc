@@ -42,6 +42,7 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
     private AudioTrackErrorCallback audioTrackErrorCallback;
     private AudioRecordErrorCallback audioRecordErrorCallback;
     private SamplesReadyCallback samplesReadyCallback;
+    private PlaybackSamplesReadyCallback playbackSamplesReadyCallback;
     private AudioTrackStateCallback audioTrackStateCallback;
     private AudioRecordStateCallback audioRecordStateCallback;
     private boolean useHardwareAcousticEchoCanceler = isBuiltInAcousticEchoCancelerSupported();
@@ -137,6 +138,14 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
      */
     public Builder setSamplesReadyCallback(SamplesReadyCallback samplesReadyCallback) {
       this.samplesReadyCallback = samplesReadyCallback;
+      return this;
+    }
+
+    /**
+     * Set a callback to listen to the audio output passed to the AudioTrack.
+     */
+    public Builder setPlaybackSamplesReadyCallback(PlaybackSamplesReadyCallback playbackSamplesReadyCallback) {
+      this.playbackSamplesReadyCallback = playbackSamplesReadyCallback;
       return this;
     }
 
@@ -258,7 +267,7 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
           samplesReadyCallback, useHardwareAcousticEchoCanceler, useHardwareNoiseSuppressor);
       final WebRtcAudioTrack audioOutput =
           new WebRtcAudioTrack(context, audioManager, audioAttributes, audioTrackErrorCallback,
-              audioTrackStateCallback, useLowLatency, enableVolumeLogger);
+              audioTrackStateCallback, playbackSamplesReadyCallback, useLowLatency, enableVolumeLogger);
       return new JavaAudioDeviceModule(context, audioManager, audioInput, audioOutput,
           inputSampleRate, outputSampleRate, useStereoInput, useStereoOutput);
     }
@@ -325,6 +334,11 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
     void onWebRtcAudioRecordSamplesReady(AudioSamples samples);
   }
 
+  /** Called when new audio samples are ready. This should only be set for debug purposes */
+  public static interface PlaybackSamplesReadyCallback {
+    void onWebRtcAudioTrackSamplesReady(AudioSamples samples);
+  }
+
   /* AudioTrack */
   // Audio playout/track error handler functions.
   public enum AudioTrackStartErrorCode {
@@ -362,8 +376,8 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
 
   private final Context context;
   private final AudioManager audioManager;
-  private final WebRtcAudioRecord audioInput;
-  private final WebRtcAudioTrack audioOutput;
+  public final WebRtcAudioRecord audioInput;
+  public final WebRtcAudioTrack audioOutput;
   private final int inputSampleRate;
   private final int outputSampleRate;
   private final boolean useStereoInput;

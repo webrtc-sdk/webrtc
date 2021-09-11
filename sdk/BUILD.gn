@@ -119,6 +119,7 @@ if (is_ios || is_mac) {
       "objc/base/RTCVideoFrame.mm",
       "objc/base/RTCVideoFrameBuffer.h",
       "objc/base/RTCVideoRenderer.h",
+      "objc/base/RTCAudioRenderer.h",
       "objc/base/RTCYUVPlanarBuffer.h",
     ]
 
@@ -922,6 +923,11 @@ if (is_ios || is_mac) {
       ]
       configs += [ "..:no_global_constructors" ]
       sources = [
+        "objc/api/peerconnection/RTCAudioDeviceModule.h",
+        "objc/api/peerconnection/RTCAudioDeviceModule+Private.h",
+        "objc/api/peerconnection/RTCAudioDeviceModule.mm",
+        "objc/api/peerconnection/RTCIODevice.h",
+        "objc/api/peerconnection/RTCIODevice.mm",
         "objc/api/peerconnection/RTCAudioSource+Private.h",
         "objc/api/peerconnection/RTCAudioSource.h",
         "objc/api/peerconnection/RTCAudioSource.mm",
@@ -1034,6 +1040,20 @@ if (is_ios || is_mac) {
         "objc/api/peerconnection/RTCVideoTrack+Private.h",
         "objc/api/peerconnection/RTCVideoTrack.h",
         "objc/api/peerconnection/RTCVideoTrack.mm",
+        "objc/components/audio/RTCAudioBuffer.h",
+        "objc/components/audio/RTCAudioBuffer.mm",
+        "objc/components/audio/RTCAudioBuffer+Private.h",
+        "objc/components/audio/RTCAudioCustomProcessingAdapter.h",
+        "objc/components/audio/RTCAudioCustomProcessingAdapter.mm",
+        "objc/components/audio/RTCAudioCustomProcessingAdapter+Private.h",
+        "objc/components/audio/RTCAudioCustomProcessingDelegate.h",
+        "objc/components/audio/RTCAudioProcessingConfig.h",
+        "objc/components/audio/RTCAudioProcessingConfig.mm",
+        "objc/components/audio/RTCAudioProcessingConfig+Private.h",
+        "objc/components/audio/RTCAudioProcessingModule.h",
+        "objc/components/audio/RTCDefaultAudioProcessingModule.h",
+        "objc/components/audio/RTCDefaultAudioProcessingModule.mm",
+        "objc/components/audio/RTCDefaultAudioProcessingModule+Private.h",
       ]
 
       configs += [
@@ -1275,6 +1295,7 @@ if (is_ios || is_mac) {
           "objc/base/RTCVideoFrame.h",
           "objc/base/RTCVideoFrameBuffer.h",
           "objc/base/RTCVideoRenderer.h",
+          "objc/base/RTCAudioRenderer.h",
           "objc/base/RTCYUVPlanarBuffer.h",
           "objc/components/audio/RTCAudioDevice.h",
           "objc/components/audio/RTCAudioSession.h",
@@ -1297,6 +1318,8 @@ if (is_ios || is_mac) {
           "objc/helpers/RTCCameraPreviewView.h",
           "objc/helpers/RTCDispatcher.h",
           "objc/helpers/UIDevice+RTCDevice.h",
+          "objc/api/peerconnection/RTCAudioDeviceModule.h",
+          "objc/api/peerconnection/RTCIODevice.h",
           "objc/api/peerconnection/RTCAudioSource.h",
           "objc/api/peerconnection/RTCAudioTrack.h",
           "objc/api/peerconnection/RTCConfiguration.h",
@@ -1411,6 +1434,8 @@ if (is_ios || is_mac) {
         output_name = "WebRTC"
 
         sources = [
+          "objc/api/peerconnection/RTCAudioDeviceModule.h",
+          "objc/api/peerconnection/RTCIODevice.h",
           "objc/api/peerconnection/RTCAudioSource.h",
           "objc/api/peerconnection/RTCAudioTrack.h",
           "objc/api/peerconnection/RTCCertificate.h",
@@ -1477,6 +1502,7 @@ if (is_ios || is_mac) {
           "objc/base/RTCVideoFrame.h",
           "objc/base/RTCVideoFrameBuffer.h",
           "objc/base/RTCVideoRenderer.h",
+          "objc/base/RTCAudioRenderer.h",
           "objc/base/RTCYUVPlanarBuffer.h",
           "objc/components/capturer/RTCCameraVideoCapturer.h",
           "objc/components/capturer/RTCFileVideoCapturer.h",

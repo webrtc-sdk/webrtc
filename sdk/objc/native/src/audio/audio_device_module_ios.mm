@@ -665,5 +665,11 @@ AudioDeviceModuleIOS::AudioDeviceModuleIOS(bool bypass_voice_processing)
     return r;
   }
 #endif  // WEBRTC_IOS
+
+  int32_t AudioDeviceModuleIOS::SetAudioDeviceSink(AudioDeviceSink* sink) const {
+    // not implemented
+    RTC_LOG(LS_WARNING) << __FUNCTION__ << "(" << sink << ") Not implemented";
+    return -1;
+  }
 }
 }

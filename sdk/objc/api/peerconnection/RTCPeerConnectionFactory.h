@@ -24,6 +24,7 @@ NS_ASSUME_NONNULL_BEGIN
 @class RTC_OBJC_TYPE(RTCVideoSource);
 @class RTC_OBJC_TYPE(RTCVideoTrack);
 @class RTC_OBJC_TYPE(RTCPeerConnectionFactoryOptions);
+@class RTC_OBJC_TYPE(RTCAudioDeviceModule);
 @protocol RTC_OBJC_TYPE
 (RTCPeerConnectionDelegate);
 @protocol RTC_OBJC_TYPE
@@ -34,6 +35,8 @@ NS_ASSUME_NONNULL_BEGIN
 (RTCSSLCertificateVerifier);
 @protocol RTC_OBJC_TYPE
 (RTCAudioDevice);
+@protocol RTC_OBJC_TYPE
+(RTCAudioProcessingModule);
 
 RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCPeerConnectionFactory) : NSObject
@@ -51,6 +54,16 @@ RTC_OBJC_EXPORT
     initWithEncoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoEncoderFactory)>)encoderFactory
             decoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoDecoderFactory)>)decoderFactory
                audioDevice:(nullable id<RTC_OBJC_TYPE(RTCAudioDevice)>)audioDevice;
+
+/* Initialize object with bypass voice processing */
+- (instancetype)
+    initWithBypassVoiceProcessing:(BOOL)bypassVoiceProcessing
+                   encoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoEncoderFactory)>)encoderFactory
+                   decoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoDecoderFactory)>)decoderFactory
+            audioProcessingModule:
+                (nullable id<RTC_OBJC_TYPE(RTCAudioProcessingModule)>)audioProcessingModule;
+
+@property(nonatomic, readonly) RTCAudioDeviceModule *audioDeviceModule;
 
 /**
  * Valid kind values are kRTCMediaStreamTrackKindAudio and

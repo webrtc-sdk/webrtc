@@ -20,12 +20,14 @@ import android.os.Build;
 import android.os.Process;
 import androidx.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import org.webrtc.CalledByNative;
 import org.webrtc.Logging;
 import org.webrtc.ThreadUtils;
 import org.webrtc.audio.JavaAudioDeviceModule.AudioTrackErrorCallback;
 import org.webrtc.audio.JavaAudioDeviceModule.AudioTrackStartErrorCode;
 import org.webrtc.audio.JavaAudioDeviceModule.AudioTrackStateCallback;
+import org.webrtc.audio.JavaAudioDeviceModule.PlaybackSamplesReadyCallback;
 import org.webrtc.audio.LowLatencyAudioBufferManager;
 
 class WebRtcAudioTrack {
@@ -62,7 +64,7 @@ class WebRtcAudioTrack {
 
   private ByteBuffer byteBuffer;
 
-  private @Nullable final AudioAttributes audioAttributes;
+  public @Nullable AudioAttributes audioAttributes;
   private @Nullable AudioTrack audioTrack;
   private @Nullable AudioTrackThread audioThread;
   private final VolumeLogger volumeLogger;
@@ -76,6 +78,7 @@ class WebRtcAudioTrack {
 
   private final @Nullable AudioTrackErrorCallback errorCallback;
   private final @Nullable AudioTrackStateCallback stateCallback;
+  private final @Nullable PlaybackSamplesReadyCallback audioSamplesReadyCallback;
 
   /**
    * Audio thread which keeps calling AudioTrack.write() to stream audio.
@@ -129,6 +132,17 @@ class WebRtcAudioTrack {
             reportWebRtcAudioTrackError("AudioTrack.write failed: " + bytesWritten);
           }
         }
+
+        if (audioSamplesReadyCallback != null && keepAlive) {
+          // Copy the entire byte buffer array. The start of the byteBuffer is not necessarily
+          // at index 0.
+          byte[] data = Arrays.copyOfRange(byteBuffer.array(), byteBuffer.arrayOffset(),
+              sizeInBytes + byteBuffer.arrayOffset());
+          audioSamplesReadyCallback.onWebRtcAudioTrackSamplesReady(
+              new JavaAudioDeviceModule.AudioSamples(audioTrack.getAudioFormat(),
+                  audioTrack.getChannelCount(), audioTrack.getSampleRate(), data));
+        }
+
         if (useLowLatency) {
           bufferManager.maybeAdjustBufferSize(audioTrack);
         }
@@ -154,13 +168,13 @@ class WebRtcAudioTrack {
   @CalledByNative
   WebRtcAudioTrack(Context context, AudioManager audioManager) {
     this(context, audioManager, null /* audioAttributes */, null /* errorCallback */,
-        null /* stateCallback */, false /* useLowLatency */, true /* enableVolumeLogger */);
+        null /* stateCallback */, null /* audioSamplesReadyCallback */, false /* useLowLatency */, true /* enableVolumeLogger */);
   }
 
   WebRtcAudioTrack(Context context, AudioManager audioManager,
       @Nullable AudioAttributes audioAttributes, @Nullable AudioTrackErrorCallback errorCallback,
-      @Nullable AudioTrackStateCallback stateCallback, boolean useLowLatency,
-      boolean enableVolumeLogger) {
+      @Nullable AudioTrackStateCallback stateCallback, @Nullable PlaybackSamplesReadyCallback audioSamplesReadyCallback, 
+      boolean useLowLatency, boolean enableVolumeLogger) {
     threadChecker.detachThread();
     this.context = context;
     this.audioManager = audioManager;
@@ -168,6 +182,7 @@ class WebRtcAudioTrack {
     this.errorCallback = errorCallback;
     this.stateCallback = stateCallback;
     this.volumeLogger = enableVolumeLogger ? new VolumeLogger(audioManager) : null;
+    this.audioSamplesReadyCallback = audioSamplesReadyCallback;
     this.useLowLatency = useLowLatency;
     Logging.d(TAG, "ctor" + WebRtcAudioUtils.getThreadInfo());
   }
