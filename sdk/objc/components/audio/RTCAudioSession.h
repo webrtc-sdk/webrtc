@@ -99,6 +99,9 @@ RTC_OBJC_EXPORT
     failedToSetActive:(BOOL)active
                 error:(NSError *)error;
 
+/** Called when audio session changed from output-only to input & output */
+- (void)audioSessionWillRecord:(RTC_OBJC_TYPE(RTCAudioSession) *)audioSession;
+
 @end
 
 /** This is a protocol used to inform RTCAudioSession when the audio session
