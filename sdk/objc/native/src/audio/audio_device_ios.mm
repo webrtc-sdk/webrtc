@@ -61,16 +61,6 @@ namespace ios_adm {
 const UInt16 kFixedPlayoutDelayEstimate = 30;
 const UInt16 kFixedRecordDelayEstimate = 30;
 
-enum AudioDeviceMessageType : uint32_t {
-  kMessageTypeInterruptionBegin,
-  kMessageTypeInterruptionEnd,
-  kMessageTypeValidRouteChange,
-  kMessageTypeCanPlayOrRecordChange,
-  kMessageTypePlayoutGlitchDetected,
-  kMessageOutputVolumeChange,
-  kMessageTypeAudioWillRecord,
-};
-
 using ios::CheckAndLogError;
 
 #if !defined(NDEBUG)
