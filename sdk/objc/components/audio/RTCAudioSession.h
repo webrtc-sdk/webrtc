@@ -100,7 +100,7 @@ RTC_OBJC_EXPORT
                 error:(NSError *)error;
 
 /** Called when audio session changed from output-only to input & output */
-- (void)audioSessionWillRecord:(RTC_OBJC_TYPE(RTCAudioSession) *)audioSession;
+- (void)audioSessionDidChangeRecordingEnabled:(RTC_OBJC_TYPE(RTCAudioSession) *)audioSession;
 
 @end
 
