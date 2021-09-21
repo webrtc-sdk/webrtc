@@ -360,9 +360,9 @@ void AudioDeviceIOS::OnChangedOutputVolume() {
   thread_->PostTask(SafeTask(safety_, [this] { HandleOutputVolumeChange(); }));
 }
 
-void AudioDeviceIOS::OnAudioWillRecord() {
+void AudioDeviceIOS::OnChangedRecordingEnabled() {
   RTC_DCHECK(thread_);
-  thread_->PostTask(SafeTask(safety_, [this] { HandleAudioWillRecord(); }));
+  thread_->PostTask(SafeTask(safety_, [this] { HandleAudioSessionRecordingEnabledChange(); }));
 }
 
 OSStatus AudioDeviceIOS::OnDeliverRecordedData(AudioUnitRenderActionFlags* flags,
@@ -638,10 +638,10 @@ void AudioDeviceIOS::HandleOutputVolumeChange() {
   last_output_volume_change_time_ = rtc::TimeMillis();
 }
 
-void AudioDeviceIOS::HandleAudioWillRecord() {
+void AudioDeviceIOS::HandleAudioSessionRecordingEnabledChange() {
   RTC_DCHECK_RUN_ON(&io_thread_checker_);
 
-  LOGI() << "HandleAudioWillRecord";
+  LOGI() << "HandleAudioSessionRecordingEnabledChange";
 
   // If we don't have an audio unit yet, or the audio unit is uninitialized,
   // there is no work to do.

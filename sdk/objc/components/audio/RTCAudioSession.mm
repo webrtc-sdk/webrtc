@@ -114,7 +114,7 @@ ABSL_CONST_INIT thread_local bool mutex_locked = false;
                   options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld
                   context:(__bridge void *)RTC_OBJC_TYPE(RTCAudioSession).class];
 
-    self.isRecordingEnabled = [_session.category isEqualToString:AVAudioSessionCategoryPlayAndRecord];
+    _isRecordingEnabled = [self sessionCategoryIsRecordingEnabled];
 
     RTCLog(@"RTC_OBJC_TYPE(RTCAudioSession) (%p): init.", self);
   }
@@ -542,14 +542,13 @@ ABSL_CONST_INIT thread_local bool mutex_locked = false;
       RTCLog(@"Audio route changed: OldDeviceUnavailable");
       break;
     case AVAudioSessionRouteChangeReasonCategoryChange:
-      RTCLog(@"Audio route changed: CategoryChange to :%@",
-             self.session.category);
-      if (!self.isRecordingEnabled && [self.session.category isEqualToString:AVAudioSessionCategoryPlayAndRecord]) {
-        self.isRecordingEnabled = true;
-        [self notifyWillRecord];
-      }
-      if (self.isRecordingEnabled && [self.session.category isEqualToString:AVAudioSessionCategoryPlayback]) {
-        self.isRecordingEnabled = false;
+      RTCLog(@"Audio route changed: CategoryChange to :%@", self.session.category);
+      {
+        BOOL newValue = [self sessionCategoryIsRecordingEnabled];
+        if (_isRecordingEnabled != newValue) {
+          _isRecordingEnabled = newValue;
+          [self notifyDidChangeAudioSessionRecordingEnabled];
+        }
       }
       break;
     case AVAudioSessionRouteChangeReasonOverride:
@@ -782,7 +781,7 @@ ABSL_CONST_INIT thread_local bool mutex_locked = false;
   }
   RTCLog(@"Unconfiguring audio session for WebRTC.");
   [self setActive:NO error:outError];
-  self.isRecordingEnabled = NO;
+  _isRecordingEnabled = NO;
 
   return YES;
 }
@@ -1007,14 +1006,18 @@ ABSL_CONST_INIT thread_local bool mutex_locked = false;
   }
 }
 
-- (void)notifyWillRecord {
+- (void)notifyDidChangeAudioSessionRecordingEnabled {
   for (auto delegate : self.delegates) {
-    SEL sel = @selector(audioSessionWillRecord:);
+    SEL sel = @selector(audioSessionDidChangeRecordingEnabled:);
     if ([delegate respondsToSelector:sel]) {
-      [delegate audioSessionWillRecord:self];
+      [delegate audioSessionDidChangeRecordingEnabled:self];
     }
   }
 }
 
+-(BOOL)sessionCategoryIsRecordingEnabled {
+  return [_session.category isEqualToString:AVAudioSessionCategoryPlayAndRecord] || 
+    [_session.category isEqualToString:AVAudioSessionCategoryRecord];
+}
 
 @end
