@@ -145,7 +145,7 @@ class AudioDeviceIOS : public AudioDeviceGeneric,
   void OnValidRouteChange() override;
   void OnCanPlayOrRecordChange(bool can_play_or_record) override;
   void OnChangedOutputVolume() override;
-  void OnAudioWillRecord() override;
+  void OnChangedRecordingEnabled() override;
 
   // VoiceProcessingAudioUnitObserver methods.
   OSStatus OnDeliverRecordedData(AudioUnitRenderActionFlags* flags,
@@ -173,7 +173,7 @@ class AudioDeviceIOS : public AudioDeviceGeneric,
   void HandleSampleRateChange();
   void HandlePlayoutGlitchDetected();
   void HandleOutputVolumeChange();
-  void HandleAudioWillRecord();
+  void HandleAudioSessionRecordingEnabledChange();
 
   // Uses current `playout_parameters_` and `record_parameters_` to inform the
   // audio device buffer (ADB) about our internal audio parameters.
