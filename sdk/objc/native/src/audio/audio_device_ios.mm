@@ -68,7 +68,7 @@ enum AudioDeviceMessageType : uint32_t {
   kMessageTypeCanPlayOrRecordChange,
   kMessageTypePlayoutGlitchDetected,
   kMessageOutputVolumeChange,
-  kMessageTypeAudioWillRecord,
+  kMessageTypeRecordingEnabledChange,
 };
 
 using ios::CheckAndLogError;
@@ -374,9 +374,9 @@ void AudioDeviceIOS::OnChangedOutputVolume() {
   thread_->Post(RTC_FROM_HERE, this, kMessageOutputVolumeChange);
 }
 
-void AudioDeviceIOS::OnAudioWillRecord() {
+void AudioDeviceIOS::OnChangedRecordingEnabled() {
   RTC_DCHECK(thread_);
-  thread_->Post(RTC_FROM_HERE, this, kMessageTypeAudioWillRecord);
+  thread_->Post(RTC_FROM_HERE, this, kMessageTypeRecordingEnabledChange);
 }
 
 OSStatus AudioDeviceIOS::OnDeliverRecordedData(AudioUnitRenderActionFlags* flags,
@@ -509,8 +509,9 @@ void AudioDeviceIOS::OnMessage(rtc::Message* msg) {
     case kMessageOutputVolumeChange:
       HandleOutputVolumeChange();
       break;
-    case kMessageTypeAudioWillRecord:
-      HandleAudioWillRecord();
+    case kMessageTypeRecordingEnabledChange:
+      HandleAudioSessionRecordingEnabledChange();
+      break;
   }
 }
 
@@ -681,10 +682,10 @@ void AudioDeviceIOS::HandleOutputVolumeChange() {
   last_output_volume_change_time_ = rtc::TimeMillis();
 }
 
-void AudioDeviceIOS::HandleAudioWillRecord() {
+void AudioDeviceIOS::HandleAudioSessionRecordingEnabledChange() {
   RTC_DCHECK_RUN_ON(&thread_checker_);
 
-  LOGI() << "HandleAudioWillRecord";
+  LOGI() << "HandleAudioSessionRecordingEnabledChange";
 
   // If we don't have an audio unit yet, or the audio unit is uninitialized,
   // there is no work to do.
