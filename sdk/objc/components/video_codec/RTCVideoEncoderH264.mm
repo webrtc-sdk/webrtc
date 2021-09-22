@@ -388,8 +388,8 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
 - (NSInteger)encode:(RTC_OBJC_TYPE(RTCVideoFrame) *)frame
     codecSpecificInfo:(nullable id<RTC_OBJC_TYPE(RTCCodecSpecificInfo)>)codecSpecificInfo
            frameTypes:(NSArray<NSNumber *> *)frameTypes {
-  RTC_DCHECK_EQ(frame.width, _width);
-  RTC_DCHECK_EQ(frame.height, _height);
+  // RTC_DCHECK_EQ(frame.width, _width);
+  // RTC_DCHECK_EQ(frame.height, _height);
   if (!_callback || !_compressionSession) {
     return WEBRTC_VIDEO_CODEC_UNINITIALIZED;
   }
@@ -572,6 +572,7 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
   OSType framePixelFormat = [self pixelFormatOfFrame:frame];
 
   if (_compressionSession) {
+    _pixelBufferPool = VTCompressionSessionGetPixelBufferPool(_compressionSession);
     // The pool attribute `kCVPixelBufferPixelFormatTypeKey` can contain either an array of pixel
     // formats or a single pixel format.
     NSDictionary *poolAttributes =
