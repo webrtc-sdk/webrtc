@@ -38,6 +38,8 @@ NS_ASSUME_NONNULL_BEGIN
 /** if the current category could allow recording */
 @property(nonatomic, assign) BOOL isRecordingEnabled;
 
+@property(nonatomic, strong) NSString *activeCategory;
+
 /** Adds the delegate to the list of delegates, and places it at the front of
  *  the list. This delegate will be notified before other delegates of
  *  audio events.
