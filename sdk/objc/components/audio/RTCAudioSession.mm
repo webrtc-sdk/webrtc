@@ -114,7 +114,7 @@ ABSL_CONST_INIT thread_local bool mutex_locked = false;
                   options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld
                   context:(__bridge void *)RTC_OBJC_TYPE(RTCAudioSession).class];
 
-    _isRecordingEnabled = [self sessionCategoryIsRecordingEnabled];
+    _activeCategory = _session.category;
 
     RTCLog(@"RTC_OBJC_TYPE(RTCAudioSession) (%p): init.", self);
   }
@@ -544,9 +544,9 @@ ABSL_CONST_INIT thread_local bool mutex_locked = false;
     case AVAudioSessionRouteChangeReasonCategoryChange:
       RTCLog(@"Audio route changed: CategoryChange to :%@", self.session.category);
       {
-        BOOL newValue = [self sessionCategoryIsRecordingEnabled];
-        if (_isRecordingEnabled != newValue) {
-          _isRecordingEnabled = newValue;
+        if (![_session.category isEqualToString:_activeCategory]) {
+          _activeCategory = _session.category;
+          RTCLog(@"Audio route changed: Restarting Audio Unit");
           [self notifyDidChangeAudioSessionRecordingEnabled];
         }
       }
@@ -781,7 +781,6 @@ ABSL_CONST_INIT thread_local bool mutex_locked = false;
   }
   RTCLog(@"Unconfiguring audio session for WebRTC.");
   [self setActive:NO error:outError];
-  _isRecordingEnabled = NO;
 
   return YES;
 }
@@ -1013,11 +1012,6 @@ ABSL_CONST_INIT thread_local bool mutex_locked = false;
       [delegate audioSessionDidChangeRecordingEnabled:self];
     }
   }
-}
-
--(BOOL)sessionCategoryIsRecordingEnabled {
-  return [_session.category isEqualToString:AVAudioSessionCategoryPlayAndRecord] || 
-    [_session.category isEqualToString:AVAudioSessionCategoryRecord];
 }
 
 @end
