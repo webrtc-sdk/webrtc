@@ -33,13 +33,3 @@ native API header files.
 ### Note
 
 This is a community maintenance project, not the official Google WebRTC repository. It is maintained by some contributors with WebRTC development experience, and the goal is to create a flexible binary release version.
-
-* The original code was cloned from [google webrtc](https://chromium.googlesource.com/external/webrtc.git) and released with [BSD license](/LICENSE).
-
-* Many of these patches ([#3](https://github.com/webrtc-sdk/webrtc/pull/3), [#4](https://github.com/webrtc-sdk/webrtc/pull/4), [#6](https://github.com/webrtc-sdk/webrtc/pull/6)) come from [shiguredo-webrtc-build/webrtc-build/patches](https://github.com/shiguredo-webrtc-build/webrtc-build/tree/master/patches) and released with [Apache-2.0](/LICENSE-APACHE).
-
-### Who is using this project?
-
-* [flutter-webrtc](https://github.com/flutter-webrtc)
-
-* [LiveKit](https://github.com/livekit/)
