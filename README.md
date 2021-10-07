@@ -1,32 +1,49 @@
-**WebRTC is a free, open software project** that provides browsers and mobile
-applications with Real-Time Communications (RTC) capabilities via simple APIs.
-The WebRTC components have been optimized to best serve this purpose.
+# WebRTC-SDK
 
-**Our mission:** To enable rich, high-quality RTC applications to be
-developed for the browser, mobile platforms, and IoT devices, and allow them
-all to communicate via a common set of protocols.
+This repository contains a fork of WebRTC from Google with various improvements.
 
-The WebRTC initiative is a project supported by Google, Mozilla and Opera,
-amongst others.
+## Changes
 
-### Development
+### All
 
-See [here][native-dev] for instructions on how to get started
-developing with the native code.
+- Dynamically acquire decoder to mitigate decoder limitations #25 #26
 
-[Authoritative list](native-api.md) of directories that contain the
-native API header files.
+### Android
 
-### More info
+- Support for video simulcast #3
 
- * Official web site: http://www.webrtc.org
- * Master source code repo: https://webrtc.googlesource.com/src
- * Samples and reference apps: https://github.com/webrtc
- * Mailing list: http://groups.google.com/group/discuss-webrtc
- * Continuous build: https://ci.chromium.org/p/webrtc/g/ci/console
- * [Coding style guide](g3doc/style-guide.md)
- * [Code of conduct](CODE_OF_CONDUCT.md)
- * [Reporting bugs](docs/bug-reporting.md)
- * [Documentation](g3doc/sitemap.md)
+### iOS
 
-[native-dev]: https://webrtc.googlesource.com/src/+/main/docs/native-code/index.md
+- Do not request microphone permissions for playback-only #2 #5
+- Improvements to AVAudioSession interactions #7 #8
+- Support for video simulcast #4
+- Support for voice processing bypass #15
+
+### Mac
+
+- Support for video simulcast #10
+- Remove hardcoded limitation of outputting to only right speaker on MBP #22
+- Screen capture support #24 #36 #37
+- Support for audio output device selection #35
+- Cross-platform RTCMTLVideoView #40
+
+### Windows
+
+- Fixed unable to acquire Mic when built-in AEC is enabled #29
+
+## LICENSE
+
+- [Google WebRTC](https://chromium.googlesource.com/external/webrtc.git), is licensed under [BSD license](/LICENSE).
+
+- Contains patches from [shiguredo-webrtc-build](https://github.com/shiguredo-webrtc-build), licensed under [Apache 2.0](/NOTICE).
+
+- Contains changes from LiveKit, licensed under Apache 2.0.
+
+## Who is using this project
+
+- [flutter-webrtc](https://github.com/flutter-webrtc/flutter-webrtc)
+
+- [LiveKit](https://github.com/livekit)
+
+- [Membrane Framework](https://github.com/membraneframework/membrane_rtc_engine)
+
