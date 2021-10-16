@@ -103,7 +103,7 @@ NSString * const kRTCAudioSessionOutputVolumeSelector = @"outputVolume";
                   options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld
                   context:(__bridge void *)RTC_OBJC_TYPE(RTCAudioSession).class];
 
-    _isRecordingEnabled = [self sessionCategoryIsRecordingEnabled];
+    _activeCategory = _session.category;
 
     RTCLog(@"RTC_OBJC_TYPE(RTCAudioSession) (%p): init.", self);
   }
@@ -494,9 +494,9 @@ NSString * const kRTCAudioSessionOutputVolumeSelector = @"outputVolume";
     case AVAudioSessionRouteChangeReasonCategoryChange:
       RTCLog(@"Audio route changed: CategoryChange to :%@", self.session.category);
       {
-        BOOL newValue = [self sessionCategoryIsRecordingEnabled];
-        if (_isRecordingEnabled != newValue) {
-          _isRecordingEnabled = newValue;
+        if (![_session.category isEqualToString:_activeCategory]) {
+          _activeCategory = _session.category;
+          RTCLog(@"Audio route changed: Restarting Audio Unit");
           [self notifyDidChangeAudioSessionRecordingEnabled];
         }
       }
@@ -712,7 +712,6 @@ NSString * const kRTCAudioSessionOutputVolumeSelector = @"outputVolume";
   }
   RTCLog(@"Unconfiguring audio session for WebRTC.");
   [self setActive:NO error:outError];
-  _isRecordingEnabled = NO;
 
   return YES;
 }
@@ -932,11 +931,6 @@ NSString * const kRTCAudioSessionOutputVolumeSelector = @"outputVolume";
       [delegate audioSessionDidChangeRecordingEnabled:self];
     }
   }
-}
-
--(BOOL)sessionCategoryIsRecordingEnabled {
-  return [_session.category isEqualToString:AVAudioSessionCategoryPlayAndRecord] || 
-    [_session.category isEqualToString:AVAudioSessionCategoryRecord];
 }
 
 @end
