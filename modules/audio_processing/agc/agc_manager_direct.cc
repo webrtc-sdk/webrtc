@@ -718,8 +718,4 @@ void AgcManagerDirect::AggregateChannelLevels() {
   }
 }
 
-bool AgcManagerDirect::clipping_predictor_enabled() const {
-  return !!clipping_predictor_;
-}
-
 }  // namespace webrtc

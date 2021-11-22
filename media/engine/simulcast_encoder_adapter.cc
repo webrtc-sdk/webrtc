@@ -713,9 +713,10 @@ SimulcastEncoderAdapter::FetchOrCreateEncoderContext(
     encoder_context = std::move(*encoder_context_iter);
     cached_encoder_contexts_.erase(encoder_context_iter);
   } else {
+    std::unique_ptr<VideoEncoder> encoder;
     std::unique_ptr<VideoEncoder> primary_encoder =
         primary_encoder_factory_->CreateVideoEncoder(video_format_);
-    VideoEncoder::EncoderInfo primary_info = encoder->GetEncoderInfo();
+    VideoEncoder::EncoderInfo primary_info = primary_encoder->GetEncoderInfo();
     VideoEncoder::EncoderInfo fallback_info = primary_info;
     if (fallback_encoder_factory_ != nullptr) {
       std::unique_ptr<VideoEncoder> fallback_encoder =

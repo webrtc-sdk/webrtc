@@ -74,9 +74,6 @@ class AgcManagerDirect final {
   int num_channels() const { return num_capture_channels_; }
   int sample_rate_hz() const { return sample_rate_hz_; }
 
-  // Returns true if clipping prediction was set to be used in ctor.
-  bool clipping_predictor_enabled() const;
-
   // If available, returns a new compression gain for the digital gain control.
   absl::optional<int> GetDigitalComressionGain();
 
