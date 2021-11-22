@@ -59,8 +59,6 @@ rtc_library("clipping_predictor") {
   absl_deps = [ "//third_party/abseil-cpp/absl/types:optional" ]
 }
 
-<<<<<<< HEAD
-=======
 rtc_library("clipping_predictor_evaluator") {
   sources = [
     "clipping_predictor_evaluator.cc",
@@ -73,7 +71,6 @@ rtc_library("clipping_predictor_evaluator") {
   absl_deps = [ "//third_party/abseil-cpp/absl/types:optional" ]
 }
 
->>>>>>> branch-heads/4577
 rtc_library("clipping_predictor_level_buffer") {
   sources = [
     "clipping_predictor_level_buffer.cc",
@@ -82,10 +79,7 @@ rtc_library("clipping_predictor_level_buffer") {
   deps = [
     "../../../rtc_base:checks",
     "../../../rtc_base:logging",
-<<<<<<< HEAD
-=======
     "../../../rtc_base:rtc_base_approved",
->>>>>>> branch-heads/4577
   ]
   absl_deps = [ "//third_party/abseil-cpp/absl/types:optional" ]
 }
@@ -148,10 +142,7 @@ if (rtc_include_tests) {
     testonly = true
     sources = [
       "agc_manager_direct_unittest.cc",
-<<<<<<< HEAD
-=======
       "clipping_predictor_evaluator_unittest.cc",
->>>>>>> branch-heads/4577
       "clipping_predictor_level_buffer_unittest.cc",
       "clipping_predictor_unittest.cc",
       "loudness_histogram_unittest.cc",
@@ -162,20 +153,14 @@ if (rtc_include_tests) {
     deps = [
       ":agc",
       ":clipping_predictor",
-<<<<<<< HEAD
-=======
       ":clipping_predictor_evaluator",
->>>>>>> branch-heads/4577
       ":clipping_predictor_level_buffer",
       ":gain_control_interface",
       ":level_estimation",
       "..:mocks",
       "../../../rtc_base:checks",
-<<<<<<< HEAD
-=======
       "../../../rtc_base:rtc_base_approved",
       "../../../rtc_base:safe_conversions",
->>>>>>> branch-heads/4577
       "../../../test:field_trial",
       "../../../test:fileutils",
       "../../../test:test_support",
