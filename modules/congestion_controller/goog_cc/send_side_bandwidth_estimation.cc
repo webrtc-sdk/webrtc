@@ -587,8 +587,7 @@ DataRate SendSideBandwidthEstimation::GetUpperLimit() const {
   DataRate upper_limit = delay_based_limit_;
   if (!receiver_limit_caps_only_)
     upper_limit = std::min(upper_limit, receiver_limit_);
-  upper_limit = std::min(upper_limit, max_bitrate_configured_);
-  return upper_limit;
+  return std::min(upper_limit, max_bitrate_configured_);
 }
 
 void SendSideBandwidthEstimation::MaybeLogLowBitrateWarning(DataRate bitrate,

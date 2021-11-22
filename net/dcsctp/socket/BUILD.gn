@@ -133,10 +133,10 @@ rtc_library("dcsctp_socket") {
     "../rx:data_tracker",
     "../rx:reassembly_queue",
     "../timer",
-    "../tx:fcfs_send_queue",
     "../tx:retransmission_error_counter",
     "../tx:retransmission_queue",
     "../tx:retransmission_timeout",
+    "../tx:rr_send_queue",
     "../tx:send_queue",
   ]
   sources = [
@@ -211,6 +211,7 @@ if (rtc_include_tests) {
       "../packet:tlv_trait",
       "../public:socket",
       "../public:types",
+      "../public:utils",
       "../rx:data_tracker",
       "../rx:reassembly_queue",
       "../testing:data_generator",
@@ -220,6 +221,7 @@ if (rtc_include_tests) {
       "../tx:retransmission_queue",
     ]
     absl_deps = [
+      "//third_party/abseil-cpp/absl/flags:flag",
       "//third_party/abseil-cpp/absl/memory",
       "//third_party/abseil-cpp/absl/strings",
       "//third_party/abseil-cpp/absl/types:optional",

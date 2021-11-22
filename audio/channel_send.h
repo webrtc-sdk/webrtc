@@ -28,7 +28,6 @@
 namespace webrtc {
 
 class FrameEncryptorInterface;
-class ProcessThread;
 class RtcEventLog;
 class RtpTransportControllerSendInterface;
 
@@ -46,6 +45,7 @@ struct CallSendStatistics {
   // ReportBlockData represents the latest Report Block that was received for
   // that pair.
   std::vector<ReportBlockData> report_block_datas;
+  uint32_t nacks_rcvd;
 };
 
 // See section 6.4.2 in http://www.ietf.org/rfc/rfc3550.txt for details.
@@ -126,7 +126,6 @@ class ChannelSendInterface {
 std::unique_ptr<ChannelSendInterface> CreateChannelSend(
     Clock* clock,
     TaskQueueFactory* task_queue_factory,
-    ProcessThread* module_process_thread,
     Transport* rtp_transport,
     RtcpRttStats* rtcp_rtt_stats,
     RtcEventLog* rtc_event_log,

@@ -19,9 +19,10 @@
 #include "absl/types/optional.h"
 #include "api/array_view.h"
 #include "media/base/media_channel.h"
+#include "net/dcsctp/public/dcsctp_socket_factory.h"
 #include "net/dcsctp/public/packet_observer.h"
+#include "net/dcsctp/public/text_pcap_packet_observer.h"
 #include "net/dcsctp/public/types.h"
-#include "net/dcsctp/socket/dcsctp_socket.h"
 #include "p2p/base/packet_transport_internal.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
@@ -73,51 +74,33 @@ absl::optional<DataMessageType> ToDataMessageType(dcsctp::PPID ppid) {
   return absl::nullopt;
 }
 
+absl::optional<cricket::SctpErrorCauseCode> ToErrorCauseCode(
+    dcsctp::ErrorKind error) {
+  switch (error) {
+    case dcsctp::ErrorKind::kParseFailed:
+      return cricket::SctpErrorCauseCode::kUnrecognizedParameters;
+    case dcsctp::ErrorKind::kPeerReported:
+      return cricket::SctpErrorCauseCode::kUserInitiatedAbort;
+    case dcsctp::ErrorKind::kWrongSequence:
+    case dcsctp::ErrorKind::kProtocolViolation:
+      return cricket::SctpErrorCauseCode::kProtocolViolation;
+    case dcsctp::ErrorKind::kResourceExhaustion:
+      return cricket::SctpErrorCauseCode::kOutOfResource;
+    case dcsctp::ErrorKind::kTooManyRetries:
+    case dcsctp::ErrorKind::kUnsupportedOperation:
+    case dcsctp::ErrorKind::kNoError:
+    case dcsctp::ErrorKind::kNotConnected:
+      // No SCTP error cause code matches those
+      break;
+  }
+  return absl::nullopt;
+}
+
 bool IsEmptyPPID(dcsctp::PPID ppid) {
   WebrtcPPID webrtc_ppid = static_cast<WebrtcPPID>(ppid.value());
   return webrtc_ppid == WebrtcPPID::kStringEmpty ||
          webrtc_ppid == WebrtcPPID::kBinaryEmpty;
 }
-
-// Print outs all sent and received packets to the logs, at LS_VERBOSE severity.
-class TextPcapPacketObserver : public dcsctp::PacketObserver {
- public:
-  explicit TextPcapPacketObserver(absl::string_view name) : name_(name) {}
-
-  void OnSentPacket(dcsctp::TimeMs now, rtc::ArrayView<const uint8_t> payload) {
-    PrintPacket("O ", now, payload);
-  }
-
-  void OnReceivedPacket(dcsctp::TimeMs now,
-                        rtc::ArrayView<const uint8_t> payload) {
-    PrintPacket("I ", now, payload);
-  }
-
- private:
-  void PrintPacket(absl::string_view prefix,
-                   dcsctp::TimeMs now,
-                   rtc::ArrayView<const uint8_t> payload) {
-    rtc::StringBuilder s;
-    s << prefix;
-    int64_t remaining = *now % (24 * 60 * 60 * 1000);
-    int hours = remaining / (60 * 60 * 1000);
-    remaining = remaining % (60 * 60 * 1000);
-    int minutes = remaining / (60 * 1000);
-    remaining = remaining % (60 * 1000);
-    int seconds = remaining / 1000;
-    int ms = remaining % 1000;
-    s.AppendFormat("%02d:%02d:%02d.%03d", hours, minutes, seconds, ms);
-    s << " 0000";
-    for (uint8_t byte : payload) {
-      s.AppendFormat(" %02x", byte);
-    }
-    s << " # SCTP_PACKET " << name_;
-    RTC_LOG(LS_VERBOSE) << s.str();
-  }
-
-  const std::string name_;
-};
-
 }  // namespace
 
 DcSctpTransport::DcSctpTransport(rtc::Thread* network_thread,
@@ -174,11 +157,13 @@ bool DcSctpTransport::Start(int local_sctp_port,
 
     std::unique_ptr<dcsctp::PacketObserver> packet_observer;
     if (RTC_LOG_CHECK_LEVEL(LS_VERBOSE)) {
-      packet_observer = std::make_unique<TextPcapPacketObserver>(debug_name_);
+      packet_observer =
+          std::make_unique<dcsctp::TextPcapPacketObserver>(debug_name_);
     }
 
-    socket_ = std::make_unique<dcsctp::DcSctpSocket>(
-        debug_name_, *this, std::move(packet_observer), options);
+    dcsctp::DcSctpSocketFactory factory;
+    socket_ =
+        factory.Create(debug_name_, *this, std::move(packet_observer), options);
   } else {
     if (local_sctp_port != socket_->options().local_port ||
         remote_sctp_port != socket_->options().remote_port) {
@@ -237,11 +222,11 @@ bool DcSctpTransport::SendData(int sid,
 
   auto max_message_size = socket_->options().max_message_size;
   if (max_message_size > 0 && payload.size() > max_message_size) {
-    RTC_LOG(LS_ERROR) << debug_name_
-                      << "->SendData(...): "
-                         "Trying to send packet bigger "
-                         "than the max message size: "
-                      << payload.size() << " vs max of " << max_message_size;
+    RTC_LOG(LS_WARNING) << debug_name_
+                        << "->SendData(...): "
+                           "Trying to send packet bigger "
+                           "than the max message size: "
+                        << payload.size() << " vs max of " << max_message_size;
     *result = cricket::SDR_ERROR;
     return false;
   }
@@ -348,9 +333,9 @@ void DcSctpTransport::SendPacket(rtc::ArrayView<const uint8_t> data) {
                              data.size(), rtc::PacketOptions(), 0);
 
   if (result < 0) {
-    RTC_LOG(LS_ERROR) << debug_name_ << "->SendPacket(length=" << data.size()
-                      << ") failed with error: " << transport_->GetError()
-                      << ".";
+    RTC_LOG(LS_WARNING) << debug_name_ << "->SendPacket(length=" << data.size()
+                        << ") failed with error: " << transport_->GetError()
+                        << ".";
   }
 }
 
@@ -366,7 +351,7 @@ uint32_t DcSctpTransport::GetRandomInt(uint32_t low, uint32_t high) {
   return random_.Rand(low, high);
 }
 
-void DcSctpTransport::NotifyOutgoingMessageBufferEmpty() {
+void DcSctpTransport::OnTotalBufferedAmountLow() {
   if (!ready_to_send_data_) {
     ready_to_send_data_ = true;
     SignalReadyToSendData();
@@ -375,10 +360,10 @@ void DcSctpTransport::NotifyOutgoingMessageBufferEmpty() {
 
 void DcSctpTransport::OnMessageReceived(dcsctp::DcSctpMessage message) {
   RTC_DCHECK_RUN_ON(network_thread_);
-  RTC_LOG(LS_INFO) << debug_name_
-                   << "->OnMessageReceived(sid=" << message.stream_id().value()
-                   << ", ppid=" << message.ppid().value()
-                   << ", length=" << message.payload().size() << ").";
+  RTC_LOG(LS_VERBOSE) << debug_name_ << "->OnMessageReceived(sid="
+                      << message.stream_id().value()
+                      << ", ppid=" << message.ppid().value()
+                      << ", length=" << message.payload().size() << ").";
   cricket::ReceiveDataParams receive_data_params;
   receive_data_params.sid = message.stream_id().value();
   auto type = ToDataMessageType(message.ppid());
@@ -412,6 +397,14 @@ void DcSctpTransport::OnAborted(dcsctp::ErrorKind error,
                     << "->OnAborted(error=" << dcsctp::ToString(error)
                     << ", message=" << message << ").";
   ready_to_send_data_ = false;
+  RTCError rtc_error(RTCErrorType::OPERATION_ERROR_WITH_DATA,
+                     std::string(message));
+  rtc_error.set_error_detail(RTCErrorDetailType::SCTP_FAILURE);
+  auto code = ToErrorCauseCode(error);
+  if (code.has_value()) {
+    rtc_error.set_sctp_cause_code(static_cast<uint16_t>(*code));
+  }
+  SignalClosedAbruptly(rtc_error);
 }
 
 void DcSctpTransport::OnConnected() {
@@ -435,7 +428,7 @@ void DcSctpTransport::OnStreamsResetFailed(
     absl::string_view reason) {
   // TODO(orphis): Need a test to check for correct behavior
   for (auto& stream_id : outgoing_streams) {
-    RTC_LOG(LS_ERROR)
+    RTC_LOG(LS_WARNING)
         << debug_name_
         << "->OnStreamsResetFailed(...): Outgoing stream reset failed"
         << ", sid=" << stream_id.value() << ", reason: " << reason << ".";
@@ -490,8 +483,9 @@ void DcSctpTransport::OnTransportWritableState(
   RTC_DCHECK_RUN_ON(network_thread_);
   RTC_DCHECK_EQ(transport_, transport);
 
-  RTC_LOG(LS_INFO) << debug_name_ << "->OnTransportWritableState(), writable="
-                   << transport->writable();
+  RTC_LOG(LS_VERBOSE) << debug_name_
+                      << "->OnTransportWritableState(), writable="
+                      << transport->writable();
 
   MaybeConnectSocket();
 }
@@ -518,7 +512,7 @@ void DcSctpTransport::OnTransportReadPacket(
 void DcSctpTransport::OnTransportClosed(
     rtc::PacketTransportInternal* transport) {
   RTC_LOG(LS_VERBOSE) << debug_name_ << "->OnTransportClosed().";
-  SignalClosedAbruptly();
+  SignalClosedAbruptly({});
 }
 
 void DcSctpTransport::MaybeConnectSocket() {

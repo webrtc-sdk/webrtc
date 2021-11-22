@@ -51,7 +51,7 @@ class RtpPacket {
   bool Parse(rtc::CopyOnWriteBuffer packet);
 
   // Maps extensions id to their types.
-  void IdentifyExtensions(const ExtensionManager& extensions);
+  void IdentifyExtensions(ExtensionManager extensions);
 
   // Header.
   bool Marker() const { return marker_; }
@@ -65,6 +65,7 @@ class RtpPacket {
 
   // Payload.
   size_t payload_size() const { return payload_size_; }
+  bool has_padding() const { return buffer_[0] & 0x20; }
   size_t padding_size() const { return padding_size_; }
   rtc::ArrayView<const uint8_t> payload() const {
     return rtc::MakeArrayView(data() + payload_offset_, payload_size_);
@@ -113,6 +114,11 @@ class RtpPacket {
   template <typename Extension>
   bool HasExtension() const;
   bool HasExtension(ExtensionType type) const;
+
+  // Returns whether there is an associated id for the extension and thus it is
+  // possible to set the extension.
+  template <typename Extension>
+  bool IsRegistered() const;
 
   template <typename Extension, typename FirstValue, typename... Values>
   bool GetExtension(FirstValue, Values...) const;
@@ -205,6 +211,11 @@ class RtpPacket {
 template <typename Extension>
 bool RtpPacket::HasExtension() const {
   return HasExtension(Extension::kId);
+}
+
+template <typename Extension>
+bool RtpPacket::IsRegistered() const {
+  return extensions_.IsRegistered(Extension::kId);
 }
 
 template <typename Extension, typename FirstValue, typename... Values>

@@ -44,7 +44,6 @@ namespace webrtc {
 class AudioDeviceModule;
 class FrameDecryptorInterface;
 class PacketRouter;
-class ProcessThread;
 class RateLimiter;
 class ReceiveStatistics;
 class RtcEventLog;
@@ -58,6 +57,7 @@ struct CallReceiveStatistics {
   int64_t payload_bytes_rcvd = 0;
   int64_t header_and_padding_bytes_rcvd = 0;
   int packetsReceived;
+  uint32_t nacks_sent = 0;
   // The capture NTP time (in local timebase) of the first played out audio
   // frame.
   int64_t capture_start_ntp_time_ms_;
@@ -159,11 +159,16 @@ class ChannelReceiveInterface : public RtpPacketSinkInterface {
   virtual void SetDepacketizerToDecoderFrameTransformer(
       rtc::scoped_refptr<webrtc::FrameTransformerInterface>
           frame_transformer) = 0;
+
+  virtual void SetFrameDecryptor(
+      rtc::scoped_refptr<webrtc::FrameDecryptorInterface> frame_decryptor) = 0;
+
+  virtual void OnLocalSsrcChange(uint32_t local_ssrc) = 0;
+  virtual uint32_t GetLocalSsrc() const = 0;
 };
 
 std::unique_ptr<ChannelReceiveInterface> CreateChannelReceive(
     Clock* clock,
-    ProcessThread* module_process_thread,
     NetEqFactory* neteq_factory,
     AudioDeviceModule* audio_device_module,
     Transport* rtcp_send_transport,

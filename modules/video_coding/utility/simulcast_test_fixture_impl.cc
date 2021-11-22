@@ -190,7 +190,7 @@ void ConfigureStream(int width,
                      float max_framerate,
                      SpatialLayer* stream,
                      int num_temporal_layers) {
-  assert(stream);
+  RTC_DCHECK(stream);
   stream->width = width;
   stream->height = height;
   stream->maxBitrate = max_bitrate;
@@ -590,6 +590,7 @@ void SimulcastTestFixtureImpl::SwitchingToOneStream(int width, int height) {
     settings_.VP8()->numberOfTemporalLayers = 1;
     temporal_layer_profile = kDefaultTemporalLayerProfile;
   } else {
+    settings_.H264()->numberOfTemporalLayers = 1;
     temporal_layer_profile = kNoTemporalLayerProfile;
   }
   settings_.maxBitrate = 100;

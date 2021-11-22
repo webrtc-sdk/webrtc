@@ -8,23 +8,23 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#ifndef API_PEER_CONNECTION_PROXY_H_
-#define API_PEER_CONNECTION_PROXY_H_
+#ifndef PC_PEER_CONNECTION_PROXY_H_
+#define PC_PEER_CONNECTION_PROXY_H_
 
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "api/peer_connection_interface.h"
-#include "api/proxy.h"
+#include "pc/proxy.h"
 
 namespace webrtc {
 
 // PeerConnection proxy objects will be constructed with two thread pointers,
 // signaling and network. The proxy macros don't have 'network' specific macros
 // and support for a secondary thread is provided via 'SECONDARY' macros.
-// TODO(deadbeef): Move this to .cc file and out of api/. What threads methods
-// are called on is an implementation detail.
+// TODO(deadbeef): Move this to .cc file. What threads methods are called on is
+// an implementation detail.
 BEGIN_PROXY_MAP(PeerConnection)
 PROXY_PRIMARY_THREAD_DESTRUCTOR()
 PROXY_METHOD0(rtc::scoped_refptr<StreamCollectionInterface>, local_streams)
@@ -76,8 +76,8 @@ PROXY_METHOD2(void,
               rtc::scoped_refptr<RtpReceiverInterface>,
               rtc::scoped_refptr<RTCStatsCollectorCallback>)
 PROXY_METHOD0(void, ClearStatsCache)
-PROXY_METHOD2(rtc::scoped_refptr<DataChannelInterface>,
-              CreateDataChannel,
+PROXY_METHOD2(RTCErrorOr<rtc::scoped_refptr<DataChannelInterface>>,
+              CreateDataChannelOrError,
               const std::string&,
               const DataChannelInit*)
 PROXY_CONSTMETHOD0(const SessionDescriptionInterface*, local_description)
@@ -157,8 +157,8 @@ PROXY_METHOD1(bool, StartRtcEventLog, std::unique_ptr<RtcEventLogOutput>)
 PROXY_METHOD0(void, StopRtcEventLog)
 PROXY_METHOD0(void, Close)
 BYPASS_PROXY_CONSTMETHOD0(rtc::Thread*, signaling_thread)
-END_PROXY_MAP()
+END_PROXY_MAP(PeerConnection)
 
 }  // namespace webrtc
 
-#endif  // API_PEER_CONNECTION_PROXY_H_
+#endif  // PC_PEER_CONNECTION_PROXY_H_

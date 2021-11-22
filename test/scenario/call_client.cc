@@ -17,6 +17,8 @@
 #include "api/rtc_event_log/rtc_event_log_factory.h"
 #include "api/transport/network_types.h"
 #include "modules/audio_mixer/audio_mixer_impl.h"
+#include "modules/rtp_rtcp/source/rtp_util.h"
+#include "test/rtp_header_parser.h"
 
 namespace webrtc {
 namespace test {
@@ -213,7 +215,6 @@ CallClient::CallClient(
       clock_(time_controller->GetClock()),
       log_writer_factory_(std::move(log_writer_factory)),
       network_controller_factory_(log_writer_factory_.get(), config.transport),
-      header_parser_(RtpHeaderParser::CreateForTest()),
       task_queue_(time_controller->GetTaskQueueFactory()->CreateTaskQueue(
           "CallClient",
           TaskQueueFactory::Priority::NORMAL)) {
@@ -293,7 +294,7 @@ void CallClient::UpdateBitrateConstraints(
 
 void CallClient::OnPacketReceived(EmulatedIpPacket packet) {
   MediaType media_type = MediaType::ANY;
-  if (!RtpHeaderParser::IsRtcp(packet.cdata(), packet.data.size())) {
+  if (IsRtpPacket(packet.data)) {
     auto ssrc = RtpHeaderParser::GetSsrc(packet.cdata(), packet.data.size());
     RTC_CHECK(ssrc.has_value());
     media_type = ssrc_media_types_[*ssrc];
@@ -336,11 +337,6 @@ uint32_t CallClient::GetNextAudioLocalSsrc() {
 uint32_t CallClient::GetNextRtxSsrc() {
   RTC_CHECK_LT(next_rtx_ssrc_index_, kNumSsrcs);
   return kSendRtxSsrcs[next_rtx_ssrc_index_++];
-}
-
-void CallClient::AddExtensions(std::vector<RtpExtension> extensions) {
-  for (const auto& extension : extensions)
-    header_parser_->RegisterRtpHeaderExtension(extension);
 }
 
 void CallClient::SendTask(std::function<void()> task) {

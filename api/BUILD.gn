@@ -29,7 +29,10 @@ rtc_source_set("call_api") {
 rtc_source_set("callfactory_api") {
   visibility = [ "*" ]
   sources = [ "call/call_factory_interface.h" ]
-  deps = [ "../rtc_base/system:rtc_export" ]
+  deps = [
+    "../call:rtp_interfaces",
+    "../rtc_base/system:rtc_export",
+  ]
 }
 
 if (!build_with_chromium) {
@@ -135,14 +138,8 @@ rtc_library("libjingle_peerconnection_api") {
     "jsep_ice_candidate.cc",
     "jsep_ice_candidate.h",
     "jsep_session_description.h",
-    "media_stream_proxy.h",
-    "media_stream_track_proxy.h",
-    "peer_connection_factory_proxy.h",
     "peer_connection_interface.cc",
     "peer_connection_interface.h",
-    "peer_connection_proxy.h",
-    "proxy.cc",
-    "proxy.h",
     "rtp_receiver_interface.cc",
     "rtp_receiver_interface.h",
     "rtp_sender_interface.cc",
@@ -157,7 +154,7 @@ rtc_library("libjingle_peerconnection_api") {
     "stats_types.h",
     "turn_customizer.h",
     "uma_metrics.h",
-    "video_track_source_proxy.h",
+    "video_track_source_proxy_factory.h",
   ]
   deps = [
     ":array_view",
@@ -178,6 +175,7 @@ rtc_library("libjingle_peerconnection_api") {
     ":rtp_transceiver_direction",
     ":scoped_refptr",
     ":sequence_checker",
+    "../call:rtp_interfaces",
     "../rtc_base:network_constants",
     "adaptation:resource_adaptation_api",
     "audio:audio_mixer_api",
@@ -1059,6 +1057,7 @@ if (rtc_include_tests) {
       ":time_controller",
       "../call",
       "../call:call_interfaces",
+      "../call:rtp_interfaces",
       "../test/time_controller",
     ]
   }
@@ -1103,6 +1102,7 @@ if (rtc_include_tests) {
       "units:time_delta",
       "units:timestamp",
       "units:units_unittests",
+      "video:rtp_video_frame_assembler_unittests",
       "video:video_unittests",
     ]
   }

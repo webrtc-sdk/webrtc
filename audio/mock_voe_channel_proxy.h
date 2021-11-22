@@ -17,6 +17,7 @@
 #include <utility>
 #include <vector>
 
+#include "api/crypto/frame_decryptor_interface.h"
 #include "api/test/mock_frame_encryptor.h"
 #include "audio/channel_receive.h"
 #include "audio/channel_send.h"
@@ -98,6 +99,13 @@ class MockChannelReceive : public voe::ChannelReceiveInterface {
       SetDepacketizerToDecoderFrameTransformer,
       (rtc::scoped_refptr<webrtc::FrameTransformerInterface> frame_transformer),
       (override));
+  MOCK_METHOD(
+      void,
+      SetFrameDecryptor,
+      (rtc::scoped_refptr<webrtc::FrameDecryptorInterface> frame_decryptor),
+      (override));
+  MOCK_METHOD(void, OnLocalSsrcChange, (uint32_t local_ssrc), (override));
+  MOCK_METHOD(uint32_t, GetLocalSsrc, (), (const, override));
 };
 
 class MockChannelSend : public voe::ChannelSendInterface {

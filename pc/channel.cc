@@ -220,6 +220,7 @@ void BaseChannel::Deinit() {
 }
 
 bool BaseChannel::SetRtpTransport(webrtc::RtpTransportInternal* rtp_transport) {
+  TRACE_EVENT0("webrtc", "BaseChannel::SetRtpTransport");
   RTC_DCHECK_RUN_ON(network_thread());
   if (rtp_transport == rtp_transport_) {
     return true;
@@ -524,6 +525,7 @@ void BaseChannel::DisableMedia_w() {
 }
 
 void BaseChannel::UpdateWritableState_n() {
+  TRACE_EVENT0("webrtc", "BaseChannel::UpdateWritableState_n");
   if (rtp_transport_->IsWritable(/*rtcp=*/true) &&
       rtp_transport_->IsWritable(/*rtcp=*/false)) {
     ChannelWritable_n();
@@ -533,6 +535,7 @@ void BaseChannel::UpdateWritableState_n() {
 }
 
 void BaseChannel::ChannelWritable_n() {
+  TRACE_EVENT0("webrtc", "BaseChannel::ChannelWritable_n");
   if (writable_) {
     return;
   }
@@ -552,6 +555,7 @@ void BaseChannel::ChannelWritable_n() {
 }
 
 void BaseChannel::ChannelNotWritable_n() {
+  TRACE_EVENT0("webrtc", "BaseChannel::ChannelNotWritable_n");
   if (!writable_) {
     return;
   }
@@ -748,18 +752,12 @@ bool BaseChannel::UpdateRemoteStreams_w(
   return ret;
 }
 
-RtpHeaderExtensions BaseChannel::GetFilteredRtpHeaderExtensions(
+RtpHeaderExtensions BaseChannel::GetDeduplicatedRtpHeaderExtensions(
     const RtpHeaderExtensions& extensions) {
-  if (crypto_options_.srtp.enable_encrypted_rtp_header_extensions) {
-    RtpHeaderExtensions filtered;
-    absl::c_copy_if(extensions, std::back_inserter(filtered),
-                    [](const webrtc::RtpExtension& extension) {
-                      return !extension.encrypt;
-                    });
-    return filtered;
-  }
-
-  return webrtc::RtpExtension::FilterDuplicateNonEncrypted(extensions);
+  return webrtc::RtpExtension::DeduplicateHeaderExtensions(
+      extensions, crypto_options_.srtp.enable_encrypted_rtp_header_extensions
+                      ? webrtc::RtpExtension::kPreferEncryptedExtension
+                      : webrtc::RtpExtension::kDiscardEncryptedExtension);
 }
 
 void BaseChannel::MaybeAddHandledPayloadType(int payload_type) {
@@ -829,7 +827,7 @@ bool VoiceChannel::SetLocalContent_w(const MediaContentDescription* content,
   RTC_LOG(LS_INFO) << "Setting local voice description for " << ToString();
 
   RtpHeaderExtensions rtp_header_extensions =
-      GetFilteredRtpHeaderExtensions(content->rtp_header_extensions());
+      GetDeduplicatedRtpHeaderExtensions(content->rtp_header_extensions());
   // TODO(tommi): There's a hop to the network thread here.
   // some of the below is also network thread related.
   UpdateRtpHeaderExtensionMap(rtp_header_extensions);
@@ -891,7 +889,7 @@ bool VoiceChannel::SetRemoteContent_w(const MediaContentDescription* content,
   const AudioContentDescription* audio = content->as_audio();
 
   RtpHeaderExtensions rtp_header_extensions =
-      GetFilteredRtpHeaderExtensions(audio->rtp_header_extensions());
+      GetDeduplicatedRtpHeaderExtensions(audio->rtp_header_extensions());
 
   AudioSendParameters send_params = last_send_params_;
   RtpSendParametersFromMediaDescription(
@@ -991,7 +989,7 @@ bool VideoChannel::SetLocalContent_w(const MediaContentDescription* content,
   RTC_LOG(LS_INFO) << "Setting local video description for " << ToString();
 
   RtpHeaderExtensions rtp_header_extensions =
-      GetFilteredRtpHeaderExtensions(content->rtp_header_extensions());
+      GetDeduplicatedRtpHeaderExtensions(content->rtp_header_extensions());
   UpdateRtpHeaderExtensionMap(rtp_header_extensions);
   media_channel()->SetExtmapAllowMixed(content->extmap_allow_mixed());
 
@@ -1084,7 +1082,7 @@ bool VideoChannel::SetRemoteContent_w(const MediaContentDescription* content,
   const VideoContentDescription* video = content->as_video();
 
   RtpHeaderExtensions rtp_header_extensions =
-      GetFilteredRtpHeaderExtensions(video->rtp_header_extensions());
+      GetDeduplicatedRtpHeaderExtensions(video->rtp_header_extensions());
 
   VideoSendParameters send_params = last_send_params_;
   RtpSendParametersFromMediaDescription(

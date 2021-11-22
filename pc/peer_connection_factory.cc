@@ -18,17 +18,14 @@
 #include "api/call/call_factory_interface.h"
 #include "api/fec_controller.h"
 #include "api/ice_transport_interface.h"
-#include "api/media_stream_proxy.h"
-#include "api/media_stream_track_proxy.h"
 #include "api/network_state_predictor.h"
 #include "api/packet_socket_factory.h"
-#include "api/peer_connection_factory_proxy.h"
-#include "api/peer_connection_proxy.h"
 #include "api/rtc_event_log/rtc_event_log.h"
 #include "api/sequence_checker.h"
 #include "api/transport/bitrate_settings.h"
 #include "api/units/data_rate.h"
 #include "call/audio_state.h"
+#include "call/rtp_transport_controller_send_factory.h"
 #include "media/base/media_engine.h"
 #include "p2p/base/basic_async_resolver_factory.h"
 #include "p2p/base/basic_packet_socket_factory.h"
@@ -38,7 +35,11 @@
 #include "pc/audio_track.h"
 #include "pc/local_audio_source.h"
 #include "pc/media_stream.h"
+#include "pc/media_stream_proxy.h"
+#include "pc/media_stream_track_proxy.h"
 #include "pc/peer_connection.h"
+#include "pc/peer_connection_factory_proxy.h"
+#include "pc/peer_connection_proxy.h"
 #include "pc/rtp_parameters_conversion.h"
 #include "pc/session_description.h"
 #include "pc/video_track.h"
@@ -100,7 +101,11 @@ PeerConnectionFactory::PeerConnectionFactory(
           std::move(dependencies->network_state_predictor_factory)),
       injected_network_controller_factory_(
           std::move(dependencies->network_controller_factory)),
-      neteq_factory_(std::move(dependencies->neteq_factory)) {}
+      neteq_factory_(std::move(dependencies->neteq_factory)),
+      transport_controller_send_factory_(
+          (dependencies->transport_controller_send_factory)
+              ? std::move(dependencies->transport_controller_send_factory)
+              : std::make_unique<RtpTransportControllerSendFactory>()) {}
 
 PeerConnectionFactory::PeerConnectionFactory(
     PeerConnectionFactoryDependencies dependencies)
@@ -139,6 +144,7 @@ RtpCapabilities PeerConnectionFactory::GetRtpSenderCapabilities(
     case cricket::MEDIA_TYPE_UNSUPPORTED:
       return RtpCapabilities();
   }
+  RTC_DLOG(LS_ERROR) << "Got unexpected MediaType " << kind;
   RTC_CHECK_NOTREACHED();
 }
 
@@ -165,6 +171,7 @@ RtpCapabilities PeerConnectionFactory::GetRtpReceiverCapabilities(
     case cricket::MEDIA_TYPE_UNSUPPORTED:
       return RtpCapabilities();
   }
+  RTC_DLOG(LS_ERROR) << "Got unexpected MediaType " << kind;
   RTC_CHECK_NOTREACHED();
 }
 
@@ -332,7 +339,8 @@ std::unique_ptr<Call> PeerConnectionFactory::CreateCall_w(
   }
 
   call_config.trials = &trials();
-
+  call_config.rtp_transport_controller_send_factory =
+      transport_controller_send_factory_.get();
   return std::unique_ptr<Call>(
       context_->call_factory()->CreateCall(call_config));
 }

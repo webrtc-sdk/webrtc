@@ -118,6 +118,7 @@
 #include "api/transport/webrtc_key_value_config.h"
 #include "api/turn_customizer.h"
 #include "api/video/video_bitrate_allocator_factory.h"
+#include "call/rtp_transport_controller_send_factory_interface.h"
 #include "media/base/media_config.h"
 #include "media/base/media_engine.h"
 // TODO(bugs.webrtc.org/7447): We plan to provide a way to let applications
@@ -918,9 +919,24 @@ class RTC_EXPORT PeerConnectionInterface : public rtc::RefCountInterface {
   // Also, calling CreateDataChannel is the only way to get a data "m=" section
   // in SDP, so it should be done before CreateOffer is called, if the
   // application plans to use data channels.
+  virtual RTCErrorOr<rtc::scoped_refptr<DataChannelInterface>>
+  CreateDataChannelOrError(const std::string& label,
+                           const DataChannelInit* config) {
+    return RTCError(RTCErrorType::INTERNAL_ERROR, "dummy function called");
+  }
+  // TODO(crbug.com/788659): Remove "virtual" below and default implementation
+  // above once mock in Chrome is fixed.
+  ABSL_DEPRECATED("Use CreateDataChannelOrError")
   virtual rtc::scoped_refptr<DataChannelInterface> CreateDataChannel(
       const std::string& label,
-      const DataChannelInit* config) = 0;
+      const DataChannelInit* config) {
+    auto result = CreateDataChannelOrError(label, config);
+    if (!result.ok()) {
+      return nullptr;
+    } else {
+      return result.MoveValue();
+    }
+  }
 
   // NOTE: For the following 6 methods, it's only safe to dereference the
   // SessionDescriptionInterface on signaling_thread() (for example, calling
@@ -1090,13 +1106,11 @@ class RTC_EXPORT PeerConnectionInterface : public rtc::RefCountInterface {
   // playout of the underlying audio device but starts a task which will poll
   // for audio data every 10ms to ensure that audio processing happens and the
   // audio statistics are updated.
-  // TODO(henrika): deprecate and remove this.
   virtual void SetAudioPlayout(bool playout) {}
 
   // Enable/disable recording of transmitted audio streams. Enabled by default.
   // Note that even if recording is enabled, streams will only be recorded if
   // the appropriate SDP is also applied.
-  // TODO(henrika): deprecate and remove this.
   virtual void SetAudioRecording(bool recording) {}
 
   // Looks up the DtlsTransport associated with a MID value.
@@ -1385,6 +1399,8 @@ struct RTC_EXPORT PeerConnectionFactoryDependencies final {
   std::unique_ptr<NetEqFactory> neteq_factory;
   std::unique_ptr<SctpTransportFactoryInterface> sctp_factory;
   std::unique_ptr<WebRtcKeyValueConfig> trials;
+  std::unique_ptr<RtpTransportControllerSendFactoryInterface>
+      transport_controller_send_factory;
 };
 
 // PeerConnectionFactoryInterface is the factory interface used for creating
