@@ -54,7 +54,6 @@ namespace webrtc {
 
 class NackModule2;
 class PacketRouter;
-class ProcessThread;
 class ReceiveStatistics;
 class RtcpRttStats;
 class RtpPacketReceived;
@@ -65,11 +64,18 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
                                 public RecoveredPacketReceiver,
                                 public RtpPacketSinkInterface,
                                 public KeyFrameRequestSender,
-                                public OnCompleteFrameCallback,
                                 public OnDecryptedFrameCallback,
                                 public OnDecryptionStatusChangeCallback,
                                 public RtpVideoFrameReceiver {
  public:
+  // A complete frame is a frame which has received all its packets and all its
+  // references are known.
+  class OnCompleteFrameCallback {
+   public:
+    virtual ~OnCompleteFrameCallback() {}
+    virtual void OnCompleteFrame(std::unique_ptr<EncodedFrame> frame) = 0;
+  };
+
   RtpVideoStreamReceiver2(
       TaskQueueBase* current_queue,
       Clock* clock,
@@ -83,7 +89,6 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
       ReceiveStatistics* rtp_receive_statistics,
       RtcpPacketTypeCounterObserver* rtcp_packet_type_counter_observer,
       RtcpCnameCallback* rtcp_cname_callback,
-      ProcessThread* process_thread,
       NackSender* nack_sender,
       // The KeyFrameRequestSender is optional; if not provided, key frame
       // requests are sent via the internal RtpRtcp module.
@@ -114,7 +119,7 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
 
   // Returns number of different frames seen.
   int GetUniqueFramesSeen() const {
-    RTC_DCHECK_RUN_ON(&worker_task_checker_);
+    RTC_DCHECK_RUN_ON(&packet_sequence_checker_);
     return frame_counter_.GetUniqueSeen();
   }
 
@@ -146,11 +151,11 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
   // Decryption not SRTP.
   bool IsDecryptable() const;
 
-  // Don't use, still experimental.
+  // Request packet retransmits via NACK. Called via
+  // VideoReceiveStream2::SendNack, which gets called when
+  // RtpVideoStreamReceiver2::RtcpFeedbackBuffer's SendNack and
+  // SendBufferedRtcpFeedback methods (see `rtcp_feedback_buffer_` below).
   void RequestPacketRetransmit(const std::vector<uint16_t>& sequence_numbers);
-
-  // Implements OnCompleteFrameCallback.
-  void OnCompleteFrame(std::unique_ptr<EncodedFrame> frame) override;
 
   // Implements OnDecryptedFrameCallback.
   void OnDecryptedFrame(std::unique_ptr<RtpFrameObject> frame) override;
@@ -178,6 +183,9 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
  private:
   // Implements RtpVideoFrameReceiver.
   void ManageFrame(std::unique_ptr<RtpFrameObject> frame) override;
+
+  void OnCompleteFrames(RtpFrameReferenceFinder::ReturnVector frame)
+      RTC_RUN_ON(packet_sequence_checker_);
 
   // Used for buffering RTCP feedback messages and sending them all together.
   // Note:
@@ -226,20 +234,20 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
       bool decodability_flag;
     };
 
-    RTC_NO_UNIQUE_ADDRESS SequenceChecker worker_task_checker_;
+    RTC_NO_UNIQUE_ADDRESS SequenceChecker packet_sequence_checker_;
     KeyFrameRequestSender* const key_frame_request_sender_;
     NackSender* const nack_sender_;
     LossNotificationSender* const loss_notification_sender_;
 
     // Key-frame-request-related state.
-    bool request_key_frame_ RTC_GUARDED_BY(worker_task_checker_);
+    bool request_key_frame_ RTC_GUARDED_BY(packet_sequence_checker_);
 
     // NACK-related state.
     std::vector<uint16_t> nack_sequence_numbers_
-        RTC_GUARDED_BY(worker_task_checker_);
+        RTC_GUARDED_BY(packet_sequence_checker_);
 
     absl::optional<LossNotificationState> lntf_state_
-        RTC_GUARDED_BY(worker_task_checker_);
+        RTC_GUARDED_BY(packet_sequence_checker_);
   };
   enum ParseGenericDependenciesResult {
     kDropPacket,
@@ -249,28 +257,34 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
 
   // Entry point doing non-stats work for a received packet. Called
   // for the same packet both before and after RED decapsulation.
-  void ReceivePacket(const RtpPacketReceived& packet);
+  void ReceivePacket(const RtpPacketReceived& packet)
+      RTC_RUN_ON(packet_sequence_checker_);
+
   // Parses and handles RED headers.
   // This function assumes that it's being called from only one thread.
-  void ParseAndHandleEncapsulatingHeader(const RtpPacketReceived& packet);
-  void NotifyReceiverOfEmptyPacket(uint16_t seq_num);
+  void ParseAndHandleEncapsulatingHeader(const RtpPacketReceived& packet)
+      RTC_RUN_ON(packet_sequence_checker_);
+  void NotifyReceiverOfEmptyPacket(uint16_t seq_num)
+      RTC_RUN_ON(packet_sequence_checker_);
   void UpdateHistograms();
   bool IsRedEnabled() const;
-  void InsertSpsPpsIntoTracker(uint8_t payload_type);
-  void OnInsertedPacket(video_coding::PacketBuffer::InsertResult result);
+  void InsertSpsPpsIntoTracker(uint8_t payload_type)
+      RTC_RUN_ON(packet_sequence_checker_);
+  void OnInsertedPacket(video_coding::PacketBuffer::InsertResult result)
+      RTC_RUN_ON(packet_sequence_checker_);
   ParseGenericDependenciesResult ParseGenericDependenciesExtension(
       const RtpPacketReceived& rtp_packet,
-      RTPVideoHeader* video_header) RTC_RUN_ON(worker_task_checker_);
-  void OnAssembledFrame(std::unique_ptr<RtpFrameObject> frame);
+      RTPVideoHeader* video_header) RTC_RUN_ON(packet_sequence_checker_);
+  void OnAssembledFrame(std::unique_ptr<RtpFrameObject> frame)
+      RTC_RUN_ON(packet_sequence_checker_);
   void UpdatePacketReceiveTimestamps(const RtpPacketReceived& packet,
                                      bool is_keyframe)
-      RTC_RUN_ON(worker_task_checker_);
+      RTC_RUN_ON(packet_sequence_checker_);
 
   Clock* const clock_;
   // Ownership of this object lies with VideoReceiveStream, which owns |this|.
   const VideoReceiveStream::Config& config_;
   PacketRouter* const packet_router_;
-  ProcessThread* const process_thread_;
 
   RemoteNtpTimeEstimator ntp_estimator_;
 
@@ -283,8 +297,16 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
   std::unique_ptr<UlpfecReceiver> ulpfec_receiver_;
 
   RTC_NO_UNIQUE_ADDRESS SequenceChecker worker_task_checker_;
-  bool receiving_ RTC_GUARDED_BY(worker_task_checker_);
-  int64_t last_packet_log_ms_ RTC_GUARDED_BY(worker_task_checker_);
+  // TODO(bugs.webrtc.org/11993): This checker conceptually represents
+  // operations that belong to the network thread. The Call class is currently
+  // moving towards handling network packets on the network thread and while
+  // that work is ongoing, this checker may in practice represent the worker
+  // thread, but still serves as a mechanism of grouping together concepts
+  // that belong to the network thread. Once the packets are fully delivered
+  // on the network thread, this comment will be deleted.
+  RTC_NO_UNIQUE_ADDRESS SequenceChecker packet_sequence_checker_;
+  bool receiving_ RTC_GUARDED_BY(packet_sequence_checker_);
+  int64_t last_packet_log_ms_ RTC_GUARDED_BY(packet_sequence_checker_);
 
   const std::unique_ptr<ModuleRtpRtcpImpl2> rtp_rtcp_;
 
@@ -296,66 +318,68 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
   std::unique_ptr<LossNotificationController> loss_notification_controller_;
 
   video_coding::PacketBuffer packet_buffer_
-      RTC_GUARDED_BY(worker_task_checker_);
-  UniqueTimestampCounter frame_counter_ RTC_GUARDED_BY(worker_task_checker_);
+      RTC_GUARDED_BY(packet_sequence_checker_);
+  UniqueTimestampCounter frame_counter_
+      RTC_GUARDED_BY(packet_sequence_checker_);
   SeqNumUnwrapper<uint16_t> frame_id_unwrapper_
-      RTC_GUARDED_BY(worker_task_checker_);
+      RTC_GUARDED_BY(packet_sequence_checker_);
 
   // Video structure provided in the dependency descriptor in a first packet
   // of a key frame. It is required to parse dependency descriptor in the
   // following delta packets.
   std::unique_ptr<FrameDependencyStructure> video_structure_
-      RTC_GUARDED_BY(worker_task_checker_);
+      RTC_GUARDED_BY(packet_sequence_checker_);
   // Frame id of the last frame with the attached video structure.
   // absl::nullopt when `video_structure_ == nullptr`;
   absl::optional<int64_t> video_structure_frame_id_
-      RTC_GUARDED_BY(worker_task_checker_);
+      RTC_GUARDED_BY(packet_sequence_checker_);
 
   std::unique_ptr<RtpFrameReferenceFinder> reference_finder_
-      RTC_GUARDED_BY(worker_task_checker_);
+      RTC_GUARDED_BY(packet_sequence_checker_);
   absl::optional<VideoCodecType> current_codec_
-      RTC_GUARDED_BY(worker_task_checker_);
+      RTC_GUARDED_BY(packet_sequence_checker_);
   uint32_t last_assembled_frame_rtp_timestamp_
-      RTC_GUARDED_BY(worker_task_checker_);
+      RTC_GUARDED_BY(packet_sequence_checker_);
 
   std::map<int64_t, uint16_t> last_seq_num_for_pic_id_
-      RTC_GUARDED_BY(worker_task_checker_);
-  video_coding::H264SpsPpsTracker tracker_ RTC_GUARDED_BY(worker_task_checker_);
+      RTC_GUARDED_BY(packet_sequence_checker_);
+  video_coding::H264SpsPpsTracker tracker_
+      RTC_GUARDED_BY(packet_sequence_checker_);
 
   // Maps payload id to the depacketizer.
   std::map<uint8_t, std::unique_ptr<VideoRtpDepacketizer>> payload_type_map_
-      RTC_GUARDED_BY(worker_task_checker_);
+      RTC_GUARDED_BY(packet_sequence_checker_);
 
   // TODO(johan): Remove pt_codec_params_ once
   // https://bugs.chromium.org/p/webrtc/issues/detail?id=6883 is resolved.
   // Maps a payload type to a map of out-of-band supplied codec parameters.
   std::map<uint8_t, std::map<std::string, std::string>> pt_codec_params_
-      RTC_GUARDED_BY(worker_task_checker_);
-  int16_t last_payload_type_ RTC_GUARDED_BY(worker_task_checker_) = -1;
+      RTC_GUARDED_BY(packet_sequence_checker_);
+  int16_t last_payload_type_ RTC_GUARDED_BY(packet_sequence_checker_) = -1;
 
-  bool has_received_frame_ RTC_GUARDED_BY(worker_task_checker_);
+  bool has_received_frame_ RTC_GUARDED_BY(packet_sequence_checker_);
 
   absl::optional<uint32_t> last_received_rtp_timestamp_
-      RTC_GUARDED_BY(worker_task_checker_);
+      RTC_GUARDED_BY(packet_sequence_checker_);
   absl::optional<uint32_t> last_received_keyframe_rtp_timestamp_
-      RTC_GUARDED_BY(worker_task_checker_);
+      RTC_GUARDED_BY(packet_sequence_checker_);
   absl::optional<Timestamp> last_received_rtp_system_time_
-      RTC_GUARDED_BY(worker_task_checker_);
+      RTC_GUARDED_BY(packet_sequence_checker_);
   absl::optional<Timestamp> last_received_keyframe_rtp_system_time_
-      RTC_GUARDED_BY(worker_task_checker_);
+      RTC_GUARDED_BY(packet_sequence_checker_);
 
   // Handles incoming encrypted frames and forwards them to the
   // rtp_reference_finder if they are decryptable.
   std::unique_ptr<BufferedFrameDecryptor> buffered_frame_decryptor_
-      RTC_PT_GUARDED_BY(worker_task_checker_);
+      RTC_PT_GUARDED_BY(packet_sequence_checker_);
   bool frames_decryptable_ RTC_GUARDED_BY(worker_task_checker_);
   absl::optional<ColorSpace> last_color_space_;
 
   AbsoluteCaptureTimeInterpolator absolute_capture_time_interpolator_
-      RTC_GUARDED_BY(worker_task_checker_);
+      RTC_GUARDED_BY(packet_sequence_checker_);
 
   CaptureClockOffsetUpdater capture_clock_offset_updater_
-      RTC_GUARDED_BY(worker_task_checker_);
+      RTC_GUARDED_BY(packet_sequence_checker_);
 
   int64_t last_completed_picture_id_ = 0;
 
@@ -363,9 +387,9 @@ class RtpVideoStreamReceiver2 : public LossNotificationSender,
       frame_transformer_delegate_;
 
   SeqNumUnwrapper<uint16_t> rtp_seq_num_unwrapper_
-      RTC_GUARDED_BY(worker_task_checker_);
+      RTC_GUARDED_BY(packet_sequence_checker_);
   std::map<int64_t, RtpPacketInfo> packet_infos_
-      RTC_GUARDED_BY(worker_task_checker_);
+      RTC_GUARDED_BY(packet_sequence_checker_);
 };
 
 }  // namespace webrtc

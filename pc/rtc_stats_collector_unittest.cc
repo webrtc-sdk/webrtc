@@ -22,6 +22,7 @@
 
 #include "absl/memory/memory.h"
 #include "absl/strings/str_replace.h"
+#include "api/dtls_transport_interface.h"
 #include "api/media_stream_track.h"
 #include "api/rtp_parameters.h"
 #include "api/stats/rtc_stats_report.h"
@@ -199,14 +200,34 @@ std::unique_ptr<cricket::Candidate> CreateFakeCandidate(
   return candidate;
 }
 
+class FakeAudioProcessor : public AudioProcessorInterface {
+ public:
+  FakeAudioProcessor() {}
+  ~FakeAudioProcessor() {}
+
+ private:
+  AudioProcessorInterface::AudioProcessorStatistics GetStats(
+      bool has_recv_streams) override {
+    AudioProcessorStatistics stats;
+    stats.apm_statistics.echo_return_loss = 2.0;
+    stats.apm_statistics.echo_return_loss_enhancement = 3.0;
+    return stats;
+  }
+};
+
 class FakeAudioTrackForStats : public MediaStreamTrack<AudioTrackInterface> {
  public:
   static rtc::scoped_refptr<FakeAudioTrackForStats> Create(
       const std::string& id,
-      MediaStreamTrackInterface::TrackState state) {
+      MediaStreamTrackInterface::TrackState state,
+      bool create_fake_audio_processor) {
     rtc::scoped_refptr<FakeAudioTrackForStats> audio_track_stats(
         new rtc::RefCountedObject<FakeAudioTrackForStats>(id));
     audio_track_stats->set_state(state);
+    if (create_fake_audio_processor) {
+      audio_track_stats->processor_ =
+          rtc::make_ref_counted<FakeAudioProcessor>();
+    }
     return audio_track_stats;
   }
 
@@ -221,8 +242,11 @@ class FakeAudioTrackForStats : public MediaStreamTrack<AudioTrackInterface> {
   void RemoveSink(webrtc::AudioTrackSinkInterface* sink) override {}
   bool GetSignalLevel(int* level) override { return false; }
   rtc::scoped_refptr<AudioProcessorInterface> GetAudioProcessor() override {
-    return nullptr;
+    return processor_;
   }
+
+ private:
+  rtc::scoped_refptr<FakeAudioProcessor> processor_;
 };
 
 class FakeVideoTrackSourceForStats : public VideoTrackSourceInterface {
@@ -307,9 +331,11 @@ class FakeVideoTrackForStats : public MediaStreamTrack<VideoTrackInterface> {
 rtc::scoped_refptr<MediaStreamTrackInterface> CreateFakeTrack(
     cricket::MediaType media_type,
     const std::string& track_id,
-    MediaStreamTrackInterface::TrackState track_state) {
+    MediaStreamTrackInterface::TrackState track_state,
+    bool create_fake_audio_processor = false) {
   if (media_type == cricket::MEDIA_TYPE_AUDIO) {
-    return FakeAudioTrackForStats::Create(track_id, track_state);
+    return FakeAudioTrackForStats::Create(track_id, track_state,
+                                          create_fake_audio_processor);
   } else {
     RTC_DCHECK_EQ(media_type, cricket::MEDIA_TYPE_VIDEO);
     return FakeVideoTrackForStats::Create(track_id, track_state, nullptr);
@@ -925,9 +951,14 @@ TEST_F(RTCStatsCollectorTest, ToJsonProducesParseableJson) {
   ExampleStatsGraph graph = SetupExampleStatsGraphForSelectorTests();
   rtc::scoped_refptr<const RTCStatsReport> report = stats_->GetStatsReport();
   std::string json_format = report->ToJson();
-  Json::Reader reader;
+
+  Json::CharReaderBuilder builder;
   Json::Value json_value;
-  ASSERT_TRUE(reader.parse(json_format, json_value));
+  std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+  ASSERT_TRUE(reader->parse(json_format.c_str(),
+                            json_format.c_str() + json_format.size(),
+                            &json_value, nullptr));
+
   // A very brief sanity check on the result.
   EXPECT_EQ(report->size(), json_value.size());
 }
@@ -1706,7 +1737,7 @@ TEST_F(RTCStatsCollectorTest,
   voice_receiver_info.inserted_samples_for_deceleration = 987;
   voice_receiver_info.removed_samples_for_acceleration = 876;
   voice_receiver_info.silent_concealed_samples = 765;
-  voice_receiver_info.jitter_buffer_delay_seconds = 3456;
+  voice_receiver_info.jitter_buffer_delay_seconds = 3.456;
   voice_receiver_info.jitter_buffer_emitted_count = 13;
   voice_receiver_info.jitter_buffer_target_delay_seconds = 7.894;
   voice_receiver_info.jitter_buffer_flushes = 7;
@@ -1751,7 +1782,7 @@ TEST_F(RTCStatsCollectorTest,
   expected_remote_audio_track.inserted_samples_for_deceleration = 987;
   expected_remote_audio_track.removed_samples_for_acceleration = 876;
   expected_remote_audio_track.silent_concealed_samples = 765;
-  expected_remote_audio_track.jitter_buffer_delay = 3456;
+  expected_remote_audio_track.jitter_buffer_delay = 3.456;
   expected_remote_audio_track.jitter_buffer_emitted_count = 13;
   expected_remote_audio_track.jitter_buffer_target_delay = 7.894;
   expected_remote_audio_track.jitter_buffer_flushes = 7;
@@ -1923,6 +1954,7 @@ TEST_F(RTCStatsCollectorTest, CollectRTCInboundRTPStreamStats_Audio) {
   voice_media_info.receivers[0].local_stats[0].ssrc = 1;
   voice_media_info.receivers[0].packets_lost = -1;  // Signed per RFC3550
   voice_media_info.receivers[0].packets_rcvd = 2;
+  voice_media_info.receivers[0].nacks_sent = 5;
   voice_media_info.receivers[0].fec_packets_discarded = 5566;
   voice_media_info.receivers[0].fec_packets_received = 6677;
   voice_media_info.receivers[0].payload_bytes_rcvd = 3;
@@ -1971,6 +2003,7 @@ TEST_F(RTCStatsCollectorTest, CollectRTCInboundRTPStreamStats_Audio) {
   expected_audio.transport_id = "RTCTransport_TransportName_1";
   expected_audio.codec_id = "RTCCodec_AudioMid_Inbound_42";
   expected_audio.packets_received = 2;
+  expected_audio.nack_count = 5;
   expected_audio.fec_packets_discarded = 5566;
   expected_audio.fec_packets_received = 6677;
   expected_audio.bytes_received = 3;
@@ -2037,6 +2070,8 @@ TEST_F(RTCStatsCollectorTest, CollectRTCInboundRTPStreamStats_Video) {
   video_media_info.receivers[0].total_inter_frame_delay = 0.123;
   video_media_info.receivers[0].total_squared_inter_frame_delay = 0.00456;
   video_media_info.receivers[0].jitter_ms = 1199;
+  video_media_info.receivers[0].jitter_buffer_delay_seconds = 3.456;
+  video_media_info.receivers[0].jitter_buffer_emitted_count = 13;
 
   video_media_info.receivers[0].last_packet_received_timestamp_ms =
       absl::nullopt;
@@ -2084,6 +2119,8 @@ TEST_F(RTCStatsCollectorTest, CollectRTCInboundRTPStreamStats_Video) {
   expected_video.total_inter_frame_delay = 0.123;
   expected_video.total_squared_inter_frame_delay = 0.00456;
   expected_video.jitter = 1.199;
+  expected_video.jitter_buffer_delay = 3.456;
+  expected_video.jitter_buffer_emitted_count = 13;
   // |expected_video.last_packet_received_timestamp| should be undefined.
   // |expected_video.content_type| should be undefined.
   // |expected_video.decoder_implementation| should be undefined.
@@ -2128,6 +2165,7 @@ TEST_F(RTCStatsCollectorTest, CollectRTCOutboundRTPStreamStats_Audio) {
   voice_media_info.senders[0].payload_bytes_sent = 3;
   voice_media_info.senders[0].header_and_padding_bytes_sent = 12;
   voice_media_info.senders[0].retransmitted_bytes_sent = 30;
+  voice_media_info.senders[0].nacks_rcvd = 31;
   voice_media_info.senders[0].codec_payload_type = 42;
 
   RtpCodecParameters codec_parameters;
@@ -2161,6 +2199,7 @@ TEST_F(RTCStatsCollectorTest, CollectRTCOutboundRTPStreamStats_Audio) {
   expected_audio.bytes_sent = 3;
   expected_audio.header_bytes_sent = 12;
   expected_audio.retransmitted_bytes_sent = 30;
+  expected_audio.nack_count = 31;
 
   ASSERT_TRUE(report->Get(expected_audio.id()));
   EXPECT_EQ(
@@ -2198,6 +2237,8 @@ TEST_F(RTCStatsCollectorTest, CollectRTCOutboundRTPStreamStats_Video) {
   video_media_info.senders[0].total_packet_send_delay_ms = 10000;
   video_media_info.senders[0].quality_limitation_reason =
       QualityLimitationReason::kBandwidth;
+  video_media_info.senders[0].quality_limitation_durations_ms
+      [webrtc::QualityLimitationReason::kBandwidth] = 300;
   video_media_info.senders[0].quality_limitation_resolution_changes = 56u;
   video_media_info.senders[0].qp_sum = absl::nullopt;
   video_media_info.senders[0].content_type = VideoContentType::UNSPECIFIED;
@@ -2253,6 +2294,9 @@ TEST_F(RTCStatsCollectorTest, CollectRTCOutboundRTPStreamStats_Video) {
   expected_video.total_encoded_bytes_target = 1234;
   expected_video.total_packet_send_delay = 10.0;
   expected_video.quality_limitation_reason = "bandwidth";
+  expected_video.quality_limitation_durations = std::map<std::string, double>{
+      std::pair<std::string, double>{"bandwidth", 300.0},
+  };
   expected_video.quality_limitation_resolution_changes = 56u;
   expected_video.frame_width = 200u;
   expected_video.frame_height = 100u;
@@ -2322,7 +2366,7 @@ TEST_F(RTCStatsCollectorTest, CollectRTCTransportStats) {
   rtp_transport_channel_stats.component = cricket::ICE_CANDIDATE_COMPONENT_RTP;
   rtp_transport_channel_stats.ice_transport_stats.connection_infos.push_back(
       rtp_connection_info);
-  rtp_transport_channel_stats.dtls_state = cricket::DTLS_TRANSPORT_NEW;
+  rtp_transport_channel_stats.dtls_state = DtlsTransportState::kNew;
   rtp_transport_channel_stats.ice_transport_stats
       .selected_candidate_pair_changes = 1;
   pc_->SetTransportStats(kTransportName, {rtp_transport_channel_stats});
@@ -2360,7 +2404,7 @@ TEST_F(RTCStatsCollectorTest, CollectRTCTransportStats) {
       cricket::ICE_CANDIDATE_COMPONENT_RTCP;
   rtcp_transport_channel_stats.ice_transport_stats.connection_infos.push_back(
       rtcp_connection_info);
-  rtcp_transport_channel_stats.dtls_state = cricket::DTLS_TRANSPORT_CONNECTING;
+  rtcp_transport_channel_stats.dtls_state = DtlsTransportState::kConnecting;
   pc_->SetTransportStats(kTransportName, {rtp_transport_channel_stats,
                                           rtcp_transport_channel_stats});
 
@@ -2476,7 +2520,7 @@ TEST_F(RTCStatsCollectorTest, CollectRTCTransportStatsWithCrypto) {
   rtp_transport_channel_stats.ice_transport_stats.connection_infos.push_back(
       rtp_connection_info);
   // The state must be connected in order for crypto parameters to show up.
-  rtp_transport_channel_stats.dtls_state = cricket::DTLS_TRANSPORT_CONNECTED;
+  rtp_transport_channel_stats.dtls_state = DtlsTransportState::kConnected;
   rtp_transport_channel_stats.ice_transport_stats
       .selected_candidate_pair_changes = 1;
   rtp_transport_channel_stats.ssl_version_bytes = 0x0203;
@@ -2520,6 +2564,7 @@ TEST_F(RTCStatsCollectorTest, CollectNoStreamRTCOutboundRTPStreamStats_Audio) {
   voice_media_info.senders[0].payload_bytes_sent = 3;
   voice_media_info.senders[0].header_and_padding_bytes_sent = 4;
   voice_media_info.senders[0].retransmitted_bytes_sent = 30;
+  voice_media_info.senders[0].nacks_rcvd = 31;
   voice_media_info.senders[0].codec_payload_type = 42;
 
   RtpCodecParameters codec_parameters;
@@ -2553,6 +2598,7 @@ TEST_F(RTCStatsCollectorTest, CollectNoStreamRTCOutboundRTPStreamStats_Audio) {
   expected_audio.bytes_sent = 3;
   expected_audio.header_bytes_sent = 4;
   expected_audio.retransmitted_bytes_sent = 30;
+  expected_audio.nack_count = 31;
 
   ASSERT_TRUE(report->Get(expected_audio.id()));
   EXPECT_EQ(
@@ -2574,6 +2620,9 @@ TEST_F(RTCStatsCollectorTest, RTCAudioSourceStatsCollectedForSenderWithTrack) {
   voice_media_info.senders[0].audio_level = 32767;  // [0,32767]
   voice_media_info.senders[0].total_input_energy = 2.0;
   voice_media_info.senders[0].total_input_duration = 3.0;
+  voice_media_info.senders[0].apm_statistics.echo_return_loss = 42.0;
+  voice_media_info.senders[0].apm_statistics.echo_return_loss_enhancement =
+      52.0;
   auto* voice_media_channel = pc_->AddVoiceChannel("AudioMid", "TransportName");
   voice_media_channel->SetStats(voice_media_info);
   stats_->SetupLocalTrackAndSender(cricket::MEDIA_TYPE_AUDIO,
@@ -2589,6 +2638,8 @@ TEST_F(RTCStatsCollectorTest, RTCAudioSourceStatsCollectedForSenderWithTrack) {
   expected_audio.audio_level = 1.0;  // [0,1]
   expected_audio.total_audio_energy = 2.0;
   expected_audio.total_samples_duration = 3.0;
+  expected_audio.echo_return_loss = 42.0;
+  expected_audio.echo_return_loss_enhancement = 52.0;
 
   ASSERT_TRUE(report->Get(expected_audio.id()));
   EXPECT_EQ(report->Get(expected_audio.id())->cast_to<RTCAudioSourceStats>(),
@@ -2963,11 +3014,11 @@ TEST_P(RTCStatsCollectorTestWithParamKind,
 
   cricket::TransportChannelStats rtp_transport_channel_stats;
   rtp_transport_channel_stats.component = cricket::ICE_CANDIDATE_COMPONENT_RTP;
-  rtp_transport_channel_stats.dtls_state = cricket::DTLS_TRANSPORT_NEW;
+  rtp_transport_channel_stats.dtls_state = DtlsTransportState::kNew;
   cricket::TransportChannelStats rtcp_transport_channel_stats;
   rtcp_transport_channel_stats.component =
       cricket::ICE_CANDIDATE_COMPONENT_RTCP;
-  rtcp_transport_channel_stats.dtls_state = cricket::DTLS_TRANSPORT_NEW;
+  rtcp_transport_channel_stats.dtls_state = DtlsTransportState::kNew;
   pc_->SetTransportStats("TransportName", {rtp_transport_channel_stats,
                                            rtcp_transport_channel_stats});
   AddSenderInfoAndMediaChannel("TransportName", {report_block_data},
@@ -3048,6 +3099,64 @@ TEST_F(RTCStatsCollectorTest,
 
   rtc::scoped_refptr<const RTCStatsReport> report = stats_->GetStatsReport();
   EXPECT_FALSE(report->Get("RTCVideoSource_42"));
+}
+
+// Test collecting echo return loss stats from the audio processor attached to
+// the track, rather than the voice sender info.
+TEST_F(RTCStatsCollectorTest, CollectEchoReturnLossFromTrackAudioProcessor) {
+  rtc::scoped_refptr<MediaStream> local_stream =
+      MediaStream::Create("LocalStreamId");
+  pc_->mutable_local_streams()->AddStream(local_stream);
+
+  // Local audio track
+  rtc::scoped_refptr<MediaStreamTrackInterface> local_audio_track =
+      CreateFakeTrack(cricket::MEDIA_TYPE_AUDIO, "LocalAudioTrackID",
+                      MediaStreamTrackInterface::kEnded,
+                      /*create_fake_audio_processor=*/true);
+  local_stream->AddTrack(
+      static_cast<AudioTrackInterface*>(local_audio_track.get()));
+
+  cricket::VoiceSenderInfo voice_sender_info_ssrc1;
+  voice_sender_info_ssrc1.local_stats.push_back(cricket::SsrcSenderInfo());
+  voice_sender_info_ssrc1.local_stats[0].ssrc = 1;
+
+  stats_->CreateMockRtpSendersReceiversAndChannels(
+      {std::make_pair(local_audio_track.get(), voice_sender_info_ssrc1)}, {},
+      {}, {}, {local_stream->id()}, {});
+
+  rtc::scoped_refptr<const RTCStatsReport> report = stats_->GetStatsReport();
+
+  RTCMediaStreamTrackStats expected_local_audio_track_ssrc1(
+      IdForType<RTCMediaStreamTrackStats>(report), report->timestamp_us(),
+      RTCMediaStreamTrackKind::kAudio);
+  expected_local_audio_track_ssrc1.track_identifier = local_audio_track->id();
+  expected_local_audio_track_ssrc1.media_source_id =
+      "RTCAudioSource_11";  // Attachment ID = SSRC + 10
+  expected_local_audio_track_ssrc1.remote_source = false;
+  expected_local_audio_track_ssrc1.ended = true;
+  expected_local_audio_track_ssrc1.detached = false;
+  expected_local_audio_track_ssrc1.echo_return_loss = 2.0;
+  expected_local_audio_track_ssrc1.echo_return_loss_enhancement = 3.0;
+  ASSERT_TRUE(report->Get(expected_local_audio_track_ssrc1.id()))
+      << "Did not find " << expected_local_audio_track_ssrc1.id() << " in "
+      << report->ToJson();
+  EXPECT_EQ(expected_local_audio_track_ssrc1,
+            report->Get(expected_local_audio_track_ssrc1.id())
+                ->cast_to<RTCMediaStreamTrackStats>());
+
+  RTCAudioSourceStats expected_audio("RTCAudioSource_11",
+                                     report->timestamp_us());
+  expected_audio.track_identifier = "LocalAudioTrackID";
+  expected_audio.kind = "audio";
+  expected_audio.audio_level = 0;
+  expected_audio.total_audio_energy = 0;
+  expected_audio.total_samples_duration = 0;
+  expected_audio.echo_return_loss = 2.0;
+  expected_audio.echo_return_loss_enhancement = 3.0;
+
+  ASSERT_TRUE(report->Get(expected_audio.id()));
+  EXPECT_EQ(report->Get(expected_audio.id())->cast_to<RTCAudioSourceStats>(),
+            expected_audio);
 }
 
 TEST_F(RTCStatsCollectorTest, GetStatsWithSenderSelector) {

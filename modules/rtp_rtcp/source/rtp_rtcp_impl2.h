@@ -23,6 +23,7 @@
 #include "api/rtp_headers.h"
 #include "api/sequence_checker.h"
 #include "api/task_queue/task_queue_base.h"
+#include "api/units/time_delta.h"
 #include "api/video/video_bitrate_allocation.h"
 #include "modules/include/module_fec_types.h"
 #include "modules/remote_bitrate_estimator/include/remote_bitrate_estimator.h"
@@ -32,7 +33,6 @@
 #include "modules/rtp_rtcp/source/rtcp_sender.h"
 #include "modules/rtp_rtcp/source/rtp_packet_history.h"
 #include "modules/rtp_rtcp/source/rtp_packet_to_send.h"
-#include "modules/rtp_rtcp/source/rtp_rtcp_impl2.h"
 #include "modules/rtp_rtcp/source/rtp_sender.h"
 #include "modules/rtp_rtcp/source/rtp_sender_egress.h"
 #include "rtc_base/gtest_prod_util.h"
@@ -40,6 +40,8 @@
 #include "rtc_base/system/no_unique_address.h"
 #include "rtc_base/task_utils/pending_task_safety_flag.h"
 #include "rtc_base/task_utils/repeating_task.h"
+#include "rtc_base/task_utils/to_queued_task.h"
+#include "rtc_base/thread_annotations.h"
 
 namespace webrtc {
 
@@ -48,7 +50,6 @@ struct PacedPacketInfo;
 struct RTPVideoHeader;
 
 class ModuleRtpRtcpImpl2 final : public RtpRtcpInterface,
-                                 public Module,
                                  public RTCPReceiver::ModuleRtpRtcp {
  public:
   explicit ModuleRtpRtcpImpl2(
@@ -62,13 +63,6 @@ class ModuleRtpRtcpImpl2 final : public RtpRtcpInterface,
   static std::unique_ptr<ModuleRtpRtcpImpl2> Create(
       const Configuration& configuration);
 
-  // Returns the number of milliseconds until the module want a worker thread to
-  // call Process.
-  int64_t TimeUntilNextProcess() override;
-
-  // Process any pending tasks such as timeouts.
-  void Process() override;
-
   // Receiver part.
 
   // Called when we receive an RTCP packet.
@@ -76,6 +70,8 @@ class ModuleRtpRtcpImpl2 final : public RtpRtcpInterface,
                           size_t incoming_packet_length) override;
 
   void SetRemoteSSRC(uint32_t ssrc) override;
+
+  void SetLocalSsrc(uint32_t local_ssrc) override;
 
   // Sender part.
   void RegisterSendPayloadFrequency(int payload_type,
@@ -109,6 +105,11 @@ class ModuleRtpRtcpImpl2 final : public RtpRtcpInterface,
   RtpState GetRtxState() const override;
 
   uint32_t SSRC() const override { return rtcp_sender_.SSRC(); }
+
+  // Semantically identical to `SSRC()` but must be called on the packet
+  // delivery thread/tq and returns the ssrc that maps to
+  // RtpRtcpInterface::Configuration::local_media_ssrc.
+  uint32_t local_media_ssrc() const;
 
   void SetRid(const std::string& rid) override;
 
@@ -193,7 +194,8 @@ class ModuleRtpRtcpImpl2 final : public RtpRtcpInterface,
   int64_t ExpectedRetransmissionTimeMs() const override;
 
   // Force a send of an RTCP packet.
-  // Normal SR and RR are triggered via the process function.
+  // Normal SR and RR are triggered via the task queue that's current when this
+  // object is created.
   int32_t SendRTCP(RTCPPacketType rtcpPacketType) override;
 
   void GetSendStreamDataCounters(
@@ -282,18 +284,32 @@ class ModuleRtpRtcpImpl2 final : public RtpRtcpInterface,
   // Returns true if the module is configured to store packets.
   bool StorePackets() const;
 
+  // Used from RtcpSenderMediator to maybe send rtcp.
+  void MaybeSendRtcp() RTC_RUN_ON(worker_queue_);
+
+  // Called when |rtcp_sender_| informs of the next RTCP instant. The method may
+  // be called on various sequences, and is called under a RTCPSenderLock.
+  void ScheduleRtcpSendEvaluation(TimeDelta duration);
+
+  // Helper method combating too early delayed calls from task queues.
+  // TODO(bugs.webrtc.org/12889): Consider removing this function when the issue
+  // is resolved.
+  void MaybeSendRtcpAtOrAfterTimestamp(Timestamp execution_time)
+      RTC_RUN_ON(worker_queue_);
+
+  // Schedules a call to MaybeSendRtcpAtOrAfterTimestamp delayed by |duration|.
+  void ScheduleMaybeSendRtcpAtOrAfterTimestamp(Timestamp execution_time,
+                                               TimeDelta duration);
+
   TaskQueueBase* const worker_queue_;
-  RTC_NO_UNIQUE_ADDRESS SequenceChecker process_thread_checker_;
+  RTC_NO_UNIQUE_ADDRESS SequenceChecker packet_sequence_checker_;
 
   std::unique_ptr<RtpSenderContext> rtp_sender_;
-
   RTCPSender rtcp_sender_;
   RTCPReceiver rtcp_receiver_;
 
   Clock* const clock_;
 
-  int64_t last_rtt_process_time_;
-  int64_t next_process_time_;
   uint16_t packet_overhead_;
 
   // Send side
@@ -308,6 +324,8 @@ class ModuleRtpRtcpImpl2 final : public RtpRtcpInterface,
   // The processed RTT from RtcpRttStats.
   mutable Mutex mutex_rtt_;
   int64_t rtt_ms_ RTC_GUARDED_BY(mutex_rtt_);
+
+  RTC_NO_UNIQUE_ADDRESS ScopedTaskSafety task_safety_;
 };
 
 }  // namespace webrtc

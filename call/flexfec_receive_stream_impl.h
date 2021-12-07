@@ -16,12 +16,12 @@
 #include "call/flexfec_receive_stream.h"
 #include "call/rtp_packet_sink_interface.h"
 #include "modules/rtp_rtcp/source/rtp_rtcp_impl2.h"
+#include "rtc_base/system/no_unique_address.h"
 #include "system_wrappers/include/clock.h"
 
 namespace webrtc {
 
 class FlexfecReceiver;
-class ProcessThread;
 class ReceiveStatistics;
 class RecoveredPacketReceiver;
 class RtcpRttStats;
@@ -32,22 +32,37 @@ class RtpStreamReceiverInterface;
 
 class FlexfecReceiveStreamImpl : public FlexfecReceiveStream {
  public:
-  FlexfecReceiveStreamImpl(
-      Clock* clock,
-      RtpStreamReceiverControllerInterface* receiver_controller,
-      const Config& config,
-      RecoveredPacketReceiver* recovered_packet_receiver,
-      RtcpRttStats* rtt_stats,
-      ProcessThread* process_thread);
+  FlexfecReceiveStreamImpl(Clock* clock,
+                           const Config& config,
+                           RecoveredPacketReceiver* recovered_packet_receiver,
+                           RtcpRttStats* rtt_stats);
+  // Destruction happens on the worker thread. Prior to destruction the caller
+  // must ensure that a registration with the transport has been cleared. See
+  // `RegisterWithTransport` for details.
+  // TODO(tommi): As a further improvement to this, performing the full
+  // destruction on the network thread could be made the default.
   ~FlexfecReceiveStreamImpl() override;
+
+  // Called on the network thread to register/unregister with the network
+  // transport.
+  void RegisterWithTransport(
+      RtpStreamReceiverControllerInterface* receiver_controller);
+  // If registration has previously been done (via `RegisterWithTransport`) then
+  // `UnregisterFromTransport` must be called prior to destruction, on the
+  // network thread.
+  void UnregisterFromTransport();
 
   // RtpPacketSinkInterface.
   void OnRtpPacket(const RtpPacketReceived& packet) override;
 
   Stats GetStats() const override;
-  const Config& GetConfig() const override;
+
+  // ReceiveStream impl.
+  const RtpConfig& rtp_config() const override { return config_.rtp; }
 
  private:
+  RTC_NO_UNIQUE_ADDRESS SequenceChecker packet_sequence_checker_;
+
   // Config.
   const Config config_;
 
@@ -57,9 +72,9 @@ class FlexfecReceiveStreamImpl : public FlexfecReceiveStream {
   // RTCP reporting.
   const std::unique_ptr<ReceiveStatistics> rtp_receive_statistics_;
   const std::unique_ptr<ModuleRtpRtcpImpl2> rtp_rtcp_;
-  ProcessThread* process_thread_;
 
-  std::unique_ptr<RtpStreamReceiverInterface> rtp_stream_receiver_;
+  std::unique_ptr<RtpStreamReceiverInterface> rtp_stream_receiver_
+      RTC_GUARDED_BY(packet_sequence_checker_);
 };
 
 }  // namespace webrtc

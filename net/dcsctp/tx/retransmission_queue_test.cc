@@ -42,6 +42,7 @@ using ::testing::ElementsAre;
 using ::testing::IsEmpty;
 using ::testing::NiceMock;
 using ::testing::Pair;
+using ::testing::Return;
 using ::testing::SizeIs;
 using ::testing::UnorderedElementsAre;
 
@@ -79,7 +80,6 @@ class RetransmissionQueueTest : public testing::Test {
     options.mtu = kMaxMtu;
     return RetransmissionQueue(
         "", TSN(10), kArwnd, producer_, on_rtt_.AsStdFunction(),
-        on_outgoing_message_buffer_empty_.AsStdFunction(),
         on_clear_retransmission_counter_.AsStdFunction(), *timer_, options,
         supports_partial_reliability, use_message_interleaving);
   }
@@ -89,7 +89,6 @@ class RetransmissionQueueTest : public testing::Test {
   FakeTimeoutManager timeout_manager_;
   TimerManager timer_manager_;
   NiceMock<MockFunction<void(DurationMs rtt_ms)>> on_rtt_;
-  NiceMock<MockFunction<void()>> on_outgoing_message_buffer_empty_;
   NiceMock<MockFunction<void()>> on_clear_retransmission_counter_;
   NiceMock<MockSendQueue> producer_;
   std::unique_ptr<Timer> timer_;
@@ -379,14 +378,14 @@ TEST_F(RetransmissionQueueTest, LimitsRetransmissionsAsUdp) {
                           Pair(TSN(10), State::kInFlight)));
 
   // Will force chunks to be retransmitted
+  EXPECT_CALL(producer_, Discard(IsUnordered(false), StreamID(1), MID(42)))
+      .Times(1);
+
   queue.HandleT3RtxTimerExpiry();
 
   EXPECT_THAT(queue.GetChunkStatesForTesting(),
               ElementsAre(Pair(TSN(9), State::kAcked),  //
-                          Pair(TSN(10), State::kToBeRetransmitted)));
-
-  EXPECT_CALL(producer_, Discard(IsUnordered(false), StreamID(1), MID(42)))
-      .Times(1);
+                          Pair(TSN(10), State::kAbandoned)));
 
   EXPECT_TRUE(queue.ShouldSendForwardTsn(now_));
 
@@ -439,9 +438,9 @@ TEST_F(RetransmissionQueueTest, LimitsRetransmissionsToThreeSends) {
   EXPECT_THAT(queue.GetChunksToSend(now_, 1000), SizeIs(1));
 
   // Retransmission 4 - not allowed.
-  queue.HandleT3RtxTimerExpiry();
   EXPECT_CALL(producer_, Discard(IsUnordered(false), StreamID(1), MID(42)))
       .Times(1);
+  queue.HandleT3RtxTimerExpiry();
   EXPECT_TRUE(queue.ShouldSendForwardTsn(now_));
   EXPECT_THAT(queue.GetChunksToSend(now_, 1000), IsEmpty());
 
@@ -522,21 +521,73 @@ TEST_F(RetransmissionQueueTest, ProducesValidForwardTsn) {
 
   // Chunk 10 is acked, but the remaining are lost
   queue.HandleSack(now_, SackChunk(TSN(10), kArwnd, {}, {}));
-  queue.HandleT3RtxTimerExpiry();
-
-  EXPECT_THAT(queue.GetChunkStatesForTesting(),
-              ElementsAre(Pair(TSN(10), State::kAcked),              //
-                          Pair(TSN(11), State::kToBeRetransmitted),  //
-                          Pair(TSN(12), State::kToBeRetransmitted)));
 
   EXPECT_CALL(producer_, Discard(IsUnordered(false), StreamID(1), MID(42)))
-      .Times(1);
+      .WillOnce(Return(true));
+
+  queue.HandleT3RtxTimerExpiry();
+
+  // NOTE: The TSN=13 represents the end fragment.
+  EXPECT_THAT(queue.GetChunkStatesForTesting(),
+              ElementsAre(Pair(TSN(10), State::kAcked),      //
+                          Pair(TSN(11), State::kAbandoned),  //
+                          Pair(TSN(12), State::kAbandoned),  //
+                          Pair(TSN(13), State::kAbandoned)));
+
   EXPECT_TRUE(queue.ShouldSendForwardTsn(now_));
+
+  ForwardTsnChunk forward_tsn = queue.CreateForwardTsn();
+  EXPECT_EQ(forward_tsn.new_cumulative_tsn(), TSN(13));
+  EXPECT_THAT(forward_tsn.skipped_streams(),
+              UnorderedElementsAre(
+                  ForwardTsnChunk::SkippedStream(StreamID(1), SSN(42))));
+}
+
+TEST_F(RetransmissionQueueTest, ProducesValidForwardTsnWhenFullySent) {
+  RetransmissionQueue queue = CreateQueue();
+  EXPECT_CALL(producer_, Produce)
+      .WillOnce([this](TimeMs, size_t) {
+        SendQueue::DataToSend dts(gen_.Ordered({1, 2, 3, 4}, "B"));
+        dts.max_retransmissions = 0;
+        return dts;
+      })
+      .WillOnce([this](TimeMs, size_t) {
+        SendQueue::DataToSend dts(gen_.Ordered({5, 6, 7, 8}, ""));
+        dts.max_retransmissions = 0;
+        return dts;
+      })
+      .WillOnce([this](TimeMs, size_t) {
+        SendQueue::DataToSend dts(gen_.Ordered({9, 10, 11, 12}, "E"));
+        dts.max_retransmissions = 0;
+        return dts;
+      })
+      .WillRepeatedly([](TimeMs, size_t) { return absl::nullopt; });
+
+  // Send and ack first chunk (TSN 10)
+  std::vector<std::pair<TSN, Data>> chunks_to_send =
+      queue.GetChunksToSend(now_, 1000);
+  EXPECT_THAT(chunks_to_send, ElementsAre(Pair(TSN(10), _), Pair(TSN(11), _),
+                                          Pair(TSN(12), _)));
+  EXPECT_THAT(queue.GetChunkStatesForTesting(),
+              ElementsAre(Pair(TSN(9), State::kAcked),      //
+                          Pair(TSN(10), State::kInFlight),  //
+                          Pair(TSN(11), State::kInFlight),  //
+                          Pair(TSN(12), State::kInFlight)));
+
+  // Chunk 10 is acked, but the remaining are lost
+  queue.HandleSack(now_, SackChunk(TSN(10), kArwnd, {}, {}));
+
+  EXPECT_CALL(producer_, Discard(IsUnordered(false), StreamID(1), MID(42)))
+      .WillOnce(Return(false));
+
+  queue.HandleT3RtxTimerExpiry();
 
   EXPECT_THAT(queue.GetChunkStatesForTesting(),
               ElementsAre(Pair(TSN(10), State::kAcked),      //
                           Pair(TSN(11), State::kAbandoned),  //
                           Pair(TSN(12), State::kAbandoned)));
+
+  EXPECT_TRUE(queue.ShouldSendForwardTsn(now_));
 
   ForwardTsnChunk forward_tsn = queue.CreateForwardTsn();
   EXPECT_EQ(forward_tsn.new_cumulative_tsn(), TSN(12));
@@ -599,34 +650,61 @@ TEST_F(RetransmissionQueueTest, ProducesValidIForwardTsn) {
                           Pair(TSN(12), State::kNacked),  //
                           Pair(TSN(13), State::kAcked)));
 
-  queue.HandleT3RtxTimerExpiry();
-
-  EXPECT_THAT(queue.GetChunkStatesForTesting(),
-              ElementsAre(Pair(TSN(9), State::kAcked),               //
-                          Pair(TSN(10), State::kToBeRetransmitted),  //
-                          Pair(TSN(11), State::kToBeRetransmitted),  //
-                          Pair(TSN(12), State::kToBeRetransmitted),  //
-                          Pair(TSN(13), State::kAcked)));
-
   EXPECT_CALL(producer_, Discard(IsUnordered(false), StreamID(1), MID(42)))
-      .Times(1);
+      .WillOnce(Return(true));
   EXPECT_CALL(producer_, Discard(IsUnordered(true), StreamID(2), MID(42)))
-      .Times(1);
+      .WillOnce(Return(true));
   EXPECT_CALL(producer_, Discard(IsUnordered(false), StreamID(3), MID(42)))
-      .Times(1);
-  EXPECT_TRUE(queue.ShouldSendForwardTsn(now_));
+      .WillOnce(Return(true));
+
+  queue.HandleT3RtxTimerExpiry();
 
   EXPECT_THAT(queue.GetChunkStatesForTesting(),
               ElementsAre(Pair(TSN(9), State::kAcked),       //
                           Pair(TSN(10), State::kAbandoned),  //
                           Pair(TSN(11), State::kAbandoned),  //
                           Pair(TSN(12), State::kAbandoned),  //
-                          Pair(TSN(13), State::kAcked)));
+                          Pair(TSN(13), State::kAcked),
+                          // Representing end fragments of stream 1-3
+                          Pair(TSN(14), State::kAbandoned),  //
+                          Pair(TSN(15), State::kAbandoned),  //
+                          Pair(TSN(16), State::kAbandoned)));
 
-  IForwardTsnChunk forward_tsn = queue.CreateIForwardTsn();
-  EXPECT_EQ(forward_tsn.new_cumulative_tsn(), TSN(12));
+  EXPECT_TRUE(queue.ShouldSendForwardTsn(now_));
+
+  IForwardTsnChunk forward_tsn1 = queue.CreateIForwardTsn();
+  EXPECT_EQ(forward_tsn1.new_cumulative_tsn(), TSN(12));
   EXPECT_THAT(
-      forward_tsn.skipped_streams(),
+      forward_tsn1.skipped_streams(),
+      UnorderedElementsAre(IForwardTsnChunk::SkippedStream(
+                               IsUnordered(false), StreamID(1), MID(42)),
+                           IForwardTsnChunk::SkippedStream(
+                               IsUnordered(true), StreamID(2), MID(42)),
+                           IForwardTsnChunk::SkippedStream(
+                               IsUnordered(false), StreamID(3), MID(42))));
+
+  // When TSN 13 is acked, the placeholder "end fragments" must be skipped as
+  // well.
+
+  // A receiver is more likely to ack TSN 13, but do it incrementally.
+  queue.HandleSack(now_, SackChunk(TSN(12), kArwnd, {}, {}));
+
+  EXPECT_CALL(producer_, Discard).Times(0);
+  EXPECT_FALSE(queue.ShouldSendForwardTsn(now_));
+
+  queue.HandleSack(now_, SackChunk(TSN(13), kArwnd, {}, {}));
+  EXPECT_TRUE(queue.ShouldSendForwardTsn(now_));
+
+  EXPECT_THAT(queue.GetChunkStatesForTesting(),
+              ElementsAre(Pair(TSN(13), State::kAcked),      //
+                          Pair(TSN(14), State::kAbandoned),  //
+                          Pair(TSN(15), State::kAbandoned),  //
+                          Pair(TSN(16), State::kAbandoned)));
+
+  IForwardTsnChunk forward_tsn2 = queue.CreateIForwardTsn();
+  EXPECT_EQ(forward_tsn2.new_cumulative_tsn(), TSN(16));
+  EXPECT_THAT(
+      forward_tsn2.skipped_streams(),
       UnorderedElementsAre(IForwardTsnChunk::SkippedStream(
                                IsUnordered(false), StreamID(1), MID(42)),
                            IForwardTsnChunk::SkippedStream(
@@ -799,6 +877,306 @@ TEST_F(RetransmissionQueueTest, StaysWithinAvailableSize) {
       queue.GetChunksToSend(now_, 1188 - 12);
   EXPECT_THAT(chunks_to_send, ElementsAre(Pair(TSN(10), _), Pair(TSN(11), _)));
 }
+
+TEST_F(RetransmissionQueueTest, AccountsNackedAbandonedChunksAsNotOutstanding) {
+  RetransmissionQueue queue = CreateQueue();
+  EXPECT_CALL(producer_, Produce)
+      .WillOnce([this](TimeMs, size_t) {
+        SendQueue::DataToSend dts(gen_.Ordered({1, 2, 3, 4}, "B"));
+        dts.max_retransmissions = 0;
+        return dts;
+      })
+      .WillOnce([this](TimeMs, size_t) {
+        SendQueue::DataToSend dts(gen_.Ordered({5, 6, 7, 8}, ""));
+        dts.max_retransmissions = 0;
+        return dts;
+      })
+      .WillOnce([this](TimeMs, size_t) {
+        SendQueue::DataToSend dts(gen_.Ordered({9, 10, 11, 12}, ""));
+        dts.max_retransmissions = 0;
+        return dts;
+      })
+      .WillRepeatedly([](TimeMs, size_t) { return absl::nullopt; });
+
+  // Send and ack first chunk (TSN 10)
+  std::vector<std::pair<TSN, Data>> chunks_to_send =
+      queue.GetChunksToSend(now_, 1000);
+  EXPECT_THAT(chunks_to_send, ElementsAre(Pair(TSN(10), _), Pair(TSN(11), _),
+                                          Pair(TSN(12), _)));
+  EXPECT_THAT(queue.GetChunkStatesForTesting(),
+              ElementsAre(Pair(TSN(9), State::kAcked),      //
+                          Pair(TSN(10), State::kInFlight),  //
+                          Pair(TSN(11), State::kInFlight),  //
+                          Pair(TSN(12), State::kInFlight)));
+  EXPECT_EQ(queue.outstanding_bytes(), (16 + 4) * 3u);
+
+  // Mark the message as lost.
+  EXPECT_CALL(producer_, Discard(IsUnordered(false), StreamID(1), MID(42)))
+      .Times(1);
+  queue.HandleT3RtxTimerExpiry();
+
+  EXPECT_TRUE(queue.ShouldSendForwardTsn(now_));
+
+  EXPECT_THAT(queue.GetChunkStatesForTesting(),
+              ElementsAre(Pair(TSN(9), State::kAcked),       //
+                          Pair(TSN(10), State::kAbandoned),  //
+                          Pair(TSN(11), State::kAbandoned),  //
+                          Pair(TSN(12), State::kAbandoned)));
+  EXPECT_EQ(queue.outstanding_bytes(), 0u);
+
+  // Now ACK those, one at a time.
+  queue.HandleSack(now_, SackChunk(TSN(10), kArwnd, {}, {}));
+  EXPECT_EQ(queue.outstanding_bytes(), 0u);
+
+  queue.HandleSack(now_, SackChunk(TSN(11), kArwnd, {}, {}));
+  EXPECT_EQ(queue.outstanding_bytes(), 0u);
+
+  queue.HandleSack(now_, SackChunk(TSN(12), kArwnd, {}, {}));
+  EXPECT_EQ(queue.outstanding_bytes(), 0u);
+}
+
+TEST_F(RetransmissionQueueTest, ExpireFromSendQueueWhenPartiallySent) {
+  RetransmissionQueue queue = CreateQueue();
+  DataGeneratorOptions options;
+  options.stream_id = StreamID(17);
+  options.message_id = MID(42);
+  TimeMs test_start = now_;
+  EXPECT_CALL(producer_, Produce)
+      .WillOnce([&](TimeMs, size_t) {
+        SendQueue::DataToSend dts(gen_.Ordered({1, 2, 3, 4}, "B", options));
+        dts.expires_at = TimeMs(test_start + DurationMs(10));
+        return dts;
+      })
+      .WillOnce([&](TimeMs, size_t) {
+        SendQueue::DataToSend dts(gen_.Ordered({5, 6, 7, 8}, "", options));
+        dts.expires_at = TimeMs(test_start + DurationMs(10));
+        return dts;
+      })
+      .WillRepeatedly([](TimeMs, size_t) { return absl::nullopt; });
+
+  std::vector<std::pair<TSN, Data>> chunks_to_send =
+      queue.GetChunksToSend(now_, 24);
+  EXPECT_THAT(chunks_to_send, ElementsAre(Pair(TSN(10), _)));
+
+  EXPECT_CALL(producer_, Discard(IsUnordered(false), StreamID(17), MID(42)))
+      .WillOnce(Return(true));
+  now_ += DurationMs(100);
+
+  EXPECT_THAT(queue.GetChunksToSend(now_, 24), IsEmpty());
+
+  EXPECT_THAT(
+      queue.GetChunkStatesForTesting(),
+      ElementsAre(Pair(TSN(9), State::kAcked),         // Initial TSN
+                  Pair(TSN(10), State::kAbandoned),    // Produced
+                  Pair(TSN(11), State::kAbandoned),    // Produced and expired
+                  Pair(TSN(12), State::kAbandoned)));  // Placeholder end
+}
+
+TEST_F(RetransmissionQueueTest, LimitsRetransmissionsOnlyWhenNackedThreeTimes) {
+  RetransmissionQueue queue = CreateQueue();
+  EXPECT_CALL(producer_, Produce)
+      .WillOnce([this](TimeMs, size_t) {
+        SendQueue::DataToSend dts(gen_.Ordered({1, 2, 3, 4}, "BE"));
+        dts.max_retransmissions = 0;
+        return dts;
+      })
+      .WillOnce(CreateChunk())
+      .WillOnce(CreateChunk())
+      .WillOnce(CreateChunk())
+      .WillRepeatedly([](TimeMs, size_t) { return absl::nullopt; });
+
+  EXPECT_FALSE(queue.ShouldSendForwardTsn(now_));
+
+  std::vector<std::pair<TSN, Data>> chunks_to_send =
+      queue.GetChunksToSend(now_, 1000);
+  EXPECT_THAT(chunks_to_send, ElementsAre(Pair(TSN(10), _), Pair(TSN(11), _),
+                                          Pair(TSN(12), _), Pair(TSN(13), _)));
+  EXPECT_THAT(queue.GetChunkStatesForTesting(),
+              ElementsAre(Pair(TSN(9), State::kAcked),      //
+                          Pair(TSN(10), State::kInFlight),  //
+                          Pair(TSN(11), State::kInFlight),  //
+                          Pair(TSN(12), State::kInFlight),  //
+                          Pair(TSN(13), State::kInFlight)));
+
+  EXPECT_FALSE(queue.ShouldSendForwardTsn(now_));
+
+  EXPECT_CALL(producer_, Discard(IsUnordered(false), StreamID(1), MID(42)))
+      .Times(0);
+
+  queue.HandleSack(
+      now_, SackChunk(TSN(9), kArwnd, {SackChunk::GapAckBlock(2, 2)}, {}));
+
+  EXPECT_THAT(queue.GetChunkStatesForTesting(),
+              ElementsAre(Pair(TSN(9), State::kAcked),      //
+                          Pair(TSN(10), State::kNacked),    //
+                          Pair(TSN(11), State::kAcked),     //
+                          Pair(TSN(12), State::kInFlight),  //
+                          Pair(TSN(13), State::kInFlight)));
+
+  EXPECT_FALSE(queue.ShouldSendForwardTsn(now_));
+
+  queue.HandleSack(
+      now_, SackChunk(TSN(9), kArwnd, {SackChunk::GapAckBlock(2, 3)}, {}));
+
+  EXPECT_THAT(queue.GetChunkStatesForTesting(),
+              ElementsAre(Pair(TSN(9), State::kAcked),    //
+                          Pair(TSN(10), State::kNacked),  //
+                          Pair(TSN(11), State::kAcked),   //
+                          Pair(TSN(12), State::kAcked),   //
+                          Pair(TSN(13), State::kInFlight)));
+
+  EXPECT_FALSE(queue.ShouldSendForwardTsn(now_));
+
+  EXPECT_CALL(producer_, Discard(IsUnordered(false), StreamID(1), MID(42)))
+      .WillOnce(Return(false));
+  queue.HandleSack(
+      now_, SackChunk(TSN(9), kArwnd, {SackChunk::GapAckBlock(2, 4)}, {}));
+
+  EXPECT_THAT(queue.GetChunkStatesForTesting(),
+              ElementsAre(Pair(TSN(9), State::kAcked),       //
+                          Pair(TSN(10), State::kAbandoned),  //
+                          Pair(TSN(11), State::kAcked),      //
+                          Pair(TSN(12), State::kAcked),      //
+                          Pair(TSN(13), State::kAcked)));
+
+  EXPECT_TRUE(queue.ShouldSendForwardTsn(now_));
+}
+
+TEST_F(RetransmissionQueueTest, AbandonsRtxLimit2WhenNackedNineTimes) {
+  // This is a fairly long test.
+  RetransmissionQueue queue = CreateQueue();
+  EXPECT_CALL(producer_, Produce)
+      .WillOnce([this](TimeMs, size_t) {
+        SendQueue::DataToSend dts(gen_.Ordered({1, 2, 3, 4}, "BE"));
+        dts.max_retransmissions = 2;
+        return dts;
+      })
+      .WillOnce(CreateChunk())
+      .WillOnce(CreateChunk())
+      .WillOnce(CreateChunk())
+      .WillOnce(CreateChunk())
+      .WillOnce(CreateChunk())
+      .WillOnce(CreateChunk())
+      .WillOnce(CreateChunk())
+      .WillOnce(CreateChunk())
+      .WillOnce(CreateChunk())
+      .WillRepeatedly([](TimeMs, size_t) { return absl::nullopt; });
+
+  EXPECT_FALSE(queue.ShouldSendForwardTsn(now_));
+
+  std::vector<std::pair<TSN, Data>> chunks_to_send =
+      queue.GetChunksToSend(now_, 1000);
+  EXPECT_THAT(chunks_to_send,
+              ElementsAre(Pair(TSN(10), _), Pair(TSN(11), _), Pair(TSN(12), _),
+                          Pair(TSN(13), _), Pair(TSN(14), _), Pair(TSN(15), _),
+                          Pair(TSN(16), _), Pair(TSN(17), _), Pair(TSN(18), _),
+                          Pair(TSN(19), _)));
+
+  EXPECT_THAT(queue.GetChunkStatesForTesting(),
+              ElementsAre(Pair(TSN(9), State::kAcked),      //
+                          Pair(TSN(10), State::kInFlight),  //
+                          Pair(TSN(11), State::kInFlight),  //
+                          Pair(TSN(12), State::kInFlight),  //
+                          Pair(TSN(13), State::kInFlight),  //
+                          Pair(TSN(14), State::kInFlight),  //
+                          Pair(TSN(15), State::kInFlight),  //
+                          Pair(TSN(16), State::kInFlight),  //
+                          Pair(TSN(17), State::kInFlight),  //
+                          Pair(TSN(18), State::kInFlight),  //
+                          Pair(TSN(19), State::kInFlight)));
+
+  EXPECT_CALL(producer_, Discard(IsUnordered(false), StreamID(1), MID(42)))
+      .Times(0);
+
+  // Ack TSN [11 to 13] - three nacks for TSN(10), which will retransmit it.
+  for (int tsn = 11; tsn <= 13; ++tsn) {
+    queue.HandleSack(
+        now_,
+        SackChunk(TSN(9), kArwnd, {SackChunk::GapAckBlock(2, (tsn - 9))}, {}));
+  }
+
+  EXPECT_THAT(queue.GetChunkStatesForTesting(),
+              ElementsAre(Pair(TSN(9), State::kAcked),               //
+                          Pair(TSN(10), State::kToBeRetransmitted),  //
+                          Pair(TSN(11), State::kAcked),              //
+                          Pair(TSN(12), State::kAcked),              //
+                          Pair(TSN(13), State::kAcked),              //
+                          Pair(TSN(14), State::kInFlight),           //
+                          Pair(TSN(15), State::kInFlight),           //
+                          Pair(TSN(16), State::kInFlight),           //
+                          Pair(TSN(17), State::kInFlight),           //
+                          Pair(TSN(18), State::kInFlight),           //
+                          Pair(TSN(19), State::kInFlight)));
+
+  EXPECT_THAT(queue.GetChunksToSend(now_, 1000), ElementsAre(Pair(TSN(10), _)));
+
+  // Ack TSN [14 to 16] - three more nacks - second and last retransmission.
+  for (int tsn = 14; tsn <= 16; ++tsn) {
+    queue.HandleSack(
+        now_,
+        SackChunk(TSN(9), kArwnd, {SackChunk::GapAckBlock(2, (tsn - 9))}, {}));
+  }
+
+  EXPECT_THAT(queue.GetChunkStatesForTesting(),
+              ElementsAre(Pair(TSN(9), State::kAcked),               //
+                          Pair(TSN(10), State::kToBeRetransmitted),  //
+                          Pair(TSN(11), State::kAcked),              //
+                          Pair(TSN(12), State::kAcked),              //
+                          Pair(TSN(13), State::kAcked),              //
+                          Pair(TSN(14), State::kAcked),              //
+                          Pair(TSN(15), State::kAcked),              //
+                          Pair(TSN(16), State::kAcked),              //
+                          Pair(TSN(17), State::kInFlight),           //
+                          Pair(TSN(18), State::kInFlight),           //
+                          Pair(TSN(19), State::kInFlight)));
+
+  EXPECT_THAT(queue.GetChunksToSend(now_, 1000), ElementsAre(Pair(TSN(10), _)));
+
+  // Ack TSN [17 to 18]
+  for (int tsn = 17; tsn <= 18; ++tsn) {
+    queue.HandleSack(
+        now_,
+        SackChunk(TSN(9), kArwnd, {SackChunk::GapAckBlock(2, (tsn - 9))}, {}));
+  }
+
+  EXPECT_THAT(queue.GetChunkStatesForTesting(),
+              ElementsAre(Pair(TSN(9), State::kAcked),    //
+                          Pair(TSN(10), State::kNacked),  //
+                          Pair(TSN(11), State::kAcked),   //
+                          Pair(TSN(12), State::kAcked),   //
+                          Pair(TSN(13), State::kAcked),   //
+                          Pair(TSN(14), State::kAcked),   //
+                          Pair(TSN(15), State::kAcked),   //
+                          Pair(TSN(16), State::kAcked),   //
+                          Pair(TSN(17), State::kAcked),   //
+                          Pair(TSN(18), State::kAcked),   //
+                          Pair(TSN(19), State::kInFlight)));
+
+  EXPECT_FALSE(queue.ShouldSendForwardTsn(now_));
+
+  // Ack TSN 19 - three more nacks for TSN 10, no more retransmissions.
+  EXPECT_CALL(producer_, Discard(IsUnordered(false), StreamID(1), MID(42)))
+      .WillOnce(Return(false));
+  queue.HandleSack(
+      now_, SackChunk(TSN(9), kArwnd, {SackChunk::GapAckBlock(2, 10)}, {}));
+
+  EXPECT_THAT(queue.GetChunksToSend(now_, 1000), IsEmpty());
+
+  EXPECT_THAT(queue.GetChunkStatesForTesting(),
+              ElementsAre(Pair(TSN(9), State::kAcked),       //
+                          Pair(TSN(10), State::kAbandoned),  //
+                          Pair(TSN(11), State::kAcked),      //
+                          Pair(TSN(12), State::kAcked),      //
+                          Pair(TSN(13), State::kAcked),      //
+                          Pair(TSN(14), State::kAcked),      //
+                          Pair(TSN(15), State::kAcked),      //
+                          Pair(TSN(16), State::kAcked),      //
+                          Pair(TSN(17), State::kAcked),      //
+                          Pair(TSN(18), State::kAcked),      //
+                          Pair(TSN(19), State::kAcked)));
+
+  EXPECT_TRUE(queue.ShouldSendForwardTsn(now_));
+}  // namespace
 
 }  // namespace
 }  // namespace dcsctp

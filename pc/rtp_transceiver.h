@@ -21,19 +21,19 @@
 #include "absl/types/optional.h"
 #include "api/array_view.h"
 #include "api/media_types.h"
-#include "api/proxy.h"
 #include "api/rtc_error.h"
 #include "api/rtp_parameters.h"
-#include "api/rtp_receiver_interface.h"
-#include "api/rtp_sender_interface.h"
 #include "api/rtp_transceiver_direction.h"
 #include "api/rtp_transceiver_interface.h"
 #include "api/scoped_refptr.h"
 #include "api/task_queue/task_queue_base.h"
 #include "pc/channel_interface.h"
 #include "pc/channel_manager.h"
+#include "pc/proxy.h"
 #include "pc/rtp_receiver.h"
+#include "pc/rtp_receiver_proxy.h"
 #include "pc/rtp_sender.h"
+#include "pc/rtp_sender_proxy.h"
 #include "rtc_base/ref_counted_object.h"
 #include "rtc_base/task_utils/pending_task_safety_flag.h"
 #include "rtc_base/third_party/sigslot/sigslot.h"
@@ -310,7 +310,7 @@ PROXY_CONSTMETHOD0(std::vector<RtpHeaderExtensionCapability>,
 PROXY_METHOD1(webrtc::RTCError,
               SetOfferedRtpHeaderExtensions,
               rtc::ArrayView<const RtpHeaderExtensionCapability>)
-END_PROXY_MAP()
+END_PROXY_MAP(RtpTransceiver)
 
 }  // namespace webrtc
 

@@ -167,7 +167,14 @@ DcSctpSocket::DcSctpSocket(absl::string_view log_prefix,
           TimerOptions(options.t2_shutdown_timeout,
                        TimerBackoffAlgorithm::kExponential,
                        options.max_retransmissions))),
-      send_queue_(log_prefix_, options_.max_send_buffer_size) {}
+      send_queue_(
+          log_prefix_,
+          options_.max_send_buffer_size,
+          [this](StreamID stream_id) {
+            callbacks_.OnBufferedAmountLow(stream_id);
+          },
+          options_.total_buffered_amount_low_threshold,
+          [this]() { callbacks_.OnTotalBufferedAmountLow(); }) {}
 
 std::string DcSctpSocket::log_prefix() const {
   return log_prefix_ + "[" + std::string(ToString(state_)) + "] ";
@@ -184,7 +191,7 @@ bool DcSctpSocket::IsConsistent() const {
     case State::kCookieEchoed:
       return (tcb_ != nullptr && !t1_init_->is_running() &&
               t1_cookie_->is_running() && !t2_shutdown_->is_running() &&
-              cookie_echo_chunk_.has_value());
+              tcb_->has_cookie_echo_chunk());
     case State::kEstablished:
       return (tcb_ != nullptr && !t1_init_->is_running() &&
               !t1_cookie_->is_running() && !t2_shutdown_->is_running());
@@ -332,7 +339,6 @@ void DcSctpSocket::InternalClose(ErrorKind error, absl::string_view message) {
     t1_cookie_->Stop();
     t2_shutdown_->Stop();
     tcb_ = nullptr;
-    cookie_echo_chunk_ = absl::nullopt;
 
     if (error == ErrorKind::kNoError) {
       callbacks_.OnClosed();
@@ -435,6 +441,19 @@ SocketState DcSctpSocket::state() const {
 
 void DcSctpSocket::SetMaxMessageSize(size_t max_message_size) {
   options_.max_message_size = max_message_size;
+}
+
+size_t DcSctpSocket::buffered_amount(StreamID stream_id) const {
+  return send_queue_.buffered_amount(stream_id);
+}
+
+size_t DcSctpSocket::buffered_amount_low_threshold(StreamID stream_id) const {
+  return send_queue_.buffered_amount_low_threshold(stream_id);
+}
+
+void DcSctpSocket::SetBufferedAmountLowThreshold(StreamID stream_id,
+                                                 size_t bytes) {
+  send_queue_.SetBufferedAmountLowThreshold(stream_id, bytes);
 }
 
 void DcSctpSocket::MaybeSendShutdownOnPacketReceived(const SctpPacket& packet) {
@@ -756,7 +775,7 @@ absl::optional<DurationMs> DcSctpSocket::OnCookieTimerExpiry() {
   RTC_DCHECK(state_ == State::kCookieEchoed);
 
   if (t1_cookie_->is_running()) {
-    SendCookieEcho();
+    tcb_->SendBufferedPackets(callbacks_.TimeMillis());
   } else {
     InternalClose(ErrorKind::kTooManyRetries, "No COOKIE_ACK received");
   }
@@ -1028,19 +1047,6 @@ void DcSctpSocket::HandleInit(const CommonHeader& header,
   SendPacket(b);
 }
 
-void DcSctpSocket::SendCookieEcho() {
-  RTC_DCHECK(tcb_ != nullptr);
-  TimeMs now = callbacks_.TimeMillis();
-  SctpPacket::Builder b = tcb_->PacketBuilder();
-  b.Add(*cookie_echo_chunk_);
-
-  // https://tools.ietf.org/html/rfc4960#section-5.1
-  // "The COOKIE ECHO chunk can be bundled with any pending outbound DATA
-  // chunks, but it MUST be the first chunk in the packet and until the COOKIE
-  // ACK is returned the sender MUST NOT send any other packets to the peer."
-  tcb_->SendBufferedPackets(b, now, /*only_one_packet=*/true);
-}
-
 void DcSctpSocket::HandleInitAck(
     const CommonHeader& header,
     const SctpPacket::ChunkDescriptor& descriptor) {
@@ -1086,8 +1092,8 @@ void DcSctpSocket::HandleInitAck(
   SetState(State::kCookieEchoed, "INIT_ACK received");
 
   // The connection isn't fully established just yet.
-  cookie_echo_chunk_ = CookieEchoChunk(cookie->data());
-  SendCookieEcho();
+  tcb_->SetCookieEchoChunk(CookieEchoChunk(cookie->data()));
+  tcb_->SendBufferedPackets(callbacks_.TimeMillis());
   t1_cookie_->Start();
 }
 
@@ -1127,7 +1133,9 @@ void DcSctpSocket::HandleCookieEcho(
   t1_init_->Stop();
   t1_cookie_->Stop();
   if (state_ != State::kEstablished) {
-    cookie_echo_chunk_ = absl::nullopt;
+    if (tcb_ != nullptr) {
+      tcb_->ClearCookieEchoChunk();
+    }
     SetState(State::kEstablished, "COOKIE_ECHO received");
     callbacks_.OnConnected();
   }
@@ -1250,7 +1258,7 @@ void DcSctpSocket::HandleCookieAck(
 
   // RFC 4960, Errata ID: 4400
   t1_cookie_->Stop();
-  cookie_echo_chunk_ = absl::nullopt;
+  tcb_->ClearCookieEchoChunk();
   SetState(State::kEstablished, "COOKIE_ACK received");
   tcb_->SendBufferedPackets(callbacks_.TimeMillis());
   callbacks_.OnConnected();

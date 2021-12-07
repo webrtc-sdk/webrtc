@@ -49,6 +49,10 @@ constexpr int kMaxResidualGainChange = 15;
 // restrictions from clipping events.
 constexpr int kSurplusCompressionGain = 6;
 
+// History size for the clipping predictor evaluator (unit: number of 10 ms
+// frames).
+constexpr int kClippingPredictorEvaluatorHistorySize = 32;
+
 using ClippingPredictorConfig = AudioProcessing::Config::GainController1::
     AnalogGainController::ClippingPredictor;
 
@@ -129,24 +133,38 @@ float ComputeClippedRatio(const float* const* audio,
   return static_cast<float>(num_clipped) / (samples_per_channel);
 }
 
-std::unique_ptr<ClippingPredictor> CreateClippingPredictor(
-    int num_capture_channels,
-    const ClippingPredictorConfig& config) {
-  if (config.enabled) {
-    RTC_LOG(LS_INFO) << "[agc] Clipping prediction enabled.";
-    switch (config.mode) {
-      case ClippingPredictorConfig::kClippingEventPrediction:
-        return CreateClippingEventPredictor(num_capture_channels, config);
-      case ClippingPredictorConfig::kAdaptiveStepClippingPeakPrediction:
-        return CreateAdaptiveStepClippingPeakPredictor(num_capture_channels,
-                                                       config);
-      case ClippingPredictorConfig::kFixedStepClippingPeakPrediction:
-        return CreateFixedStepClippingPeakPredictor(num_capture_channels,
-                                                    config);
+void LogClippingPredictorMetrics(const ClippingPredictorEvaluator& evaluator) {
+  RTC_LOG(LS_INFO) << "Clipping predictor metrics: TP "
+                   << evaluator.true_positives() << " TN "
+                   << evaluator.true_negatives() << " FP "
+                   << evaluator.false_positives() << " FN "
+                   << evaluator.false_negatives();
+  const float precision_denominator =
+      evaluator.true_positives() + evaluator.false_positives();
+  const float recall_denominator =
+      evaluator.true_positives() + evaluator.false_negatives();
+  if (precision_denominator > 0 && recall_denominator > 0) {
+    const float precision = evaluator.true_positives() / precision_denominator;
+    const float recall = evaluator.true_positives() / recall_denominator;
+    RTC_LOG(LS_INFO) << "Clipping predictor metrics: P " << precision << " R "
+                     << recall;
+    const float f1_score_denominator = precision + recall;
+    if (f1_score_denominator > 0.0f) {
+      const float f1_score = 2 * precision * recall / f1_score_denominator;
+      RTC_LOG(LS_INFO) << "Clipping predictor metrics: F1 " << f1_score;
+      RTC_HISTOGRAM_COUNTS_LINEAR("WebRTC.Audio.Agc.ClippingPredictor.F1Score",
+                                  std::round(f1_score * 100.0f), /*min=*/0,
+                                  /*max=*/100,
+                                  /*bucket_count=*/50);
     }
-  } else {
-    return nullptr;
   }
+}
+
+void LogClippingMetrics(int clipping_rate) {
+  RTC_LOG(LS_INFO) << "Input clipping rate: " << clipping_rate << "%";
+  RTC_HISTOGRAM_COUNTS_LINEAR("WebRTC.Audio.Agc.InputClippingRate",
+                              clipping_rate, /*min=*/0, /*max=*/100,
+                              /*bucket_count=*/50);
 }
 
 }  // namespace
@@ -418,14 +436,15 @@ void MonoAgc::UpdateCompressor() {
 
 int AgcManagerDirect::instance_counter_ = 0;
 
-AgcManagerDirect::AgcManagerDirect(Agc* agc,
-                                   int startup_min_level,
-                                   int clipped_level_min,
-                                   int sample_rate_hz,
-                                   int clipped_level_step,
-                                   float clipped_ratio_threshold,
-                                   int clipped_wait_frames,
-                                   const ClippingPredictorConfig& clipping_cfg)
+AgcManagerDirect::AgcManagerDirect(
+    Agc* agc,
+    int startup_min_level,
+    int clipped_level_min,
+    int sample_rate_hz,
+    int clipped_level_step,
+    float clipped_ratio_threshold,
+    int clipped_wait_frames,
+    const ClippingPredictorConfig& clipping_config)
     : AgcManagerDirect(/*num_capture_channels*/ 1,
                        startup_min_level,
                        clipped_level_min,
@@ -434,21 +453,22 @@ AgcManagerDirect::AgcManagerDirect(Agc* agc,
                        clipped_level_step,
                        clipped_ratio_threshold,
                        clipped_wait_frames,
-                       clipping_cfg) {
+                       clipping_config) {
   RTC_DCHECK(channel_agcs_[0]);
   RTC_DCHECK(agc);
   channel_agcs_[0]->set_agc(agc);
 }
 
-AgcManagerDirect::AgcManagerDirect(int num_capture_channels,
-                                   int startup_min_level,
-                                   int clipped_level_min,
-                                   bool disable_digital_adaptive,
-                                   int sample_rate_hz,
-                                   int clipped_level_step,
-                                   float clipped_ratio_threshold,
-                                   int clipped_wait_frames,
-                                   const ClippingPredictorConfig& clipping_cfg)
+AgcManagerDirect::AgcManagerDirect(
+    int num_capture_channels,
+    int startup_min_level,
+    int clipped_level_min,
+    bool disable_digital_adaptive,
+    int sample_rate_hz,
+    int clipped_level_step,
+    float clipped_ratio_threshold,
+    int clipped_wait_frames,
+    const ClippingPredictorConfig& clipping_config)
     : data_dumper_(
           new ApmDataDumper(rtc::AtomicOps::Increment(&instance_counter_))),
       use_min_channel_level_(!UseMaxAnalogChannelLevel()),
@@ -463,7 +483,13 @@ AgcManagerDirect::AgcManagerDirect(int num_capture_channels,
       channel_agcs_(num_capture_channels),
       new_compressions_to_set_(num_capture_channels),
       clipping_predictor_(
-          CreateClippingPredictor(num_capture_channels, clipping_cfg)) {
+          CreateClippingPredictor(num_capture_channels, clipping_config)),
+      use_clipping_predictor_step_(!!clipping_predictor_ &&
+                                   clipping_config.use_predicted_step),
+      clipping_predictor_evaluator_(kClippingPredictorEvaluatorHistorySize),
+      clipping_predictor_log_counter_(0),
+      clipping_rate_log_(0.0f),
+      clipping_rate_log_counter_(0) {
   const int min_mic_level = GetMinMicLevel();
   for (size_t ch = 0; ch < channel_agcs_.size(); ++ch) {
     ApmDataDumper* data_dumper_ch = ch == 0 ? data_dumper_.get() : nullptr;
@@ -492,6 +518,10 @@ void AgcManagerDirect::Initialize() {
   capture_output_used_ = true;
 
   AggregateChannelLevels();
+  clipping_predictor_evaluator_.Reset();
+  clipping_predictor_log_counter_ = 0;
+  clipping_rate_log_ = 0.0f;
+  clipping_rate_log_counter_ = 0;
 }
 
 void AgcManagerDirect::SetupDigitalGainControl(
@@ -531,12 +561,7 @@ void AgcManagerDirect::AnalyzePreProcess(const float* const* audio,
   if (!!clipping_predictor_) {
     AudioFrameView<const float> frame = AudioFrameView<const float>(
         audio, num_capture_channels_, static_cast<int>(samples_per_channel));
-    clipping_predictor_->Process(frame);
-  }
-
-  if (frames_since_clipped_ < clipped_wait_frames_) {
-    ++frames_since_clipped_;
-    return;
+    clipping_predictor_->Analyze(frame);
   }
 
   // Check for clipped samples, as the AGC has difficulty detecting pitch
@@ -550,6 +575,20 @@ void AgcManagerDirect::AnalyzePreProcess(const float* const* audio,
   // gain is increased, through SetMaxLevel().
   float clipped_ratio =
       ComputeClippedRatio(audio, num_capture_channels_, samples_per_channel);
+  clipping_rate_log_ = std::max(clipped_ratio, clipping_rate_log_);
+  clipping_rate_log_counter_++;
+  constexpr int kNumFramesIn30Seconds = 3000;
+  if (clipping_rate_log_counter_ == kNumFramesIn30Seconds) {
+    LogClippingMetrics(std::round(100.0f * clipping_rate_log_));
+    clipping_rate_log_ = 0.0f;
+    clipping_rate_log_counter_ = 0;
+  }
+
+  if (frames_since_clipped_ < clipped_wait_frames_) {
+    ++frames_since_clipped_;
+    return;
+  }
+
   const bool clipping_detected = clipped_ratio > clipped_ratio_threshold_;
   bool clipping_predicted = false;
   int predicted_step = 0;
@@ -558,10 +597,25 @@ void AgcManagerDirect::AnalyzePreProcess(const float* const* audio,
       const auto step = clipping_predictor_->EstimateClippedLevelStep(
           channel, stream_analog_level_, clipped_level_step_,
           channel_agcs_[channel]->min_mic_level(), kMaxMicLevel);
-      if (step.has_value()) {
+      if (use_clipping_predictor_step_ && step.has_value()) {
         predicted_step = std::max(predicted_step, step.value());
         clipping_predicted = true;
       }
+    }
+    // Clipping prediction evaluation.
+    absl::optional<int> prediction_interval =
+        clipping_predictor_evaluator_.Observe(clipping_detected,
+                                              clipping_predicted);
+    if (prediction_interval.has_value()) {
+      RTC_HISTOGRAM_COUNTS_LINEAR(
+          "WebRTC.Audio.Agc.ClippingPredictor.PredictionInterval",
+          prediction_interval.value(), /*min=*/0,
+          /*max=*/49, /*bucket_count=*/50);
+    }
+    clipping_predictor_log_counter_++;
+    if (clipping_predictor_log_counter_ == kNumFramesIn30Seconds) {
+      LogClippingPredictorMetrics(clipping_predictor_evaluator_);
+      clipping_predictor_log_counter_ = 0;
     }
   }
   if (clipping_detected || clipping_predicted) {
@@ -580,6 +634,7 @@ void AgcManagerDirect::AnalyzePreProcess(const float* const* audio,
     frames_since_clipped_ = 0;
     if (!!clipping_predictor_) {
       clipping_predictor_->Reset();
+      clipping_predictor_evaluator_.Reset();
     }
   }
   AggregateChannelLevels();
@@ -661,10 +716,6 @@ void AgcManagerDirect::AggregateChannelLevels() {
       }
     }
   }
-}
-
-bool AgcManagerDirect::clipping_predictor_enabled() const {
-  return !!clipping_predictor_;
 }
 
 }  // namespace webrtc

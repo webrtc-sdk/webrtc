@@ -811,6 +811,7 @@ WEBRTC_RTCSTATS_IMPL(
     &huge_frames_sent,
     &total_packet_send_delay,
     &quality_limitation_reason,
+    &quality_limitation_durations,
     &quality_limitation_resolution_changes,
     &content_type,
     &encoder_implementation,
@@ -847,6 +848,7 @@ RTCOutboundRTPStreamStats::RTCOutboundRTPStreamStats(std::string&& id,
       huge_frames_sent("hugeFramesSent"),
       total_packet_send_delay("totalPacketSendDelay"),
       quality_limitation_reason("qualityLimitationReason"),
+      quality_limitation_durations("qualityLimitationDurations"),
       quality_limitation_resolution_changes(
           "qualityLimitationResolutionChanges"),
       content_type("contentType"),
@@ -879,6 +881,7 @@ RTCOutboundRTPStreamStats::RTCOutboundRTPStreamStats(
       huge_frames_sent(other.huge_frames_sent),
       total_packet_send_delay(other.total_packet_send_delay),
       quality_limitation_reason(other.quality_limitation_reason),
+      quality_limitation_durations(other.quality_limitation_durations),
       quality_limitation_resolution_changes(
           other.quality_limitation_resolution_changes),
       content_type(other.content_type),
@@ -984,7 +987,9 @@ RTCMediaSourceStats::~RTCMediaSourceStats() {}
 WEBRTC_RTCSTATS_IMPL(RTCAudioSourceStats, RTCMediaSourceStats, "media-source",
     &audio_level,
     &total_audio_energy,
-    &total_samples_duration)
+    &total_samples_duration,
+    &echo_return_loss,
+    &echo_return_loss_enhancement)
 // clang-format on
 
 RTCAudioSourceStats::RTCAudioSourceStats(const std::string& id,
@@ -995,13 +1000,17 @@ RTCAudioSourceStats::RTCAudioSourceStats(std::string&& id, int64_t timestamp_us)
     : RTCMediaSourceStats(std::move(id), timestamp_us),
       audio_level("audioLevel"),
       total_audio_energy("totalAudioEnergy"),
-      total_samples_duration("totalSamplesDuration") {}
+      total_samples_duration("totalSamplesDuration"),
+      echo_return_loss("echoReturnLoss"),
+      echo_return_loss_enhancement("echoReturnLossEnhancement") {}
 
 RTCAudioSourceStats::RTCAudioSourceStats(const RTCAudioSourceStats& other)
     : RTCMediaSourceStats(other),
       audio_level(other.audio_level),
       total_audio_energy(other.total_audio_energy),
-      total_samples_duration(other.total_samples_duration) {}
+      total_samples_duration(other.total_samples_duration),
+      echo_return_loss(other.echo_return_loss),
+      echo_return_loss_enhancement(other.echo_return_loss_enhancement) {}
 
 RTCAudioSourceStats::~RTCAudioSourceStats() {}
 

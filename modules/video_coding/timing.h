@@ -14,6 +14,7 @@
 #include <memory>
 
 #include "absl/types/optional.h"
+#include "api/units/time_delta.h"
 #include "api/video/video_timing.h"
 #include "modules/video_coding/codec_timer.h"
 #include "rtc_base/experiments/field_trial_parser.h"
@@ -81,8 +82,15 @@ class VCMTiming {
   virtual int64_t RenderTimeMs(uint32_t frame_timestamp, int64_t now_ms) const;
 
   // Returns the maximum time in ms that we can wait for a frame to become
-  // complete before we must pass it to the decoder.
-  virtual int64_t MaxWaitingTime(int64_t render_time_ms, int64_t now_ms) const;
+  // complete before we must pass it to the decoder. render_time_ms==0 indicates
+  // that the frames should be processed as quickly as possible, with possibly
+  // only a small delay added to make sure that the decoder is not overloaded.
+  // In this case, the parameter too_many_frames_queued is used to signal that
+  // the decode queue is full and that the frame should be decoded as soon as
+  // possible.
+  virtual int64_t MaxWaitingTime(int64_t render_time_ms,
+                                 int64_t now_ms,
+                                 bool too_many_frames_queued) const;
 
   // Returns the current target delay which is required delay + decode time +
   // render delay.
@@ -103,6 +111,9 @@ class VCMTiming {
   void SetMaxCompositionDelayInFrames(
       absl::optional<int> max_composition_delay_in_frames);
   absl::optional<int> MaxCompositionDelayInFrames() const;
+
+  // Updates the last time a frame was scheduled for decoding.
+  void SetLastDecodeScheduledTimestamp(int64_t last_decode_scheduled_ts);
 
   enum { kDefaultRenderDelayMs = 10 };
   enum { kDelayMaxChangeMsPerS = 100 };
@@ -139,6 +150,15 @@ class VCMTiming {
   FieldTrialParameter<bool> low_latency_renderer_enabled_
       RTC_GUARDED_BY(mutex_);
   absl::optional<int> max_composition_delay_in_frames_ RTC_GUARDED_BY(mutex_);
+  // Set by the field trial WebRTC-ZeroPlayoutDelay. The parameter min_pacing
+  // determines the minimum delay between frames scheduled for decoding that is
+  // used when min playout delay=0 and max playout delay>=0.
+  FieldTrialParameter<TimeDelta> zero_playout_delay_min_pacing_
+      RTC_GUARDED_BY(mutex_);
+  // Timestamp at which the last frame was scheduled to be sent to the decoder.
+  // Used only when the RTP header extension playout delay is set to min=0 ms
+  // which is indicated by a render time set to 0.
+  int64_t last_decode_scheduled_ts_ RTC_GUARDED_BY(mutex_);
 };
 }  // namespace webrtc
 

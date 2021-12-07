@@ -209,20 +209,20 @@ const char* IceCandidatePairStateToRTCStatsIceCandidatePairState(
 }
 
 const char* DtlsTransportStateToRTCDtlsTransportState(
-    cricket::DtlsTransportState state) {
+    DtlsTransportState state) {
   switch (state) {
-    case cricket::DTLS_TRANSPORT_NEW:
+    case DtlsTransportState::kNew:
       return RTCDtlsTransportState::kNew;
-    case cricket::DTLS_TRANSPORT_CONNECTING:
+    case DtlsTransportState::kConnecting:
       return RTCDtlsTransportState::kConnecting;
-    case cricket::DTLS_TRANSPORT_CONNECTED:
+    case DtlsTransportState::kConnected:
       return RTCDtlsTransportState::kConnected;
-    case cricket::DTLS_TRANSPORT_CLOSED:
+    case DtlsTransportState::kClosed:
       return RTCDtlsTransportState::kClosed;
-    case cricket::DTLS_TRANSPORT_FAILED:
+    case DtlsTransportState::kFailed:
       return RTCDtlsTransportState::kFailed;
     default:
-      RTC_NOTREACHED();
+      RTC_CHECK_NOTREACHED();
       return nullptr;
   }
 }
@@ -263,6 +263,17 @@ const char* QualityLimitationReasonToRTCQualityLimitationReason(
       return RTCQualityLimitationReason::kOther;
   }
   RTC_CHECK_NOTREACHED();
+}
+
+std::map<std::string, double>
+QualityLimitationDurationToRTCQualityLimitationDuration(
+    std::map<webrtc::QualityLimitationReason, int64_t> durations_ms) {
+  std::map<std::string, double> result;
+  for (const auto& elem : durations_ms) {
+    result[QualityLimitationReasonToRTCQualityLimitationReason(elem.first)] =
+        elem.second;
+  }
+  return result;
 }
 
 double DoubleAudioLevelFromIntAudioLevel(int audio_level) {
@@ -322,6 +333,13 @@ void SetInboundRTPStreamStatsFromMediaReceiverInfo(
       static_cast<uint64_t>(media_receiver_info.header_and_padding_bytes_rcvd);
   inbound_stats->packets_lost =
       static_cast<int32_t>(media_receiver_info.packets_lost);
+  inbound_stats->jitter_buffer_delay =
+      media_receiver_info.jitter_buffer_delay_seconds;
+  inbound_stats->jitter_buffer_emitted_count =
+      media_receiver_info.jitter_buffer_emitted_count;
+  if (media_receiver_info.nacks_sent) {
+    inbound_stats->nack_count = *media_receiver_info.nacks_sent;
+  }
 }
 
 std::unique_ptr<RTCInboundRTPStreamStats> CreateInboundAudioStreamStats(
@@ -342,10 +360,6 @@ std::unique_ptr<RTCInboundRTPStreamStats> CreateInboundAudioStreamStats(
   }
   inbound_audio->jitter = static_cast<double>(voice_receiver_info.jitter_ms) /
                           rtc::kNumMillisecsPerSec;
-  inbound_audio->jitter_buffer_delay =
-      voice_receiver_info.jitter_buffer_delay_seconds;
-  inbound_audio->jitter_buffer_emitted_count =
-      voice_receiver_info.jitter_buffer_emitted_count;
   inbound_audio->total_samples_received =
       voice_receiver_info.total_samples_received;
   inbound_audio->concealed_samples = voice_receiver_info.concealed_samples;
@@ -443,8 +457,6 @@ void SetInboundRTPStreamStatsFromVideoReceiverInfo(
       static_cast<uint32_t>(video_receiver_info.firs_sent);
   inbound_video->pli_count =
       static_cast<uint32_t>(video_receiver_info.plis_sent);
-  inbound_video->nack_count =
-      static_cast<uint32_t>(video_receiver_info.nacks_sent);
   inbound_video->frames_received = video_receiver_info.frames_received;
   inbound_video->frames_decoded = video_receiver_info.frames_decoded;
   inbound_video->frames_dropped = video_receiver_info.frames_dropped;
@@ -504,6 +516,7 @@ void SetOutboundRTPStreamStatsFromMediaSenderInfo(
       static_cast<uint64_t>(media_sender_info.header_and_padding_bytes_sent);
   outbound_stats->retransmitted_bytes_sent =
       media_sender_info.retransmitted_bytes_sent;
+  outbound_stats->nack_count = media_sender_info.nacks_rcvd;
 }
 
 void SetOutboundRTPStreamStatsFromVoiceSenderInfo(
@@ -538,8 +551,6 @@ void SetOutboundRTPStreamStatsFromVideoSenderInfo(
       static_cast<uint32_t>(video_sender_info.firs_rcvd);
   outbound_video->pli_count =
       static_cast<uint32_t>(video_sender_info.plis_rcvd);
-  outbound_video->nack_count =
-      static_cast<uint32_t>(video_sender_info.nacks_rcvd);
   if (video_sender_info.qp_sum)
     outbound_video->qp_sum = *video_sender_info.qp_sum;
   outbound_video->frames_encoded = video_sender_info.frames_encoded;
@@ -568,6 +579,9 @@ void SetOutboundRTPStreamStatsFromVideoSenderInfo(
   outbound_video->quality_limitation_reason =
       QualityLimitationReasonToRTCQualityLimitationReason(
           video_sender_info.quality_limitation_reason);
+  outbound_video->quality_limitation_durations =
+      QualityLimitationDurationToRTCQualityLimitationDuration(
+          video_sender_info.quality_limitation_durations_ms);
   outbound_video->quality_limitation_resolution_changes =
       video_sender_info.quality_limitation_resolution_changes;
   // TODO(https://crbug.com/webrtc/10529): When info's |content_info| is
@@ -729,10 +743,22 @@ const std::string& ProduceIceCandidateStats(int64_t timestamp_us,
   return stats->id();
 }
 
+template <typename StatsType>
+void SetAudioProcessingStats(StatsType* stats,
+                             const AudioProcessingStats& apm_stats) {
+  if (apm_stats.echo_return_loss) {
+    stats->echo_return_loss = *apm_stats.echo_return_loss;
+  }
+  if (apm_stats.echo_return_loss_enhancement) {
+    stats->echo_return_loss_enhancement =
+        *apm_stats.echo_return_loss_enhancement;
+  }
+}
+
 std::unique_ptr<RTCMediaStreamTrackStats>
 ProduceMediaStreamTrackStatsFromVoiceSenderInfo(
     int64_t timestamp_us,
-    const AudioTrackInterface& audio_track,
+    AudioTrackInterface& audio_track,
     const cricket::VoiceSenderInfo& voice_sender_info,
     int attachment_id) {
   std::unique_ptr<RTCMediaStreamTrackStats> audio_track_stats(
@@ -747,13 +773,17 @@ ProduceMediaStreamTrackStatsFromVoiceSenderInfo(
                                                  attachment_id);
   audio_track_stats->remote_source = false;
   audio_track_stats->detached = false;
-  if (voice_sender_info.apm_statistics.echo_return_loss) {
-    audio_track_stats->echo_return_loss =
-        *voice_sender_info.apm_statistics.echo_return_loss;
-  }
-  if (voice_sender_info.apm_statistics.echo_return_loss_enhancement) {
-    audio_track_stats->echo_return_loss_enhancement =
-        *voice_sender_info.apm_statistics.echo_return_loss_enhancement;
+  // Audio processor may be attached to either the track or the send
+  // stream, so look in both places.
+  SetAudioProcessingStats(audio_track_stats.get(),
+                          voice_sender_info.apm_statistics);
+  auto audio_processor(audio_track.GetAudioProcessor());
+  if (audio_processor.get()) {
+    // The |has_remote_tracks| argument is obsolete; makes no difference if it's
+    // set to true or false.
+    AudioProcessorInterface::AudioProcessorStatistics ap_stats =
+        audio_processor->GetStats(/*has_remote_tracks=*/false);
+    SetAudioProcessingStats(audio_track_stats.get(), ap_stats.apm_statistics);
   }
   return audio_track_stats;
 }
@@ -1259,6 +1289,8 @@ void RTCStatsCollector::ProducePartialResultsOnSignalingThreadImpl(
 void RTCStatsCollector::ProducePartialResultsOnNetworkThread(
     int64_t timestamp_us,
     absl::optional<std::string> sctp_transport_name) {
+  TRACE_EVENT0("webrtc",
+               "RTCStatsCollector::ProducePartialResultsOnNetworkThread");
   RTC_DCHECK_RUN_ON(network_thread_);
   rtc::Thread::ScopedDisallowBlockingCalls no_blocking_calls;
 
@@ -1641,6 +1673,8 @@ void RTCStatsCollector::ProduceMediaSourceStats_s(
       // create separate media source stats objects on a per-attachment basis.
       std::unique_ptr<RTCMediaSourceStats> media_source_stats;
       if (track->kind() == MediaStreamTrackInterface::kAudioKind) {
+        AudioTrackInterface* audio_track =
+            static_cast<AudioTrackInterface*>(track.get());
         auto audio_source_stats = std::make_unique<RTCAudioSourceStats>(
             RTCMediaSourceStatsIDFromKindAndAttachment(
                 cricket::MEDIA_TYPE_AUDIO, sender_internal->AttachmentId()),
@@ -1661,7 +1695,20 @@ void RTCStatsCollector::ProduceMediaSourceStats_s(
                 voice_sender_info->total_input_energy;
             audio_source_stats->total_samples_duration =
                 voice_sender_info->total_input_duration;
+            SetAudioProcessingStats(audio_source_stats.get(),
+                                    voice_sender_info->apm_statistics);
           }
+        }
+        // Audio processor may be attached to either the track or the send
+        // stream, so look in both places.
+        auto audio_processor(audio_track->GetAudioProcessor());
+        if (audio_processor.get()) {
+          // The |has_remote_tracks| argument is obsolete; makes no difference
+          // if it's set to true or false.
+          AudioProcessorInterface::AudioProcessorStatistics ap_stats =
+              audio_processor->GetStats(/*has_remote_tracks=*/false);
+          SetAudioProcessingStats(audio_source_stats.get(),
+                                  ap_stats.apm_statistics);
         }
         media_source_stats = std::move(audio_source_stats);
       } else {

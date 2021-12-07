@@ -13,6 +13,7 @@
 #include <memory>
 #include <utility>
 
+#include "api/task_queue/task_queue_base.h"
 #include "api/video/video_codec_type.h"
 #include "api/video/video_frame_type.h"
 #include "common_video/h264/h264_common.h"
@@ -38,6 +39,7 @@
 #include "test/gtest.h"
 #include "test/mock_frame_transformer.h"
 #include "test/time_controller/simulated_task_queue.h"
+#include "test/time_controller/simulated_time_controller.h"
 
 using ::testing::_;
 using ::testing::ElementsAre;
@@ -94,7 +96,8 @@ class MockKeyFrameRequestSender : public KeyFrameRequestSender {
   MOCK_METHOD(void, RequestKeyFrame, (), (override));
 };
 
-class MockOnCompleteFrameCallback : public OnCompleteFrameCallback {
+class MockOnCompleteFrameCallback
+    : public RtpVideoStreamReceiver2::OnCompleteFrameCallback {
  public:
   MOCK_METHOD(void, DoOnCompleteFrame, (EncodedFrame*), ());
   MOCK_METHOD(void, DoOnCompleteFrameFailNullptr, (EncodedFrame*), ());
@@ -157,17 +160,20 @@ class RtpVideoStreamReceiver2Test : public ::testing::Test,
  public:
   RtpVideoStreamReceiver2Test() : RtpVideoStreamReceiver2Test("") {}
   explicit RtpVideoStreamReceiver2Test(std::string field_trials)
-      : override_field_trials_(field_trials),
-        config_(CreateConfig()),
-        process_thread_(ProcessThread::Create("TestThread")) {
+      : time_controller_(Timestamp::Millis(100)),
+        task_queue_(time_controller_.GetTaskQueueFactory()->CreateTaskQueue(
+            "RtpVideoStreamReceiver2Test",
+            TaskQueueFactory::Priority::NORMAL)),
+        task_queue_setter_(task_queue_.get()),
+        override_field_trials_(field_trials),
+        config_(CreateConfig()) {
     rtp_receive_statistics_ =
         ReceiveStatistics::Create(Clock::GetRealTimeClock());
     rtp_video_stream_receiver_ = std::make_unique<RtpVideoStreamReceiver2>(
         TaskQueueBase::Current(), Clock::GetRealTimeClock(), &mock_transport_,
         nullptr, nullptr, &config_, rtp_receive_statistics_.get(), nullptr,
-        nullptr, process_thread_.get(), &mock_nack_sender_,
-        &mock_key_frame_request_sender_, &mock_on_complete_frame_callback_,
-        nullptr, nullptr);
+        nullptr, &mock_nack_sender_, &mock_key_frame_request_sender_,
+        &mock_on_complete_frame_callback_, nullptr, nullptr);
     VideoCodec codec;
     codec.codecType = kVideoCodecGeneric;
     rtp_video_stream_receiver_->AddReceiveCodec(kPayloadType, codec, {},
@@ -232,8 +238,9 @@ class RtpVideoStreamReceiver2Test : public ::testing::Test,
     return config;
   }
 
-  TokenTaskQueue task_queue_;
-  TokenTaskQueue::CurrentTaskQueueSetter task_queue_setter_{&task_queue_};
+  GlobalSimulatedTimeController time_controller_;
+  std::unique_ptr<TaskQueueBase, TaskQueueDeleter> task_queue_;
+  TokenTaskQueue::CurrentTaskQueueSetter task_queue_setter_;
 
   const webrtc::test::ScopedFieldTrials override_field_trials_;
   VideoReceiveStream::Config config_;
@@ -241,7 +248,6 @@ class RtpVideoStreamReceiver2Test : public ::testing::Test,
   MockKeyFrameRequestSender mock_key_frame_request_sender_;
   MockTransport mock_transport_;
   MockOnCompleteFrameCallback mock_on_complete_frame_callback_;
-  std::unique_ptr<ProcessThread> process_thread_;
   std::unique_ptr<ReceiveStatistics> rtp_receive_statistics_;
   std::unique_ptr<RtpVideoStreamReceiver2> rtp_video_stream_receiver_;
   RtpPacketSinkInterface* test_packet_sink_ = nullptr;
@@ -1126,8 +1132,8 @@ TEST_F(RtpVideoStreamReceiver2Test, TransformFrame) {
   auto receiver = std::make_unique<RtpVideoStreamReceiver2>(
       TaskQueueBase::Current(), Clock::GetRealTimeClock(), &mock_transport_,
       nullptr, nullptr, &config_, rtp_receive_statistics_.get(), nullptr,
-      nullptr, process_thread_.get(), &mock_nack_sender_, nullptr,
-      &mock_on_complete_frame_callback_, nullptr, mock_frame_transformer);
+      nullptr, &mock_nack_sender_, nullptr, &mock_on_complete_frame_callback_,
+      nullptr, mock_frame_transformer);
   VideoCodec video_codec;
   video_codec.codecType = kVideoCodecGeneric;
   receiver->AddReceiveCodec(kPayloadType, video_codec, {},

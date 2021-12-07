@@ -361,7 +361,8 @@ void RTPSenderVideo::AddRtpHeaderExtensions(
 
   if (video_header.generic) {
     bool extension_is_set = false;
-    if (video_structure_ != nullptr) {
+    if (packet->IsRegistered<RtpDependencyDescriptorExtension>() &&
+        video_structure_ != nullptr) {
       DependencyDescriptor descriptor;
       descriptor.first_packet_in_frame = first_packet;
       descriptor.last_packet_in_frame = last_packet;
@@ -407,7 +408,8 @@ void RTPSenderVideo::AddRtpHeaderExtensions(
     }
 
     // Do not use generic frame descriptor when dependency descriptor is stored.
-    if (!extension_is_set) {
+    if (packet->IsRegistered<RtpGenericFrameDescriptorExtension00>() &&
+        !extension_is_set) {
       RtpGenericFrameDescriptor generic_descriptor;
       generic_descriptor.SetFirstPacketInSubFrame(first_packet);
       generic_descriptor.SetLastPacketInSubFrame(last_packet);
@@ -437,7 +439,8 @@ void RTPSenderVideo::AddRtpHeaderExtensions(
     }
   }
 
-  if (first_packet &&
+  if (packet->IsRegistered<RtpVideoLayersAllocationExtension>() &&
+      first_packet &&
       send_allocation_ != SendVideoLayersAllocation::kDontSend &&
       (video_header.frame_type == VideoFrameType::kVideoFrameKey ||
        PacketWillLikelyBeRequestedForRestransmitionIfLost(video_header))) {
@@ -523,7 +526,8 @@ bool RTPSenderVideo::SendVideo(
           AbsoluteCaptureTimeSender::GetSource(single_packet->Ssrc(),
                                                single_packet->Csrcs()),
           single_packet->Timestamp(), kVideoPayloadTypeFrequency,
-          Int64MsToUQ32x32(single_packet->capture_time_ms() + NtpOffsetMs()),
+          Int64MsToUQ32x32(
+              clock_->ConvertTimestampToNtpTimeInMilliseconds(capture_time_ms)),
           /*estimated_capture_clock_offset=*/
           include_capture_clock_offset_ ? estimated_capture_clock_offset_ms
                                         : absl::nullopt);

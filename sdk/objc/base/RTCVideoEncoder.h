@@ -28,7 +28,7 @@ RTC_OBJC_EXPORT
 @protocol RTC_OBJC_TYPE
 (RTCVideoEncoder)<NSObject>
 
-    - (void)setCallback : (RTCVideoEncoderCallback)callback;
+- (void)setCallback:(nullable RTCVideoEncoderCallback)callback;
 - (NSInteger)startEncodeWithSettings:(RTC_OBJC_TYPE(RTCVideoEncoderSettings) *)settings
                        numberOfCores:(int)numberOfCores;
 - (NSInteger)releaseEncoder;
@@ -42,6 +42,13 @@ RTC_OBJC_EXPORT
  *  keep the QP from the encoded images within the given range. Returning nil from this function
  *  disables quality scaling. */
 - (nullable RTC_OBJC_TYPE(RTCVideoEncoderQpThresholds) *)scalingSettings;
+
+/** Resolutions should be aligned to this value. */
+@property(nonatomic, readonly) NSInteger resolutionAlignment;
+
+/** If enabled, resolution alignment is applied to all simulcast layers simultaneously so that when
+    scaled, all resolutions comply with 'resolutionAlignment'. */
+@property(nonatomic, readonly) BOOL applyAlignmentToAllSimulcastLayers;
 
 @end
 

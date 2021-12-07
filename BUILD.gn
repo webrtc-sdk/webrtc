@@ -435,10 +435,6 @@ config("common_config") {
 
 config("common_objc") {
   frameworks = [ "Foundation.framework" ]
-
-  if (rtc_use_metal_rendering) {
-    defines = [ "RTC_SUPPORTS_METAL" ]
-  }
 }
 
 if (!build_with_chromium) {
@@ -519,6 +515,10 @@ if (!build_with_chromium) {
   if (rtc_include_tests && !is_asan) {
     rtc_executable("webrtc_lib_link_test") {
       testonly = true
+
+      # This target is used for checking to link, so do not check dependencies
+      # on gn check.
+      check_includes = false  # no-presubmit-check TODO(bugs.webrtc.org/12785)
 
       sources = [ "webrtc_lib_link_test.cc" ]
       deps = [

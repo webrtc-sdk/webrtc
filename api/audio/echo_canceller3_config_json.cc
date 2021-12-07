@@ -11,6 +11,7 @@
 
 #include <stddef.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -156,9 +157,14 @@ void Aec3ConfigFromJsonString(absl::string_view json_string,
   *parsing_successful = true;
 
   Json::Value root;
-  bool success = Json::Reader().parse(std::string(json_string), root);
+  Json::CharReaderBuilder builder;
+  std::string error_message;
+  std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+  bool success =
+      reader->parse(json_string.data(), json_string.data() + json_string.size(),
+                    &root, &error_message);
   if (!success) {
-    RTC_LOG(LS_ERROR) << "Incorrect JSON format: " << json_string;
+    RTC_LOG(LS_ERROR) << "Incorrect JSON format: " << error_message;
     *parsing_successful = false;
     return;
   }
@@ -340,6 +346,15 @@ void Aec3ConfigFromJsonString(absl::string_view json_string,
       ReadParam(subsection, "max_dec_factor_lf",
                 &cfg.suppressor.nearend_tuning.max_dec_factor_lf);
     }
+
+    ReadParam(section, "lf_smoothing_during_initial_phase",
+              &cfg.suppressor.lf_smoothing_during_initial_phase);
+    ReadParam(section, "last_permanent_lf_smoothing_band",
+              &cfg.suppressor.last_permanent_lf_smoothing_band);
+    ReadParam(section, "last_lf_smoothing_band",
+              &cfg.suppressor.last_lf_smoothing_band);
+    ReadParam(section, "last_lf_band", &cfg.suppressor.last_lf_band);
+    ReadParam(section, "first_hf_band", &cfg.suppressor.first_hf_band);
 
     if (rtc::GetValueFromJsonObject(section, "dominant_nearend_detection",
                                     &subsection)) {
@@ -651,6 +666,16 @@ std::string Aec3ConfigToJsonString(const EchoCanceller3Config& config) {
   ost << "\"max_dec_factor_lf\": "
       << config.suppressor.nearend_tuning.max_dec_factor_lf;
   ost << "},";
+  ost << "\"lf_smoothing_during_initial_phase\": "
+      << (config.suppressor.lf_smoothing_during_initial_phase ? "true"
+                                                              : "false")
+      << ",";
+  ost << "\"last_permanent_lf_smoothing_band\": "
+      << config.suppressor.last_permanent_lf_smoothing_band << ",";
+  ost << "\"last_lf_smoothing_band\": "
+      << config.suppressor.last_lf_smoothing_band << ",";
+  ost << "\"last_lf_band\": " << config.suppressor.last_lf_band << ",";
+  ost << "\"first_hf_band\": " << config.suppressor.first_hf_band << ",";
   ost << "\"dominant_nearend_detection\": {";
   ost << "\"enr_threshold\": "
       << config.suppressor.dominant_nearend_detection.enr_threshold << ",";

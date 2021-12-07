@@ -21,7 +21,9 @@
 
 #include "api/transport/field_trial_based_config.h"
 #include "modules/rtp_rtcp/source/rtcp_packet/dlrr.h"
+#include "modules/rtp_rtcp/source/rtcp_sender.h"
 #include "modules/rtp_rtcp/source/rtp_rtcp_config.h"
+#include "modules/rtp_rtcp/source/rtp_rtcp_interface.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
 #include "system_wrappers/include/ntp_time.h"
@@ -58,7 +60,8 @@ std::unique_ptr<RtpRtcp> RtpRtcp::DEPRECATED_Create(
 }
 
 ModuleRtpRtcpImpl::ModuleRtpRtcpImpl(const Configuration& configuration)
-    : rtcp_sender_(configuration),
+    : rtcp_sender_(
+          RTCPSender::Configuration::FromRtpRtcpConfiguration(configuration)),
       rtcp_receiver_(configuration, this),
       clock_(configuration.clock),
       last_bitrate_process_time_(clock_->TimeInMilliseconds()),
@@ -378,7 +381,16 @@ bool ModuleRtpRtcpImpl::OnSendingRtpFrame(uint32_t timestamp,
   if (!Sending())
     return false;
 
-  rtcp_sender_.SetLastRtpTime(timestamp, capture_time_ms, payload_type);
+  // TODO(bugs.webrtc.org/12873): Migrate this method and it's users to use
+  // optional Timestamps.
+  absl::optional<Timestamp> capture_time;
+  if (capture_time_ms > 0) {
+    capture_time = Timestamp::Millis(capture_time_ms);
+  }
+  absl::optional<int> payload_type_optional;
+  if (payload_type >= 0)
+    payload_type_optional = payload_type;
+  rtcp_sender_.SetLastRtpTime(timestamp, capture_time, payload_type_optional);
   // Make sure an RTCP report isn't queued behind a key frame.
   if (rtcp_sender_.TimeToSendRTCPReport(force_sender_report))
     rtcp_sender_.SendRTCP(GetFeedbackState(), kRtcpReport);
@@ -681,6 +693,11 @@ void ModuleRtpRtcpImpl::SetRemoteSSRC(const uint32_t ssrc) {
   // Inform about the incoming SSRC.
   rtcp_sender_.SetRemoteSSRC(ssrc);
   rtcp_receiver_.SetRemoteSSRC(ssrc);
+}
+
+void ModuleRtpRtcpImpl::SetLocalSsrc(uint32_t local_ssrc) {
+  rtcp_receiver_.set_local_media_ssrc(local_ssrc);
+  rtcp_sender_.SetSsrc(local_ssrc);
 }
 
 RtpSendRates ModuleRtpRtcpImpl::GetSendRates() const {

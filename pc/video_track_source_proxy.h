@@ -8,18 +8,18 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#ifndef API_VIDEO_TRACK_SOURCE_PROXY_H_
-#define API_VIDEO_TRACK_SOURCE_PROXY_H_
+#ifndef PC_VIDEO_TRACK_SOURCE_PROXY_H_
+#define PC_VIDEO_TRACK_SOURCE_PROXY_H_
 
 #include "api/media_stream_interface.h"
-#include "api/proxy.h"
+#include "pc/proxy.h"
 
 namespace webrtc {
 
 // Makes sure the real VideoTrackSourceInterface implementation is destroyed on
 // the signaling thread and marshals all method calls to the signaling thread.
-// TODO(deadbeef): Move this to .cc file and out of api/. What threads methods
-// are called on is an implementation detail.
+// TODO(deadbeef): Move this to .cc file. What threads methods are called on is
+// an implementation detail.
 BEGIN_PROXY_MAP(VideoTrackSource)
 PROXY_PRIMARY_THREAD_DESTRUCTOR()
 PROXY_CONSTMETHOD0(SourceState, state)
@@ -42,8 +42,8 @@ PROXY_SECONDARY_METHOD1(void,
 PROXY_SECONDARY_METHOD1(void,
                         RemoveEncodedSink,
                         rtc::VideoSinkInterface<RecordableEncodedFrame>*)
-END_PROXY_MAP()
+END_PROXY_MAP(VideoTrackSource)
 
 }  // namespace webrtc
 
-#endif  // API_VIDEO_TRACK_SOURCE_PROXY_H_
+#endif  // PC_VIDEO_TRACK_SOURCE_PROXY_H_

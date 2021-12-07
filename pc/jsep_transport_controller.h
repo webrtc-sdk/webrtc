@@ -31,6 +31,7 @@
 #include "api/rtc_error.h"
 #include "api/rtc_event_log/rtc_event_log.h"
 #include "api/scoped_refptr.h"
+#include "api/sequence_checker.h"
 #include "api/transport/data_channel_transport_interface.h"
 #include "api/transport/sctp_transport_factory_interface.h"
 #include "media/sctp/sctp_transport_internal.h"
@@ -48,6 +49,7 @@
 #include "pc/dtls_srtp_transport.h"
 #include "pc/dtls_transport.h"
 #include "pc/jsep_transport.h"
+#include "pc/jsep_transport_collection.h"
 #include "pc/rtp_transport.h"
 #include "pc/rtp_transport_internal.h"
 #include "pc/sctp_transport.h"
@@ -55,6 +57,7 @@
 #include "pc/srtp_transport.h"
 #include "pc/transport_stats.h"
 #include "rtc_base/callback_list.h"
+#include "rtc_base/checks.h"
 #include "rtc_base/constructor_magic.h"
 #include "rtc_base/copy_on_write_buffer.h"
 #include "rtc_base/helpers.h"
@@ -327,17 +330,11 @@ class JsepTransportController : public sigslot::has_slots<> {
       const cricket::SessionDescription* description);
   RTCError ValidateContent(const cricket::ContentInfo& content_info);
 
-  void HandleRejectedContent(const cricket::ContentInfo& content_info,
-                             std::map<std::string, cricket::ContentGroup*>&
-                                 established_bundle_groups_by_mid)
+  void HandleRejectedContent(const cricket::ContentInfo& content_info)
       RTC_RUN_ON(network_thread_);
   bool HandleBundledContent(const cricket::ContentInfo& content_info,
                             const cricket::ContentGroup& bundle_group)
       RTC_RUN_ON(network_thread_);
-
-  bool SetTransportForMid(const std::string& mid,
-                          cricket::JsepTransport* jsep_transport);
-  void RemoveTransportForMid(const std::string& mid);
 
   cricket::JsepTransportDescription CreateJsepTransportDescription(
       const cricket::ContentInfo& content_info,
@@ -350,7 +347,6 @@ class JsepTransportController : public sigslot::has_slots<> {
 
   std::map<const cricket::ContentGroup*, std::vector<int>>
   MergeEncryptedHeaderExtensionIdsForBundles(
-      const std::map<std::string, cricket::ContentGroup*>& bundle_groups_by_mid,
       const cricket::SessionDescription* description);
   std::vector<int> GetEncryptedHeaderExtensionIds(
       const cricket::ContentInfo& content_info);
@@ -384,8 +380,6 @@ class JsepTransportController : public sigslot::has_slots<> {
       const cricket::SessionDescription& description)
       RTC_RUN_ON(network_thread_);
 
-  void MaybeDestroyJsepTransport(const std::string& mid)
-      RTC_RUN_ON(network_thread_);
   void DestroyAllJsepTransports_n() RTC_RUN_ON(network_thread_);
 
   void SetIceRole_n(cricket::IceRole ice_role) RTC_RUN_ON(network_thread_);
@@ -452,18 +446,14 @@ class JsepTransportController : public sigslot::has_slots<> {
 
   void OnDtlsHandshakeError(rtc::SSLHandshakeError error);
 
+  bool OnTransportChanged(const std::string& mid,
+                          cricket::JsepTransport* transport);
+
   rtc::Thread* const network_thread_ = nullptr;
   cricket::PortAllocator* const port_allocator_ = nullptr;
   AsyncDnsResolverFactoryInterface* const async_dns_resolver_factory_ = nullptr;
 
-  std::map<std::string, std::unique_ptr<cricket::JsepTransport>>
-      jsep_transports_by_name_ RTC_GUARDED_BY(network_thread_);
-  // This keeps track of the mapping between media section
-  // (BaseChannel/SctpTransport) and the JsepTransport underneath.
-  std::map<std::string, cricket::JsepTransport*> mid_to_transport_
-      RTC_GUARDED_BY(network_thread_);
-  // Keep track of mids that have been mapped to transports. Used for rollback.
-  std::vector<std::string> pending_mids_ RTC_GUARDED_BY(network_thread_);
+  JsepTransportCollection transports_ RTC_GUARDED_BY(network_thread_);
   // Aggregate states for Transports.
   // standardized_ice_connection_state_ is intended to replace
   // ice_connection_state, see bugs.webrtc.org/9308
@@ -483,13 +473,12 @@ class JsepTransportController : public sigslot::has_slots<> {
   const cricket::SessionDescription* remote_desc_ = nullptr;
   absl::optional<bool> initial_offerer_;
 
-  // Use unique_ptr<> to get a stable address.
-  std::vector<std::unique_ptr<cricket::ContentGroup>> bundle_groups_;
-
   cricket::IceConfig ice_config_;
   cricket::IceRole ice_role_ = cricket::ICEROLE_CONTROLLING;
   uint64_t ice_tiebreaker_ = rtc::CreateRandomId64();
   rtc::scoped_refptr<rtc::RTCCertificate> certificate_;
+
+  BundleManager bundles_;
 
   RTC_DISALLOW_COPY_AND_ASSIGN(JsepTransportController);
 };

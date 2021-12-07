@@ -660,6 +660,7 @@ VideoStreamEncoder::VideoStreamEncoder(
       encoder_queue_(task_queue_factory->CreateTaskQueue(
           "EncoderQueue",
           TaskQueueFactory::Priority::NORMAL)) {
+  TRACE_EVENT0("webrtc", "VideoStreamEncoder::VideoStreamEncoder");
   RTC_DCHECK(main_queue_);
   RTC_DCHECK(encoder_stats_observer);
   RTC_DCHECK_GE(number_of_cores, 1);
@@ -742,11 +743,16 @@ void VideoStreamEncoder::SetFecControllerOverride(
 void VideoStreamEncoder::AddAdaptationResource(
     rtc::scoped_refptr<Resource> resource) {
   RTC_DCHECK_RUN_ON(main_queue_);
+  TRACE_EVENT0("webrtc", "VideoStreamEncoder::AddAdaptationResource");
   // Map any externally added resources as kCpu for the sake of stats reporting.
   // TODO(hbos): Make the manager map any unknown resources to kCpu and get rid
   // of this MapResourceToReason() call.
+  TRACE_EVENT_ASYNC_BEGIN0(
+      "webrtc", "VideoStreamEncoder::AddAdaptationResource(latency)", this);
   rtc::Event map_resource_event;
   encoder_queue_.PostTask([this, resource, &map_resource_event] {
+    TRACE_EVENT_ASYNC_END0(
+        "webrtc", "VideoStreamEncoder::AddAdaptationResource(latency)", this);
     RTC_DCHECK_RUN_ON(&encoder_queue_);
     additional_resources_.push_back(resource);
     stream_resource_manager_.AddResource(resource, VideoAdaptationReason::kCpu);
@@ -1610,6 +1616,12 @@ void VideoStreamEncoder::EncodeVideoFrame(const VideoFrame& video_frame,
   if (encoder_failed_)
     return;
 
+  // It's possible that EncodeVideoFrame can be called after we've completed
+  // a Stop() operation. Check if the encoder_ is set before continuing.
+  // See: bugs.webrtc.org/12857
+  if (!encoder_)
+    return;
+
   TraceFrameDropEnd();
 
   // Encoder metadata needs to be updated before encode complete callback.
@@ -1767,6 +1779,9 @@ void VideoStreamEncoder::SendKeyFrame() {
   RTC_DCHECK_RUN_ON(&encoder_queue_);
   TRACE_EVENT0("webrtc", "OnKeyFrameRequest");
   RTC_DCHECK(!next_frame_types_.empty());
+
+  if (!encoder_)
+    return;  // Shutting down.
 
   // TODO(webrtc:10615): Map keyframe request to spatial layer.
   std::fill(next_frame_types_.begin(), next_frame_types_.end(),

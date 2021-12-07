@@ -32,6 +32,7 @@
 #include "rtc_base/ref_counted_object.h"
 #include "rtc_base/strings/string_builder.h"
 #include "rtc_base/time_utils.h"
+#include "rtc_base/trace_event.h"
 #include "system_wrappers/include/field_trial.h"
 #include "video/adaptation/quality_scaler_resource.h"
 
@@ -257,6 +258,9 @@ VideoStreamEncoderResourceManager::VideoStreamEncoderResourceManager(
       quality_rampup_experiment_(
           QualityRampUpExperimentHelper::CreateIfEnabled(this, clock_)),
       encoder_settings_(absl::nullopt) {
+  TRACE_EVENT0(
+      "webrtc",
+      "VideoStreamEncoderResourceManager::VideoStreamEncoderResourceManager");
   RTC_CHECK(degradation_preference_provider_);
   RTC_CHECK(encoder_stats_observer_);
 }
@@ -494,7 +498,7 @@ void VideoStreamEncoderResourceManager::OnMaybeEncodeFrame() {
         quality_scaler_resource_, bandwidth,
         DataRate::BitsPerSec(encoder_target_bitrate_bps_.value_or(0)),
         DataRate::KilobitsPerSec(encoder_settings_->video_codec().maxBitrate),
-        LastInputFrameSizeOrDefault());
+        LastFrameSizeOrDefault());
   }
 }
 
@@ -551,7 +555,7 @@ void VideoStreamEncoderResourceManager::ConfigureQualityScaler(
     absl::optional<VideoEncoder::QpThresholds> thresholds =
         balanced_settings_.GetQpThresholds(
             GetVideoCodecTypeOrGeneric(encoder_settings_),
-            LastInputFrameSizeOrDefault());
+            LastFrameSizeOrDefault());
     if (thresholds) {
       quality_scaler_resource_->SetQpThresholds(*thresholds);
     }
@@ -591,10 +595,13 @@ CpuOveruseOptions VideoStreamEncoderResourceManager::GetCpuOveruseOptions()
   return options;
 }
 
-int VideoStreamEncoderResourceManager::LastInputFrameSizeOrDefault() const {
+int VideoStreamEncoderResourceManager::LastFrameSizeOrDefault() const {
   RTC_DCHECK_RUN_ON(encoder_queue_);
-  return input_state_provider_->InputState().frame_size_pixels().value_or(
-      kDefaultInputPixelsWidth * kDefaultInputPixelsHeight);
+  return input_state_provider_->InputState()
+      .single_active_stream_pixels()
+      .value_or(
+          input_state_provider_->InputState().frame_size_pixels().value_or(
+              kDefaultInputPixelsWidth * kDefaultInputPixelsHeight));
 }
 
 void VideoStreamEncoderResourceManager::OnVideoSourceRestrictionsUpdated(

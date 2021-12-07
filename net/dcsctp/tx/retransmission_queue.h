@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <functional>
 #include <map>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -43,7 +44,7 @@ namespace dcsctp {
 class RetransmissionQueue {
  public:
   static constexpr size_t kMinimumFragmentedPayload = 10;
-  // State for DATA chunks (message fragments) in the queue.
+  // State for DATA chunks (message fragments) in the queue - used in tests.
   enum class State {
     // The chunk has been sent but not received yet (from the sender's point of
     // view, as no SACK has been received yet that reference this chunk).
@@ -72,7 +73,6 @@ class RetransmissionQueue {
                       size_t a_rwnd,
                       SendQueue& send_queue,
                       std::function<void(DurationMs rtt)> on_new_rtt,
-                      std::function<void()> on_send_queue_empty,
                       std::function<void()> on_clear_retransmission_counter,
                       Timer& t3_rtx,
                       const DcSctpOptions& options,
@@ -143,6 +143,12 @@ class RetransmissionQueue {
   // its associated metadata.
   class TxData {
    public:
+    enum class NackAction {
+      kNothing,
+      kRetransmit,
+      kAbandon,
+    };
+
     explicit TxData(Data data,
                     absl::optional<size_t> max_retransmissions,
                     TimeMs time_sent,
@@ -154,24 +160,52 @@ class RetransmissionQueue {
 
     TimeMs time_sent() const { return time_sent_; }
 
-    State state() const { return state_; }
-    void SetState(State state) { state_ = state; }
-
     const Data& data() const { return data_; }
 
-    // Nacks an item. If it has been nacked enough times, it will be marked for
-    // retransmission.
-    void Nack();
+    // Acks an item.
+    void Ack();
+
+    // Nacks an item. If it has been nacked enough times, or if `retransmit_now`
+    // is set, it might be marked for retransmission. If the item has reached
+    // its max retransmission value, it will instead be abandoned. The action
+    // performed is indicated as return value.
+    NackAction Nack(bool retransmit_now = false);
+
+    // Prepares the item to be retransmitted. Sets it as outstanding and
+    // clears all nack counters.
     void Retransmit();
 
-    bool has_been_retransmitted() { return num_retransmissions_ > 0; }
+    // Marks this item as abandoned.
+    void Abandon();
+
+    bool is_outstanding() const { return ack_state_ == AckState::kUnacked; }
+    bool is_acked() const { return ack_state_ == AckState::kAcked; }
+    bool is_nacked() const { return ack_state_ == AckState::kNacked; }
+    bool is_abandoned() const { return is_abandoned_; }
+
+    // Indicates if this chunk should be retransmitted.
+    bool should_be_retransmitted() const { return should_be_retransmitted_; }
+    // Indicates if this chunk has ever been retransmitted.
+    bool has_been_retransmitted() const { return num_retransmissions_ > 0; }
 
     // Given the current time, and the current state of this DATA chunk, it will
     // indicate if it has expired (SCTP Partial Reliability Extension).
     bool has_expired(TimeMs now) const;
 
    private:
-    State state_ = State::kInFlight;
+    enum class AckState {
+      kUnacked,
+      kAcked,
+      kNacked,
+    };
+    // Indicates the presence of this chunk, if it's in flight (Unacked), has
+    // been received (Acked) or is lost (Nacked).
+    AckState ack_state_ = AckState::kUnacked;
+    // Indicates if this chunk has been abandoned, which is a terminal state.
+    bool is_abandoned_ = false;
+    // Indicates if this chunk should be retransmitted.
+    bool should_be_retransmitted_ = false;
+
     // The number of times the DATA chunk has been nacked (by having received a
     // SACK which doesn't include it). Will be cleared on retransmissions.
     size_t nack_count_ = 0;
@@ -214,6 +248,8 @@ class RetransmissionQueue {
     UnwrappedTSN highest_tsn_acked;
   };
 
+  bool IsConsistent() const;
+
   // Returns how large a chunk will be, serialized, carrying the data
   size_t GetSerializedChunkSize(const Data& data) const;
 
@@ -235,6 +271,14 @@ class RetransmissionQueue {
   // in the retransmission queue up until this value and will update `ack_info`
   // by setting `bytes_acked_by_cumulative_tsn_ack` and `acked_tsns`.
   void RemoveAcked(UnwrappedTSN cumulative_tsn_ack, AckInfo& ack_info);
+
+  // Helper method to nack an item and perform the correct operations given the
+  // action indicated when nacking an item (e.g. retransmitting or abandoning).
+  // The return value indicate if an action was performed, meaning that packet
+  // loss was detected and acted upon.
+  bool NackItem(UnwrappedTSN cumulative_tsn_ack,
+                TxData& item,
+                bool retransmit_now);
 
   // Will mark the chunks covered by the `gap_ack_blocks` from an incoming SACK
   // as "acked" and update `ack_info` by adding new TSNs to `added_tsns`.
@@ -270,8 +314,6 @@ class RetransmissionQueue {
   // Update the congestion control algorithm, given as packet loss has been
   // detected, as reported in an incoming SACK chunk.
   void HandlePacketLoss(UnwrappedTSN highest_tsn_acked);
-  // Recalculate the number of in-flight payload bytes.
-  void RecalculateOutstandingBytes();
   // Update the view of the receiver window size.
   void UpdateReceiverWindow(uint32_t a_rwnd);
   // Given `max_size` of space left in a packet, which chunks can be added to
@@ -281,13 +323,13 @@ class RetransmissionQueue {
   // is running.
   void StartT3RtxTimerIfOutstandingData();
 
-  // Given the current time `now_ms`, expire chunks that have a limited
-  // lifetime.
-  void ExpireChunks(TimeMs now);
-  // Given that a message fragment, `item` has expired, expire all other
-  // fragments that share the same message - even never-before-sent fragments
-  // that are still in the SendQueue.
-  void ExpireAllFor(const RetransmissionQueue::TxData& item);
+  // Given the current time `now_ms`, expire and abandon outstanding (sent at
+  // least once) chunks that have a limited lifetime.
+  void ExpireOutstandingChunks(TimeMs now);
+  // Given that a message fragment, `item` has been abandoned, abandon all other
+  // fragments that share the same message - both never-before-sent fragments
+  // that are still in the SendQueue and outstanding chunks.
+  void AbandonAllFor(const RetransmissionQueue::TxData& item);
 
   // Returns the current congestion control algorithm phase.
   CongestionAlgorithmPhase phase() const {
@@ -304,8 +346,6 @@ class RetransmissionQueue {
   const size_t data_chunk_header_size_;
   // Called when a new RTT measurement has been done
   const std::function<void(DurationMs rtt)> on_new_rtt_;
-  // Called when the send queue is empty.
-  const std::function<void()> on_send_queue_empty_;
   // Called when a SACK has been seen that cleared the retransmission counter.
   const std::function<void()> on_clear_retransmission_counter_;
   // The retransmission counter.
@@ -337,7 +377,9 @@ class RetransmissionQueue {
   // cumulative acked. Note that it also contains chunks that have been acked in
   // gap ack blocks.
   std::map<UnwrappedTSN, TxData> outstanding_data_;
-  // The sum of the message bytes of the send_queue_
+  // Data chunks that are to be retransmitted.
+  std::set<UnwrappedTSN> to_be_retransmitted_;
+  // The number of bytes that are in-flight (sent but not yet acked or nacked).
   size_t outstanding_bytes_ = 0;
 };
 }  // namespace dcsctp
