@@ -68,9 +68,9 @@
 
 @synthesize nativeFactory = _nativeFactory;
 
-- (rtc::scoped_refptr<webrtc::AudioDeviceModule>)audioDeviceModule {
+- (rtc::scoped_refptr<webrtc::AudioDeviceModule>)audioDeviceModule:(BOOL)bypassVoiceProcessing {
 #if defined(WEBRTC_IOS)
-  return webrtc::CreateAudioDeviceModule();
+  return webrtc::CreateAudioDeviceModule(bypassVoiceProcessing);
 #else
   return nullptr;
 #endif
@@ -87,7 +87,7 @@
                                             RTCVideoEncoderFactoryH264) alloc] init])
               nativeVideoDecoderFactory:webrtc::ObjCToNativeVideoDecoderFactory([[RTC_OBJC_TYPE(
                                             RTCVideoDecoderFactoryH264) alloc] init])
-                      audioDeviceModule:[self audioDeviceModule]
+                      audioDeviceModule:[self audioDeviceModule:false]
                   audioProcessingModule:nullptr];
 #endif
 }
@@ -110,10 +110,36 @@
                        nativeAudioDecoderFactory:webrtc::CreateBuiltinAudioDecoderFactory()
                        nativeVideoEncoderFactory:std::move(native_encoder_factory)
                        nativeVideoDecoderFactory:std::move(native_decoder_factory)
-                               audioDeviceModule:[self audioDeviceModule]
+                               audioDeviceModule:[self audioDeviceModule:false]
                            audioProcessingModule:nullptr];
 #endif
 }
+
+- (instancetype)
+    initWithBypassVoiceProcessing:(BOOL)bypassVoiceProcessing
+                   encoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoEncoderFactory)>)encoderFactory
+                   decoderFactory:
+                       (nullable id<RTC_OBJC_TYPE(RTCVideoDecoderFactory)>)decoderFactory {
+#ifdef HAVE_NO_MEDIA
+  return [self initWithNoMedia];
+#else
+  std::unique_ptr<webrtc::VideoEncoderFactory> native_encoder_factory;
+  std::unique_ptr<webrtc::VideoDecoderFactory> native_decoder_factory;
+  if (encoderFactory) {
+    native_encoder_factory = webrtc::ObjCToNativeVideoEncoderFactory(encoderFactory);
+  }
+  if (decoderFactory) {
+    native_decoder_factory = webrtc::ObjCToNativeVideoDecoderFactory(decoderFactory);
+  }
+  return [self initWithNativeAudioEncoderFactory:webrtc::CreateBuiltinAudioEncoderFactory()
+                       nativeAudioDecoderFactory:webrtc::CreateBuiltinAudioDecoderFactory()
+                       nativeVideoEncoderFactory:std::move(native_encoder_factory)
+                       nativeVideoDecoderFactory:std::move(native_decoder_factory)
+                               audioDeviceModule:[self audioDeviceModule:bypassVoiceProcessing]
+                           audioProcessingModule:nullptr];
+#endif
+}
+
 - (instancetype)initNative {
   if (self = [super init]) {
     _networkThread = rtc::Thread::CreateWithSocketServer();
