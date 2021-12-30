@@ -51,6 +51,13 @@ RTC_OBJC_EXPORT
             decoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoDecoderFactory)>)decoderFactory
                audioDevice:(nullable id<RTC_OBJC_TYPE(RTCAudioDevice)>)audioDevice;
 
+/* Initialize object with bypass voice processing */
+- (instancetype)
+    initWithBypassVoiceProcessing:(BOOL)bypassVoiceProcessing
+                   encoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoEncoderFactory)>)encoderFactory
+                   decoderFactory:
+                       (nullable id<RTC_OBJC_TYPE(RTCVideoDecoderFactory)>)decoderFactory;
+
 /** Initialize an RTCAudioSource with constraints. */
 - (RTC_OBJC_TYPE(RTCAudioSource) *)audioSourceWithConstraints:
     (nullable RTC_OBJC_TYPE(RTCMediaConstraints) *)constraints;
