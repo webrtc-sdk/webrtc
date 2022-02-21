@@ -199,7 +199,7 @@ bool VoiceProcessingAudioUnit::Initialize(Float64 sample_rate) {
       [session.category isEqualToString: AVAudioSessionCategoryRecord]) {
     enable_input = 1;
   }
-  RTCLog(@"Initializing AudioUnit, category=%@, enable_input=%d", session.category, enable_input);
+  RTCLog(@"Initializing AudioUnit, category=%@, enable_input=%d", session.category, (int) enable_input);
   // LOGI() << "Initialize" << session.category << ", enable_input=" << enable_input;
   result = AudioUnitSetProperty(vpio_unit_, kAudioOutputUnitProperty_EnableIO,
                                 kAudioUnitScope_Input, kInputBus, &enable_input,
