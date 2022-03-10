@@ -11,6 +11,7 @@
 #import <Foundation/Foundation.h>
 
 #import "RTCMacros.h"
+#import "RTCAudioDeviceModule.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -47,6 +48,8 @@ RTC_OBJC_EXPORT
                    encoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoEncoderFactory)>)encoderFactory
                    decoderFactory:
                        (nullable id<RTC_OBJC_TYPE(RTCVideoDecoderFactory)>)decoderFactory;
+
+@property(nonatomic, readonly) RTCAudioDeviceModule *audioDeviceModule;
 
 /** Initialize an RTCAudioSource with constraints. */
 - (RTC_OBJC_TYPE(RTCAudioSource) *)audioSourceWithConstraints:

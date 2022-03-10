@@ -14,6 +14,9 @@
 #import "RTCPeerConnectionFactory+Private.h"
 #import "RTCPeerConnectionFactoryOptions+Private.h"
 
+#import "RTCAudioDeviceModule.h"
+#import "RTCAudioDeviceModule+Private.h"
+
 #import "RTCAudioSource+Private.h"
 #import "RTCAudioTrack+Private.h"
 #import "RTCMediaConstraints+Private.h"
@@ -63,6 +66,8 @@
   std::unique_ptr<rtc::Thread> _networkThread;
   std::unique_ptr<rtc::Thread> _workerThread;
   std::unique_ptr<rtc::Thread> _signalingThread;
+  rtc::scoped_refptr<webrtc::AudioDeviceModule> _audioDeviceModule;
+
   BOOL _hasStartedAecDump;
 }
 
@@ -74,6 +79,10 @@
 #else
   return nullptr;
 #endif
+}
+
+- (RTCAudioDeviceModule *)audioDeviceModule {
+  return [[RTCAudioDeviceModule alloc] initWithNativeModule: _audioDeviceModule];
 }
 
 - (instancetype)init {
@@ -220,7 +229,12 @@
     dependencies.task_queue_factory = webrtc::CreateDefaultTaskQueueFactory();
     dependencies.trials = std::make_unique<webrtc::FieldTrialBasedConfig>();
     cricket::MediaEngineDependencies media_deps;
-    media_deps.adm = std::move(audioDeviceModule);
+    
+    rtc::scoped_refptr<webrtc::AudioDeviceModule> adm = webrtc::AudioDeviceModule::Create(webrtc::AudioDeviceModule::AudioLayer::kPlatformDefaultAudio, dependencies.task_queue_factory.get());
+    adm->Init();
+    _audioDeviceModule = std::move(adm);
+
+    media_deps.adm = std::move(adm);
     media_deps.task_queue_factory = dependencies.task_queue_factory.get();
     media_deps.audio_encoder_factory = std::move(audioEncoderFactory);
     media_deps.audio_decoder_factory = std::move(audioDecoderFactory);
