@@ -17,18 +17,18 @@
 #import "sdk/objc/native/api/audio_device_module.h"
 
 @implementation RTCAudioDeviceModule {
-  rtc::scoped_refptr<webrtc::AudioDeviceModule> _nativeModule;
+  rtc::scoped_refptr<webrtc::AudioDeviceModule> _native;
 }
 
 - (instancetype)initWithNativeModule:(rtc::scoped_refptr<webrtc::AudioDeviceModule> )module {
   self = [super init];
-  _nativeModule = module;
+  _native = module;
   return self;
 }
 
 - (void)captureSampleBuffer:(CMSampleBufferRef)sampleBuffer {
   // TODO: Implement
-  // _nativeModule->CaptureSampleBuffer(sampleBuffer);
+  // _native->CaptureSampleBuffer(sampleBuffer);
 }
 
 - (NSArray<RTC_OBJC_TYPE(RTCDevice) *> *)playoutDevices {
@@ -38,11 +38,11 @@
   
   NSMutableArray *result = [NSMutableArray array];
 
-  int16_t count = _nativeModule->PlayoutDevices();
+  int16_t count = _native->PlayoutDevices();
 
   if (count > 0) {
     for (int i = 0; i < count; i++) {
-      _nativeModule->PlayoutDeviceName(i, name, guid);
+      _native->PlayoutDeviceName(i, name, guid);
       NSString *strGUID = [[NSString alloc] initWithCString:guid encoding:NSUTF8StringEncoding];
       NSString *strName = [[NSString alloc] initWithCString:name encoding:NSUTF8StringEncoding];
       RTCDevice *device = [[RTCDevice alloc] initWithGUID:strGUID name:strName];
@@ -60,11 +60,11 @@
   
   NSMutableArray *result = [NSMutableArray array];
 
-  int16_t count = _nativeModule->RecordingDevices();
+  int16_t count = _native->RecordingDevices();
 
   if (count > 0) {
     for (int i = 0; i < count; i++) {
-      _nativeModule->RecordingDeviceName(i, name, guid);
+      _native->RecordingDeviceName(i, name, guid);
       NSString *strGUID = [[NSString alloc] initWithCString:guid encoding:NSUTF8StringEncoding];
       NSString *strName = [[NSString alloc] initWithCString:name encoding:NSUTF8StringEncoding];
       RTCDevice *device = [[RTCDevice alloc] initWithGUID:strGUID name:strName];
@@ -75,44 +75,104 @@
   return result;
 }
 
+- (BOOL)switchPlayoutDevice: (nullable RTCDevice *)device {
+
+  NSUInteger index = 0;
+  NSArray *devices = [self playoutDevices];
+
+  if ([devices count] == 0) {
+    return NO;
+  }
+
+  if (device != nil) {
+    index = [devices indexOfObjectPassingTest:^BOOL(RTCDevice *e, NSUInteger i, BOOL *stop) {
+      return (*stop = [e.guid isEqualToString:device.guid]);
+    }];
+    if (index == NSNotFound) {
+      return NO;
+    }
+  }
+
+  _native->StopPlayout();
+
+  if (_native->SetPlayoutDevice(index) == 0 
+      && _native->InitPlayout() == 0
+      && _native->StartPlayout() == 0) {
+
+      return YES;
+  }
+
+  return NO;
+}
+
+- (BOOL)switchRecordingDevice: (nullable RTCDevice *)device {
+
+  NSUInteger index = 0;
+  NSArray *devices = [self recordingDevices];
+
+  if ([devices count] == 0) {
+    return NO;
+  }
+
+  if (device != nil) {
+    index = [devices indexOfObjectPassingTest:^BOOL(RTCDevice *e, NSUInteger i, BOOL *stop) {
+      return (*stop = [e.guid isEqualToString:device.guid]);
+    }];
+    if (index == NSNotFound) {
+      return NO;
+    }
+  }
+
+  _native->StopRecording();
+
+  if (_native->SetRecordingDevice(index) == 0 
+      && _native->InitRecording() == 0
+      && _native->StartRecording() == 0) {
+
+      return YES;
+  }
+
+  return NO;
+}
+
 - (BOOL)playing {
-  return _nativeModule->Playing();
+  return _native->Playing();
 }
 
 - (BOOL)setPlayoutDevice:(uint16_t) index {
-  return _nativeModule->SetPlayoutDevice(index) == 0;
+  return _native->SetPlayoutDevice(index) == 0;
 }
 
 - (BOOL)startPlayout {
-  return _nativeModule->StartPlayout() == 0;
+  return _native->StartPlayout() == 0;
 }
 
 - (BOOL)stopPlayout {
-  return _nativeModule->StopPlayout() == 0;
+  return _native->StopPlayout() == 0;
 }
 
 - (BOOL)initPlayout {
-  return _nativeModule->InitPlayout() == 0;
+  return _native->InitPlayout() == 0;
 }
 
 - (BOOL)recording {
-  return _nativeModule->Recording();
+  return _native->Recording();
 }
 
 - (BOOL)setRecordingDevice:(uint16_t) index {
-  return _nativeModule->SetRecordingDevice(index) == 0;
+  return _native->SetRecordingDevice(index) == 0;
 }
 
 - (BOOL)startRecording {
-  return _nativeModule->StartRecording() == 0;
+  return _native->StartRecording() == 0;
 }
 
 - (BOOL)stopRecording {
-  return _nativeModule->StopRecording() == 0;
+  return _native->StopRecording() == 0;
 }
 
 - (BOOL)initRecording {
-  return _nativeModule->InitRecording() == 0;
+  return _native->InitRecording() == 0;
 }
 
 @end

@@ -27,11 +27,17 @@ RTC_OBJC_EXPORT
 @property(nonatomic, readonly) BOOL playing;
 @property(nonatomic, readonly) BOOL recording;
 
+// Executes low-level API's in sequence to switch the device
+- (BOOL)switchPlayoutDevice: (nullable RTCDevice *)device;
+- (BOOL)switchRecordingDevice: (nullable RTCDevice *)device;
+
+// Low-level APIs
 - (BOOL)setPlayoutDevice:(uint16_t) index;
 - (BOOL)startPlayout;
 - (BOOL)stopPlayout;
 - (BOOL)initPlayout;
 
+// Low-level APIs
 - (BOOL)setRecordingDevice:(uint16_t) index;
 - (BOOL)startRecording;
 - (BOOL)stopRecording;
