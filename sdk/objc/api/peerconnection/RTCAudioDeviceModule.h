@@ -30,10 +30,12 @@ RTC_OBJC_EXPORT
 - (BOOL)setPlayoutDevice:(uint16_t) index;
 - (BOOL)startPlayout;
 - (BOOL)stopPlayout;
+- (BOOL)initPlayout;
 
 - (BOOL)setRecordingDevice:(uint16_t) index;
 - (BOOL)startRecording;
 - (BOOL)stopRecording;
+- (BOOL)initRecording;
 
 @end
 

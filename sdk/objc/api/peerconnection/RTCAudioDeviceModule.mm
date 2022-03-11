@@ -91,6 +91,10 @@
   return _nativeModule->StopPlayout() == 0;
 }
 
+- (BOOL)initPlayout {
+  return _nativeModule->InitPlayout() == 0;
+}
+
 - (BOOL)recording {
   return _nativeModule->Recording();
 }
@@ -105,6 +109,10 @@
 
 - (BOOL)stopRecording {
   return _nativeModule->StopRecording() == 0;
+}
+
+- (BOOL)initRecording {
+  return _nativeModule->InitRecording() == 0;
 }
 
 @end
