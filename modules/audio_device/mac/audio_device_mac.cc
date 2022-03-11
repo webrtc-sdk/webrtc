@@ -849,12 +849,9 @@ int32_t AudioDeviceMac::PlayoutDeviceName(uint16_t index,
   }
 
   memset(name, 0, kAdmMaxDeviceNameSize);
+  memset(guid, 0, kAdmMaxGuidSize);
 
-  if (guid != NULL) {
-    memset(guid, 0, kAdmMaxGuidSize);
-  }
-
-  return GetDeviceName(kAudioDevicePropertyScopeOutput, index, name);
+  return GetDeviceName(kAudioDevicePropertyScopeOutput, index, name, guid);
 }
 
 int32_t AudioDeviceMac::RecordingDeviceName(uint16_t index,
@@ -867,12 +864,9 @@ int32_t AudioDeviceMac::RecordingDeviceName(uint16_t index,
   }
 
   memset(name, 0, kAdmMaxDeviceNameSize);
-
-  if (guid != NULL) {
-    memset(guid, 0, kAdmMaxGuidSize);
-  }
-
-  return GetDeviceName(kAudioDevicePropertyScopeInput, index, name);
+  memset(guid, 0, kAdmMaxGuidSize);
+  
+  return GetDeviceName(kAudioDevicePropertyScopeInput, index, name, guid);
 }
 
 int16_t AudioDeviceMac::RecordingDevices() {
@@ -1665,7 +1659,8 @@ int32_t AudioDeviceMac::GetNumberDevices(const AudioObjectPropertyScope scope,
 
 int32_t AudioDeviceMac::GetDeviceName(const AudioObjectPropertyScope scope,
                                       const uint16_t index,
-                                      char* name) {
+                                      char* name,
+                                      char* guid) {
   OSStatus err = noErr;
   UInt32 len = kAdmMaxDeviceNameSize;
   AudioDeviceID deviceIds[MaxNumberDevices];
@@ -1703,6 +1698,9 @@ int32_t AudioDeviceMac::GetDeviceName(const AudioObjectPropertyScope scope,
       isDefaultDevice = true;
     }
   }
+
+  std::string strData = std::to_string(deviceIds[index]);
+  strcpy(guid, strData.c_str());
 
   AudioObjectPropertyAddress propertyAddress = {kAudioDevicePropertyDeviceName,
                                                 scope, 0};
