@@ -25,4 +25,23 @@
   return self;
 }
 
+
+- (BOOL)isEqual:(id)object {
+  if (self == object) {
+    return YES;
+  }
+  if (object == nil) {
+    return NO;
+  }
+  if (![object isMemberOfClass:[self class]]) {
+    return NO;
+  }
+
+  return [_guid isEqualToString:((RTC_OBJC_TYPE(RTCDevice) *)object).guid];
+}
+
+- (NSUInteger)hash {
+  return [_guid hash];
+}
+
 @end
