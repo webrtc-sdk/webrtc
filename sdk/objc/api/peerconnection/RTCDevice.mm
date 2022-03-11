@@ -11,10 +11,17 @@
 #import "RTCDevice+Private.h"
 #include "rtc_base/ref_counted_object.h"
 
+NSString *const kDefaultDeviceId = @"default";
+
 @implementation RTCDevice
 
 @synthesize guid = _guid;
 @synthesize name = _name;
+
++ (instancetype)defaultDevice {
+  return [[self alloc] initWithGUID: kDefaultDeviceId
+                               name: @""];
+}
 
 - (instancetype)initWithGUID:(NSString *)guid
                         name:(NSString* )name {

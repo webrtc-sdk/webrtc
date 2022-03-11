@@ -17,6 +17,7 @@ NS_ASSUME_NONNULL_BEGIN
 RTC_OBJC_EXPORT
 @interface RTCDevice : NSObject
 
++ (instancetype)defaultDevice;
 - (instancetype)init NS_UNAVAILABLE;
 
 @property(nonatomic, copy, readonly) NSString *guid;
