@@ -15,17 +15,21 @@ NSString *const kDefaultDeviceId = @"default";
 
 @implementation RTCDevice
 
+@synthesize type = _type;
 @synthesize guid = _guid;
 @synthesize name = _name;
 
-+ (instancetype)defaultDevice {
-  return [[self alloc] initWithGUID: kDefaultDeviceId
++ (instancetype)defaultDeviceWithType:(RTCDeviceType)type {
+  return [[self alloc] initWithType: type 
+                               guid: kDefaultDeviceId
                                name: @""];
 }
 
-- (instancetype)initWithGUID:(NSString *)guid
+- (instancetype)initWithType:(RTCDeviceType)type
+                        guid:(NSString *)guid
                         name:(NSString* )name {
   if (self = [super init]) {
+    _type = type;
     _guid = guid;
     _name = name;
   }

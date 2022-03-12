@@ -14,7 +14,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface RTCDevice ()
 
-- (instancetype)initWithGUID:(NSString *)guid
+- (instancetype)initWithType:(RTCDeviceType)type
+                        guid:(NSString *)guid
                         name:(NSString* )name;
 
 @end

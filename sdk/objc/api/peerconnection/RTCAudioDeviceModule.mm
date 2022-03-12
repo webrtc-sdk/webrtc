@@ -45,7 +45,7 @@
       _native->PlayoutDeviceName(i, name, guid);
       NSString *strGUID = [[NSString alloc] initWithCString:guid encoding:NSUTF8StringEncoding];
       NSString *strName = [[NSString alloc] initWithCString:name encoding:NSUTF8StringEncoding];
-      RTCDevice *device = [[RTCDevice alloc] initWithGUID:strGUID name:strName];
+      RTCDevice *device = [[RTCDevice alloc] initWithType:RTCDeviceTypeOutput guid:strGUID name:strName];
       [result addObject: device];
     }
   }
@@ -67,7 +67,7 @@
       _native->RecordingDeviceName(i, name, guid);
       NSString *strGUID = [[NSString alloc] initWithCString:guid encoding:NSUTF8StringEncoding];
       NSString *strName = [[NSString alloc] initWithCString:name encoding:NSUTF8StringEncoding];
-      RTCDevice *device = [[RTCDevice alloc] initWithGUID:strGUID name:strName];
+      RTCDevice *device = [[RTCDevice alloc] initWithType:RTCDeviceTypeInput guid:strGUID name:strName];
       [result addObject: device];
     }
   }

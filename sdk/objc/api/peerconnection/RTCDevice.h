@@ -12,15 +12,24 @@
 
 #import "RTCMacros.h"
 
+/**
+ * Represents the device type
+ */
+typedef NS_ENUM(NSInteger, RTCDeviceType) {
+  RTCDeviceTypeOutput,
+  RTCDeviceTypeInput,
+};
+
 NS_ASSUME_NONNULL_BEGIN
 
 RTC_OBJC_EXPORT
 @interface RTCDevice : NSObject
 
-+ (instancetype)defaultDevice;
++ (instancetype)defaultDeviceWithType:(RTCDeviceType)type;
 - (instancetype)init NS_UNAVAILABLE;
 
 @property(nonatomic, readonly) BOOL isDefault;
+@property(nonatomic, readonly) RTCDeviceType type;
 @property(nonatomic, copy, readonly) NSString *guid;
 @property(nonatomic, copy, readonly) NSString *name;
 
