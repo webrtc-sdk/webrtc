@@ -58,6 +58,15 @@
   return _source;
 }
 
+- (int)signalLevel {
+  int result = 0;
+  if (self.nativeAudioTrack->GetSignalLevel(&result)) {
+    return result;
+  }
+
+  return result;
+}
+
 #pragma mark - Private
 
 - (rtc::scoped_refptr<webrtc::AudioTrackInterface>)nativeAudioTrack {

@@ -23,6 +23,8 @@ RTC_OBJC_EXPORT
 /** The audio source for this audio track. */
 @property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioSource) * source;
 
+@property(nonatomic, readonly) int signalLevel;
+
 @end
 
 NS_ASSUME_NONNULL_END
