@@ -178,7 +178,8 @@ class AudioDeviceMac : public AudioDeviceGeneric {
 
   int32_t GetDeviceName(const AudioObjectPropertyScope scope,
                         const uint16_t index,
-                        char* name);
+                        char* name,
+                        char* guid);
 
   int32_t InitDevice(uint16_t userDeviceIndex,
                      AudioDeviceID& deviceId,

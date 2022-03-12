@@ -14,6 +14,9 @@
 #import "RTCPeerConnectionFactory+Private.h"
 #import "RTCPeerConnectionFactoryOptions+Private.h"
 
+#import "RTCAudioDeviceModule.h"
+#import "RTCAudioDeviceModule+Private.h"
+
 #import "RTCAudioSource+Private.h"
 #import "RTCAudioTrack+Private.h"
 #import "RTCMediaConstraints+Private.h"
@@ -46,9 +49,6 @@
 #include "sdk/objc/native/api/video_encoder_factory.h"
 #include "sdk/objc/native/src/objc_video_decoder_factory.h"
 #include "sdk/objc/native/src/objc_video_encoder_factory.h"
-#endif
-
-#if defined(WEBRTC_IOS)
 #import "sdk/objc/native/api/audio_device_module.h"
 #endif
 
@@ -63,17 +63,15 @@
   std::unique_ptr<rtc::Thread> _networkThread;
   std::unique_ptr<rtc::Thread> _workerThread;
   std::unique_ptr<rtc::Thread> _signalingThread;
+  rtc::scoped_refptr<webrtc::AudioDeviceModule> _audioDeviceModule;
+
   BOOL _hasStartedAecDump;
 }
 
 @synthesize nativeFactory = _nativeFactory;
 
-- (rtc::scoped_refptr<webrtc::AudioDeviceModule>)audioDeviceModule:(BOOL)bypassVoiceProcessing {
-#if defined(WEBRTC_IOS)
-  return webrtc::CreateAudioDeviceModule(bypassVoiceProcessing);
-#else
-  return nullptr;
-#endif
+- (RTCAudioDeviceModule *)audioDeviceModule {
+  return [[RTCAudioDeviceModule alloc] initWithNativeModule: _audioDeviceModule];
 }
 
 - (instancetype)init {
@@ -87,8 +85,9 @@
                                             RTCVideoEncoderFactoryH264) alloc] init])
               nativeVideoDecoderFactory:webrtc::ObjCToNativeVideoDecoderFactory([[RTC_OBJC_TYPE(
                                             RTCVideoDecoderFactoryH264) alloc] init])
-                      audioDeviceModule:[self audioDeviceModule:false]
-                  audioProcessingModule:nullptr];
+                      audioDeviceModule:nullptr
+                  audioProcessingModule:nullptr
+                  bypassVoiceProcessing:NO];
 #endif
 }
 
@@ -110,8 +109,9 @@
                        nativeAudioDecoderFactory:webrtc::CreateBuiltinAudioDecoderFactory()
                        nativeVideoEncoderFactory:std::move(native_encoder_factory)
                        nativeVideoDecoderFactory:std::move(native_decoder_factory)
-                               audioDeviceModule:[self audioDeviceModule:false]
-                           audioProcessingModule:nullptr];
+                               audioDeviceModule:nullptr
+                           audioProcessingModule:nullptr
+                           bypassVoiceProcessing:NO];
 #endif
 }
 
@@ -135,8 +135,9 @@
                        nativeAudioDecoderFactory:webrtc::CreateBuiltinAudioDecoderFactory()
                        nativeVideoEncoderFactory:std::move(native_encoder_factory)
                        nativeVideoDecoderFactory:std::move(native_decoder_factory)
-                               audioDeviceModule:[self audioDeviceModule:bypassVoiceProcessing]
-                           audioProcessingModule:nullptr];
+                               audioDeviceModule:nullptr
+                           audioProcessingModule:nullptr
+                           bypassVoiceProcessing:bypassVoiceProcessing];
 #endif
 }
 
@@ -185,14 +186,16 @@
                             (std::unique_ptr<webrtc::VideoDecoderFactory>)videoDecoderFactory
                                 audioDeviceModule:(webrtc::AudioDeviceModule *)audioDeviceModule
                             audioProcessingModule:
-                                (rtc::scoped_refptr<webrtc::AudioProcessing>)audioProcessingModule {
+                                (rtc::scoped_refptr<webrtc::AudioProcessing>)audioProcessingModule
+                            bypassVoiceProcessing:(BOOL)bypassVoiceProcessing {
   return [self initWithNativeAudioEncoderFactory:audioEncoderFactory
                        nativeAudioDecoderFactory:audioDecoderFactory
                        nativeVideoEncoderFactory:std::move(videoEncoderFactory)
                        nativeVideoDecoderFactory:std::move(videoDecoderFactory)
                                audioDeviceModule:audioDeviceModule
                            audioProcessingModule:audioProcessingModule
-                        networkControllerFactory:nullptr];
+                        networkControllerFactory:nullptr
+                           bypassVoiceProcessing:NO];
 }
 - (instancetype)initWithNativeAudioEncoderFactory:
                     (rtc::scoped_refptr<webrtc::AudioEncoderFactory>)audioEncoderFactory
@@ -207,7 +210,8 @@
                                 (rtc::scoped_refptr<webrtc::AudioProcessing>)audioProcessingModule
                          networkControllerFactory:
                              (std::unique_ptr<webrtc::NetworkControllerFactoryInterface>)
-                                 networkControllerFactory {
+                                 networkControllerFactory
+                            bypassVoiceProcessing:(BOOL)bypassVoiceProcessing {
   if (self = [self initNative]) {
     webrtc::PeerConnectionFactoryDependencies dependencies;
     dependencies.network_thread = _networkThread.get();
@@ -220,7 +224,16 @@
     dependencies.task_queue_factory = webrtc::CreateDefaultTaskQueueFactory();
     dependencies.trials = std::make_unique<webrtc::FieldTrialBasedConfig>();
     cricket::MediaEngineDependencies media_deps;
-    media_deps.adm = std::move(audioDeviceModule);
+  
+    // always create ADM on worker thread
+    auto adm = _workerThread->Invoke<rtc::scoped_refptr<webrtc::AudioDeviceModule>>(RTC_FROM_HERE, [&dependencies, &bypassVoiceProcessing]() {
+      return webrtc::AudioDeviceModule::Create(webrtc::AudioDeviceModule::AudioLayer::kPlatformDefaultAudio,
+                                               dependencies.task_queue_factory.get(),
+                                               bypassVoiceProcessing == YES);
+	  });
+
+    _audioDeviceModule = adm;
+    media_deps.adm = adm;
     media_deps.task_queue_factory = dependencies.task_queue_factory.get();
     media_deps.audio_encoder_factory = std::move(audioEncoderFactory);
     media_deps.audio_decoder_factory = std::move(audioDecoderFactory);
@@ -238,6 +251,7 @@
         std::make_unique<webrtc::RtcEventLogFactory>(dependencies.task_queue_factory.get());
     dependencies.network_controller_factory = std::move(networkControllerFactory);
 #endif
+
     _nativeFactory = webrtc::CreateModularPeerConnectionFactory(std::move(dependencies));
     NSAssert(_nativeFactory, @"Failed to initialize PeerConnectionFactory!");
   }

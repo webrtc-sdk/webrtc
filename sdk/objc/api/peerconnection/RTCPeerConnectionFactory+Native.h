@@ -50,7 +50,8 @@ NS_ASSUME_NONNULL_BEGIN
                                 audioDeviceModule:
                                     (nullable webrtc::AudioDeviceModule *)audioDeviceModule
                             audioProcessingModule:
-                                (rtc::scoped_refptr<webrtc::AudioProcessing>)audioProcessingModule;
+                                (rtc::scoped_refptr<webrtc::AudioProcessing>)audioProcessingModule
+                            bypassVoiceProcessing:(BOOL)bypassVoiceProcessing;
 
 - (instancetype)
     initWithNativeAudioEncoderFactory:
