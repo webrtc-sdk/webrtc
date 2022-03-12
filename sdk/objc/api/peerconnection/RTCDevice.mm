@@ -32,6 +32,9 @@ NSString *const kDefaultDeviceId = @"default";
   return self;
 }
 
+- (BOOL)isDefault {
+  return [_guid isEqualToString: kDefaultDeviceId];
+}
 
 - (BOOL)isEqual:(id)object {
   if (self == object) {

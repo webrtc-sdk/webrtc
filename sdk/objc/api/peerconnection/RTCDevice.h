@@ -20,6 +20,7 @@ RTC_OBJC_EXPORT
 + (instancetype)defaultDevice;
 - (instancetype)init NS_UNAVAILABLE;
 
+@property(nonatomic, readonly) BOOL isDefault;
 @property(nonatomic, copy, readonly) NSString *guid;
 @property(nonatomic, copy, readonly) NSString *name;
 
