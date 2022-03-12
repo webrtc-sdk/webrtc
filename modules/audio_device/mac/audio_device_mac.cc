@@ -1699,20 +1699,17 @@ int32_t AudioDeviceMac::GetDeviceName(const AudioObjectPropertyScope scope,
     }
   }
 
-  std::string strData = std::to_string(deviceIds[index]);
+  std::string strData;
+  if (isDefaultDevice) {
+    strData = "default";
+  } else {
+    strData = std::to_string(deviceIds[index]);
+  }
   strcpy(guid, strData.c_str());
 
   AudioObjectPropertyAddress propertyAddress = {kAudioDevicePropertyDeviceName,
                                                 scope, 0};
 
-  if (isDefaultDevice) {
-    char devName[len];
-
-    WEBRTC_CA_RETURN_ON_ERR(AudioObjectGetPropertyData(usedID, &propertyAddress,
-                                                       0, NULL, &len, devName));
-
-    sprintf(name, "default (%s)", devName);
-  } else {
     if (index < numberDevices) {
       usedID = deviceIds[index];
     } else {
@@ -1721,7 +1718,6 @@ int32_t AudioDeviceMac::GetDeviceName(const AudioObjectPropertyScope scope,
 
     WEBRTC_CA_RETURN_ON_ERR(AudioObjectGetPropertyData(usedID, &propertyAddress,
                                                        0, NULL, &len, name));
-  }
 
   return 0;
 }
