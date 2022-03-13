@@ -11,9 +11,8 @@
 #include <AudioUnit/AudioUnit.h>
 
 #import "RTCAudioDeviceModule+Private.h"
-#import "RTCDevice+Private.h"
+#import "RTCIODevice+Private.h"
 
-#include "rtc_base/ref_counted_object.h"
 #import "sdk/objc/native/api/audio_device_module.h"
 
 @implementation RTCAudioDeviceModule {
@@ -31,7 +30,7 @@
   // _native->CaptureSampleBuffer(sampleBuffer);
 }
 
-- (NSArray<RTC_OBJC_TYPE(RTCDevice) *> *)playoutDevices {
+- (NSArray<RTC_OBJC_TYPE(RTCAudioDevice) *> *)playoutDevices {
   
   char guid[webrtc::kAdmMaxGuidSize + 1] = {0};
   char name[webrtc::kAdmMaxDeviceNameSize + 1] = {0};
@@ -45,7 +44,7 @@
       _native->PlayoutDeviceName(i, name, guid);
       NSString *strGUID = [[NSString alloc] initWithCString:guid encoding:NSUTF8StringEncoding];
       NSString *strName = [[NSString alloc] initWithCString:name encoding:NSUTF8StringEncoding];
-      RTCDevice *device = [[RTCDevice alloc] initWithType:RTCDeviceTypeOutput guid:strGUID name:strName];
+      RTCAudioDevice *device = [[RTCAudioDevice alloc] initWithType:RTCIODeviceTypeOutput deviceId:strGUID name:strName];
       [result addObject: device];
     }
   }
@@ -53,7 +52,7 @@
   return result;
 }
 
-- (NSArray<RTC_OBJC_TYPE(RTCDevice) *> *)recordingDevices {
+- (NSArray<RTC_OBJC_TYPE(RTCAudioDevice) *> *)recordingDevices {
   
   char guid[webrtc::kAdmMaxGuidSize + 1] = {0};
   char name[webrtc::kAdmMaxDeviceNameSize + 1] = {0};
@@ -67,7 +66,7 @@
       _native->RecordingDeviceName(i, name, guid);
       NSString *strGUID = [[NSString alloc] initWithCString:guid encoding:NSUTF8StringEncoding];
       NSString *strName = [[NSString alloc] initWithCString:name encoding:NSUTF8StringEncoding];
-      RTCDevice *device = [[RTCDevice alloc] initWithType:RTCDeviceTypeInput guid:strGUID name:strName];
+      RTCAudioDevice *device = [[RTCAudioDevice alloc] initWithType:RTCIODeviceTypeInput deviceId:strGUID name:strName];
       [result addObject: device];
     }
   }
@@ -75,7 +74,7 @@
   return result;
 }
 
-- (BOOL)switchPlayoutDevice: (nullable RTCDevice *)device {
+- (BOOL)switchPlayoutDevice: (nullable RTCAudioDevice *)device {
 
   NSUInteger index = 0;
   NSArray *devices = [self playoutDevices];
@@ -85,8 +84,8 @@
   }
 
   if (device != nil) {
-    index = [devices indexOfObjectPassingTest:^BOOL(RTCDevice *e, NSUInteger i, BOOL *stop) {
-      return (*stop = [e.guid isEqualToString:device.guid]);
+    index = [devices indexOfObjectPassingTest:^BOOL(RTCAudioDevice *e, NSUInteger i, BOOL *stop) {
+      return (*stop = [e.deviceId isEqualToString:device.deviceId]);
     }];
     if (index == NSNotFound) {
       return NO;
@@ -105,7 +104,7 @@
   return NO;
 }
 
-- (BOOL)switchRecordingDevice: (nullable RTCDevice *)device {
+- (BOOL)switchRecordingDevice: (nullable RTCAudioDevice *)device {
 
   NSUInteger index = 0;
   NSArray *devices = [self recordingDevices];
@@ -115,8 +114,8 @@
   }
 
   if (device != nil) {
-    index = [devices indexOfObjectPassingTest:^BOOL(RTCDevice *e, NSUInteger i, BOOL *stop) {
-      return (*stop = [e.guid isEqualToString:device.guid]);
+    index = [devices indexOfObjectPassingTest:^BOOL(RTCAudioDevice *e, NSUInteger i, BOOL *stop) {
+      return (*stop = [e.deviceId isEqualToString:device.deviceId]);
     }];
     if (index == NSNotFound) {
       return NO;

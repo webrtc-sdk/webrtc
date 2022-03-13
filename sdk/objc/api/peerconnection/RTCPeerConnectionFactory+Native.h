@@ -66,7 +66,8 @@ NS_ASSUME_NONNULL_BEGIN
                 audioProcessingModule:
                     (rtc::scoped_refptr<webrtc::AudioProcessing>)audioProcessingModule
              networkControllerFactory:(std::unique_ptr<webrtc::NetworkControllerFactoryInterface>)
-                                          networkControllerFactory;
+                                          networkControllerFactory
+                bypassVoiceProcessing:(BOOL)bypassVoiceProcessing;
 
 - (instancetype)
     initWithEncoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoEncoderFactory)>)encoderFactory

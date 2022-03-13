@@ -12,7 +12,7 @@
 #import <Foundation/Foundation.h>
 
 #import "RTCMacros.h"
-#import "RTCDevice.h"
+#import "RTCAudioDevice.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -21,15 +21,15 @@ RTC_OBJC_EXPORT
 
 - (void)captureSampleBuffer:(CMSampleBufferRef)sampleBuffer;
 
-@property(nonatomic, readonly) NSArray<RTC_OBJC_TYPE(RTCDevice) *> *playoutDevices;
-@property(nonatomic, readonly) NSArray<RTC_OBJC_TYPE(RTCDevice) *> *recordingDevices;
+@property(nonatomic, readonly) NSArray<RTC_OBJC_TYPE(RTCAudioDevice) *> *playoutDevices;
+@property(nonatomic, readonly) NSArray<RTC_OBJC_TYPE(RTCAudioDevice) *> *recordingDevices;
 
 @property(nonatomic, readonly) BOOL playing;
 @property(nonatomic, readonly) BOOL recording;
 
 // Executes low-level API's in sequence to switch the device
-- (BOOL)switchPlayoutDevice: (nullable RTCDevice *)device;
-- (BOOL)switchRecordingDevice: (nullable RTCDevice *)device;
+- (BOOL)switchPlayoutDevice: (nullable RTCAudioDevice *)device;
+- (BOOL)switchRecordingDevice: (nullable RTCAudioDevice *)device;
 
 // Low-level APIs
 - (BOOL)setPlayoutDevice:(uint16_t) index;

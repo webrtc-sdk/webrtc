@@ -8,39 +8,43 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#import "RTCDevice+Private.h"
-#include "rtc_base/ref_counted_object.h"
+#import "RTCIODevice.h"
+#import "RTCIODevice+Private.h"
 
 NSString *const kDefaultDeviceId = @"default";
 
-@implementation RTCDevice
+@implementation RTCIODevice
 
 @synthesize type = _type;
-@synthesize guid = _guid;
+@synthesize deviceId = _deviceId;
 @synthesize name = _name;
 
-+ (instancetype)defaultDeviceWithType:(RTCDeviceType)type {
++ (instancetype)defaultDeviceWithType: (RTCIODeviceType)type {
   return [[self alloc] initWithType: type 
-                               guid: kDefaultDeviceId
+                           deviceId: kDefaultDeviceId
                                name: @""];
 }
 
-- (instancetype)initWithType:(RTCDeviceType)type
-                        guid:(NSString *)guid
-                        name:(NSString* )name {
+- (instancetype)initWithType: (RTCIODeviceType)type
+                    deviceId: (NSString *)deviceId
+                        name: (NSString* )name {
   if (self = [super init]) {
     _type = type;
-    _guid = guid;
+    _deviceId = deviceId;
     _name = name;
   }
   return self;
 }
 
+#pragma mark - IODevice
+
 - (BOOL)isDefault {
-  return [_guid isEqualToString: kDefaultDeviceId];
+  return [_deviceId isEqualToString: kDefaultDeviceId];
 }
 
-- (BOOL)isEqual:(id)object {
+#pragma mark - Equatable
+
+- (BOOL)isEqual: (id)object {
   if (self == object) {
     return YES;
   }
@@ -51,11 +55,11 @@ NSString *const kDefaultDeviceId = @"default";
     return NO;
   }
 
-  return [_guid isEqualToString:((RTC_OBJC_TYPE(RTCDevice) *)object).guid];
+  return [_deviceId isEqualToString:((RTC_OBJC_TYPE(RTCIODevice) *)object).deviceId];
 }
 
 - (NSUInteger)hash {
-  return [_guid hash];
+  return [_deviceId hash];
 }
 
 @end
