@@ -21,27 +21,15 @@ RTC_OBJC_EXPORT
 
 - (void)captureSampleBuffer:(CMSampleBufferRef)sampleBuffer;
 
-@property(nonatomic, readonly) NSArray<RTC_OBJC_TYPE(RTCAudioDevice) *> *playoutDevices;
-@property(nonatomic, readonly) NSArray<RTC_OBJC_TYPE(RTCAudioDevice) *> *recordingDevices;
+@property(nonatomic, readonly) NSArray<RTC_OBJC_TYPE(RTCAudioDevice) *> *outputDevices;
+@property(nonatomic, readonly) NSArray<RTC_OBJC_TYPE(RTCAudioDevice) *> *inputDevices;
 
 @property(nonatomic, readonly) BOOL playing;
 @property(nonatomic, readonly) BOOL recording;
 
 // Executes low-level API's in sequence to switch the device
-- (BOOL)switchPlayoutDevice: (nullable RTCAudioDevice *)device;
-- (BOOL)switchRecordingDevice: (nullable RTCAudioDevice *)device;
-
-// Low-level APIs
-- (BOOL)setPlayoutDevice:(uint16_t) index;
-- (BOOL)startPlayout;
-- (BOOL)stopPlayout;
-- (BOOL)initPlayout;
-
-// Low-level APIs
-- (BOOL)setRecordingDevice:(uint16_t) index;
-- (BOOL)startRecording;
-- (BOOL)stopRecording;
-- (BOOL)initRecording;
+- (BOOL)setOutputDevice: (nullable RTCAudioDevice *)device;
+- (BOOL)setInputDevice: (nullable RTCAudioDevice *)device;
 
 @end
 

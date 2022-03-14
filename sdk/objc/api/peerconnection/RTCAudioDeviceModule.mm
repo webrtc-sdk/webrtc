@@ -30,7 +30,7 @@
   // _native->CaptureSampleBuffer(sampleBuffer);
 }
 
-- (NSArray<RTC_OBJC_TYPE(RTCAudioDevice) *> *)playoutDevices {
+- (NSArray<RTC_OBJC_TYPE(RTCAudioDevice) *> *)outputDevices {
   
   char guid[webrtc::kAdmMaxGuidSize + 1] = {0};
   char name[webrtc::kAdmMaxDeviceNameSize + 1] = {0};
@@ -52,7 +52,7 @@
   return result;
 }
 
-- (NSArray<RTC_OBJC_TYPE(RTCAudioDevice) *> *)recordingDevices {
+- (NSArray<RTC_OBJC_TYPE(RTCAudioDevice) *> *)inputDevices {
   
   char guid[webrtc::kAdmMaxGuidSize + 1] = {0};
   char name[webrtc::kAdmMaxDeviceNameSize + 1] = {0};
@@ -74,10 +74,10 @@
   return result;
 }
 
-- (BOOL)switchPlayoutDevice: (nullable RTCAudioDevice *)device {
+- (BOOL)setOutputDevice: (nullable RTCAudioDevice *)device {
 
   NSUInteger index = 0;
-  NSArray *devices = [self playoutDevices];
+  NSArray *devices = [self outputDevices];
 
   if ([devices count] == 0) {
     return NO;
@@ -104,10 +104,10 @@
   return NO;
 }
 
-- (BOOL)switchRecordingDevice: (nullable RTCAudioDevice *)device {
+- (BOOL)setInputDevice: (nullable RTCAudioDevice *)device {
 
   NSUInteger index = 0;
-  NSArray *devices = [self recordingDevices];
+  NSArray *devices = [self inputDevices];
 
   if ([devices count] == 0) {
     return NO;
@@ -138,40 +138,8 @@
   return _native->Playing();
 }
 
-- (BOOL)setPlayoutDevice:(uint16_t) index {
-  return _native->SetPlayoutDevice(index) == 0;
-}
-
-- (BOOL)startPlayout {
-  return _native->StartPlayout() == 0;
-}
-
-- (BOOL)stopPlayout {
-  return _native->StopPlayout() == 0;
-}
-
-- (BOOL)initPlayout {
-  return _native->InitPlayout() == 0;
-}
-
 - (BOOL)recording {
   return _native->Recording();
-}
-
-- (BOOL)setRecordingDevice:(uint16_t) index {
-  return _native->SetRecordingDevice(index) == 0;
-}
-
-- (BOOL)startRecording {
-  return _native->StartRecording() == 0;
-}
-
-- (BOOL)stopRecording {
-  return _native->StopRecording() == 0;
-}
-
-- (BOOL)initRecording {
-  return _native->InitRecording() == 0;
 }
 
 @end
