@@ -1263,7 +1263,7 @@ int32_t AudioDeviceMac::StartRecording() {
         while (CaptureWorkerThread()) {
         }
       },
-      "CaptureWorkerThread",
+      "Audio_CaptureWorkerThread",
       rtc::ThreadAttributes().SetPriority(rtc::ThreadPriority::kRealtime));
 
   OSStatus err = noErr;
@@ -1400,7 +1400,7 @@ int32_t AudioDeviceMac::StartPlayout() {
         while (RenderWorkerThread()) {
         }
       },
-      "RenderWorkerThread",
+      "Audio_RenderWorkerThread",
       rtc::ThreadAttributes().SetPriority(rtc::ThreadPriority::kRealtime));
 
   if (_twoDevices || !_recording) {
