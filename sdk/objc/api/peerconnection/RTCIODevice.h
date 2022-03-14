@@ -22,6 +22,7 @@ typedef NS_ENUM(NSInteger, RTCIODeviceType) {
 RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE(RTCIODevice) : NSObject
 
++ (instancetype)defaultDeviceWithType: (RTCIODeviceType)type;
 - (instancetype)init NS_UNAVAILABLE;
 
 @property(nonatomic, readonly) BOOL isDefault;
