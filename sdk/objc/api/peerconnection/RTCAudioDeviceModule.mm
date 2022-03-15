@@ -1,11 +1,17 @@
 /*
- *  Copyright 2016 The WebRTC project authors. All Rights Reserved.
+ * Copyright 2022 LiveKit
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #include <AudioUnit/AudioUnit.h>
@@ -30,7 +36,7 @@
   // _native->CaptureSampleBuffer(sampleBuffer);
 }
 
-- (NSArray<RTC_OBJC_TYPE(RTCAudioDevice) *> *)playoutDevices {
+- (NSArray<RTC_OBJC_TYPE(RTCAudioDevice) *> *)outputDevices {
   
   char guid[webrtc::kAdmMaxGuidSize + 1] = {0};
   char name[webrtc::kAdmMaxDeviceNameSize + 1] = {0};
@@ -52,7 +58,7 @@
   return result;
 }
 
-- (NSArray<RTC_OBJC_TYPE(RTCAudioDevice) *> *)recordingDevices {
+- (NSArray<RTC_OBJC_TYPE(RTCAudioDevice) *> *)inputDevices {
   
   char guid[webrtc::kAdmMaxGuidSize + 1] = {0};
   char name[webrtc::kAdmMaxDeviceNameSize + 1] = {0};
@@ -74,10 +80,10 @@
   return result;
 }
 
-- (BOOL)switchPlayoutDevice: (nullable RTCAudioDevice *)device {
+- (BOOL)setOutputDevice: (nullable RTCAudioDevice *)device {
 
   NSUInteger index = 0;
-  NSArray *devices = [self playoutDevices];
+  NSArray *devices = [self outputDevices];
 
   if ([devices count] == 0) {
     return NO;
@@ -104,10 +110,10 @@
   return NO;
 }
 
-- (BOOL)switchRecordingDevice: (nullable RTCAudioDevice *)device {
+- (BOOL)setInputDevice: (nullable RTCAudioDevice *)device {
 
   NSUInteger index = 0;
-  NSArray *devices = [self recordingDevices];
+  NSArray *devices = [self inputDevices];
 
   if ([devices count] == 0) {
     return NO;
@@ -138,40 +144,8 @@
   return _native->Playing();
 }
 
-- (BOOL)setPlayoutDevice:(uint16_t) index {
-  return _native->SetPlayoutDevice(index) == 0;
-}
-
-- (BOOL)startPlayout {
-  return _native->StartPlayout() == 0;
-}
-
-- (BOOL)stopPlayout {
-  return _native->StopPlayout() == 0;
-}
-
-- (BOOL)initPlayout {
-  return _native->InitPlayout() == 0;
-}
-
 - (BOOL)recording {
   return _native->Recording();
-}
-
-- (BOOL)setRecordingDevice:(uint16_t) index {
-  return _native->SetRecordingDevice(index) == 0;
-}
-
-- (BOOL)startRecording {
-  return _native->StartRecording() == 0;
-}
-
-- (BOOL)stopRecording {
-  return _native->StopRecording() == 0;
-}
-
-- (BOOL)initRecording {
-  return _native->InitRecording() == 0;
 }
 
 @end

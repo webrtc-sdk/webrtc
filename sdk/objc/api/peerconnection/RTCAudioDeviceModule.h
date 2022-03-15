@@ -1,11 +1,17 @@
 /*
- *  Copyright 2016 The WebRTC project authors. All Rights Reserved.
+ * Copyright 2022 LiveKit
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #import <CoreMedia/CoreMedia.h>
@@ -21,27 +27,15 @@ RTC_OBJC_EXPORT
 
 - (void)captureSampleBuffer:(CMSampleBufferRef)sampleBuffer;
 
-@property(nonatomic, readonly) NSArray<RTC_OBJC_TYPE(RTCAudioDevice) *> *playoutDevices;
-@property(nonatomic, readonly) NSArray<RTC_OBJC_TYPE(RTCAudioDevice) *> *recordingDevices;
+@property(nonatomic, readonly) NSArray<RTC_OBJC_TYPE(RTCAudioDevice) *> *outputDevices;
+@property(nonatomic, readonly) NSArray<RTC_OBJC_TYPE(RTCAudioDevice) *> *inputDevices;
 
 @property(nonatomic, readonly) BOOL playing;
 @property(nonatomic, readonly) BOOL recording;
 
 // Executes low-level API's in sequence to switch the device
-- (BOOL)switchPlayoutDevice: (nullable RTCAudioDevice *)device;
-- (BOOL)switchRecordingDevice: (nullable RTCAudioDevice *)device;
-
-// Low-level APIs
-- (BOOL)setPlayoutDevice:(uint16_t) index;
-- (BOOL)startPlayout;
-- (BOOL)stopPlayout;
-- (BOOL)initPlayout;
-
-// Low-level APIs
-- (BOOL)setRecordingDevice:(uint16_t) index;
-- (BOOL)startRecording;
-- (BOOL)stopRecording;
-- (BOOL)initRecording;
+- (BOOL)setOutputDevice: (nullable RTCAudioDevice *)device;
+- (BOOL)setInputDevice: (nullable RTCAudioDevice *)device;
 
 @end
 
