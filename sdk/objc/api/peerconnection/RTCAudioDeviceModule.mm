@@ -148,4 +148,30 @@
   return _native->Recording();
 }
 
+#pragma mark -
+
+- (BOOL)startPlayout {
+  return _native->StartPlayout() == 0;
+}
+
+- (BOOL)stopPlayout {
+  return _native->StopPlayout() == 0;
+}
+
+- (BOOL)initPlayout {
+  return _native->InitPlayout() == 0;
+}
+
+- (BOOL)startRecording {
+  return _native->StartRecording() == 0;
+}
+
+- (BOOL)stopRecording {
+  return _native->StopRecording() == 0;
+}
+
+- (BOOL)initRecording {
+  return _native->InitRecording() == 0;
+}
+
 @end

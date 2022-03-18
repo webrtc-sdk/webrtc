@@ -37,6 +37,13 @@ RTC_OBJC_EXPORT
 - (BOOL)setOutputDevice: (nullable RTCAudioDevice *)device;
 - (BOOL)setInputDevice: (nullable RTCAudioDevice *)device;
 
+- (BOOL)startPlayout;
+- (BOOL)stopPlayout;
+- (BOOL)initPlayout;
+- (BOOL)startRecording;
+- (BOOL)stopRecording;
+- (BOOL)initRecording;
+
 @end
 
 NS_ASSUME_NONNULL_END
