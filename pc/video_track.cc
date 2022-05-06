@@ -19,6 +19,7 @@
 #include "rtc_base/checks.h"
 #include "rtc_base/location.h"
 #include "rtc_base/ref_counted_object.h"
+#include "rtc_base/logging.h"
 
 namespace webrtc {
 
@@ -53,7 +54,7 @@ void VideoTrack::AddOrUpdateSink(rtc::VideoSinkInterface<VideoFrame>* sink,
   RTC_DCHECK_RUN_ON(worker_thread_);
   VideoSourceBaseGuarded::AddOrUpdateSink(sink, wants);
   rtc::VideoSinkWants modified_wants = wants;
-  modified_wants.black_frames = !enabled();
+  modified_wants.black_frames = !enabled_w_;
   video_source_->AddOrUpdateSink(sink, modified_wants);
 }
 
@@ -69,12 +70,12 @@ VideoTrackSourceInterface* VideoTrack::GetSource() const {
 }
 
 VideoTrackInterface::ContentHint VideoTrack::content_hint() const {
-  RTC_DCHECK_RUN_ON(worker_thread_);
+  RTC_DCHECK_RUN_ON(&signaling_thread_);
   return content_hint_;
 }
 
 void VideoTrack::set_content_hint(ContentHint hint) {
-  RTC_DCHECK_RUN_ON(worker_thread_);
+  RTC_DCHECK_RUN_ON(&signaling_thread_);
   if (content_hint_ == hint)
     return;
   content_hint_ = hint;
@@ -82,17 +83,29 @@ void VideoTrack::set_content_hint(ContentHint hint) {
 }
 
 bool VideoTrack::set_enabled(bool enable) {
-  RTC_DCHECK_RUN_ON(worker_thread_);
-  for (auto& sink_pair : sink_pairs()) {
-    rtc::VideoSinkWants modified_wants = sink_pair.wants;
-    modified_wants.black_frames = !enable;
-    video_source_->AddOrUpdateSink(sink_pair.sink, modified_wants);
-  }
-  return MediaStreamTrack<VideoTrackInterface>::set_enabled(enable);
+  RTC_DCHECK_RUN_ON(&signaling_thread_);
+
+  bool ret = MediaStreamTrack<VideoTrackInterface>::set_enabled(enable);
+
+  worker_thread_->Invoke<void>(RTC_FROM_HERE, [&]() {
+    RTC_DCHECK_RUN_ON(worker_thread_);
+    enabled_w_ = enable;
+    for (auto& sink_pair : sink_pairs()) {
+      rtc::VideoSinkWants modified_wants = sink_pair.wants;
+      modified_wants.black_frames = !enable;
+      video_source_->AddOrUpdateSink(sink_pair.sink, modified_wants);
+    }
+  });
+
+  return ret;
 }
 
 bool VideoTrack::enabled() const {
-  RTC_DCHECK_RUN_ON(worker_thread_);
+  if (worker_thread_->IsCurrent()) {
+    RTC_DCHECK_RUN_ON(worker_thread_);
+    return enabled_w_;
+  }
+  RTC_DCHECK_RUN_ON(&signaling_thread_);
   return MediaStreamTrack<VideoTrackInterface>::enabled();
 }
 

@@ -43,7 +43,8 @@
 
 namespace webrtc {
 
-class VideoRtpReceiver : public RtpReceiverInternal {
+class VideoRtpReceiver : public RtpReceiverInternal,
+                         public ObserverInterface {
  public:
   // An SSRC of 0 will create a receiver that will match the first SSRC it
   // sees. Must be called on signaling thread.
@@ -60,6 +61,9 @@ class VideoRtpReceiver : public RtpReceiverInternal {
   virtual ~VideoRtpReceiver();
 
   rtc::scoped_refptr<VideoTrackInterface> video_track() const { return track_; }
+
+  // ObserverInterface implementation
+  void OnChanged() override;
 
   // RtpReceiverInterface implementation
   rtc::scoped_refptr<MediaStreamTrackInterface> track() const override {
@@ -111,6 +115,9 @@ class VideoRtpReceiver : public RtpReceiverInternal {
   std::vector<RtpSource> GetSources() const override;
 
  private:
+
+  void StartMediaChannel();
+  void StopMediaChannel();
   void RestartMediaChannel(absl::optional<uint32_t> ssrc);
   void SetSink(rtc::VideoSinkInterface<VideoFrame>* sink)
       RTC_RUN_ON(worker_thread_);
@@ -165,6 +172,8 @@ class VideoRtpReceiver : public RtpReceiverInternal {
       RTC_GUARDED_BY(&signaling_thread_checker_) = nullptr;
   bool received_first_packet_ RTC_GUARDED_BY(&signaling_thread_checker_) =
       false;
+
+  bool cached_track_enabled_ RTC_GUARDED_BY(&signaling_thread_checker_);
   const int attachment_id_;
   rtc::scoped_refptr<FrameDecryptorInterface> frame_decryptor_
       RTC_GUARDED_BY(worker_thread_);
@@ -180,6 +189,7 @@ class VideoRtpReceiver : public RtpReceiverInternal {
   // or switched.
   bool saved_generate_keyframe_ RTC_GUARDED_BY(worker_thread_) = false;
   bool saved_encoded_sink_enabled_ RTC_GUARDED_BY(worker_thread_) = false;
+  const rtc::scoped_refptr<PendingTaskSafetyFlag> worker_thread_safety_;
 };
 
 }  // namespace webrtc

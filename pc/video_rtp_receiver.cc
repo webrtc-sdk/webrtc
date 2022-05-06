@@ -21,6 +21,7 @@
 #include "rtc_base/checks.h"
 #include "rtc_base/location.h"
 #include "rtc_base/logging.h"
+#include "rtc_base/task_utils/to_queued_task.h"
 
 namespace webrtc {
 
@@ -46,9 +47,13 @@ VideoRtpReceiver::VideoRtpReceiver(
                                                          worker_thread,
                                                          source_),
                              worker_thread))),
-      attachment_id_(GenerateUniqueId()) {
+      cached_track_enabled_(track_->enabled()),
+      attachment_id_(GenerateUniqueId()),
+      worker_thread_safety_(PendingTaskSafetyFlag::CreateDetachedInactive()) {
   RTC_DCHECK(worker_thread_);
   SetStreams(streams);
+  track_->RegisterObserver(this);
+  RTC_LOG(LS_ERROR) << "VideoRtpReceiver::VideoRtpReceiver called, id = " << receiver_id;
   RTC_DCHECK_EQ(source_->state(), MediaSourceInterface::kLive);
 }
 
@@ -135,6 +140,42 @@ void VideoRtpReceiver::StopAndEndTrack() {
   RTC_DCHECK_RUN_ON(&signaling_thread_checker_);
   Stop();
   track_->internal()->set_ended();
+}
+
+void VideoRtpReceiver::OnChanged() {
+  RTC_DCHECK_RUN_ON(&signaling_thread_checker_);
+  if (cached_track_enabled_ != track_->enabled()) {
+    cached_track_enabled_ = track_->enabled();
+    worker_thread_->PostTask(ToQueuedTask(
+        worker_thread_safety_,
+        [this, enabled = cached_track_enabled_]() {
+          RTC_DCHECK_RUN_ON(worker_thread_);
+          if(enabled) {
+            StartMediaChannel();
+          } else {
+            StopMediaChannel();
+          }
+        }));
+  }
+}
+
+void VideoRtpReceiver::StartMediaChannel() {
+  RTC_LOG(LS_ERROR) << "VideoRtpReceiver::StartMediaChannel id = " << id();
+  
+  RTC_DCHECK_RUN_ON(worker_thread_);
+  if (!media_channel_) {
+    return;
+  }
+  media_channel_->StartReceive(ssrc_.value_or(0));
+  OnGenerateKeyFrame();
+}
+void VideoRtpReceiver::StopMediaChannel() {
+  RTC_LOG(LS_ERROR) << "VideoRtpReceiver::StopMediaChannelid = " << id();
+  RTC_DCHECK_RUN_ON(worker_thread_);
+  if (!media_channel_) {
+    return;
+  }
+  media_channel_->StopReceive(ssrc_.value_or(0));
 }
 
 void VideoRtpReceiver::RestartMediaChannel(absl::optional<uint32_t> ssrc) {
@@ -235,6 +276,11 @@ void VideoRtpReceiver::set_transport(
 void VideoRtpReceiver::SetStreams(
     const std::vector<rtc::scoped_refptr<MediaStreamInterface>>& streams) {
   RTC_DCHECK_RUN_ON(&signaling_thread_checker_);
+
+  for (size_t i = 0; i < streams.size(); ++i) {
+    RTC_LOG(LS_ERROR) << id() << ": stream_id: " << streams[i]->id();
+  }
+  
   // Remove remote track from any streams that are going away.
   for (const auto& existing_stream : streams_) {
     bool removed = true;
@@ -301,13 +347,18 @@ void VideoRtpReceiver::SetMediaChannel(cricket::MediaChannel* media_channel) {
 void VideoRtpReceiver::SetMediaChannel_w(cricket::MediaChannel* media_channel) {
   if (media_channel == media_channel_)
     return;
-
+  
+  RTC_LOG(LS_ERROR)
+        << "VideoRtpReceiver::SetMediaChannel_w: " << typeid(media_channel).name();
+    
   bool encoded_sink_enabled = saved_encoded_sink_enabled_;
   if (encoded_sink_enabled && media_channel_) {
     // Turn off the old sink, if any.
     SetEncodedSinkEnabled(false);
   }
 
+  media_channel ? worker_thread_safety_->SetAlive()
+                : worker_thread_safety_->SetNotAlive();
   media_channel_ = static_cast<cricket::VideoMediaChannel*>(media_channel);
 
   if (media_channel_) {
