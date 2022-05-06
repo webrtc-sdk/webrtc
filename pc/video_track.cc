@@ -116,15 +116,9 @@ MediaStreamTrackInterface::TrackState VideoTrack::state() const {
 
 void VideoTrack::OnChanged() {
   RTC_DCHECK_RUN_ON(&signaling_thread_);
-  worker_thread_->Invoke<void>(
-      RTC_FROM_HERE, [this, state = video_source_->state()]() {
-        // TODO(tommi): Calling set_state() this way isn't ideal since we're
-        // currently blocking the signaling thread and set_state() may
-        // internally fire notifications via `FireOnChanged()` which may further
-        // amplify the blocking effect on the signaling thread.
-        rtc::Thread::ScopedDisallowBlockingCalls no_blocking_calls;
-        set_state(state == MediaSourceInterface::kEnded ? kEnded : kLive);
-      });
+  rtc::Thread::ScopedDisallowBlockingCalls no_blocking_calls;
+  MediaSourceInterface::SourceState state = video_source_->state();
+  set_state(state == MediaSourceInterface::kEnded ? kEnded : kLive);
 }
 
 rtc::scoped_refptr<VideoTrack> VideoTrack::Create(
