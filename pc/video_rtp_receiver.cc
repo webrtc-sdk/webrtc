@@ -47,7 +47,7 @@ VideoRtpReceiver::VideoRtpReceiver(
                                                          worker_thread,
                                                          source_),
                              worker_thread))),
-      cached_track_enabled_(track_->enabled()),
+      cached_track_should_receive_(track_->should_receive()),
       attachment_id_(GenerateUniqueId()),
       worker_thread_safety_(PendingTaskSafetyFlag::CreateDetachedInactive()) {
   RTC_DCHECK(worker_thread_);
@@ -143,14 +143,16 @@ void VideoRtpReceiver::StopAndEndTrack() {
 }
 
 void VideoRtpReceiver::OnChanged() {
+  RTC_LOG(LS_ERROR) << "VideoRtpReceiver::OnChanged::id" << id() << ": signaling: " << (&signaling_thread_checker_)->IsCurrent();
+  RTC_LOG(LS_ERROR) << "VideoRtpReceiver::OnChanged::id" << id() << ": worker: " << (worker_thread_)->IsCurrent();
   RTC_DCHECK_RUN_ON(&signaling_thread_checker_);
-  if (cached_track_enabled_ != track_->enabled()) {
-    cached_track_enabled_ = track_->enabled();
+  if (cached_track_should_receive_ != track_->should_receive()) {
+    cached_track_should_receive_ = track_->should_receive();
     worker_thread_->PostTask(ToQueuedTask(
         worker_thread_safety_,
-        [this, enabled = cached_track_enabled_]() {
+        [this, receive = cached_track_should_receive_]() {
           RTC_DCHECK_RUN_ON(worker_thread_);
-          if(enabled) {
+          if(receive) {
             StartMediaChannel();
           } else {
             StopMediaChannel();

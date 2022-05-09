@@ -173,7 +173,7 @@ class VideoRtpReceiver : public RtpReceiverInternal,
   bool received_first_packet_ RTC_GUARDED_BY(&signaling_thread_checker_) =
       false;
 
-  bool cached_track_enabled_ RTC_GUARDED_BY(&signaling_thread_checker_);
+  bool cached_track_should_receive_ RTC_GUARDED_BY(&signaling_thread_checker_);
   const int attachment_id_;
   rtc::scoped_refptr<FrameDecryptorInterface> frame_decryptor_
       RTC_GUARDED_BY(worker_thread_);
