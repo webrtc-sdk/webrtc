@@ -70,11 +70,11 @@
 }
 
 - (BOOL)shouldReceive {
-  return _nativeTrack->shouldReceive();
+  return self.nativeVideoTrack->should_receive();
 }
 
 - (void)setShouldReceive:(BOOL)shouldReceive {
-  _nativeTrack->set_should_receive(shouldReceive);
+  self.nativeVideoTrack->set_should_receive(shouldReceive);
 }
 
 - (void)addRenderer:(id<RTC_OBJC_TYPE(RTCVideoRenderer)>)renderer {
