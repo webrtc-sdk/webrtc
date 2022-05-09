@@ -339,10 +339,6 @@ void VideoRtpReceiver::SetMediaChannel(cricket::MediaChannel* media_channel) {
 void VideoRtpReceiver::SetMediaChannel_w(cricket::MediaChannel* media_channel) {
   if (media_channel == media_channel_)
     return;
-  
-  RTC_LOG(LS_ERROR)
-        << "VideoRtpReceiver::SetMediaChannel_w: " << typeid(media_channel).name();
-    
   bool encoded_sink_enabled = saved_encoded_sink_enabled_;
   if (encoded_sink_enabled && media_channel_) {
     // Turn off the old sink, if any.
