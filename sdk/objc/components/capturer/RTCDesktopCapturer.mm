@@ -10,22 +10,25 @@
 
 #import <Foundation/Foundation.h>
 
-#import "RTCScreenCapturer.h"
+#import "RTCDesktopCapturer.h"
 #import "base/RTCLogging.h"
 #import "base/RTCVideoFrameBuffer.h"
 #import "components/video_frame_buffer/RTCCVPixelBuffer.h"
 
-#include "sdk/objc/native/src/objc_screen_capture.h"
+#include "sdk/objc/native/src/objc_desktop_capture.h"
 
-
-@implementation RTC_OBJC_TYPE (RTCScreenCapturer) {
-    std::unique_ptr<webrtc::ObjCScreenCapture> capturer_;
+@implementation RTC_OBJC_TYPE (RTCDesktopCapturer) {
+    std::unique_ptr<webrtc::ObjCDesktopCapturer> capturer_;
 }
 
 // This initializer is used for testing.
-- (instancetype)initWithDelegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)delegate{
+- (instancetype)initWithDelegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)delegate type:(RTCDesktopCapturerType)type {
   if (self = [super initWithDelegate:delegate]) {
-      capturer_ = std::make_unique<webrtc::ObjCScreenCapture>(self);
+      webrtc::ObjCDesktopCapturer::DesktopType captureType = webrtc::ObjCDesktopCapturer::kScreen;
+      if(type == RTCDesktopCapturerTypeWindow) {
+          captureType = webrtc::ObjCDesktopCapturer::kWindow;
+      }
+      capturer_ = std::make_unique<webrtc::ObjCDesktopCapturer>(captureType, self);
   }
   return self;
 }

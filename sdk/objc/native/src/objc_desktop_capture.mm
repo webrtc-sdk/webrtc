@@ -1,41 +1,46 @@
-#include "sdk/objc/native/src/objc_screen_capture.h"
+#include "sdk/objc/native/src/objc_desktop_capture.h"
 #include "sdk/objc/native/src/objc_video_frame.h"
 
 #include "third_party/libyuv/include/libyuv.h"
 
-#import "components/capturer/RTCScreenCapturer.h"
+#import "components/capturer/RTCDesktopCapturer.h"
 
 namespace webrtc {
 
 enum { kCaptureDelay = 33, kCaptureMessageId = 1000 };
 
-ObjCScreenCapture::ObjCScreenCapture(id<RTC_OBJC_TYPE(ScreenCapturerDelegate)> delegate)
- : thread_(rtc::Thread::Create()), delegate_(delegate) {
+ObjCDesktopCapturer::ObjCDesktopCapturer(DesktopType type,
+                                     id<RTC_OBJC_TYPE(DesktopCapturerDelegate)> delegate)
+    : thread_(rtc::Thread::Create()), delegate_(delegate) {
   webrtc::DesktopCaptureOptions options = webrtc::DesktopCaptureOptions::CreateDefault();
-  capturer_ = webrtc::DesktopCapturer::CreateScreenCapturer(options);
+  if (type == kScreen) {
+    capturer_ = webrtc::DesktopCapturer::CreateScreenCapturer(options);
+  }
+  else { capturer_ = webrtc::DesktopCapturer::CreateWindowCapturer(options); }
+
   thread_->Start();
 }
 
-ObjCScreenCapture::~ObjCScreenCapture() {
+ObjCDesktopCapturer::~ObjCDesktopCapturer() {
   thread_->Stop();
 }
 
-CaptureState ObjCScreenCapture::Start() {
+ObjCDesktopCapturer::CaptureState ObjCDesktopCapturer::Start() {
   capture_state_ = CS_RUNNING;
   capturer_->Start(this);
   CaptureFrame();
   return CS_RUNNING;
 }
 
-void ObjCScreenCapture::Stop() {
+void ObjCDesktopCapturer::Stop() {
   capture_state_ = CS_STOPPED;
 }
 
-bool ObjCScreenCapture::IsRunning() {
+bool ObjCDesktopCapturer::IsRunning() {
   return capture_state_ == CS_RUNNING;
 }
 
-void ObjCScreenCapture::OnCaptureResult(webrtc::DesktopCapturer::Result result,
+void ObjCDesktopCapturer::OnCaptureResult(webrtc::DesktopCapturer::Result result,
                                         std::unique_ptr<webrtc::DesktopFrame> frame) {
   if (result != webrtc::DesktopCapturer::Result::SUCCESS) {
     return;
@@ -63,17 +68,18 @@ void ObjCScreenCapture::OnCaptureResult(webrtc::DesktopCapturer::Result result,
                         libyuv::kRotate0,
                         libyuv::FOURCC_ARGB);
 
-   RTCVideoFrame *rtc_video_frame = ToObjCVideoFrame(webrtc::VideoFrame(i420_buffer_, 0, 0, webrtc::kVideoRotation_0));
-   [delegate_ didCaptureVideoFrame:rtc_video_frame];
+  RTCVideoFrame* rtc_video_frame =
+      ToObjCVideoFrame(webrtc::VideoFrame(i420_buffer_, 0, 0, webrtc::kVideoRotation_0));
+  [delegate_ didCaptureVideoFrame:rtc_video_frame];
 }
 
-void ObjCScreenCapture::OnMessage(rtc::Message* msg) {
+void ObjCDesktopCapturer::OnMessage(rtc::Message* msg) {
   if (msg->message_id == kCaptureMessageId) {
     CaptureFrame();
   }
 }
 
-void ObjCScreenCapture::CaptureFrame() {
+void ObjCDesktopCapturer::CaptureFrame() {
   if (capture_state_ == CS_RUNNING) {
     capturer_->CaptureFrame();
     thread_->PostDelayed(RTC_FROM_HERE, kCaptureDelay, this, kCaptureMessageId);

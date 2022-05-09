@@ -21,26 +21,29 @@
 #include "rtc_base/thread.h"
 
 @protocol RTC_OBJC_TYPE
-(ScreenCapturerDelegate);
+(DesktopCapturerDelegate);
 
 namespace webrtc {
 
-enum CaptureState { CS_RUNNING, CS_STOPPED };
-
-class ObjCScreenCapture : public DesktopCapturer::Callback,
-                          public rtc::MessageHandler {
+class ObjCDesktopCapturer : public DesktopCapturer::Callback, public rtc::MessageHandler {
  public:
-  ObjCScreenCapture(id<RTC_OBJC_TYPE(ScreenCapturerDelegate)> delegate);
-  virtual ~ObjCScreenCapture();
+  enum CaptureState { CS_RUNNING, CS_STOPPED };
+
+  enum DesktopType { kScreen, kWindow };
+
+ public:
+  ObjCDesktopCapturer(DesktopType type, id<RTC_OBJC_TYPE(DesktopCapturerDelegate)> delegate);
+  virtual ~ObjCDesktopCapturer();
 
   virtual CaptureState Start();
+
   virtual void Stop();
+
   virtual bool IsRunning();
 
  protected:
-  virtual void OnCaptureResult(
-      webrtc::DesktopCapturer::Result result,
-      std::unique_ptr<webrtc::DesktopFrame> frame) override;
+  virtual void OnCaptureResult(webrtc::DesktopCapturer::Result result,
+                               std::unique_ptr<webrtc::DesktopFrame> frame) override;
   virtual void OnMessage(rtc::Message* msg) override;
 
  private:
@@ -49,7 +52,7 @@ class ObjCScreenCapture : public DesktopCapturer::Callback,
   std::unique_ptr<rtc::Thread> thread_;
   rtc::scoped_refptr<webrtc::I420Buffer> i420_buffer_;
   CaptureState capture_state_ = CS_STOPPED;
-  id<RTC_OBJC_TYPE(ScreenCapturerDelegate)> delegate_;
+  id<RTC_OBJC_TYPE(DesktopCapturerDelegate)> delegate_;
 };
 
 }  // namespace webrtc
