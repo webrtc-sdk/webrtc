@@ -951,7 +951,6 @@ void WebRtcVideoChannel::RequestEncoderSwitch(
 
 void WebRtcVideoChannel::StartReceive(uint32_t ssrc) {
   RTC_DCHECK_RUN_ON(&thread_checker_);
-  RTC_LOG(LS_WARNING) << "WebRtcVideoChannel::StartReceive";
   WebRtcVideoReceiveStream* stream = FindReceiveStream(ssrc);
   if(!stream) {
     return;
@@ -961,7 +960,6 @@ void WebRtcVideoChannel::StartReceive(uint32_t ssrc) {
 
 void WebRtcVideoChannel::StopReceive(uint32_t ssrc) {
   RTC_DCHECK_RUN_ON(&thread_checker_);
-  RTC_LOG(LS_WARNING) << "WebRtcVideoChannel::StopReceive";
   WebRtcVideoReceiveStream* stream = FindReceiveStream(ssrc);
   if(!stream) {
     return;
@@ -3038,13 +3036,11 @@ void WebRtcVideoChannel::WebRtcVideoReceiveStream::SetRecvParameters(
 }
 
 void WebRtcVideoChannel::WebRtcVideoReceiveStream::StartStream(){
-  RTC_LOG(LS_ERROR) << "WebRtcVideoChannel::WebRtcVideoReceiveStream::StartStream";
   if (stream_) {
     stream_->Start();
   }
 }
 void WebRtcVideoChannel::WebRtcVideoReceiveStream::StopStream(){
-  RTC_LOG(LS_ERROR) << "WebRtcVideoChannel::WebRtcVideoReceiveStream::StopStream";
   if (stream_) {
     stream_->Stop();
   }

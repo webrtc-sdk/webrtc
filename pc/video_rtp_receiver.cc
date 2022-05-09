@@ -53,7 +53,6 @@ VideoRtpReceiver::VideoRtpReceiver(
   RTC_DCHECK(worker_thread_);
   SetStreams(streams);
   track_->RegisterObserver(this);
-  RTC_LOG(LS_ERROR) << "VideoRtpReceiver::VideoRtpReceiver called, id = " << receiver_id;
   RTC_DCHECK_EQ(source_->state(), MediaSourceInterface::kLive);
 }
 
@@ -143,8 +142,6 @@ void VideoRtpReceiver::StopAndEndTrack() {
 }
 
 void VideoRtpReceiver::OnChanged() {
-  RTC_LOG(LS_ERROR) << "VideoRtpReceiver::OnChanged::id" << id() << ": signaling: " << (&signaling_thread_checker_)->IsCurrent();
-  RTC_LOG(LS_ERROR) << "VideoRtpReceiver::OnChanged::id" << id() << ": worker: " << (worker_thread_)->IsCurrent();
   RTC_DCHECK_RUN_ON(&signaling_thread_checker_);
   if (cached_track_should_receive_ != track_->should_receive()) {
     cached_track_should_receive_ = track_->should_receive();
@@ -161,9 +158,7 @@ void VideoRtpReceiver::OnChanged() {
   }
 }
 
-void VideoRtpReceiver::StartMediaChannel() {
-  RTC_LOG(LS_ERROR) << "VideoRtpReceiver::StartMediaChannel id = " << id();
-  
+void VideoRtpReceiver::StartMediaChannel() {  
   RTC_DCHECK_RUN_ON(worker_thread_);
   if (!media_channel_) {
     return;
@@ -172,7 +167,6 @@ void VideoRtpReceiver::StartMediaChannel() {
   OnGenerateKeyFrame();
 }
 void VideoRtpReceiver::StopMediaChannel() {
-  RTC_LOG(LS_ERROR) << "VideoRtpReceiver::StopMediaChannelid = " << id();
   RTC_DCHECK_RUN_ON(worker_thread_);
   if (!media_channel_) {
     return;
@@ -278,10 +272,6 @@ void VideoRtpReceiver::set_transport(
 void VideoRtpReceiver::SetStreams(
     const std::vector<rtc::scoped_refptr<MediaStreamInterface>>& streams) {
   RTC_DCHECK_RUN_ON(&signaling_thread_checker_);
-
-  for (size_t i = 0; i < streams.size(); ++i) {
-    RTC_LOG(LS_ERROR) << id() << ": stream_id: " << streams[i]->id();
-  }
   
   // Remove remote track from any streams that are going away.
   for (const auto& existing_stream : streams_) {

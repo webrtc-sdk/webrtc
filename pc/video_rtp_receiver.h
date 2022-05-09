@@ -115,7 +115,6 @@ class VideoRtpReceiver : public RtpReceiverInternal,
   std::vector<RtpSource> GetSources() const override;
 
  private:
-
   void StartMediaChannel();
   void StopMediaChannel();
   void RestartMediaChannel(absl::optional<uint32_t> ssrc);
