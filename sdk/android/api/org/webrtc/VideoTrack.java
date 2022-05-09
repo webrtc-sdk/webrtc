@@ -55,18 +55,18 @@ public class VideoTrack extends MediaStreamTrack {
   }
 
   /**
-   * For a remote video track, starts receiving the video stream.
+   * For a remote video track, starts/stops receiving the video stream.
    * 
-   * If the VideoTrack was already receiving, this is a no-op.
+   * If this is a local video track, this is a no-op.
    */
   public void setShouldReceive(boolean shouldReceive){
     nativeSetShouldReceive(getNativeMediaStreamTrack(), shouldReceive);
   }
 
   /**
-   * For a remote video track, stops receiving the video stream.
+   * The current receive status for a remote video track.
    * 
-   * If the VideoTrack was already receiving, this is a no-op.
+   * This has no meaning for a local video track.
    */
   public boolean shouldReceive(){
     return nativeGetShouldReceive(getNativeMediaStreamTrack());
