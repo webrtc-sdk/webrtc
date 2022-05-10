@@ -287,6 +287,7 @@ if (is_android) {
       "api/org/webrtc/RTCStatsCollectorCallback.java",
       "api/org/webrtc/RTCStatsReport.java",
       "api/org/webrtc/RtcCertificatePem.java",
+      "api/org/webrtc/RtpCapabilities.java",
       "api/org/webrtc/RtpParameters.java",
       "api/org/webrtc/RtpReceiver.java",
       "api/org/webrtc/RtpSender.java",
@@ -359,6 +360,7 @@ if (is_android) {
     sources = [
       "api/org/webrtc/DefaultVideoDecoderFactory.java",
       "api/org/webrtc/DefaultVideoEncoderFactory.java",
+      "api/org/webrtc/WrappedVideoDecoderFactory.java",
     ]
 
     deps = [
@@ -736,6 +738,8 @@ if (current_os == "linux" || is_android) {
       "src/jni/pc/rtc_certificate.h",
       "src/jni/pc/rtc_stats_collector_callback_wrapper.cc",
       "src/jni/pc/rtc_stats_collector_callback_wrapper.h",
+      "src/jni/pc/rtp_capabilities.cc",
+      "src/jni/pc/rtp_capabilities.h",
       "src/jni/pc/rtp_parameters.cc",
       "src/jni/pc/rtp_parameters.h",
       "src/jni/pc/rtp_receiver.cc",
@@ -1409,6 +1413,7 @@ if (current_os == "linux" || is_android) {
       "api/org/webrtc/RTCStatsCollectorCallback.java",
       "api/org/webrtc/RTCStatsReport.java",
       "api/org/webrtc/RtcCertificatePem.java",
+      "api/org/webrtc/RtpCapabilities.java",
       "api/org/webrtc/RtpParameters.java",
       "api/org/webrtc/RtpReceiver.java",
       "api/org/webrtc/RtpSender.java",

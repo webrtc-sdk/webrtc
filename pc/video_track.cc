@@ -76,6 +76,19 @@ VideoTrackSourceInterface* VideoTrack::GetSourceInternal() const {
   return video_source_->internal();
 }
 
+void VideoTrack::set_should_receive(bool receive) {
+  RTC_DCHECK_RUN_ON(&signaling_thread_);
+  if (should_receive_ == receive)
+    return;
+  should_receive_ = receive;
+  Notifier<VideoTrackInterface>::FireOnChanged();
+}
+
+bool VideoTrack::should_receive() const {
+  RTC_DCHECK_RUN_ON(&signaling_thread_);
+  return should_receive_;
+}
+
 VideoTrackInterface::ContentHint VideoTrack::content_hint() const {
   RTC_DCHECK_RUN_ON(&signaling_thread_);
   return content_hint_;
