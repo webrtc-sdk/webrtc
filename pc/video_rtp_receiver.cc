@@ -41,9 +41,12 @@ VideoRtpReceiver::VideoRtpReceiver(
           rtc::Thread::Current(),
           worker_thread,
           VideoTrack::Create(receiver_id, source_, worker_thread))),
-      attachment_id_(GenerateUniqueId()) {
+      cached_track_should_receive_(track_->should_receive()),
+      attachment_id_(GenerateUniqueId()),
+      worker_thread_safety_(PendingTaskSafetyFlag::CreateDetachedInactive()) {
   RTC_DCHECK(worker_thread_);
   SetStreams(streams);
+  track_->RegisterObserver(this);
   RTC_DCHECK_EQ(source_->state(), MediaSourceInterface::kInitializing);
 }
 
@@ -203,6 +206,7 @@ void VideoRtpReceiver::set_transport(
 void VideoRtpReceiver::SetStreams(
     const std::vector<rtc::scoped_refptr<MediaStreamInterface>>& streams) {
   RTC_DCHECK_RUN_ON(&signaling_thread_checker_);
+  
   // Remove remote track from any streams that are going away.
   for (const auto& existing_stream : streams_) {
     bool removed = true;

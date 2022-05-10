@@ -77,6 +77,8 @@ class FrameBuffer {
   // Stop the frame buffer, causing any sleeping thread in NextFrame to
   // return immediately.
   void Stop();
+  // Unstop the frame buffer, re-allowing new frames to be inserted and read.
+  void Start();
 
   // Updates the RTT for jitter buffer estimation.
   void UpdateRtt(int64_t rtt_ms);

@@ -318,6 +318,13 @@ void FrameBuffer::SetProtectionMode(VCMVideoProtection mode) {
   protection_mode_ = mode;
 }
 
+void FrameBuffer::Start() {
+  TRACE_EVENT0("webrtc", "FrameBuffer::Stop");
+  MutexLock lock(&mutex_);
+  if (!stopped_)
+    return;
+  stopped_ = false;
+}
 void FrameBuffer::Stop() {
   TRACE_EVENT0("webrtc", "FrameBuffer::Stop");
   MutexLock lock(&mutex_);
