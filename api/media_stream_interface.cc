@@ -19,6 +19,10 @@ const char* const MediaStreamTrackInterface::kVideoKind =
 const char* const MediaStreamTrackInterface::kAudioKind =
     cricket::kMediaTypeAudio;
 
+bool VideoTrackInterface::should_receive() const {
+  return true;
+}
+
 VideoTrackInterface::ContentHint VideoTrackInterface::content_hint() const {
   return ContentHint::kNone;
 }

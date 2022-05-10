@@ -48,6 +48,9 @@ class VideoTrack : public MediaStreamTrack<VideoTrackInterface>,
   void RequestRefreshFrame() override;
   VideoTrackSourceInterface* GetSource() const override;
 
+  void set_should_receive(bool should_receive) override;
+  bool should_receive() const override;
+
   ContentHint content_hint() const override;
   void set_content_hint(ContentHint hint) override;
   bool set_enabled(bool enable) override;
@@ -81,6 +84,7 @@ class VideoTrack : public MediaStreamTrack<VideoTrackInterface>,
   // be queried without blocking on the worker thread by callers that don't
   // use an api proxy to call the `enabled()` method.
   bool enabled_w_ RTC_GUARDED_BY(worker_thread_) = true;
+  bool should_receive_ RTC_GUARDED_BY(signaling_thread_) = true;
 };
 
 }  // namespace webrtc
