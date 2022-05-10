@@ -68,6 +68,14 @@
   return _source;
 }
 
+- (BOOL)shouldReceive {
+  return self.nativeVideoTrack->should_receive();
+}
+
+- (void)setShouldReceive:(BOOL)shouldReceive {
+  self.nativeVideoTrack->set_should_receive(shouldReceive);
+}
+
 - (void)addRenderer:(id<RTC_OBJC_TYPE(RTCVideoRenderer)>)renderer {
   // Make sure we don't have this renderer yet.
   for (RTCVideoRendererAdapter *adapter in _adapters) {

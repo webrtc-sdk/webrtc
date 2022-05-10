@@ -25,6 +25,9 @@ RTC_OBJC_EXPORT
 /** The video source for this video track. */
 @property(nonatomic, readonly) RTC_OBJC_TYPE(RTCVideoSource) *source;
 
+/** The receive state, if this is a remote video track. */
+@property(nonatomic, assign) BOOL shouldReceive;
+
 - (instancetype)init NS_UNAVAILABLE;
 
 /** Register a renderer that will render all frames received on this track. */
