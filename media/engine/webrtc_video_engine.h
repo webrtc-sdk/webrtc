@@ -270,6 +270,8 @@ class WebRtcVideoChannel : public VideoMediaChannel,
                                      webrtc::RtcpMode rtcp_mode,
                                      absl::optional<int> rtx_time) override;
 
+  void StartReceive(uint32_t ssrc) override;
+  void StopReceive(uint32_t ssrc) override;
  private:
   class WebRtcVideoReceiveStream;
 
@@ -537,6 +539,9 @@ class WebRtcVideoChannel : public VideoMediaChannel,
     void SetDepacketizerToDecoderFrameTransformer(
         rtc::scoped_refptr<webrtc::FrameTransformerInterface>
             frame_transformer);
+    
+    void StartStream();
+    void StopStream();
 
     void SetLocalSsrc(uint32_t local_ssrc);
     void UpdateRtxSsrc(uint32_t ssrc);

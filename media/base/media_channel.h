@@ -997,6 +997,8 @@ class VideoMediaReceiveChannelInterface : public MediaReceiveChannelInterface {
                                              bool nack_enabled,
                                              webrtc::RtcpMode rtcp_mode,
                                              absl::optional<int> rtx_time) = 0;
+  virtual void StartReceive(uint32_t ssrc) {}
+  virtual void StopReceive(uint32_t ssrc) {}
 };
 
 }  // namespace cricket

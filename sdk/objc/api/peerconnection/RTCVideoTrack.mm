@@ -70,6 +70,14 @@
   return _source;
 }
 
+- (BOOL)shouldReceive {
+  return self.nativeVideoTrack->should_receive();
+}
+
+- (void)setShouldReceive:(BOOL)shouldReceive {
+  self.nativeVideoTrack->set_should_receive(shouldReceive);
+}
+
 - (void)addRenderer:(id<RTC_OBJC_TYPE(RTCVideoRenderer)>)renderer {
   if (!_workerThread->IsCurrent()) {
     _workerThread->BlockingCall([renderer, self] { [self addRenderer:renderer]; });

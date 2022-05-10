@@ -44,5 +44,16 @@ static void JNI_VideoTrack_FreeSink(JNIEnv* jni, jlong j_native_sink) {
   delete reinterpret_cast<rtc::VideoSinkInterface<VideoFrame>*>(j_native_sink);
 }
 
+static void JNI_VideoTrack_SetShouldReceive(JNIEnv* jni,
+                                      jlong j_native_track,
+                                      jboolean should_receive) {
+  reinterpret_cast<VideoTrackInterface*>(j_native_track)->set_should_receive(should_receive);
+}
+
+static jboolean JNI_VideoTrack_GetShouldReceive(JNIEnv* jni,
+                                      jlong j_native_track) {
+  return reinterpret_cast<VideoTrackInterface*>(j_native_track)->should_receive();
+}
+
 }  // namespace jni
 }  // namespace webrtc
