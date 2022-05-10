@@ -40,6 +40,9 @@ class VideoTrack : public MediaStreamTrack<VideoTrackInterface>,
   void RemoveSink(rtc::VideoSinkInterface<VideoFrame>* sink) override;
   VideoTrackSourceInterface* GetSource() const override;
 
+  void set_should_receive(bool should_receive) override;
+  bool should_receive() const override;
+
   ContentHint content_hint() const override;
   void set_content_hint(ContentHint hint) override;
   bool set_enabled(bool enable) override;
@@ -60,7 +63,13 @@ class VideoTrack : public MediaStreamTrack<VideoTrackInterface>,
   RTC_NO_UNIQUE_ADDRESS webrtc::SequenceChecker signaling_thread_;
   rtc::Thread* const worker_thread_;
   const rtc::scoped_refptr<VideoTrackSourceInterface> video_source_;
-  ContentHint content_hint_ RTC_GUARDED_BY(worker_thread_);
+  ContentHint content_hint_ RTC_GUARDED_BY(signaling_thread_);
+  // Cached `enabled` state for the worker thread. This is kept in sync with
+  // the state maintained on the signaling thread via set_enabled() but can
+  // be queried without blocking on the worker thread by callers that don't
+  // use an api proxy to call the `enabled()` method.
+  bool enabled_w_ RTC_GUARDED_BY(worker_thread_) = true;
+  bool should_receive_ RTC_GUARDED_BY(signaling_thread_) = true;
 };
 
 }  // namespace webrtc

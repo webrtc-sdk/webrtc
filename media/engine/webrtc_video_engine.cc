@@ -949,6 +949,24 @@ void WebRtcVideoChannel::RequestEncoderSwitch(
                       << format.ToString() << " not negotiated.";
 }
 
+void WebRtcVideoChannel::StartReceive(uint32_t ssrc) {
+  RTC_DCHECK_RUN_ON(&thread_checker_);
+  WebRtcVideoReceiveStream* stream = FindReceiveStream(ssrc);
+  if(!stream) {
+    return;
+  }
+  stream->StartStream();
+}
+
+void WebRtcVideoChannel::StopReceive(uint32_t ssrc) {
+  RTC_DCHECK_RUN_ON(&thread_checker_);
+  WebRtcVideoReceiveStream* stream = FindReceiveStream(ssrc);
+  if(!stream) {
+    return;
+  }
+  stream->StopStream();
+}
+
 bool WebRtcVideoChannel::ApplyChangedParams(
     const ChangedSendParameters& changed_params) {
   RTC_DCHECK_RUN_ON(&thread_checker_);
@@ -3014,6 +3032,17 @@ void WebRtcVideoChannel::WebRtcVideoReceiveStream::SetRecvParameters(
   }
   if (video_needs_recreation) {
     RecreateWebRtcVideoStream();
+  }
+}
+
+void WebRtcVideoChannel::WebRtcVideoReceiveStream::StartStream(){
+  if (stream_) {
+    stream_->Start();
+  }
+}
+void WebRtcVideoChannel::WebRtcVideoReceiveStream::StopStream(){
+  if (stream_) {
+    stream_->Stop();
   }
 }
 
