@@ -14,14 +14,21 @@
 #include <utility>
 
 #include "absl/memory/memory.h"
-#include "api/enable_media.h"
+#include "api/video_codecs/video_decoder_factory.h"
+#include "api/video_codecs/video_encoder_factory.h"
+#include "media/base/media_engine.h"
+#include "modules/audio_device/include/audio_device.h"
+#include "modules/utility/include/jvm_android.h"
+// We don't depend on the audio processing module implementation.
+// The user may pass in a nullptr.
+#include "api/call/call_factory_interface.h"
 #include "api/rtc_event_log/rtc_event_log_factory.h"
 #include "api/task_queue/default_task_queue_factory.h"
 #include "api/video_codecs/video_decoder_factory.h"
 #include "api/video_codecs/video_encoder_factory.h"
+#include "media/engine/webrtc_media_engine.h"
 #include "modules/audio_device/include/audio_device.h"
 #include "modules/audio_processing/include/audio_processing.h"
-#include "modules/utility/include/jvm_android.h"
 #include "rtc_base/event_tracer.h"
 #include "rtc_base/physical_socket_server.h"
 #include "rtc_base/thread.h"
@@ -37,7 +44,6 @@
 #include "sdk/android/src/jni/pc/media_stream_track.h"
 #include "sdk/android/src/jni/pc/owned_factory_and_threads.h"
 #include "sdk/android/src/jni/pc/peer_connection.h"
-#include "sdk/android/src/jni/pc/rtp_capabilities.h"
 #include "sdk/android/src/jni/pc/ssl_certificate_verifier_wrapper.h"
 #include "sdk/android/src/jni/pc/video.h"
 #include "system_wrappers/include/field_trial.h"
@@ -270,7 +276,9 @@ ScopedJavaLocalRef<jobject> CreatePeerConnectionFactoryForJava(
   dependencies.worker_thread = worker_thread.get();
   dependencies.signaling_thread = signaling_thread.get();
   dependencies.task_queue_factory = CreateDefaultTaskQueueFactory();
-  dependencies.event_log_factory = std::make_unique<RtcEventLogFactory>();
+  dependencies.call_factory = CreateCallFactory();
+  dependencies.event_log_factory = std::make_unique<RtcEventLogFactory>(
+      dependencies.task_queue_factory.get());
   dependencies.fec_controller_factory = std::move(fec_controller_factory);
   dependencies.network_controller_factory =
       std::move(network_controller_factory);
@@ -282,15 +290,18 @@ ScopedJavaLocalRef<jobject> CreatePeerConnectionFactoryForJava(
         std::make_unique<AndroidNetworkMonitorFactory>();
   }
 
-  dependencies.adm = std::move(audio_device_module);
-  dependencies.audio_encoder_factory = std::move(audio_encoder_factory);
-  dependencies.audio_decoder_factory = std::move(audio_decoder_factory);
-  dependencies.audio_processing = std::move(audio_processor);
-  dependencies.video_encoder_factory =
+  cricket::MediaEngineDependencies media_dependencies;
+  media_dependencies.task_queue_factory = dependencies.task_queue_factory.get();
+  media_dependencies.adm = std::move(audio_device_module);
+  media_dependencies.audio_encoder_factory = std::move(audio_encoder_factory);
+  media_dependencies.audio_decoder_factory = std::move(audio_decoder_factory);
+  media_dependencies.audio_processing = std::move(audio_processor);
+  media_dependencies.video_encoder_factory =
       absl::WrapUnique(CreateVideoEncoderFactory(jni, jencoder_factory));
-  dependencies.video_decoder_factory =
+  media_dependencies.video_decoder_factory =
       absl::WrapUnique(CreateVideoDecoderFactory(jni, jdecoder_factory));
-  EnableMedia(dependencies);
+  dependencies.media_engine =
+      cricket::CreateMediaEngine(std::move(media_dependencies));
 
   rtc::scoped_refptr<PeerConnectionFactoryInterface> factory =
       CreateModularPeerConnectionFactory(std::move(dependencies));
@@ -389,20 +400,15 @@ ScopedJavaLocalRef<jobject> JNI_PeerConnectionFactory_GetRtpSenderCapabilities(
     jlong native_factory,
     const JavaParamRef<jobject>& media_type) {
   auto factory = PeerConnectionFactoryFromJava(native_factory);
-  return NativeToJavaRtpCapabilities(
-      jni, factory->GetRtpSenderCapabilities(
-               JavaToNativeMediaType(jni, media_type)));
+  return NativeToJavaRtpCapabilities(jni, factory->GetRtpSenderCapabilities(JavaToNativeMediaType(jni, media_type)));
 }
 
-ScopedJavaLocalRef<jobject>
-JNI_PeerConnectionFactory_GetRtpReceiverCapabilities(
+ScopedJavaLocalRef<jobject> JNI_PeerConnectionFactory_GetRtpReceiverCapabilities(
     JNIEnv* jni,
     jlong native_factory,
     const JavaParamRef<jobject>& media_type) {
   auto factory = PeerConnectionFactoryFromJava(native_factory);
-  return NativeToJavaRtpCapabilities(
-      jni, factory->GetRtpReceiverCapabilities(
-               JavaToNativeMediaType(jni, media_type)));
+  return NativeToJavaRtpCapabilities(jni, factory->GetRtpReceiverCapabilities(JavaToNativeMediaType(jni, media_type)));
 }
 
 static jboolean JNI_PeerConnectionFactory_StartAecDump(

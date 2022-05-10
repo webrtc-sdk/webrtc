@@ -140,15 +140,14 @@ ScopedJavaLocalRef<jobject> JNI_RtpTransceiver_CurrentDirection(
                    : nullptr;
 }
 
-void JNI_RtpTransceiver_SetCodecPreferences(
-    JNIEnv* jni,
+
+void JNI_RtpTransceiver_SetCodecPreferences(JNIEnv* jni,
     jlong j_rtp_transceiver_pointer,
     const JavaParamRef<jobject>& j_codecs) {
   std::vector<RtpCodecCapability> codecs =
       JavaListToNativeVector<RtpCodecCapability, jobject>(
           jni, j_codecs, &JavaToNativeRtpCodecCapability);
-  reinterpret_cast<RtpTransceiverInterface*>(j_rtp_transceiver_pointer)
-      ->SetCodecPreferences(codecs);
+  reinterpret_cast<RtpTransceiverInterface*>(j_rtp_transceiver_pointer)->SetCodecPreferences(codecs);
 }
 
 void JNI_RtpTransceiver_StopInternal(JNIEnv* jni,

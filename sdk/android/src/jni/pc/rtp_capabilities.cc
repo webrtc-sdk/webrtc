@@ -1,11 +1,17 @@
 /*
- *  Copyright 2023 The WebRTC project authors. All Rights Reserved.
+ * Copyright 2023 LiveKit
  *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree. An additional intellectual property rights grant can be found
- *  in the file PATENTS.  All contributing project authors may
- *  be found in the AUTHORS file in the root of the source tree.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #include "sdk/android/src/jni/pc/rtp_capabilities.h"
@@ -23,28 +29,26 @@ namespace {
 ScopedJavaLocalRef<jobject> NativeToJavaRtpCodecParameter(
     JNIEnv* env,
     const RtpCodecCapability& codec) {
-  return Java_CodecCapability_Constructor(
-      env, codec.preferred_payload_type.value(),
-      NativeToJavaString(env, codec.name),
-      NativeToJavaMediaType(env, codec.kind),
-      NativeToJavaInteger(env, codec.clock_rate),
-      NativeToJavaInteger(env, codec.num_channels),
-      NativeToJavaString(env, codec.mime_type()),
-      NativeToJavaStringMap(env, codec.parameters));
+  return Java_CodecCapability_Constructor(env, codec.preferred_payload_type.value(),
+                                NativeToJavaString(env, codec.name),
+                                NativeToJavaMediaType(env, codec.kind),
+                                NativeToJavaInteger(env, codec.clock_rate),
+                                NativeToJavaInteger(env, codec.num_channels),
+                                NativeToJavaString(env, codec.mime_type()),
+                                NativeToJavaStringMap(env, codec.parameters));
 }
 
 ScopedJavaLocalRef<jobject> NativeToJavaRtpHeaderExtensionParameter(
     JNIEnv* env,
     const RtpHeaderExtensionCapability& extension) {
   return Java_HeaderExtensionCapability_Constructor(
-      env, NativeToJavaString(env, extension.uri),
-      extension.preferred_id.value(), extension.preferred_encrypt);
+      env, NativeToJavaString(env, extension.uri), extension.preferred_id.value(),
+      extension.preferred_encrypt);
 }
 }  // namespace
 
-RtpCapabilities JavaToNativeRtpCapabilities(
-    JNIEnv* jni,
-    const JavaRef<jobject>& j_capabilities) {
+RtpCapabilities JavaToNativeRtpCapabilities(JNIEnv* jni,
+                                        const JavaRef<jobject>& j_capabilities) {
   RtpCapabilities capabilities;
 
   ScopedJavaLocalRef<jobject> j_header_extensions =
@@ -54,11 +58,9 @@ RtpCapabilities JavaToNativeRtpCapabilities(
     RtpHeaderExtensionCapability header_extension;
     header_extension.uri = JavaToStdString(
         jni, Java_HeaderExtensionCapability_getUri(jni, j_header_extension));
-    header_extension.preferred_id =
-        Java_HeaderExtensionCapability_getPreferredId(jni, j_header_extension);
+    header_extension.preferred_id = Java_HeaderExtensionCapability_getPreferredId(jni, j_header_extension);
     header_extension.preferred_encrypt =
-        Java_HeaderExtensionCapability_getPreferredEncrypted(
-            jni, j_header_extension);
+        Java_HeaderExtensionCapability_getPreferredEncrypted(jni, j_header_extension);
     capabilities.header_extensions.push_back(header_extension);
   }
 
@@ -67,18 +69,15 @@ RtpCapabilities JavaToNativeRtpCapabilities(
       Java_RtpCapabilities_getCodecs(jni, j_capabilities);
   for (const JavaRef<jobject>& j_codec : Iterable(jni, j_codecs)) {
     RtpCodecCapability codec;
-    codec.preferred_payload_type =
-        Java_CodecCapability_getPreferredPayloadType(jni, j_codec);
-    codec.name =
-        JavaToStdString(jni, Java_CodecCapability_getName(jni, j_codec));
-    codec.kind =
-        JavaToNativeMediaType(jni, Java_CodecCapability_getKind(jni, j_codec));
-    codec.clock_rate = JavaToNativeOptionalInt(
-        jni, Java_CodecCapability_getClockRate(jni, j_codec));
-    codec.num_channels = JavaToNativeOptionalInt(
-        jni, Java_CodecCapability_getNumChannels(jni, j_codec));
-    auto parameters_map = JavaToNativeStringMap(
-        jni, Java_CodecCapability_getParameters(jni, j_codec));
+    codec.preferred_payload_type = Java_CodecCapability_getPreferredPayloadType(jni, j_codec);
+    codec.name = JavaToStdString(jni, Java_CodecCapability_getName(jni, j_codec));
+    codec.kind = JavaToNativeMediaType(jni, Java_CodecCapability_getKind(jni, j_codec));
+    codec.clock_rate =
+        JavaToNativeOptionalInt(jni, Java_CodecCapability_getClockRate(jni, j_codec));
+    codec.num_channels =
+        JavaToNativeOptionalInt(jni, Java_CodecCapability_getNumChannels(jni, j_codec));
+    auto parameters_map =
+        JavaToNativeStringMap(jni, Java_CodecCapability_getParameters(jni, j_codec));
     codec.parameters.insert(parameters_map.begin(), parameters_map.end());
     capabilities.codecs.push_back(codec);
   }
@@ -89,30 +88,26 @@ ScopedJavaLocalRef<jobject> NativeToJavaRtpCapabilities(
     JNIEnv* env,
     const RtpCapabilities& capabilities) {
   return Java_RtpCapabilities_Constructor(
-      env,
-      NativeToJavaList(env, capabilities.codecs,
-                       &NativeToJavaRtpCodecParameter),
+      env, NativeToJavaList(env, capabilities.codecs, &NativeToJavaRtpCodecParameter),
       NativeToJavaList(env, capabilities.header_extensions,
-                       &NativeToJavaRtpHeaderExtensionParameter));
+                       &NativeToJavaRtpHeaderExtensionParameter)
+      );
 }
 
-RtpCodecCapability JavaToNativeRtpCodecCapability(
-    JNIEnv* jni,
-    const JavaRef<jobject>& j_codec) {
-  RtpCodecCapability codec;
-  codec.preferred_payload_type =
-      Java_CodecCapability_getPreferredPayloadType(jni, j_codec);
-  codec.name = JavaToStdString(jni, Java_CodecCapability_getName(jni, j_codec));
-  codec.kind =
-      JavaToNativeMediaType(jni, Java_CodecCapability_getKind(jni, j_codec));
-  codec.clock_rate = JavaToNativeOptionalInt(
-      jni, Java_CodecCapability_getClockRate(jni, j_codec));
-  codec.num_channels = JavaToNativeOptionalInt(
-      jni, Java_CodecCapability_getNumChannels(jni, j_codec));
-  auto parameters_map = JavaToNativeStringMap(
-      jni, Java_CodecCapability_getParameters(jni, j_codec));
-  codec.parameters.insert(parameters_map.begin(), parameters_map.end());
-  return codec;
+RtpCodecCapability JavaToNativeRtpCodecCapability(JNIEnv* jni,
+                               const JavaRef<jobject>& j_codec) {
+    RtpCodecCapability codec;
+    codec.preferred_payload_type = Java_CodecCapability_getPreferredPayloadType(jni, j_codec);
+    codec.name = JavaToStdString(jni, Java_CodecCapability_getName(jni, j_codec));
+    codec.kind = JavaToNativeMediaType(jni, Java_CodecCapability_getKind(jni, j_codec));
+    codec.clock_rate =
+        JavaToNativeOptionalInt(jni, Java_CodecCapability_getClockRate(jni, j_codec));
+    codec.num_channels =
+        JavaToNativeOptionalInt(jni, Java_CodecCapability_getNumChannels(jni, j_codec));
+    auto parameters_map =
+        JavaToNativeStringMap(jni, Java_CodecCapability_getParameters(jni, j_codec));
+    codec.parameters.insert(parameters_map.begin(), parameters_map.end());
+    return codec;                       
 }
 
 }  // namespace jni

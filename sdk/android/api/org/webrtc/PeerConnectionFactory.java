@@ -15,9 +15,7 @@ import android.os.Process;
 import androidx.annotation.Nullable;
 import java.util.List;
 import org.webrtc.Logging.Severity;
-import org.webrtc.MediaStreamTrack;
 import org.webrtc.PeerConnection;
-import org.webrtc.RtpCapabilities;
 import org.webrtc.audio.AudioDeviceModule;
 import org.webrtc.audio.JavaAudioDeviceModule;
 import org.webrtc.RtpCapabilities;
@@ -628,8 +626,6 @@ public class PeerConnectionFactory {
   private static native void nativeInjectLoggable(JNILogging jniLogging, int severity);
   private static native void nativeDeleteLoggable();
   private static native void nativePrintStackTrace(int tid);
-  private static native RtpCapabilities nativeGetRtpSenderCapabilities(
-      long factory, MediaStreamTrack.MediaType mediaType);
-  private static native RtpCapabilities nativeGetRtpReceiverCapabilities(
-      long factory, MediaStreamTrack.MediaType mediaType);
+  private static native RtpCapabilities nativeGetRtpSenderCapabilities(long factory, MediaStreamTrack.MediaType mediaType);
+  private static native RtpCapabilities nativeGetRtpReceiverCapabilities(long factory, MediaStreamTrack.MediaType mediaType);
 }
