@@ -56,6 +56,8 @@ VideoRtpReceiver::VideoRtpReceiver(
 VideoRtpReceiver::~VideoRtpReceiver() {
   RTC_DCHECK_RUN_ON(&signaling_thread_checker_);
   RTC_DCHECK(!media_channel_);
+
+  track_->UnregisterObserver(this);
 }
 
 std::vector<std::string> VideoRtpReceiver::stream_ids() const {
