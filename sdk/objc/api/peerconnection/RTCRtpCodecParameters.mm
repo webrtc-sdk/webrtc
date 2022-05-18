@@ -32,6 +32,7 @@ const NSString * const kRTCComfortNoiseCodecName =
 const NSString * const kRTCVp8CodecName = @(cricket::kVp8CodecName);
 const NSString * const kRTCVp9CodecName = @(cricket::kVp9CodecName);
 const NSString * const kRTCH264CodecName = @(cricket::kH264CodecName);
+const NSString * const kRTCAv1CodecName = @(cricket::kAv1CodecName);
 
 @implementation RTC_OBJC_TYPE (RTCRtpCodecParameters)
 
