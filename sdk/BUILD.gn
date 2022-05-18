@@ -144,12 +144,15 @@ if (is_ios || is_mac) {
       "objc/helpers/RTCDispatcher+Private.h",
       "objc/helpers/RTCDispatcher.h",
       "objc/helpers/RTCDispatcher.m",
+      "objc/helpers/RTCYUVHelper.h",
+      "objc/helpers/RTCYUVHelper.mm",
       "objc/helpers/scoped_cftyperef.h",
     ]
 
     deps = [
       ":base_objc",
       "../rtc_base:checks",
+      "//third_party/libyuv",
     ]
 
     absl_deps = [ "//third_party/abseil-cpp/absl/strings" ]
@@ -1324,6 +1327,7 @@ if (is_ios || is_mac) {
           "objc/components/video_frame_buffer/RTCCVPixelBuffer.h",
           "objc/helpers/RTCCameraPreviewView.h",
           "objc/helpers/RTCDispatcher.h",
+          "objc/helpers/RTCYUVHelper.h",
           "objc/helpers/UIDevice+RTCDevice.h",
           "objc/api/peerconnection/RTCAudioSource.h",
           "objc/api/peerconnection/RTCAudioTrack.h",
@@ -1519,6 +1523,7 @@ if (is_ios || is_mac) {
           "objc/components/video_codec/RTCVideoEncoderH264.h",
           "objc/components/video_frame_buffer/RTCCVPixelBuffer.h",
           "objc/helpers/RTCDispatcher.h",
+          "objc/helpers/RTCYUVHelper.h",
           # Added for Simulcast support
           "objc/components/video_codec/RTCVideoEncoderFactorySimulcast.h",
           "objc/api/video_codec/RTCVideoEncoderSimulcast.h",
