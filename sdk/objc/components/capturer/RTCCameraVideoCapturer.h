@@ -30,6 +30,8 @@ NS_EXTENSION_UNAVAILABLE_IOS("Camera not available in app extensions.")
 // Returns list of formats that are supported by this class for this device.
 + (NSArray<AVCaptureDeviceFormat *> *)supportedFormatsForDevice:(AVCaptureDevice *)device;
 
++ (CGFloat)defaultZoomFactorForDeviceType:(AVCaptureDeviceType)deviceType;
+
 // Returns the most efficient supported output pixel format for this capturer.
 - (FourCharCode)preferredOutputPixelFormat;
 

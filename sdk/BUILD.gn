@@ -144,12 +144,15 @@ if (is_ios || is_mac) {
       "objc/helpers/RTCDispatcher+Private.h",
       "objc/helpers/RTCDispatcher.h",
       "objc/helpers/RTCDispatcher.m",
+      "objc/helpers/RTCYUVHelper.h",
+      "objc/helpers/RTCYUVHelper.mm",
       "objc/helpers/scoped_cftyperef.h",
     ]
 
     deps = [
       ":base_objc",
       "../rtc_base:checks",
+      "//third_party/libyuv",
     ]
 
     absl_deps = [ "//third_party/abseil-cpp/absl/strings" ]
@@ -617,17 +620,13 @@ if (is_ios || is_mac) {
         "Metal.framework",
         "MetalKit.framework",
       ]
-      if (is_ios) {
+      if (is_ios || is_mac) {
         sources += [
           "objc/components/renderer/metal/RTCMTLVideoView.h",
           "objc/components/renderer/metal/RTCMTLVideoView.m",
         ]
       }
       if (is_mac) {
-        sources += [
-          "objc/components/renderer/metal/RTCMTLNSVideoView.h",
-          "objc/components/renderer/metal/RTCMTLNSVideoView.m",
-        ]
         frameworks += [ "AppKit.framework" ]
       }
       deps = [
@@ -1287,6 +1286,13 @@ if (is_ios || is_mac) {
       }
     }
 
+    bundle_data("darwin_privacy_info") {
+      sources = [
+        "objc/PrivacyInfo.xcprivacy",
+       ]
+       outputs = [ "{{bundle_resources_dir}}/{{source_file_part}}" ]
+    }
+
     if (is_ios) {
       apple_framework_bundle_with_umbrella_header("framework_objc") {
         info_plist = "objc/Info.plist"
@@ -1334,6 +1340,7 @@ if (is_ios || is_mac) {
           "objc/components/video_frame_buffer/RTCCVPixelBuffer.h",
           "objc/helpers/RTCCameraPreviewView.h",
           "objc/helpers/RTCDispatcher.h",
+          "objc/helpers/RTCYUVHelper.h",
           "objc/helpers/UIDevice+RTCDevice.h",
           "objc/api/peerconnection/RTCAudioDeviceModule.h",
           "objc/api/peerconnection/RTCIODevice.h",
@@ -1417,6 +1424,7 @@ if (is_ios || is_mac) {
           ":videocapture_objc",
           ":videocodec_objc",
           ":videotoolbox_objc",
+          ":darwin_privacy_info",
         ]
         if (!build_with_chromium) {
           deps += [
@@ -1526,6 +1534,7 @@ if (is_ios || is_mac) {
           "objc/base/RTCYUVPlanarBuffer.h",
           "objc/components/capturer/RTCCameraVideoCapturer.h",
           "objc/components/capturer/RTCFileVideoCapturer.h",
+          "objc/components/renderer/metal/RTCMTLVideoView.h",
           "objc/components/renderer/metal/RTCMTLNSVideoView.h",
           "objc/components/renderer/opengl/RTCVideoViewShading.h",
           "objc/components/video_codec/RTCCodecSpecificInfoH264.h",
@@ -1538,6 +1547,7 @@ if (is_ios || is_mac) {
           "objc/components/video_codec/RTCVideoEncoderH264.h",
           "objc/components/video_frame_buffer/RTCCVPixelBuffer.h",
           "objc/helpers/RTCDispatcher.h",
+          "objc/helpers/RTCYUVHelper.h",
           # Added for Simulcast support
           "objc/components/video_codec/RTCVideoEncoderFactorySimulcast.h",
           "objc/api/video_codec/RTCVideoEncoderSimulcast.h",
@@ -1558,6 +1568,7 @@ if (is_ios || is_mac) {
           ":videocapture_objc",
           ":videocodec_objc",
           ":videotoolbox_objc",
+          ":darwin_privacy_info",
         ]
         if (!build_with_chromium) {
           deps += [
