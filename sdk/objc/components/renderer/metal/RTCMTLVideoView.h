@@ -10,6 +10,10 @@
 
 #import <Foundation/Foundation.h>
 
+#if TARGET_OS_OSX
+#import <AppKit/AppKit.h>
+#endif
+
 #import "RTCMacros.h"
 #import "RTCVideoFrame.h"
 #import "RTCVideoRenderer.h"
@@ -22,14 +26,26 @@ NS_ASSUME_NONNULL_BEGIN
  * It has id<RTCVideoRenderer> property that renders video frames in the view's
  * bounds using Metal.
  */
+#if TARGET_OS_IPHONE
 NS_CLASS_AVAILABLE_IOS(9)
+#elif TARGET_OS_OSX
+NS_AVAILABLE_MAC(10.11)
+#endif
 
 RTC_OBJC_EXPORT
-@interface RTC_OBJC_TYPE (RTCMTLVideoView) : UIView<RTC_OBJC_TYPE(RTCVideoRenderer)>
+@interface RTC_OBJC_TYPE (RTCMTLVideoView) :
+
+#if TARGET_OS_IPHONE
+  UIView<RTC_OBJC_TYPE(RTCVideoRenderer)>
+#elif TARGET_OS_OSX
+  NSView<RTC_OBJC_TYPE(RTCVideoRenderer)>
+#endif
 
 @property(nonatomic, weak) id<RTC_OBJC_TYPE(RTCVideoViewDelegate)> delegate;
 
+#if TARGET_OS_IPHONE
 @property(nonatomic) UIViewContentMode videoContentMode;
+#endif
 
 /** @abstract Enables/disables rendering.
  */
@@ -38,6 +54,8 @@ RTC_OBJC_EXPORT
 /** @abstract Wrapped RTCVideoRotation, or nil.
  */
 @property(nonatomic, nullable) NSValue* rotationOverride;
+
++ (BOOL)isMetalAvailable;
 
 @end
 

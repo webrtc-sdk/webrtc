@@ -143,12 +143,15 @@ if (is_ios || is_mac) {
       "objc/helpers/RTCDispatcher+Private.h",
       "objc/helpers/RTCDispatcher.h",
       "objc/helpers/RTCDispatcher.m",
+      "objc/helpers/RTCYUVHelper.h",
+      "objc/helpers/RTCYUVHelper.mm",
       "objc/helpers/scoped_cftyperef.h",
     ]
 
     deps = [
       ":base_objc",
       "../rtc_base:checks",
+      "//third_party/libyuv",
     ]
 
     absl_deps = [ "//third_party/abseil-cpp/absl/strings" ]
@@ -635,17 +638,13 @@ if (is_ios || is_mac) {
         "Metal.framework",
         "MetalKit.framework",
       ]
-      if (is_ios) {
+      if (is_ios || is_mac) {
         sources += [
           "objc/components/renderer/metal/RTCMTLVideoView.h",
           "objc/components/renderer/metal/RTCMTLVideoView.m",
         ]
       }
       if (is_mac) {
-        sources += [
-          "objc/components/renderer/metal/RTCMTLNSVideoView.h",
-          "objc/components/renderer/metal/RTCMTLNSVideoView.m",
-        ]
         frameworks += [ "AppKit.framework" ]
       }
       deps = [
@@ -1032,6 +1031,12 @@ if (is_ios || is_mac) {
         "objc/api/peerconnection/RTCRtcpParameters+Private.h",
         "objc/api/peerconnection/RTCRtcpParameters.h",
         "objc/api/peerconnection/RTCRtcpParameters.mm",
+        "objc/api/peerconnection/RTCRtpCapabilities.h",
+        "objc/api/peerconnection/RTCRtpCapabilities.mm",
+        "objc/api/peerconnection/RTCRtpCapabilities+Private.h",
+        "objc/api/peerconnection/RTCRtpCodecCapability.h",
+        "objc/api/peerconnection/RTCRtpCodecCapability.mm",
+        "objc/api/peerconnection/RTCRtpCodecCapability+Private.h",
         "objc/api/peerconnection/RTCRtpCodecParameters+Private.h",
         "objc/api/peerconnection/RTCRtpCodecParameters.h",
         "objc/api/peerconnection/RTCRtpCodecParameters.mm",
@@ -1329,6 +1334,7 @@ if (is_ios || is_mac) {
           "objc/components/video_frame_buffer/RTCCVPixelBuffer.h",
           "objc/helpers/RTCCameraPreviewView.h",
           "objc/helpers/RTCDispatcher.h",
+          "objc/helpers/RTCYUVHelper.h",
           "objc/helpers/UIDevice+RTCDevice.h",
           "objc/api/peerconnection/RTCAudioDeviceModule.h",
           "objc/api/peerconnection/RTCIODevice.h",
@@ -1352,6 +1358,8 @@ if (is_ios || is_mac) {
           "objc/api/peerconnection/RTCPeerConnectionFactory.h",
           "objc/api/peerconnection/RTCPeerConnectionFactoryOptions.h",
           "objc/api/peerconnection/RTCRtcpParameters.h",
+          "objc/api/peerconnection/RTCRtpCapabilities.h",
+          "objc/api/peerconnection/RTCRtpCodecCapability.h",
           "objc/api/peerconnection/RTCRtpCodecParameters.h",
           "objc/api/peerconnection/RTCRtpEncodingParameters.h",
           "objc/api/peerconnection/RTCRtpHeaderExtension.h",
@@ -1474,6 +1482,8 @@ if (is_ios || is_mac) {
           "objc/api/peerconnection/RTCPeerConnectionFactory.h",
           "objc/api/peerconnection/RTCPeerConnectionFactoryOptions.h",
           "objc/api/peerconnection/RTCRtcpParameters.h",
+          "objc/api/peerconnection/RTCRtpCapabilities.h",
+          "objc/api/peerconnection/RTCRtpCodecCapability.h",
           "objc/api/peerconnection/RTCRtpCodecParameters.h",
           "objc/api/peerconnection/RTCRtpEncodingParameters.h",
           "objc/api/peerconnection/RTCRtpHeaderExtension.h",
@@ -1517,6 +1527,7 @@ if (is_ios || is_mac) {
           "objc/base/RTCYUVPlanarBuffer.h",
           "objc/components/capturer/RTCCameraVideoCapturer.h",
           "objc/components/capturer/RTCFileVideoCapturer.h",
+          "objc/components/renderer/metal/RTCMTLVideoView.h",
           "objc/components/renderer/metal/RTCMTLNSVideoView.h",
           "objc/components/renderer/opengl/RTCNSGLVideoView.h",
           "objc/components/renderer/opengl/RTCVideoViewShading.h",
@@ -1530,6 +1541,7 @@ if (is_ios || is_mac) {
           "objc/components/video_codec/RTCVideoEncoderH264.h",
           "objc/components/video_frame_buffer/RTCCVPixelBuffer.h",
           "objc/helpers/RTCDispatcher.h",
+          "objc/helpers/RTCYUVHelper.h",
           # Added for Simulcast support
           "objc/components/video_codec/RTCVideoEncoderFactorySimulcast.h",
           "objc/api/video_codec/RTCVideoEncoderSimulcast.h",

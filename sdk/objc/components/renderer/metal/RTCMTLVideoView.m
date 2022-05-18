@@ -51,6 +51,14 @@
 @synthesize lastFrameTimeNs = _lastFrameTimeNs;
 @synthesize rotationOverride = _rotationOverride;
 
++ (BOOL)isMetalAvailable {
+#if TARGET_OS_IPHONE
+  return MTLCreateSystemDefaultDevice() != nil;
+#elif TARGET_OS_OSX
+  return [MTLCopyAllDevices() count] > 0;
+#endif
+}
+
 - (instancetype)initWithFrame:(CGRect)frameRect {
   self = [super initWithFrame:frameRect];
   if (self) {
@@ -75,6 +83,7 @@
   self.metalView.paused = !enabled;
 }
 
+#if TARGET_OS_IPHONE
 - (UIViewContentMode)videoContentMode {
   return self.metalView.contentMode;
 }
@@ -82,12 +91,9 @@
 - (void)setVideoContentMode:(UIViewContentMode)mode {
   self.metalView.contentMode = mode;
 }
+#endif
 
 #pragma mark - Private
-
-+ (BOOL)isMetalAvailable {
-  return MTLCreateSystemDefaultDevice() != nil;
-}
 
 + (MTKView *)createMetalView:(CGRect)frame {
   return [[MTKViewClass alloc] initWithFrame:frame];
@@ -102,7 +108,7 @@
 }
 
 + (RTCMTLRGBRenderer *)createRGBRenderer {
-  return [[RTCMTLRGBRenderer alloc] init];
+  return [[RTCMTLRGBRendererClass alloc] init];
 }
 
 - (void)configure {
@@ -111,19 +117,24 @@
 
   self.metalView = [RTC_OBJC_TYPE(RTCMTLVideoView) createMetalView:self.bounds];
   self.metalView.delegate = self;
+#if TARGET_OS_IPHONE
   self.metalView.contentMode = UIViewContentModeScaleAspectFill;
+#elif TARGET_OS_OSX
+  self.metalView.layerContentsPlacement = NSViewLayerContentsPlacementScaleProportionallyToFit;
+#endif
+
   [self addSubview:self.metalView];
   self.videoFrameSize = CGSizeZero;
 }
 
+#if TARGET_OS_IPHONE
 - (void)setMultipleTouchEnabled:(BOOL)multipleTouchEnabled {
-    [super setMultipleTouchEnabled:multipleTouchEnabled];
-    self.metalView.multipleTouchEnabled = multipleTouchEnabled;
+  [super setMultipleTouchEnabled:multipleTouchEnabled];
+  self.metalView.multipleTouchEnabled = multipleTouchEnabled;
 }
+#endif
 
-- (void)layoutSubviews {
-  [super layoutSubviews];
-
+- (void)performLayout {
   CGRect bounds = self.bounds;
   self.metalView.frame = bounds;
   if (!CGSizeEqualToSize(self.videoFrameSize, CGSizeZero)) {
@@ -203,10 +214,10 @@
   [self setNeedsLayout];
 }
 
-- (RTCVideoRotation)frameRotation {
+- (RTCVideoRotation)videoRotation {
   if (self.rotationOverride) {
     RTCVideoRotation rotation;
-    if (@available(iOS 11, *)) {
+    if (@available(iOS 11, macos 10.13, *)) {
       [self.rotationOverride getValue:&rotation size:sizeof(rotation)];
     } else {
       [self.rotationOverride getValue:&rotation];
@@ -220,10 +231,10 @@
 - (CGSize)drawableSize {
   // Flip width/height if the rotations are not the same.
   CGSize videoFrameSize = self.videoFrameSize;
-  RTCVideoRotation frameRotation = [self frameRotation];
+  RTCVideoRotation videoRotation = [self videoRotation];
 
   BOOL useLandscape =
-      (frameRotation == RTCVideoRotation_0) || (frameRotation == RTCVideoRotation_180);
+      (videoRotation == RTCVideoRotation_0) || (videoRotation == RTCVideoRotation_180);
   BOOL sizeIsLandscape = (self.videoFrame.rotation == RTCVideoRotation_0) ||
       (self.videoFrame.rotation == RTCVideoRotation_180);
 
@@ -259,7 +270,34 @@
     RTCLogInfo(@"Incoming frame is nil. Exiting render callback.");
     return;
   }
-  self.videoFrame = frame;
+
+  // Workaround to support RTCCVPixelBuffer rendering.
+  // RTCMTLRGBRenderer seems to be broken at the moment.
+  BOOL useI420 = NO;
+  if ([frame.buffer isKindOfClass:[RTC_OBJC_TYPE(RTCCVPixelBuffer) class]]) {
+    RTC_OBJC_TYPE(RTCCVPixelBuffer) *buffer = (RTC_OBJC_TYPE(RTCCVPixelBuffer) *)frame.buffer;
+    const OSType pixelFormat = CVPixelBufferGetPixelFormatType(buffer.pixelBuffer);
+    useI420 = pixelFormat == kCVPixelFormatType_32BGRA || pixelFormat == kCVPixelFormatType_32ARGB;
+  }
+  self.videoFrame = useI420 ? [frame newI420VideoFrame] : frame;
 }
+
+#pragma mark - Cross platform
+
+#if TARGET_OS_IPHONE
+- (void)layoutSubviews {
+  [super layoutSubviews];
+  [self performLayout];
+}
+#elif TARGET_OS_OSX
+- (void)layout {
+  [super layout];
+  [self performLayout];
+}
+
+- (void)setNeedsLayout {
+  self.needsLayout = YES;
+}
+#endif
 
 @end
