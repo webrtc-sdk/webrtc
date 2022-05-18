@@ -10,7 +10,6 @@
 
 #import "RTCRtpTransceiver+Private.h"
 
-#import "RTCRtpCodecCapability+Private.h"
 #import "RTCRtpEncodingParameters+Private.h"
 #import "RTCRtpParameters+Private.h"
 #import "RTCRtpReceiver+Private.h"
@@ -19,8 +18,6 @@
 #import "RTCRtpCodecCapability+Private.h"
 #import "base/RTCLogging.h"
 #import "helpers/NSString+StdString.h"
-
-#include "api/rtp_parameters.h"
 
 NSString *const kRTCRtpTransceiverErrorDomain = @"org.webrtc.RTCRtpTranceiver";
 
@@ -70,6 +67,22 @@ NSString *const kRTCRtpTransceiverErrorDomain = @"org.webrtc.RTCRtpTranceiver";
   }
 }
 
+- (void)setCodecPreferences:(NSArray<RTC_OBJC_TYPE(RTCRtpCodecCapability) *> *)codecPreferences {
+
+  std::vector<webrtc::RtpCodecCapability> objects;
+
+  for (RTCRtpCodecCapability *object in codecPreferences) {
+    objects.push_back(object.nativeCodecCapability);
+  }
+
+  //webrtc::RTCError error = 
+  _nativeRtpTransceiver->SetCodecPreferences(rtc::ArrayView<webrtc::RtpCodecCapability>(objects.data(), objects.size()));
+
+  // if (!error.ok()) {
+  //   [NSException raise:@"setCodecPreferences" format:@"SDK returned error: %@", [NSString stringWithUTF8String: error.message()]];
+  // }
+}
+
 - (NSArray<RTC_OBJC_TYPE(RTCRtpCodecCapability) *> *)codecPreferences {
 
   NSMutableArray *result = [NSMutableArray array];
@@ -77,7 +90,7 @@ NSString *const kRTCRtpTransceiverErrorDomain = @"org.webrtc.RTCRtpTranceiver";
   std::vector<webrtc::RtpCodecCapability> capabilities = _nativeRtpTransceiver->codec_preferences();
 
   for (auto & element : capabilities) {
-    RTC_OBJC_TYPE(RTCRtpCodecCapability) *object = [[RTC_OBJC_TYPE(RTCRtpCodecCapability) alloc] initWithNativeRtpCodecCapability: element];
+    RTCRtpCodecCapability *object = [[RTCRtpCodecCapability alloc] initWithNativeCodecCapability: element];
     [result addObject: object];
   }
 
@@ -122,14 +135,6 @@ NSString *const kRTCRtpTransceiverErrorDomain = @"org.webrtc.RTCRtpTranceiver";
 
 - (void)stopInternal {
   _nativeRtpTransceiver->StopInternal();
-}
-
-- (void)setCodecPreferences:(NSArray<RTC_OBJC_TYPE(RTCRtpCodecCapability) *> *)codecs {
-  std::vector<webrtc::RtpCodecCapability> codecCapabilities;
-  for (RTC_OBJC_TYPE(RTCRtpCodecCapability) * rtpCodecCapability in codecs) {
-    codecCapabilities.push_back(rtpCodecCapability.nativeRtpCodecCapability);
-  }
-  _nativeRtpTransceiver->SetCodecPreferences(codecCapabilities);
 }
 
 - (NSString *)description {
