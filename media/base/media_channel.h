@@ -897,6 +897,9 @@ class VideoMediaChannel : public MediaChannel, public Delayable {
   virtual void GenerateKeyFrame(uint32_t ssrc) = 0;
 
   virtual std::vector<webrtc::RtpSource> GetSources(uint32_t ssrc) const = 0;
+
+  virtual void StartReceive(uint32_t ssrc) {}
+  virtual void StopReceive(uint32_t ssrc) {}
 };
 
 // Info about data received in DataMediaChannel.  For use in
