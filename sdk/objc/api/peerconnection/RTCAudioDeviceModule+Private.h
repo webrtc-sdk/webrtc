@@ -17,11 +17,14 @@
 #import "RTCAudioDeviceModule.h"
 #import "sdk/objc/native/api/audio_device_module.h"
 
+#include "rtc_base/thread.h"
+
 NS_ASSUME_NONNULL_BEGIN
 
 @interface RTCAudioDeviceModule ()
 
-- (instancetype)initWithNativeModule:(rtc::scoped_refptr<webrtc::AudioDeviceModule> )module;
+- (instancetype)initWithNativeModule:(rtc::scoped_refptr<webrtc::AudioDeviceModule> )module
+                        workerThread:(rtc::Thread *)workerThread;
 
 @end
 

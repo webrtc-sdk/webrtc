@@ -11,7 +11,6 @@
 #import <Foundation/Foundation.h>
 
 #import "RTCMacros.h"
-#import "RTCAudioDeviceModule.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -24,6 +23,8 @@ NS_ASSUME_NONNULL_BEGIN
 @class RTC_OBJC_TYPE(RTCVideoSource);
 @class RTC_OBJC_TYPE(RTCVideoTrack);
 @class RTC_OBJC_TYPE(RTCPeerConnectionFactoryOptions);
+@class RTC_OBJC_TYPE(RTCAudioDeviceModule);
+
 @protocol RTC_OBJC_TYPE
 (RTCPeerConnectionDelegate);
 @protocol RTC_OBJC_TYPE

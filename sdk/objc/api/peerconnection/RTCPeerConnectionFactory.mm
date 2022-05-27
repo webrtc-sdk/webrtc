@@ -71,7 +71,8 @@
 @synthesize nativeFactory = _nativeFactory;
 
 - (RTCAudioDeviceModule *)audioDeviceModule {
-  return [[RTCAudioDeviceModule alloc] initWithNativeModule: _audioDeviceModule];
+  return [[RTCAudioDeviceModule alloc] initWithNativeModule: _audioDeviceModule
+                                               workerThread: _workerThread.get()];
 }
 
 - (instancetype)init {
