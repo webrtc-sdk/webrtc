@@ -200,6 +200,8 @@ class AudioDeviceMac : public AudioDeviceGeneric {
                                   const AudioObjectPropertyAddress addresses[]);
 
   int32_t HandleDeviceChange();
+  int32_t HandleDefaultOutputDeviceChange();
+  int32_t HandleDefaultInputDeviceChange();
 
   int32_t HandleStreamFormatChange(AudioObjectID objectId,
                                    AudioObjectPropertyAddress propertyAddress);
