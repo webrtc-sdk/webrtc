@@ -1894,7 +1894,6 @@ int32_t AudioDeviceMac::HandleDeviceChange() {
     if (err == kAudioHardwareBadDeviceError || deviceIsAlive == 0) {
       RTC_LOG(LS_WARNING) << "Audio input device is not alive (probably removed) deviceID: " << _inputDeviceID;
       //AtomicSet32(&_captureDeviceIsAlive, 0);
-      //_mixerManager.CloseMicrophone();
 
       // Logic to switch to default device (if exists)
       // when the current device is not alive anymore
@@ -1907,6 +1906,8 @@ int32_t AudioDeviceMac::HandleDeviceChange() {
       if (wasRecording && SetRecordingDevice(0) == 0) {
         InitRecording();
         StartRecording();
+      } else {
+        _mixerManager.CloseMicrophone();
       }
 
     } else if (err != noErr) {
@@ -1926,8 +1927,7 @@ int32_t AudioDeviceMac::HandleDeviceChange() {
 
     if (err == kAudioHardwareBadDeviceError || deviceIsAlive == 0) {
       RTC_LOG(LS_WARNING) << "Audio output device is not alive (probably removed) deviceID: " << _outputDeviceID;
-      // AtomicSet32(&_renderDeviceIsAlive, 0);
-      // _mixerManager.CloseSpeaker();
+      // AtomicSet32(&_renderDeviceIsAlive, 0); // StopPlayout() does this
 
       // Logic to switch to default device (if exists)
       // when the current device is not alive anymore
@@ -1940,6 +1940,8 @@ int32_t AudioDeviceMac::HandleDeviceChange() {
       if (wasPlaying && SetPlayoutDevice(0) == 0) {
         InitPlayout();
         StartPlayout();
+      } else {
+        _mixerManager.CloseSpeaker();
       }
 
     } else if (err != noErr) {
