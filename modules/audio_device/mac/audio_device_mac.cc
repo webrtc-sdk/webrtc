@@ -1892,9 +1892,23 @@ int32_t AudioDeviceMac::HandleDeviceChange() {
                                      &size, &deviceIsAlive);
 
     if (err == kAudioHardwareBadDeviceError || deviceIsAlive == 0) {
-      RTC_LOG(LS_WARNING) << "Capture device is not alive (probably removed)";
-      AtomicSet32(&_captureDeviceIsAlive, 0);
-      _mixerManager.CloseMicrophone();
+      RTC_LOG(LS_WARNING) << "Audio input device is not alive (probably removed) deviceID: " << _inputDeviceID;
+      //AtomicSet32(&_captureDeviceIsAlive, 0);
+      //_mixerManager.CloseMicrophone();
+
+      // Logic to switch to default device (if exists)
+      // when the current device is not alive anymore
+      int32_t captureDeviceIsAlive = AtomicGet32(&_captureDeviceIsAlive);
+      bool wasRecording = _recording && captureDeviceIsAlive == 1;
+
+      StopRecording();
+
+      // was playing & default device exists
+      if (wasRecording && SetRecordingDevice(0) == 0) {
+        InitRecording();
+        StartRecording();
+      }
+
     } else if (err != noErr) {
       logCAMsg(rtc::LS_ERROR, "Error in AudioDeviceGetProperty()",
                (const char*)&err);
@@ -1911,9 +1925,23 @@ int32_t AudioDeviceMac::HandleDeviceChange() {
                                      &size, &deviceIsAlive);
 
     if (err == kAudioHardwareBadDeviceError || deviceIsAlive == 0) {
-      RTC_LOG(LS_WARNING) << "Render device is not alive (probably removed)";
-      AtomicSet32(&_renderDeviceIsAlive, 0);
-      _mixerManager.CloseSpeaker();
+      RTC_LOG(LS_WARNING) << "Audio output device is not alive (probably removed) deviceID: " << _outputDeviceID;
+      // AtomicSet32(&_renderDeviceIsAlive, 0);
+      // _mixerManager.CloseSpeaker();
+
+      // Logic to switch to default device (if exists)
+      // when the current device is not alive anymore
+      int32_t renderDeviceIsAlive = AtomicGet32(&_renderDeviceIsAlive);
+      bool wasPlaying = _playing && renderDeviceIsAlive == 1;
+
+      StopPlayout();
+
+      // was playing & default device exists
+      if (wasPlaying && SetPlayoutDevice(0) == 0) {
+        InitPlayout();
+        StartPlayout();
+      }
+
     } else if (err != noErr) {
       logCAMsg(rtc::LS_ERROR, "Error in AudioDeviceGetProperty()",
                (const char*)&err);
