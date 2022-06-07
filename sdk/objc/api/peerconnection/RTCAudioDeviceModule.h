@@ -22,6 +22,8 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+typedef void (^RTCOnAudioDevicesDidUpdate)();
+
 RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCAudioDeviceModule) : NSObject
 
@@ -34,6 +36,8 @@ RTC_OBJC_EXPORT
 // Executes low-level API's in sequence to switch the device
 - (BOOL)setOutputDevice: (nullable RTCAudioDevice *)device;
 - (BOOL)setInputDevice: (nullable RTCAudioDevice *)device;
+
+- (BOOL)setDevicesUpdatedHandler: (nullable RTCOnAudioDevicesDidUpdate) handler;
 
 - (BOOL)startPlayout;
 - (BOOL)stopPlayout;

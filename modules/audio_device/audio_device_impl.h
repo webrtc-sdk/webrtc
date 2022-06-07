@@ -146,6 +146,8 @@ class AudioDeviceModuleImpl : public AudioDeviceModuleForTest {
   int GetRecordAudioParameters(AudioParameters* params) const override;
 #endif  // WEBRTC_IOS
 
+  int32_t SetAudioDeviceSink(AudioDeviceSink* sink) const override;
+
 #if defined(WEBRTC_ANDROID)
   // Only use this acccessor for test purposes on Android.
   AudioManager* GetAndroidAudioManagerForTest() {

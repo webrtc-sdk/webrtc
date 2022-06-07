@@ -22,9 +22,24 @@
 
 #import "sdk/objc/native/api/audio_device_module.h"
 
+class AudioDeviceSink : public webrtc::AudioDeviceSink {
+ public:
+  AudioDeviceSink() {}
+
+  void OnDevicesUpdated() override {
+    if (callback_handler_) {
+      callback_handler_();
+    }
+  }
+
+ // private:
+  RTCOnAudioDevicesDidUpdate callback_handler_;
+};
+
 @implementation RTC_OBJC_TYPE (RTCAudioDeviceModule) {
   rtc::Thread *_workerThread;
   rtc::scoped_refptr<webrtc::AudioDeviceModule> _native;
+  AudioDeviceSink *_sink;
 }
 
 - (instancetype)initWithNativeModule:(rtc::scoped_refptr<webrtc::AudioDeviceModule> )module
@@ -32,6 +47,10 @@
   self = [super init];
   _native = module;
   _workerThread = workerThread;
+
+  _sink = new AudioDeviceSink();
+  _native->SetAudioDeviceSink(_sink);
+
   return self;
 }
 
@@ -171,6 +190,12 @@
   return _workerThread->Invoke<BOOL>(RTC_FROM_HERE, [self] {
     return _native->InitRecording() == 0;
   });
+}
+
+- (BOOL)setDevicesUpdatedHandler: (nullable RTCOnAudioDevicesDidUpdate) handler {
+
+  _sink->callback_handler_ = handler;
+  return YES;
 }
 
 #pragma mark - Private

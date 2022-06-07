@@ -20,6 +20,15 @@ namespace webrtc {
 
 class AudioDeviceModuleForTest;
 
+// Sink for callbacks related to a audio device.
+class AudioDeviceSink {
+ public:
+  virtual ~AudioDeviceSink() = default;
+
+  // input/output devices updated or default device changed
+  virtual void OnDevicesUpdated() {}
+};
+
 class AudioDeviceModule : public rtc::RefCountInterface {
  public:
   enum AudioLayer {
@@ -157,6 +166,8 @@ class AudioDeviceModule : public rtc::RefCountInterface {
   virtual int GetPlayoutAudioParameters(AudioParameters* params) const = 0;
   virtual int GetRecordAudioParameters(AudioParameters* params) const = 0;
 #endif  // WEBRTC_IOS
+
+  virtual int32_t SetAudioDeviceSink(AudioDeviceSink* sink) const = 0;
 
  protected:
   ~AudioDeviceModule() override {}

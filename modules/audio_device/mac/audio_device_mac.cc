@@ -1936,6 +1936,11 @@ int32_t AudioDeviceMac::HandleDefaultOutputDeviceChange() {
       InitPlayout();
       StartPlayout();
     }
+
+    // Notify default output device updated
+    if (audio_device_module_sink_) {
+      audio_device_module_sink_->OnDevicesUpdated();
+    }
   }
 
   return 0;
@@ -1956,6 +1961,11 @@ int32_t AudioDeviceMac::HandleDefaultInputDeviceChange() {
       // re-init and start recording
       InitRecording();
       StartRecording();
+    }
+
+    // Notify default input device updated
+    if (audio_device_module_sink_) {
+      audio_device_module_sink_->OnDevicesUpdated();
     }
   }
 
@@ -1996,6 +2006,11 @@ int32_t AudioDeviceMac::HandleDeviceChange() {
         _mixerManager.CloseMicrophone();
       }
 
+      // Notify input device removed
+      if (audio_device_module_sink_) {
+        audio_device_module_sink_->OnDevicesUpdated();
+      }
+
     } else if (err != noErr) {
       logCAMsg(rtc::LS_ERROR, "Error in AudioDeviceGetProperty()",
                (const char*)&err);
@@ -2028,6 +2043,11 @@ int32_t AudioDeviceMac::HandleDeviceChange() {
         StartPlayout();
       } else {
         _mixerManager.CloseSpeaker();
+      }
+
+      // Notify output device removed
+      if (audio_device_module_sink_) {
+        audio_device_module_sink_->OnDevicesUpdated();
       }
 
     } else if (err != noErr) {

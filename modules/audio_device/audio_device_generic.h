@@ -135,9 +135,14 @@ class AudioDeviceGeneric {
   virtual int GetRecordAudioParameters(AudioParameters* params) const;
 #endif  // WEBRTC_IOS
 
+  int32_t SetAudioDeviceSink(AudioDeviceSink* sink);
+
   virtual void AttachAudioBuffer(AudioDeviceBuffer* audioBuffer) = 0;
 
   virtual ~AudioDeviceGeneric() {}
+
+  protected:
+    AudioDeviceSink* audio_device_module_sink_ = nullptr;
 };
 
 }  // namespace webrtc
