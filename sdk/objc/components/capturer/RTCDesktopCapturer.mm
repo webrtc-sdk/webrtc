@@ -21,11 +21,12 @@
     std::unique_ptr<webrtc::ObjCDesktopCapturer> capturer_;
 }
 
+
 // This initializer is used for testing.
-- (instancetype)initWithDelegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)delegate type:(RTCDesktopCapturerType)type {
+- (instancetype)initWithDelegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)delegate type:(RTCDesktopCapturerSourceType)type {
   if (self = [super initWithDelegate:delegate]) {
       webrtc::ObjCDesktopCapturer::DesktopType captureType = webrtc::ObjCDesktopCapturer::kScreen;
-      if(type == RTCDesktopCapturerTypeWindow) {
+      if(type == RTCDesktopCapturerSourceTypeWindow) {
           captureType = webrtc::ObjCDesktopCapturer::kWindow;
       }
       capturer_ = std::make_unique<webrtc::ObjCDesktopCapturer>(captureType, self);

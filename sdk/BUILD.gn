@@ -626,8 +626,14 @@ if (is_ios || is_mac) {
       sources = [
         "objc/components/capturer/RTCDesktopCapturer.h",
         "objc/components/capturer/RTCDesktopCapturer.mm",
+        "objc/components/capturer/RTCDesktopCapturerSource.h",
+        "objc/components/capturer/RTCDesktopCapturerSource.mm",
+        "objc/components/capturer/RTCDesktopMediaList.h",
+        "objc/components/capturer/RTCDesktopMediaList.mm",
         "objc/native/src/objc_desktop_capture.h",
         "objc/native/src/objc_desktop_capture.mm",
+        "objc/native/src/objc_desktop_media_list.h",
+        "objc/native/src/objc_desktop_media_list.mm",
       ]
       frameworks = []
 
@@ -641,6 +647,7 @@ if (is_ios || is_mac) {
         ":videoframebuffer_objc",
         "../rtc_base/system:gcd_helpers",
         "../modules/desktop_capture",
+        "//third_party:jpeg",
       ]
     }
 
@@ -1480,6 +1487,7 @@ if (is_ios || is_mac) {
           "objc/components/capturer/RTCCameraVideoCapturer.h",
           "objc/components/capturer/RTCFileVideoCapturer.h",
           "objc/components/capturer/RTCDesktopCapturer.h",
+          "objc/components/capturer/RTCDesktopCapturerSource.h",
           "objc/components/renderer/metal/RTCMTLNSVideoView.h",
           "objc/components/renderer/opengl/RTCNSGLVideoView.h",
           "objc/components/renderer/opengl/RTCVideoViewShading.h",
