@@ -49,8 +49,8 @@ ObjCDesktopCapturer::CaptureState ObjCDesktopCapturer::Start() {
     }
   }
   capturer_->Start(this);
-  CaptureFrame();
   capture_state_ = CS_RUNNING;
+  CaptureFrame();
   return capture_state_;
 }
 
