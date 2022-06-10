@@ -10,37 +10,49 @@
 
 #import <Foundation/Foundation.h>
 
-#import "RTCDesktopCapturer.h"
 #import "base/RTCLogging.h"
 #import "base/RTCVideoFrameBuffer.h"
+
 #import "components/video_frame_buffer/RTCCVPixelBuffer.h"
 
-#include "sdk/objc/native/src/objc_desktop_capture.h"
+#import "RTCDesktopCapturer.h"
+#import "RTCDesktopCapturer+Private.h"
+#import "RTCDesktopSource+Private.h"
 
 @implementation RTC_OBJC_TYPE (RTCDesktopCapturer) {
-    std::unique_ptr<webrtc::ObjCDesktopCapturer> capturer_;
 }
 
+@synthesize nativeCapturer = _nativeCapturer;
+@synthesize source = _source;
 
-// This initializer is used for testing.
-- (instancetype)initWithDelegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)delegate type:(RTCDesktopCapturerSourceType)type {
-  if (self = [super initWithDelegate:delegate]) {
+- (instancetype)initWithSource:(RTCDesktopSource*)source delegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)delegate {
+    if (self = [super initWithDelegate:delegate]) {
       webrtc::ObjCDesktopCapturer::DesktopType captureType = webrtc::ObjCDesktopCapturer::kScreen;
-      if(type == RTCDesktopCapturerSourceTypeWindow) {
+      if(source.sourceType == RTCDesktopSourceTypeWindow) {
           captureType = webrtc::ObjCDesktopCapturer::kWindow;
       }
-      capturer_ = std::make_unique<webrtc::ObjCDesktopCapturer>(captureType, self);
+      _nativeCapturer = std::make_shared<webrtc::ObjCDesktopCapturer>(captureType, source.nativeMediaSource->id(), self);
+      _source = source;
   }
   return self;
 }
 
+- (instancetype)initWithDefaultScreen:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)delegate {
+    if (self = [super initWithDelegate:delegate]) {
+      _nativeCapturer = std::make_unique<webrtc::ObjCDesktopCapturer>(webrtc::ObjCDesktopCapturer::kScreen, -1, self);
+      _source = nil;
+  }
+  return self;
+}
+
+
 -(void)dealloc {
-    capturer_->Stop();
-    capturer_ = nullptr;
+    _nativeCapturer->Stop();
+    _nativeCapturer = nullptr;
 }
 
 - (void)startCapture:(NSInteger)fps {
-    capturer_->Start();
+    _nativeCapturer->Start();
 }
 
 - (void)didCaptureVideoFrame
@@ -49,7 +61,7 @@
 }
 
 - (void)stopCapture {
-    capturer_->Stop();
+    _nativeCapturer->Stop();
 }
 
 @end

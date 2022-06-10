@@ -8,8 +8,8 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#ifndef SDK_OBJC_NATIVE_SRC_OBJC_SCREEN_CAPTURE_H_
-#define SDK_OBJC_NATIVE_SRC_OBJC_SCREEN_CAPTURE_H_
+#ifndef SDK_OBJC_NATIVE_SRC_OBJC_DESKTOP_MEDIA_LIST_H_
+#define SDK_OBJC_NATIVE_SRC_OBJC_DESKTOP_MEDIA_LIST_H_
 
 #import "base/RTCMacros.h"
 
@@ -85,4 +85,4 @@ public:
 
 }  // namespace webrtc
 
-#endif  // SDK_OBJC_NATIVE_SRC_OBJC_SCREEN_CAPTURE_H_
+#endif  // SDK_OBJC_NATIVE_SRC_OBJC_DESKTOP_MEDIA_LIST_H_

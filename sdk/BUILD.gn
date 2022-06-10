@@ -622,12 +622,14 @@ if (is_ios || is_mac) {
     
     rtc_library("desktopcapture_objc") {
       visibility = [ "*" ]
-      allow_poison = [ "audio_codecs" ]  # TODO(bugs.webrtc.org/8396): Remove.
       sources = [
+        "objc/components/capturer/RTCDesktopCapturer+Prvate.h",
         "objc/components/capturer/RTCDesktopCapturer.h",
         "objc/components/capturer/RTCDesktopCapturer.mm",
-        "objc/components/capturer/RTCDesktopCapturerSource.h",
-        "objc/components/capturer/RTCDesktopCapturerSource.mm",
+        "objc/components/capturer/RTCDesktopSource+Prvate.h",
+        "objc/components/capturer/RTCDesktopSource.h",
+        "objc/components/capturer/RTCDesktopSource.mm",
+        "objc/components/capturer/RTCDesktopMediaList+Prvate.h",
         "objc/components/capturer/RTCDesktopMediaList.h",
         "objc/components/capturer/RTCDesktopMediaList.mm",
         "objc/native/src/objc_desktop_capture.h",
@@ -635,7 +637,9 @@ if (is_ios || is_mac) {
         "objc/native/src/objc_desktop_media_list.h",
         "objc/native/src/objc_desktop_media_list.mm",
       ]
-      frameworks = []
+      frameworks = [ 
+        "AppKit.framework",
+      ]
 
       configs += [ "..:common_objc" ]
 
@@ -647,8 +651,10 @@ if (is_ios || is_mac) {
         ":videoframebuffer_objc",
         "../rtc_base/system:gcd_helpers",
         "../modules/desktop_capture",
-        "//third_party:jpeg",
       ]
+      if(is_mac) {
+        deps += [ "//third_party:jpeg", ]
+      }
     }
 
     rtc_library("videocodec_objc") {
@@ -1487,7 +1493,8 @@ if (is_ios || is_mac) {
           "objc/components/capturer/RTCCameraVideoCapturer.h",
           "objc/components/capturer/RTCFileVideoCapturer.h",
           "objc/components/capturer/RTCDesktopCapturer.h",
-          "objc/components/capturer/RTCDesktopCapturerSource.h",
+          "objc/components/capturer/RTCDesktopSource.h",
+          "objc/components/capturer/RTCDesktopMediaList.h",
           "objc/components/renderer/metal/RTCMTLNSVideoView.h",
           "objc/components/renderer/opengl/RTCNSGLVideoView.h",
           "objc/components/renderer/opengl/RTCVideoViewShading.h",

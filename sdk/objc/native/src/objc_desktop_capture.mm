@@ -10,8 +10,9 @@ namespace webrtc {
 enum { kCaptureDelay = 33, kCaptureMessageId = 1000 };
 
 ObjCDesktopCapturer::ObjCDesktopCapturer(DesktopType type,
+                                     webrtc::DesktopCapturer::SourceId source_id, 
                                      id<RTC_OBJC_TYPE(DesktopCapturerDelegate)> delegate)
-    : thread_(rtc::Thread::Create()), delegate_(delegate) {
+    : thread_(rtc::Thread::Create()), source_id_(source_id), delegate_(delegate) {
   webrtc::DesktopCaptureOptions options = webrtc::DesktopCaptureOptions::CreateDefault();
   if (type == kScreen) {
     capturer_ = webrtc::DesktopCapturer::CreateScreenCapturer(options);
@@ -26,10 +27,16 @@ ObjCDesktopCapturer::~ObjCDesktopCapturer() {
 }
 
 ObjCDesktopCapturer::CaptureState ObjCDesktopCapturer::Start() {
-  capture_state_ = CS_RUNNING;
+  if(source_id_ != -1) {
+    if(!capturer_->SelectSource(source_id_) || !capturer_->FocusOnSelectedSource()) {
+      capture_state_ = CS_FAILED;
+      return capture_state_;
+    }
+  }
   capturer_->Start(this);
   CaptureFrame();
-  return CS_RUNNING;
+  capture_state_ = CS_RUNNING;
+  return capture_state_;
 }
 
 void ObjCDesktopCapturer::Stop() {

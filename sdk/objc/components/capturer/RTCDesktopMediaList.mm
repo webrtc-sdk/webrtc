@@ -1,33 +1,37 @@
 #import "RTCDesktopMediaList.h"
 
-#include "sdk/objc/native/src/objc_desktop_media_list.h"
+#import "RTCDesktopSource+Private.h"
+#import "RTCDesktopMediaList+Private.h"
 
 @implementation RTCDesktopMediaList {
-     std::unique_ptr<webrtc::ObjCDesktopMediaList> media_list_;
-     RTCDesktopCapturerSourceType _sourceType;
-     NSArray<RTCDesktopCapturerSource *>* _sources;
+     RTCDesktopSourceType _sourceType;
 }
 
 @synthesize sourceType = _sourceType;
-@synthesize sources  = _sources;
+@synthesize nativeMediaList = _nativeMediaList;
 
-- (instancetype)initWithDelegate:(__weak id<RTC_OBJC_TYPE(RTCDesktopMediaListDelegate)>)delegate type:(RTCDesktopCapturerSourceType)type {
+- (instancetype)initWithDelegate:(__weak id<RTC_OBJC_TYPE(RTCDesktopMediaListDelegate)>)delegate type:(RTCDesktopSourceType)type {
     if (self = [super init]) {
         webrtc::ObjCDesktopMediaList::DesktopType captureType = webrtc::ObjCDesktopMediaList::kScreen;
-        if(type == RTCDesktopCapturerSourceTypeWindow) {
+        if(type == RTCDesktopSourceTypeWindow) {
             captureType = webrtc::ObjCDesktopMediaList::kWindow;
         }
-        media_list_ = std::make_unique<webrtc::ObjCDesktopMediaList>(captureType, self);
+        _nativeMediaList = std::make_shared<webrtc::ObjCDesktopMediaList>(captureType, self);
     }
     return self;
 }
 
-- (void)startUpdating {
-    media_list_->UpdateSourceList();
+- (void)UpdateSourceList {
+    _nativeMediaList->UpdateSourceList();
 }
 
-- (void)stopUpdating {
-
+-(NSArray<RTCDesktopSource *>*) getSources {
+    NSMutableArray *sources = [NSMutableArray array];
+    int sourceCount = _nativeMediaList->GetSourceCount();
+    for (int i = 0; i < sourceCount; i++) {
+        [sources addObject:[[RTCDesktopSource alloc] initWithNativeSource:&_nativeMediaList->GetSource(i) sourceType:_sourceType]];
+    }
+    return [NSArray arrayWithArray:sources];
 }
 
 @end

@@ -2,8 +2,7 @@
 #import <Foundation/Foundation.h>
 
 #import "RTCMacros.h"
-#import "RTCVideoCapturer.h"
-#import "RTCDesktopCapturerSource.h"
+#import "RTCDesktopSource.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -20,15 +19,13 @@ RTC_OBJC_EXPORT
 RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCDesktopMediaList) : NSObject
 
-- (instancetype)initWithDelegate:(__weak id<RTC_OBJC_TYPE(RTCDesktopMediaListDelegate)>)delegate type:(RTCDesktopCapturerSourceType)type;
+- (instancetype)initWithDelegate:(__weak id<RTC_OBJC_TYPE(RTCDesktopMediaListDelegate)>)delegate type:(RTCDesktopSourceType)type;
 
-@property(nonatomic, readonly) RTCDesktopCapturerSourceType sourceType;
+@property(nonatomic, readonly) RTCDesktopSourceType sourceType;
 
-@property(nonatomic, readonly) NSArray<RTCDesktopCapturerSource *>* sources;
+- (NSArray<RTCDesktopSource *>*) getSources;
 
-- (void)startUpdating;
-
-- (void)stopUpdating;
+- (void)UpdateSourceList;
 
 @end
 

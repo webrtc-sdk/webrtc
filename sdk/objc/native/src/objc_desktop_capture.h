@@ -8,8 +8,8 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#ifndef SDK_OBJC_NATIVE_SRC_OBJC_SCREEN_CAPTURE_H_
-#define SDK_OBJC_NATIVE_SRC_OBJC_SCREEN_CAPTURE_H_
+#ifndef SDK_OBJC_NATIVE_SRC_OBJC_DESKTOP_CAPTURE_H_
+#define SDK_OBJC_NATIVE_SRC_OBJC_DESKTOP_CAPTURE_H_
 
 #import "base/RTCMacros.h"
 
@@ -27,12 +27,14 @@ namespace webrtc {
 
 class ObjCDesktopCapturer : public DesktopCapturer::Callback, public rtc::MessageHandler {
  public:
-  enum CaptureState { CS_RUNNING, CS_STOPPED };
+  enum CaptureState { CS_RUNNING, CS_STOPPED, CS_FAILED};
 
   enum DesktopType { kScreen, kWindow };
 
  public:
-  ObjCDesktopCapturer(DesktopType type, id<RTC_OBJC_TYPE(DesktopCapturerDelegate)> delegate);
+  ObjCDesktopCapturer(DesktopType type,
+    webrtc::DesktopCapturer::SourceId source_id, 
+    id<RTC_OBJC_TYPE(DesktopCapturerDelegate)> delegate);
   virtual ~ObjCDesktopCapturer();
 
   virtual CaptureState Start();
@@ -52,9 +54,10 @@ class ObjCDesktopCapturer : public DesktopCapturer::Callback, public rtc::Messag
   std::unique_ptr<rtc::Thread> thread_;
   rtc::scoped_refptr<webrtc::I420Buffer> i420_buffer_;
   CaptureState capture_state_ = CS_STOPPED;
+  webrtc::DesktopCapturer::SourceId source_id_;
   id<RTC_OBJC_TYPE(DesktopCapturerDelegate)> delegate_;
 };
 
 }  // namespace webrtc
 
-#endif  // SDK_OBJC_NATIVE_SRC_OBJC_SCREEN_CAPTURE_H_
+#endif  // SDK_OBJC_NATIVE_SRC_OBJC_DESKTOP_CAPTURE_H_
