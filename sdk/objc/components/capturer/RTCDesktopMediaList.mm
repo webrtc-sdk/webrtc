@@ -21,6 +21,8 @@
 
 @implementation RTCDesktopMediaList {
      RTCDesktopSourceType _sourceType;
+     NSMutableArray<RTCDesktopSource *>* _sources;
+     __weak id<RTC_OBJC_TYPE(RTCDesktopMediaListDelegate)> _delegate;
 }
 
 @synthesize sourceType = _sourceType;
@@ -33,21 +35,53 @@
             captureType = webrtc::ObjCDesktopMediaList::kWindow;
         }
         _nativeMediaList = std::make_shared<webrtc::ObjCDesktopMediaList>(captureType, self);
+        _delegate = delegate;
     }
     return self;
 }
 
-- (void)UpdateSourceList {
-    _nativeMediaList->UpdateSourceList();
+- (int32_t)UpdateSourceList {
+    return _nativeMediaList->UpdateSourceList();
 }
 
 -(NSArray<RTCDesktopSource *>*) getSources {
-    NSMutableArray *sources = [NSMutableArray array];
+    _sources = [NSMutableArray array];
     int sourceCount = _nativeMediaList->GetSourceCount();
     for (int i = 0; i < sourceCount; i++) {
-        [sources addObject:[[RTCDesktopSource alloc] initWithNativeSource:&_nativeMediaList->GetSource(i) sourceType:_sourceType]];
+        webrtc::ObjCDesktopMediaList::MediaSource *mediaSource = _nativeMediaList->GetSource(i);
+        [_sources addObject:[[RTCDesktopSource alloc] initWithNativeSource:mediaSource sourceType:_sourceType]];
     }
-    return [NSArray arrayWithArray:sources];
+    return _sources;
+}
+
+-(void)mediaSourceAdded:(int)index {
+    if(_delegate) {
+        //[_delegate mediaSourceAdded:index fromSource:_sources[index]];
+    }
+}
+
+-(void)mediaSourceRemoved:(int)index {
+    if(_delegate) {
+        //[_delegate mediaSourceRemoved:index fromSource:_sources[index]];
+    }
+}
+
+-(void)mediaSourceMoved:(int) oldIndex newIndex:(int) newIndex {
+    if(_delegate) {
+        //[_delegate mediaSourceMoved:oldIndex newIndex:newIndex fromSource:_sources[oldIndex]];
+    }
+}
+
+-(void)mediaSourceNameChanged:(int)index {
+    if(_delegate) {
+        //[_delegate mediaSourceNameChanged:index fromSource:_sources[index]];
+    }
+}
+
+-(void)mediaSourceThumbnailChanged:(int)index {
+    if(_delegate) {
+        //[_delegate mediaSourceThumbnailChanged:index fromSource:_sources[index]];
+    }
 }
 
 @end

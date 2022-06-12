@@ -16,13 +16,25 @@
 
 #import "RTCDesktopMediaList.h"
 
-#include "sdk/objc/native/src/objc_desktop_media_list.h"
+namespace webrtc {
+    class ObjCDesktopMediaList;
+}
 
 NS_ASSUME_NONNULL_BEGIN
 
 @interface RTCDesktopMediaList ()
 
 @property(nonatomic, readonly)std::shared_ptr<webrtc::ObjCDesktopMediaList> nativeMediaList;
+
+-(void)mediaSourceAdded:(int)index;
+
+-(void)mediaSourceRemoved:(int)index;
+
+-(void)mediaSourceMoved:(int) oldIndex newIndex:(int) newIndex;
+
+-(void)mediaSourceNameChanged:(int)index;
+
+-(void)mediaSourceThumbnailChanged:(int)index;
 
 @end
 
