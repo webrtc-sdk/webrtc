@@ -28,16 +28,20 @@ extern "C" {
 #endif
 }
 
+#include <iostream>
+#include <fstream>
+
 namespace webrtc {
 
 ObjCDesktopMediaList::ObjCDesktopMediaList(DesktopType type,
                                       RTC_OBJC_TYPE(RTCDesktopMediaList)* objcMediaList)
     :thread_(rtc::Thread::Create()),objcMediaList_(objcMediaList) {
-  webrtc::DesktopCaptureOptions options = webrtc::DesktopCaptureOptions::CreateDefault();
+  options_ = webrtc::DesktopCaptureOptions::CreateDefault();
+  options_.set_detect_updated_region(true);
   if (type == kScreen) {
-    capturer_ = webrtc::DesktopCapturer::CreateScreenCapturer(options);
+    capturer_ = webrtc::DesktopCapturer::CreateScreenCapturer(options_);
   } else { 
-      capturer_ = webrtc::DesktopCapturer::CreateWindowCapturer(options); 
+    capturer_ = webrtc::DesktopCapturer::CreateWindowCapturer(options_); 
   }
   callback_ = std::make_unique<CallbackProxy>();
   thread_->Start();
@@ -72,11 +76,10 @@ int32_t ObjCDesktopMediaList::UpdateSourceList() {
     for (size_t i = 0; i < sources_.size(); ++i) {
       old_source_set.insert(sources_[i]->id());
     }
-
     for (size_t i = 0; i < new_sources.size(); ++i) {
       if (old_source_set.find(new_sources[i].id) == old_source_set.end()) {
-        MediaSource *source = new MediaSource(new_sources[i]);
-        sources_.insert(sources_.begin() + i, source);
+        MediaSource* source = new MediaSource(new_sources[i]);
+        sources_.insert(sources_.begin() + i, std::unique_ptr<MediaSource>(source));
         callback_->SetCallback([&](webrtc::DesktopCapturer::Result result,
                                std::unique_ptr<webrtc::DesktopFrame> frame){
             source->SaveCaptureResult(result, std::move(frame));
@@ -105,9 +108,9 @@ int32_t ObjCDesktopMediaList::UpdateSourceList() {
       RTC_DCHECK(sources_[old_pos]->id() == new_sources[pos].id);
 
       // Move the source from |old_pos| to |pos|.
-      MediaSource *temp = sources_[old_pos];
+      auto temp = std::move(sources_[old_pos]);
       sources_.erase(sources_.begin() + old_pos);
-      sources_.insert(sources_.begin() + pos, temp);
+      sources_.insert(sources_.begin() + pos, std::move(temp));
       [objcMediaList_ mediaSourceMoved:old_pos newIndex:pos];
     }
 
@@ -127,7 +130,12 @@ int ObjCDesktopMediaList::GetSourceCount() const {
 }
   
 ObjCDesktopMediaList::MediaSource *ObjCDesktopMediaList::GetSource(int index) {
-    return sources_[index];
+    return sources_[index].get();
+}
+
+
+ObjCDesktopMediaList::MediaSource::~MediaSource() {
+
 }
 
 void ObjCDesktopMediaList::MediaSource::SaveCaptureResult(webrtc::DesktopCapturer::Result result,
@@ -135,7 +143,7 @@ void ObjCDesktopMediaList::MediaSource::SaveCaptureResult(webrtc::DesktopCapture
   if (result != webrtc::DesktopCapturer::Result::SUCCESS) {
     return;
   }
-
+  
   int quality = 80;
   const int kColorPlanes = 4;  // alpha, R, G and B.
   unsigned char* out_buffer = NULL;
@@ -152,7 +160,7 @@ void ObjCDesktopMediaList::MediaSource::SaveCaptureResult(webrtc::DesktopCapture
   cinfo.image_width = frame->size().width();
   cinfo.image_height = frame->size().height();
   cinfo.input_components = kColorPlanes;
-  cinfo.in_color_space = JCS_EXT_ARGB;
+  cinfo.in_color_space = JCS_EXT_BGRA;
   jpeg_set_defaults(&cinfo);
   jpeg_set_quality(&cinfo, quality, TRUE);
 

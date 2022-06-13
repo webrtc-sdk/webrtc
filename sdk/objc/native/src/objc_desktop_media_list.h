@@ -51,6 +51,7 @@ public:
     public:
         MediaSource(DesktopCapturer::Source src)
         : source(src) {}
+        virtual ~MediaSource();
         DesktopCapturer::Source source;
         // source id
         DesktopCapturer::SourceId id() const { return source.id; }
@@ -95,9 +96,10 @@ public:
     };
  private:
   std::unique_ptr<CallbackProxy> callback_;
+  webrtc::DesktopCaptureOptions options_;
   std::unique_ptr<webrtc::DesktopCapturer> capturer_;
   std::unique_ptr<rtc::Thread> thread_;
-  std::vector<MediaSource*> sources_;
+  std::vector<std::unique_ptr<MediaSource>> sources_;
   RTC_OBJC_TYPE(RTCDesktopMediaList)* objcMediaList_;
 };
 

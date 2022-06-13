@@ -36,6 +36,7 @@
         }
         _nativeMediaList = std::make_shared<webrtc::ObjCDesktopMediaList>(captureType, self);
         _delegate = delegate;
+        _sourceType = type;
     }
     return self;
 }

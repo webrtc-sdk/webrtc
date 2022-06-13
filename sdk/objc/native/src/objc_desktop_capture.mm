@@ -28,12 +28,13 @@ ObjCDesktopCapturer::ObjCDesktopCapturer(DesktopType type,
                                      webrtc::DesktopCapturer::SourceId source_id, 
                                      id<RTC_OBJC_TYPE(DesktopCapturerDelegate)> delegate)
     : thread_(rtc::Thread::Create()), source_id_(source_id), delegate_(delegate) {
-  webrtc::DesktopCaptureOptions options = webrtc::DesktopCaptureOptions::CreateDefault();
+  options_ = webrtc::DesktopCaptureOptions::CreateDefault();
+  options_.set_detect_updated_region(true);
   if (type == kScreen) {
-    capturer_ = webrtc::DesktopCapturer::CreateScreenCapturer(options);
+    capturer_ = webrtc::DesktopCapturer::CreateScreenCapturer(options_);
   }
-  else { capturer_ = webrtc::DesktopCapturer::CreateWindowCapturer(options); }
-
+  else { capturer_ = webrtc::DesktopCapturer::CreateWindowCapturer(options_); }
+  type_ = type;
   thread_->Start();
 }
 
@@ -43,9 +44,9 @@ ObjCDesktopCapturer::~ObjCDesktopCapturer() {
 
 ObjCDesktopCapturer::CaptureState ObjCDesktopCapturer::Start() {
   if(source_id_ != -1) {
-    if(!capturer_->SelectSource(source_id_) || !capturer_->FocusOnSelectedSource()) {
-      capture_state_ = CS_FAILED;
-      return capture_state_;
+    if(!capturer_->SelectSource(source_id_) && (type_ == kWindow && !capturer_->FocusOnSelectedSource())) {
+        capture_state_ = CS_FAILED;
+        return capture_state_;
     }
   }
   capturer_->Start(this);
@@ -70,7 +71,7 @@ void ObjCDesktopCapturer::OnCaptureResult(webrtc::DesktopCapturer::Result result
   int width = frame->size().width();
   int height = frame->size().height();
   if (!i420_buffer_ || !i420_buffer_.get() ||
-      i420_buffer_->width() * i420_buffer_->height() < width * height) {
+      i420_buffer_->width() * i420_buffer_->height() != width * height) {
     i420_buffer_ = webrtc::I420Buffer::Create(width, height);
   }
   libyuv::ConvertToI420(frame->data(),

@@ -56,10 +56,12 @@ class ObjCDesktopCapturer : public DesktopCapturer::Callback, public rtc::Messag
 
  private:
   void CaptureFrame();
+  webrtc::DesktopCaptureOptions options_;
   std::unique_ptr<webrtc::DesktopCapturer> capturer_;
   std::unique_ptr<rtc::Thread> thread_;
   rtc::scoped_refptr<webrtc::I420Buffer> i420_buffer_;
   CaptureState capture_state_ = CS_STOPPED;
+  DesktopType type_;
   webrtc::DesktopCapturer::SourceId source_id_;
   id<RTC_OBJC_TYPE(DesktopCapturerDelegate)> delegate_;
 };
