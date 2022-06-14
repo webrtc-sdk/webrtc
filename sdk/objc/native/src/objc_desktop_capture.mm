@@ -18,7 +18,7 @@
 #include "sdk/objc/native/src/objc_video_frame.h"
 #include "third_party/libyuv/include/libyuv.h"
 
-#import "components/capturer/RTCDesktopCapturer.h"
+#import "components/capturer/RTCDesktopCapturer+Private.h"
 
 namespace webrtc {
 
