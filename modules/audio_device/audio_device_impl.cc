@@ -946,7 +946,6 @@ int AudioDeviceModuleImpl::GetRecordAudioParameters(
 
 int32_t AudioDeviceModuleImpl::SetAudioDeviceSink(AudioDeviceSink* sink) const {
   RTC_LOG(LS_INFO) << __FUNCTION__ << "(" << sink << ")";
-  CHECKinitialized_();
   int32_t ok = audio_device_->SetAudioDeviceSink(sink);
   RTC_LOG(LS_INFO) << "output: " << ok;
   return ok;

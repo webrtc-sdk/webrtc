@@ -63,17 +63,13 @@
   std::unique_ptr<rtc::Thread> _networkThread;
   std::unique_ptr<rtc::Thread> _workerThread;
   std::unique_ptr<rtc::Thread> _signalingThread;
-  rtc::scoped_refptr<webrtc::AudioDeviceModule> _audioDeviceModule;
+  rtc::scoped_refptr<webrtc::AudioDeviceModule> _nativeAudioDeviceModule;
 
   BOOL _hasStartedAecDump;
 }
 
 @synthesize nativeFactory = _nativeFactory;
-
-- (RTCAudioDeviceModule *)audioDeviceModule {
-  return [[RTCAudioDeviceModule alloc] initWithNativeModule: _audioDeviceModule
-                                               workerThread: _workerThread.get()];
-}
+@synthesize audioDeviceModule = _audioDeviceModule;
 
 - (instancetype)init {
 #ifdef HAVE_NO_MEDIA
@@ -225,16 +221,18 @@
     dependencies.task_queue_factory = webrtc::CreateDefaultTaskQueueFactory();
     dependencies.trials = std::make_unique<webrtc::FieldTrialBasedConfig>();
     cricket::MediaEngineDependencies media_deps;
-  
+
     // always create ADM on worker thread
-    auto adm = _workerThread->Invoke<rtc::scoped_refptr<webrtc::AudioDeviceModule>>(RTC_FROM_HERE, [&dependencies, &bypassVoiceProcessing]() {
+    _nativeAudioDeviceModule = _workerThread->Invoke<rtc::scoped_refptr<webrtc::AudioDeviceModule>>(RTC_FROM_HERE, [&dependencies, &bypassVoiceProcessing]() {
       return webrtc::AudioDeviceModule::Create(webrtc::AudioDeviceModule::AudioLayer::kPlatformDefaultAudio,
                                                dependencies.task_queue_factory.get(),
                                                bypassVoiceProcessing == YES);
 	  });
 
-    _audioDeviceModule = adm;
-    media_deps.adm = adm;
+    _audioDeviceModule = [[RTCAudioDeviceModule alloc] initWithNativeModule: _nativeAudioDeviceModule
+                                                       workerThread: _workerThread.get()];
+
+    media_deps.adm = _nativeAudioDeviceModule;
     media_deps.task_queue_factory = dependencies.task_queue_factory.get();
     media_deps.audio_encoder_factory = std::move(audioEncoderFactory);
     media_deps.audio_decoder_factory = std::move(audioDecoderFactory);
