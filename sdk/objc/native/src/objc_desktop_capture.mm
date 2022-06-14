@@ -30,6 +30,7 @@ ObjCDesktopCapturer::ObjCDesktopCapturer(DesktopType type,
     : thread_(rtc::Thread::Create()), source_id_(source_id), delegate_(delegate) {
   options_ = webrtc::DesktopCaptureOptions::CreateDefault();
   options_.set_detect_updated_region(true);
+  options_.set_allow_iosurface(true);
   if (type == kScreen) {
     capturer_ = webrtc::DesktopCapturer::CreateScreenCapturer(options_);
   }

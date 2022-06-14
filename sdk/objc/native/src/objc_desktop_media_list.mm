@@ -38,6 +38,7 @@ ObjCDesktopMediaList::ObjCDesktopMediaList(DesktopType type,
     :thread_(rtc::Thread::Create()),objcMediaList_(objcMediaList) {
   options_ = webrtc::DesktopCaptureOptions::CreateDefault();
   options_.set_detect_updated_region(true);
+  options_.set_allow_iosurface(true);
   if (type == kScreen) {
     capturer_ = webrtc::DesktopCapturer::CreateScreenCapturer(options_);
   } else { 
@@ -79,14 +80,7 @@ int32_t ObjCDesktopMediaList::UpdateSourceList() {
     for (size_t i = 0; i < new_sources.size(); ++i) {
       if (old_source_set.find(new_sources[i].id) == old_source_set.end()) {
         MediaSource* source = new MediaSource(new_sources[i]);
-        sources_.insert(sources_.begin() + i, std::unique_ptr<MediaSource>(source));
-        callback_->SetCallback([&](webrtc::DesktopCapturer::Result result,
-                               std::unique_ptr<webrtc::DesktopFrame> frame){
-            source->SaveCaptureResult(result, std::move(frame));
-        });
-        if(capturer_->SelectSource(source->id())){
-          capturer_->CaptureFrame();
-        }
+        sources_.insert(sources_.begin() + i, std::shared_ptr<MediaSource>(source));
         [objcMediaList_ mediaSourceAdded:i];
       }
     }
@@ -108,9 +102,9 @@ int32_t ObjCDesktopMediaList::UpdateSourceList() {
       RTC_DCHECK(sources_[old_pos]->id() == new_sources[pos].id);
 
       // Move the source from |old_pos| to |pos|.
-      auto temp = std::move(sources_[old_pos]);
+      auto temp = sources_[old_pos];
       sources_.erase(sources_.begin() + old_pos);
-      sources_.insert(sources_.begin() + pos, std::move(temp));
+      sources_.insert(sources_.begin() + pos, temp);
       [objcMediaList_ mediaSourceMoved:old_pos newIndex:pos];
     }
 
@@ -119,6 +113,16 @@ int32_t ObjCDesktopMediaList::UpdateSourceList() {
       [objcMediaList_ mediaSourceNameChanged:pos];
     }
     ++pos;
+  }
+
+  for( auto source : sources_) {
+    callback_->SetCallback([&](webrtc::DesktopCapturer::Result result,
+                               std::unique_ptr<webrtc::DesktopFrame> frame){
+      source->SaveCaptureResult(result, std::move(frame));
+    });
+    if(capturer_->SelectSource(source->id())){
+      capturer_->CaptureFrame();
+    }
   }
 
   return sources_.size();
