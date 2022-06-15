@@ -46,6 +46,9 @@ RTC_OBJC_EXPORT
 - (BOOL)stopRecording;
 - (BOOL)initRecording;
 
+// Virtual devices
+- (RTC_OBJC_TYPE(RTCAudioDevice) *)createVirtualDevice;
+
 @end
 
 NS_ASSUME_NONNULL_END
