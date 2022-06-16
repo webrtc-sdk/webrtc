@@ -35,7 +35,7 @@ namespace webrtc {
 
 ObjCDesktopMediaList::ObjCDesktopMediaList(DesktopType type,
                                       RTC_OBJC_TYPE(RTCDesktopMediaList)* objcMediaList)
-    :thread_(rtc::Thread::Create()),objcMediaList_(objcMediaList) {
+    :thread_(rtc::Thread::Create()),objcMediaList_(objcMediaList),type_(type) {
   options_ = webrtc::DesktopCaptureOptions::CreateDefault();
   options_.set_detect_updated_region(true);
   options_.set_allow_iosurface(true);
@@ -79,7 +79,7 @@ int32_t ObjCDesktopMediaList::UpdateSourceList() {
     }
     for (size_t i = 0; i < new_sources.size(); ++i) {
       if (old_source_set.find(new_sources[i].id) == old_source_set.end()) {
-        MediaSource* source = new MediaSource(new_sources[i]);
+        MediaSource* source = new MediaSource(new_sources[i],type_);
         sources_.insert(sources_.begin() + i, std::shared_ptr<MediaSource>(source));
         [objcMediaList_ mediaSourceAdded:i];
       }
@@ -163,10 +163,14 @@ void ObjCDesktopMediaList::MediaSource::SaveCaptureResult(webrtc::DesktopCapture
 
   int width = frame->size().width();
   int height = frame->size().height();
-  int real_width = frame->size().width();
+  int real_width = width;
 
-  if( (width % 32) !=0 ) {
-    width = (width / 32 + 1) * 32;
+  if(type_ == kWindow) {
+    // A multiple of 32 must be used as the width of the src frame,
+    // and the right black border needs to be cropped during conversion.
+    if( (width % 32) !=0 ) {
+      width = (width / 32 + 1) * 32;
+    }
   }
 
   cinfo.image_width = real_width;

@@ -49,8 +49,8 @@ public:
 
     class MediaSource {
     public:
-        MediaSource(DesktopCapturer::Source src)
-        : source(src) {}
+        MediaSource(DesktopCapturer::Source src, DesktopType type)
+        : source(src), type_(type) {}
         virtual ~MediaSource();
         DesktopCapturer::Source source;
         // source id
@@ -64,6 +64,7 @@ public:
                                         std::unique_ptr<webrtc::DesktopFrame> frame);
     private:
         std::vector<unsigned char> thumbnail_;
+        DesktopType type_;
     };
  public:
   ObjCDesktopMediaList(DesktopType type, RTC_OBJC_TYPE(RTCDesktopMediaList)* objcMediaList);
@@ -101,6 +102,7 @@ public:
   std::unique_ptr<rtc::Thread> thread_;
   std::vector<std::shared_ptr<MediaSource>> sources_;
   RTC_OBJC_TYPE(RTCDesktopMediaList)* objcMediaList_;
+  DesktopType type_;
 };
 
 }  // namespace webrtc

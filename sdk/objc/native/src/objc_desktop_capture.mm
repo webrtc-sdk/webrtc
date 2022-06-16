@@ -72,12 +72,14 @@ void ObjCDesktopCapturer::OnCaptureResult(webrtc::DesktopCapturer::Result result
   
   int width = frame->size().width();
   int height = frame->size().height();
-  int real_width = frame->size().width();
+  int real_width = width;
 
-  // A multiple of 32 must be used as the width of the src frame,
-  // and the right black border needs to be cropped during conversion.
-  if( (width % 32) !=0 ) {
-    width = (width / 32 + 1) * 32;
+  if(type_ == kWindow) {
+    // A multiple of 32 must be used as the width of the src frame,
+    // and the right black border needs to be cropped during conversion.
+    if( (width % 32) !=0 ) {
+      width = (width / 32 + 1) * 32;
+    }
   }
  
   if (!i420_buffer_ || !i420_buffer_.get() ||
