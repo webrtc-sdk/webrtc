@@ -168,7 +168,7 @@ void ObjCDesktopMediaList::MediaSource::SaveCaptureResult(webrtc::DesktopCapture
   if(type_ == kWindow) {
     // A multiple of 32 must be used as the width of the src frame,
     // and the right black border needs to be cropped during conversion.
-    if( (width % 32) !=0 ) {
+    if( (width % 32) != 0 ) {
       width = (width / 32 + 1) * 32;
     }
   }
