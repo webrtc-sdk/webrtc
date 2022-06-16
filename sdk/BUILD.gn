@@ -623,13 +623,13 @@ if (is_ios || is_mac) {
     rtc_library("desktopcapture_objc") {
       visibility = [ "*" ]
       sources = [
-        "objc/components/capturer/RTCDesktopCapturer+Prvate.h",
+        "objc/components/capturer/RTCDesktopCapturer+Private.h",
         "objc/components/capturer/RTCDesktopCapturer.h",
         "objc/components/capturer/RTCDesktopCapturer.mm",
-        "objc/components/capturer/RTCDesktopSource+Prvate.h",
+        "objc/components/capturer/RTCDesktopSource+Private.h",
         "objc/components/capturer/RTCDesktopSource.h",
         "objc/components/capturer/RTCDesktopSource.mm",
-        "objc/components/capturer/RTCDesktopMediaList+Prvate.h",
+        "objc/components/capturer/RTCDesktopMediaList+Private.h",
         "objc/components/capturer/RTCDesktopMediaList.h",
         "objc/components/capturer/RTCDesktopMediaList.mm",
         "objc/native/src/objc_desktop_capture.h",

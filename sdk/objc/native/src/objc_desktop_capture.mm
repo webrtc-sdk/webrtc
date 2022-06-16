@@ -69,11 +69,20 @@ void ObjCDesktopCapturer::OnCaptureResult(webrtc::DesktopCapturer::Result result
   if (result != webrtc::DesktopCapturer::Result::SUCCESS) {
     return;
   }
+  
   int width = frame->size().width();
   int height = frame->size().height();
+  int real_width = frame->size().width();
+
+  // A multiple of 32 must be used as the width of the src frame,
+  // and the right black border needs to be cropped during conversion.
+  if( (width % 32) !=0 ) {
+    width = (width / 32 + 1) * 32;
+  }
+ 
   if (!i420_buffer_ || !i420_buffer_.get() ||
-      i420_buffer_->width() * i420_buffer_->height() != width * height) {
-    i420_buffer_ = webrtc::I420Buffer::Create(width, height);
+      i420_buffer_->width() * i420_buffer_->height() != real_width * height) {
+    i420_buffer_ = webrtc::I420Buffer::Create(real_width, height);
   }
   libyuv::ConvertToI420(frame->data(),
                         0,
@@ -87,7 +96,7 @@ void ObjCDesktopCapturer::OnCaptureResult(webrtc::DesktopCapturer::Result result
                         0,
                         width,
                         height,
-                        width,
+                        real_width,
                         height,
                         libyuv::kRotate0,
                         libyuv::FOURCC_ARGB);

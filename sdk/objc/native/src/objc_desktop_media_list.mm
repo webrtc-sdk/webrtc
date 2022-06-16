@@ -161,15 +161,23 @@ void ObjCDesktopMediaList::MediaSource::SaveCaptureResult(webrtc::DesktopCapture
 
   jpeg_mem_dest(&cinfo, &out_buffer, &out_size);
 
-  cinfo.image_width = frame->size().width();
-  cinfo.image_height = frame->size().height();
+  int width = frame->size().width();
+  int height = frame->size().height();
+  int real_width = frame->size().width();
+
+  if( (width % 32) !=0 ) {
+    width = (width / 32 + 1) * 32;
+  }
+
+  cinfo.image_width = real_width;
+  cinfo.image_height = height;
   cinfo.input_components = kColorPlanes;
   cinfo.in_color_space = JCS_EXT_BGRA;
   jpeg_set_defaults(&cinfo);
   jpeg_set_quality(&cinfo, quality, TRUE);
 
   jpeg_start_compress(&cinfo, TRUE);
-  int row_stride = frame->size().width() * kColorPlanes;
+  int row_stride = width * kColorPlanes;
   while (cinfo.next_scanline < cinfo.image_height) {
     row_pointer[0] = &frame->data()[cinfo.next_scanline * row_stride];
     jpeg_write_scanlines(&cinfo, row_pointer, 1);
