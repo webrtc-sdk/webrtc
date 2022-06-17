@@ -75,20 +75,24 @@ void ObjCDesktopCapturer::OnCaptureResult(webrtc::DesktopCapturer::Result result
   int real_width = width;
 
   if(type_ == kWindow) {
-    // A multiple of 32 must be used as the width of the src frame,
+    int multiple = 0;
+#if defined(WEBRTC_ARCH_X86_FAMILY)
+    multiple = 16;
+#elif defined(WEBRTC_ARCH_ARM64)
+    multiple = 32;
+#endif
+    // A multiple of $multiple must be used as the width of the src frame,
     // and the right black border needs to be cropped during conversion.
-    if( (width % 32) != 0 ) {
-      width = (width / 32 + 1) * 32;
+    if( multiple != 0 && (width % multiple) != 0 ) {
+      width = (width / multiple + 1) * multiple;
     }
   }
  
   if (!i420_buffer_ || !i420_buffer_.get() ||
       i420_buffer_->width() * i420_buffer_->height() != real_width * height) {
-      
-      
-        
     i420_buffer_ = webrtc::I420Buffer::Create(real_width, height);
   }
+
   libyuv::ConvertToI420(frame->data(),
                         0,
                         i420_buffer_->MutableDataY(),
