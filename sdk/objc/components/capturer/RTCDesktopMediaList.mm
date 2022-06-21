@@ -22,20 +22,18 @@
 @implementation RTCDesktopMediaList {
      RTCDesktopSourceType _sourceType;
      NSMutableArray<RTCDesktopSource *>* _sources;
-     __weak id<RTC_OBJC_TYPE(RTCDesktopMediaListDelegate)> _delegate;
 }
 
 @synthesize sourceType = _sourceType;
 @synthesize nativeMediaList = _nativeMediaList;
 
-- (instancetype)initWithDelegate:(__weak id<RTC_OBJC_TYPE(RTCDesktopMediaListDelegate)>)delegate type:(RTCDesktopSourceType)type {
+- (instancetype)initWithType:(RTCDesktopSourceType)type {
     if (self = [super init]) {
         webrtc::ObjCDesktopMediaList::DesktopType captureType = webrtc::ObjCDesktopMediaList::kScreen;
         if(type == RTCDesktopSourceTypeWindow) {
             captureType = webrtc::ObjCDesktopMediaList::kWindow;
         }
         _nativeMediaList = std::make_shared<webrtc::ObjCDesktopMediaList>(captureType, self);
-        _delegate = delegate;
         _sourceType = type;
     }
     return self;
@@ -56,33 +54,23 @@
 }
 
 -(void)mediaSourceAdded:(int)index {
-    if(_delegate) {
-        //[_delegate mediaSourceAdded:index fromSource:_sources[index]];
-    }
+
 }
 
 -(void)mediaSourceRemoved:(int)index {
-    if(_delegate) {
-        //[_delegate mediaSourceRemoved:index fromSource:_sources[index]];
-    }
+
 }
 
 -(void)mediaSourceMoved:(int) oldIndex newIndex:(int) newIndex {
-    if(_delegate) {
-        //[_delegate mediaSourceMoved:oldIndex newIndex:newIndex fromSource:_sources[oldIndex]];
-    }
+
 }
 
 -(void)mediaSourceNameChanged:(int)index {
-    if(_delegate) {
-        //[_delegate mediaSourceNameChanged:index fromSource:_sources[index]];
-    }
+
 }
 
 -(void)mediaSourceThumbnailChanged:(int)index {
-    if(_delegate) {
-        //[_delegate mediaSourceThumbnailChanged:index fromSource:_sources[index]];
-    }
+
 }
 
 @end

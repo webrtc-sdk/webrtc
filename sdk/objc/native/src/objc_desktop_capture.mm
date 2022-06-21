@@ -43,13 +43,26 @@ ObjCDesktopCapturer::~ObjCDesktopCapturer() {
   thread_->Stop();
 }
 
-ObjCDesktopCapturer::CaptureState ObjCDesktopCapturer::Start() {
+ObjCDesktopCapturer::CaptureState ObjCDesktopCapturer::Start(uint32_t fps) {
+
+  if(fps == 0) {
+      capture_state_ = CS_FAILED;
+      return capture_state_;
+  }
+
+  if(fps >= 60) {
+    capture_delay_ = uint32_t(1000.0 / 60.0);
+  } else {
+    capture_delay_ = uint32_t(1000.0 / fps);
+  }
+
   if(source_id_ != -1) {
     if(!capturer_->SelectSource(source_id_) && (type_ == kWindow && !capturer_->FocusOnSelectedSource())) {
         capture_state_ = CS_FAILED;
         return capture_state_;
     }
   }
+
   capturer_->Start(this);
   capture_state_ = CS_RUNNING;
   CaptureFrame();
@@ -124,7 +137,7 @@ void ObjCDesktopCapturer::OnMessage(rtc::Message* msg) {
 void ObjCDesktopCapturer::CaptureFrame() {
   if (capture_state_ == CS_RUNNING) {
     capturer_->CaptureFrame();
-    thread_->PostDelayed(RTC_FROM_HERE, kCaptureDelay, this, kCaptureMessageId);
+    thread_->PostDelayed(RTC_FROM_HERE, capture_delay_, this, kCaptureMessageId);
   }
 }
 

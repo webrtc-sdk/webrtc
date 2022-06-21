@@ -43,7 +43,7 @@ class ObjCDesktopCapturer : public DesktopCapturer::Callback, public rtc::Messag
     id<RTC_OBJC_TYPE(DesktopCapturerDelegate)> delegate);
   virtual ~ObjCDesktopCapturer();
 
-  virtual CaptureState Start();
+  virtual CaptureState Start(uint32_t fps);
 
   virtual void Stop();
 
@@ -64,6 +64,7 @@ class ObjCDesktopCapturer : public DesktopCapturer::Callback, public rtc::Messag
   DesktopType type_;
   webrtc::DesktopCapturer::SourceId source_id_;
   id<RTC_OBJC_TYPE(DesktopCapturerDelegate)> delegate_;
+  uint32_t capture_delay_ = 1000; // 1s
 };
 
 }  // namespace webrtc

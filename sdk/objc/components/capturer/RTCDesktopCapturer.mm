@@ -57,8 +57,12 @@
     _nativeCapturer = nullptr;
 }
 
-- (void)startCapture:(NSInteger)fps {
-    _nativeCapturer->Start();
+- (void)startCapture {
+    _nativeCapturer->Start(30);
+}
+
+- (void)startCaptureWithFPS:(NSInteger)fps {
+    _nativeCapturer->Start(fps);
 }
 
 - (void)didCaptureVideoFrame

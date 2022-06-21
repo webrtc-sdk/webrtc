@@ -23,18 +23,9 @@
 NS_ASSUME_NONNULL_BEGIN
 
 RTC_OBJC_EXPORT
-@protocol RTC_OBJC_TYPE(RTCDesktopMediaListDelegate)<NSObject>
--(void)mediaSourceAdded:(int)index fromSource:(RTCDesktopSource *) source;
--(void)mediaSourceRemoved:(int)index fromSource:(RTCDesktopSource *) source;
--(void)mediaSourceMoved:(int) oldIndex newIndex:(int) newIndex fromSource:(RTCDesktopSource *) source;
--(void)mediaSourceNameChanged:(int)index fromSource:(RTCDesktopSource *) source;
--(void)mediaSourceThumbnailChanged:(int)index fromSource:(RTCDesktopSource *) source;
-@end
-
-RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCDesktopMediaList) : NSObject
 
--(instancetype)initWithDelegate:(__weak id<RTC_OBJC_TYPE(RTCDesktopMediaListDelegate)>)delegate type:(RTCDesktopSourceType)type;
+-(instancetype)initWithType:(RTCDesktopSourceType)type;
 
 @property(nonatomic, readonly) RTCDesktopSourceType sourceType;
 

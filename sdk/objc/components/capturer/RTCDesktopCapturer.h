@@ -34,10 +34,10 @@ RTC_OBJC_EXPORT
 
 - (instancetype)initWithDefaultScreen:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)delegate;
 
-// Starts the capture session asynchronously.
-- (void)startCapture:(NSInteger)fps;
+- (void)startCapture;
 
-// Stops the capture session asynchronously.
+- (void)startCaptureWithFPS:(NSInteger)fps;
+
 - (void)stopCapture;
 
 @end

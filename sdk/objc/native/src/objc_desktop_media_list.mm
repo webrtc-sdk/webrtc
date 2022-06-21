@@ -128,7 +128,6 @@ int32_t ObjCDesktopMediaList::UpdateSourceList() {
   return sources_.size();
 }
 
-
 int ObjCDesktopMediaList::GetSourceCount() const {
     return sources_.size();
 }
@@ -136,7 +135,6 @@ int ObjCDesktopMediaList::GetSourceCount() const {
 ObjCDesktopMediaList::MediaSource *ObjCDesktopMediaList::GetSource(int index) {
     return sources_[index].get();
 }
-
 
 ObjCDesktopMediaList::MediaSource::~MediaSource() {
 
