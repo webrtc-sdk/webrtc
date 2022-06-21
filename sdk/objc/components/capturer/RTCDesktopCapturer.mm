@@ -74,4 +74,11 @@
     _nativeCapturer->Stop();
 }
 
+- (void)stopCaptureWithCompletionHandler:(nullable void (^)(void))completionHandler {
+    [self stopCapture];
+    if(completionHandler != nil) {
+        completionHandler();
+    }
+}
+
 @end

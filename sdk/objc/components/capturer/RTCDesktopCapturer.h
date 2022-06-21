@@ -40,6 +40,8 @@ RTC_OBJC_EXPORT
 
 - (void)stopCapture;
 
+- (void)stopCaptureWithCompletionHandler:(nullable void (^)(void))completionHandler;
+
 @end
 
 NS_ASSUME_NONNULL_END
