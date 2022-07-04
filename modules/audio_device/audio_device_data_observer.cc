@@ -286,6 +286,15 @@ class ADMWrapper : public AudioDeviceModule, public AudioTransport {
   int GetRecordAudioParameters(AudioParameters* params) const override {
     return impl_->GetRecordAudioParameters(params);
   }
+  void MixSampleBuffer(CMSampleBufferRef sample_buffer) override {
+    impl_->MixSampleBuffer(sample_buffer);
+  }
+  OSType GetAudioUnitSubType() const override {
+    impl_->GetAudioUnitSubType();
+  }
+  void SetAudioUnitSubType(OSType sub_type) override {
+    impl_->SetAudioUnitSubType(sub_type);
+  }
 #endif  // WEBRTC_IOS
 
   int32_t SetAudioDeviceSink(AudioDeviceSink* sink) const override {

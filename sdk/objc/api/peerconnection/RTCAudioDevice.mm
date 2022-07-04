@@ -15,7 +15,30 @@
  */
 
 #import "RTCAudioDevice.h"
+#import "RTCIODevice+Private.h"
 
-@implementation RTCAudioDevice
+#include "rtc_base/thread.h"
+#import "base/RTCLogging.h"
+#import "sdk/objc/native/api/audio_device_module.h"
+
+@implementation RTC_OBJC_TYPE (RTCAudioDevice) {
+  rtc::Thread *_workerThread;
+  rtc::scoped_refptr<webrtc::AudioDeviceModule> _nativeAudioDeviceModule;
+}
+
+- (instancetype)initWithNativeModule: (rtc::scoped_refptr<webrtc::AudioDeviceModule> )module
+                        workerThread: (rtc::Thread * )workerThread
+                                type: (RTCIODeviceType)type
+                            deviceId: (NSString *)deviceId
+                                name: (NSString* )name {
+
+  RTCLogInfo(@"RTCAudioDevice initWithNativeModule:workerThread:type:deviceId:name:");
+
+  self = [super initWithType:type deviceId:deviceId name:name];
+  _nativeAudioDeviceModule = module;
+  _workerThread = workerThread;
+
+  return self;
+}
 
 @end

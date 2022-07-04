@@ -76,6 +76,8 @@ AudioDeviceModuleIOS::AudioDeviceModuleIOS(bool bypass_voice_processing)
     audio_device_.reset(new ios_adm::AudioDeviceIOS(bypass_voice_processing_));
     RTC_CHECK(audio_device_);
 
+    audio_device_->audio_unit_sub_type = audio_unit_sub_type_;
+
     this->AttachAudioBuffer();
 
     AudioDeviceGeneric::InitStatus status = audio_device_->Init();
@@ -666,6 +668,24 @@ AudioDeviceModuleIOS::AudioDeviceModuleIOS(bool bypass_voice_processing)
     RTC_DLOG(LS_INFO) << "output: " << r;
     return r;
   }
+
+  void AudioDeviceModuleIOS::MixSampleBuffer(CMSampleBufferRef sample_buffer) {
+    audio_device_->MixSampleBuffer(sample_buffer);
+  }
+
+
+  OSType AudioDeviceModuleIOS::GetAudioUnitSubType() const {
+    return audio_unit_sub_type_;
+  }
+
+  void AudioDeviceModuleIOS::SetAudioUnitSubType(OSType sub_type) {
+    audio_unit_sub_type_ = sub_type;
+
+    if (audio_device_) {
+      audio_device_->audio_unit_sub_type = sub_type;
+    }
+  }
+
 #endif  // WEBRTC_IOS
 
   int32_t AudioDeviceModuleIOS::SetAudioDeviceSink(AudioDeviceSink* sink) const {

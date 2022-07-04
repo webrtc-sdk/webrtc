@@ -49,6 +49,10 @@ RTC_OBJC_EXPORT
 // Virtual devices
 - (RTC_OBJC_TYPE(RTCAudioDevice) *)createVirtualDevice;
 
+- (void)mixSampleBuffer: (CMSampleBufferRef)sampleBuffer;
+
+@property(nonatomic) OSType audioUnitSubType;
+
 @end
 
 NS_ASSUME_NONNULL_END

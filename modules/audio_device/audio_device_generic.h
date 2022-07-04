@@ -133,6 +133,9 @@ class AudioDeviceGeneric {
 #if defined(WEBRTC_IOS)
   virtual int GetPlayoutAudioParameters(AudioParameters* params) const;
   virtual int GetRecordAudioParameters(AudioParameters* params) const;
+  virtual void MixSampleBuffer(CMSampleBufferRef sample_buffer);
+  OSType GetAudioUnitSubType() const;
+  void SetAudioUnitSubType(OSType sub_type);
 #endif  // WEBRTC_IOS
 
   int32_t SetAudioDeviceSink(AudioDeviceSink* sink);

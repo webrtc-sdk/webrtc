@@ -942,6 +942,23 @@ int AudioDeviceModuleImpl::GetRecordAudioParameters(
   RTC_LOG(LS_INFO) << "output: " << r;
   return r;
 }
+
+void AudioDeviceModuleImpl::MixSampleBuffer(CMSampleBufferRef sample_buffer) {
+  RTC_LOG(LS_INFO) << __FUNCTION__;
+  audio_device_->MixSampleBuffer(sample_buffer);
+}
+
+OSType AudioDeviceModuleImpl::GetAudioUnitSubType() const {
+  RTC_LOG(LS_INFO) << __FUNCTION__;
+  OSType r = audio_device_->GetAudioUnitSubType();
+  RTC_LOG(LS_INFO) << "output: " << r;
+  return r;
+}
+
+void AudioDeviceModuleImpl::SetAudioUnitSubType(OSType sub_type) {
+  RTC_LOG(LS_INFO) << __FUNCTION__;
+  audio_device_->SetAudioUnitSubType(sub_type);
+}
 #endif  // WEBRTC_IOS
 
 int32_t AudioDeviceModuleImpl::SetAudioDeviceSink(AudioDeviceSink* sink) const {

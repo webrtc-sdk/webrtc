@@ -936,6 +936,7 @@ if (is_ios || is_mac) {
         "objc/api/peerconnection/RTCIODevice.h",
         "objc/api/peerconnection/RTCIODevice.mm",
         "objc/api/peerconnection/RTCAudioDevice.h",
+        "objc/api/peerconnection/RTCAudioDevice+Private.h",
         "objc/api/peerconnection/RTCAudioDevice.mm",
         "objc/api/peerconnection/RTCVirtualAudioDevice.h",
         "objc/api/peerconnection/RTCVirtualAudioDevice.mm",

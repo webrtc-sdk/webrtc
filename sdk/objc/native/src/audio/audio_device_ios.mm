@@ -427,6 +427,78 @@ OSStatus AudioDeviceIOS::OnDeliverRecordedData(AudioUnitRenderActionFlags* flags
   return noErr;
 }
 
+// OSType AudioDeviceIOS::GetAudioUnitSubType() const {
+//   return audio_unit_sub_type_;
+// }
+
+// void AudioDeviceIOS::SetAudioUnitSubType(OSType sub_type) {
+
+//   audio_unit_sub_type_ = sub_type;
+
+//   if (audio_device_) {
+//     audio_device_->audio_unit_sub_type = sub_type;
+//   }
+// }
+
+void AudioDeviceIOS::MixSampleBuffer(CMSampleBufferRef sample_buffer) {
+
+  RTC_DCHECK_RUN_ON(&io_thread_checker_);
+
+  if (audio_unit_ && audio_unit_->GetState() != VoiceProcessingAudioUnit::kUninitialized) {
+    RTCLogError(@"External recorded data was provided while audio unit is enabled.");
+    return;
+  }
+
+  CMFormatDescriptionRef description = CMSampleBufferGetFormatDescription(sample_buffer);
+  const AudioStreamBasicDescription *asbd = CMAudioFormatDescriptionGetStreamBasicDescription(description);
+  if (!asbd) {
+    RTCLogError(@"External recorded data was not in audio format.");
+    return;
+  }
+
+  if (asbd->mSampleRate != record_parameters_.sample_rate() ||
+      asbd->mChannelsPerFrame != record_parameters_.channels()) {
+    record_parameters_.reset(asbd->mSampleRate, asbd->mChannelsPerFrame);
+    UpdateAudioDeviceBuffer();
+
+    // Create a modified audio buffer class which allows us to ask for,
+    // or deliver, any number of samples (and not only multiple of 10ms) to match
+    // the native audio unit buffer size.
+    RTC_DCHECK(audio_device_buffer_);
+    fine_audio_buffer_.reset(new FineAudioBuffer(audio_device_buffer_));
+  }
+
+  CMBlockBufferRef block_buffer = CMSampleBufferGetDataBuffer(sample_buffer);
+  if (block_buffer == nil) {
+    return;
+  }
+
+  AudioBufferList buffer_list;
+  CMSampleBufferGetAudioBufferListWithRetainedBlockBuffer(sample_buffer,
+                                                          nullptr,
+                                                          &buffer_list,
+                                                          sizeof(buffer_list),
+                                                          nullptr,
+                                                          nullptr,
+                                                          kCMSampleBufferFlag_AudioBufferList_Assure16ByteAlignment,
+                                                          &block_buffer);
+
+  rtc::ArrayView<int16_t> view {
+    static_cast<int16_t*>(buffer_list.mBuffers[0].mData),
+    buffer_list.mBuffers[0].mDataByteSize / sizeof(int16_t)
+  };
+
+  if (asbd->mFormatFlags & kAudioFormatFlagIsBigEndian) {
+    for (auto& element : view) {
+      element = be16toh(element);
+    }
+  }
+
+  fine_audio_buffer_->DeliverRecordedData(view, kFixedRecordDelayEstimate);
+
+  CFRelease(block_buffer);
+}
+
 OSStatus AudioDeviceIOS::OnGetPlayoutData(AudioUnitRenderActionFlags* flags,
                                           const AudioTimeStamp* time_stamp,
                                           UInt32 bus_number,

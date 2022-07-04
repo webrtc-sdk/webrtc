@@ -18,9 +18,10 @@
 
 #import "RTCAudioDeviceModule.h"
 #import "RTCAudioDeviceModule+Private.h"
+#import "RTCAudioDevice+Private.h"
 #import "RTCIODevice+Private.h"
-#import "base/RTCLogging.h"
 
+#import "base/RTCLogging.h"
 #import "sdk/objc/native/api/audio_device_module.h"
 
 class AudioDeviceSink : public webrtc::AudioDeviceSink {
@@ -223,7 +224,8 @@ class AudioDeviceSink : public webrtc::AudioDeviceSink {
       _native->PlayoutDeviceName(i, name, guid);
       NSString *strGUID = [[NSString alloc] initWithCString:guid encoding:NSUTF8StringEncoding];
       NSString *strName = [[NSString alloc] initWithCString:name encoding:NSUTF8StringEncoding];
-      RTCAudioDevice *device = [[RTCAudioDevice alloc] initWithType:RTCIODeviceTypeOutput deviceId:strGUID name:strName];
+      RTCAudioDevice *device = [[RTCAudioDevice alloc] initWithNativeModule:_native workerThread: _workerThread type:RTCIODeviceTypeOutput deviceId:strGUID name:strName];
+
       [result addObject: device];
     }
   }
@@ -245,12 +247,25 @@ class AudioDeviceSink : public webrtc::AudioDeviceSink {
       _native->RecordingDeviceName(i, name, guid);
       NSString *strGUID = [[NSString alloc] initWithCString:guid encoding:NSUTF8StringEncoding];
       NSString *strName = [[NSString alloc] initWithCString:name encoding:NSUTF8StringEncoding];
-      RTCAudioDevice *device = [[RTCAudioDevice alloc] initWithType:RTCIODeviceTypeInput deviceId:strGUID name:strName];
+      RTCAudioDevice *device = [[RTCAudioDevice alloc] initWithNativeModule:_native workerThread: _workerThread type:RTCIODeviceTypeOutput deviceId:strGUID name:strName];
+
       [result addObject: device];
     }
   }
 
   return result;
+}
+
+- (void)mixSampleBuffer: (CMSampleBufferRef)sampleBuffer {
+  _native->MixSampleBuffer(sampleBuffer);
+}
+
+- (void)setAudioUnitSubType: (OSType)audioUnitSubType {
+  _native->SetAudioUnitSubType(audioUnitSubType);
+}
+
+- (OSType)audioUnitSubType {
+  return _native->GetAudioUnitSubType();
 }
 
 @end

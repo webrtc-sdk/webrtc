@@ -11,6 +11,7 @@
 #ifndef SDK_OBJC_NATIVE_SRC_AUDIO_AUDIO_DEVICE_IOS_H_
 #define SDK_OBJC_NATIVE_SRC_AUDIO_AUDIO_DEVICE_IOS_H_
 
+#include <CoreMedia/CoreMedia.h>
 #include <memory>
 
 #include "api/sequence_checker.h"
@@ -90,6 +91,7 @@ class AudioDeviceIOS : public AudioDeviceGeneric,
   // These methods are unique for the iOS implementation.
   int GetPlayoutAudioParameters(AudioParameters* params) const override;
   int GetRecordAudioParameters(AudioParameters* params) const override;
+  void MixSampleBuffer(CMSampleBufferRef sample_buffer) override;
 
   // These methods are currently not fully implemented on iOS:
 
@@ -153,6 +155,7 @@ class AudioDeviceIOS : public AudioDeviceGeneric,
                                  UInt32 bus_number,
                                  UInt32 num_frames,
                                  AudioBufferList* io_data) override;
+
   OSStatus OnGetPlayoutData(AudioUnitRenderActionFlags* flags,
                             const AudioTimeStamp* time_stamp,
                             UInt32 bus_number,
@@ -163,6 +166,8 @@ class AudioDeviceIOS : public AudioDeviceGeneric,
   void OnMessage(rtc::Message* msg) override;
 
   bool IsInterrupted();
+
+  OSType audio_unit_sub_type;
 
  private:
   // Called by the relevant AudioSessionObserver methods on `thread_`.

@@ -145,6 +145,19 @@ class TestAudioDeviceModuleImpl
     // no-op
     return 0;
   }
+  
+  void MixSampleBuffer(CMSampleBufferRef sample_buffer) override {
+    //
+  }
+  
+  OSType GetAudioUnitSubType() const override {
+    //
+    return 0;
+  }
+
+  void SetAudioUnitSubType(OSType sub_type) override {
+    //
+  }
 
   // Blocks until the Renderer refuses to receive data.
   // Returns false if `timeout_ms` passes before that happens.
