@@ -263,12 +263,4 @@ class AudioDeviceSink : public webrtc::AudioDeviceSink {
   });
 }
 
-- (void)setAudioUnitSubType: (OSType)audioUnitSubType {
-  _native->SetAudioUnitSubType(audioUnitSubType);
-}
-
-- (OSType)audioUnitSubType {
-  return _native->GetAudioUnitSubType();
-}
-
 @end

@@ -170,8 +170,6 @@ class AudioDeviceModule : public rtc::RefCountInterface {
   virtual int GetPlayoutAudioParameters(AudioParameters* params) const = 0;
   virtual int GetRecordAudioParameters(AudioParameters* params) const = 0;
   virtual void MixSampleBuffer(CMSampleBufferRef sample_buffer) = 0;
-  virtual OSType GetAudioUnitSubType() const = 0;
-  virtual void SetAudioUnitSubType(OSType sub_type) = 0;
 #endif  // WEBRTC_IOS
 
   virtual int32_t SetAudioDeviceSink(AudioDeviceSink* sink) const = 0;

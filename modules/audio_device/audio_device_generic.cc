@@ -65,14 +65,6 @@ int AudioDeviceGeneric::GetRecordAudioParameters(
 void AudioDeviceGeneric::MixSampleBuffer(CMSampleBufferRef sample_buffer) {
   RTC_LOG_F(LS_ERROR) << "Not supported on this platform";
 }
-
-OSType AudioDeviceGeneric::GetAudioUnitSubType() const {
-  RTC_LOG_F(LS_ERROR) << "Not supported on this platform";
-}
-
-void AudioDeviceGeneric::SetAudioUnitSubType(OSType sub_type) {
-  RTC_LOG_F(LS_ERROR) << "Not supported on this platform";
-}
 #endif  // WEBRTC_IOS
 
 int32_t AudioDeviceGeneric::SetAudioDeviceSink(AudioDeviceSink* sink) {

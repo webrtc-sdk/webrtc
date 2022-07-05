@@ -427,19 +427,6 @@ OSStatus AudioDeviceIOS::OnDeliverRecordedData(AudioUnitRenderActionFlags* flags
   return noErr;
 }
 
-// OSType AudioDeviceIOS::GetAudioUnitSubType() const {
-//   return audio_unit_sub_type_;
-// }
-
-// void AudioDeviceIOS::SetAudioUnitSubType(OSType sub_type) {
-
-//   audio_unit_sub_type_ = sub_type;
-
-//   if (audio_device_) {
-//     audio_device_->audio_unit_sub_type = sub_type;
-//   }
-// }
-
 void AudioDeviceIOS::MixSampleBuffer(CMSampleBufferRef sample_buffer) {
 
   RTC_DCHECK_RUN_ON(&io_thread_checker_);
