@@ -257,7 +257,10 @@ class AudioDeviceSink : public webrtc::AudioDeviceSink {
 }
 
 - (void)mixSampleBuffer: (CMSampleBufferRef)sampleBuffer {
-  _native->MixSampleBuffer(sampleBuffer);
+
+  _workerThread->Invoke<void>(RTC_FROM_HERE, [self, sampleBuffer] {
+    _native->MixSampleBuffer(sampleBuffer);
+  });
 }
 
 - (void)setAudioUnitSubType: (OSType)audioUnitSubType {
