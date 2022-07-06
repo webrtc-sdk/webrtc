@@ -435,6 +435,23 @@ void AudioDeviceIOS::MixSampleBuffer(CMSampleBufferRef sample_buffer) {
   //   RTCLogError(@"External recorded data was provided while audio unit is enabled.");
   //   return;
   // }
+ 
+  // Sequence of basic checks of CMSampleBuffer
+
+  if (!CMSampleBufferIsValid(sample_buffer)) {
+    RTCLogError(@"SampleBuffer is not valid");
+    return;
+  }
+
+  if (!CMSampleBufferDataIsReady(sample_buffer)) {
+    RTCLogError(@"SampleBuffer data is not ready");
+    return;
+  }
+
+  if (CMSampleBufferGetNumSamples(sample_buffer) != 1) {
+    RTCLogError(@"SampleBuffer has more than 1 sample");
+    return;
+  }
 
   CMFormatDescriptionRef description = CMSampleBufferGetFormatDescription(sample_buffer);
   const AudioStreamBasicDescription *asbd = CMAudioFormatDescriptionGetStreamBasicDescription(description);
