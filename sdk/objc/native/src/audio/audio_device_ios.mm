@@ -436,7 +436,7 @@ void AudioDeviceIOS::MixSampleBuffer(CMSampleBufferRef sample_buffer) {
   //   return;
   // }
  
-  // Sequence of basic checks of CMSampleBuffer
+  // Sequence of basic checks for CMSampleBuffer
 
   if (!CMSampleBufferIsValid(sample_buffer)) {
     RTCLogError(@"SampleBuffer is not valid");
@@ -449,7 +449,7 @@ void AudioDeviceIOS::MixSampleBuffer(CMSampleBufferRef sample_buffer) {
   }
 
   if (CMSampleBufferGetNumSamples(sample_buffer) != 1) {
-    RTCLogError(@"SampleBuffer has more than 1 sample");
+    RTCLogError(@"SampleBuffer must have exactly 1 sample");
     return;
   }
 
@@ -460,8 +460,9 @@ void AudioDeviceIOS::MixSampleBuffer(CMSampleBufferRef sample_buffer) {
     return;
   }
 
-  // if (asbd->mSampleRate != record_parameters_.sample_rate() ||
-  //     asbd->mChannelsPerFrame != record_parameters_.channels()) {
+  // If sample rate or channels are different we can't mix
+  if (asbd->mSampleRate != record_parameters_.sample_rate() ||
+      asbd->mChannelsPerFrame != record_parameters_.channels()) {
   //   record_parameters_.reset(asbd->mSampleRate, asbd->mChannelsPerFrame);
   //   UpdateAudioDeviceBuffer();
   //
@@ -470,7 +471,12 @@ void AudioDeviceIOS::MixSampleBuffer(CMSampleBufferRef sample_buffer) {
   //   // the native audio unit buffer size.
   //   RTC_DCHECK(audio_device_buffer_);
   //   fine_audio_buffer_.reset(new FineAudioBuffer(audio_device_buffer_));
-  // }
+    RTCLogError(@"SampleBuffer cannot be mixed, sample rate must be %d and"
+                "channels must be %lu",
+                record_parameters_.sample_rate(),
+                record_parameters_.channels());
+    return;
+  }
 
   CMBlockBufferRef block_buffer = CMSampleBufferGetDataBuffer(sample_buffer);
   if (block_buffer == nil) {
@@ -479,6 +485,8 @@ void AudioDeviceIOS::MixSampleBuffer(CMSampleBufferRef sample_buffer) {
   }
 
   AudioBufferList audio_buffer_list;
+  audio_buffer_list.mNumberBuffers = 1;
+
   CMSampleBufferGetAudioBufferListWithRetainedBlockBuffer(sample_buffer,
                                                           nullptr,
                                                           &audio_buffer_list,
