@@ -57,19 +57,27 @@ ObjCDesktopCapturer::CaptureState ObjCDesktopCapturer::Start(uint32_t fps) {
   }
 
   if(source_id_ != -1) {
-    if(!capturer_->SelectSource(source_id_) && (type_ == kWindow && !capturer_->FocusOnSelectedSource())) {
+    if(!capturer_->SelectSource(source_id_)) {
         capture_state_ = CS_FAILED;
         return capture_state_;
+    }
+    if(type_ == kWindow) {
+      if(!capturer_->FocusOnSelectedSource()) {
+        capture_state_ = CS_FAILED;
+        return capture_state_;
+      }
     }
   }
 
   capturer_->Start(this);
   capture_state_ = CS_RUNNING;
   CaptureFrame();
+  [delegate_ didSourceCaptureStart];
   return capture_state_;
 }
 
 void ObjCDesktopCapturer::Stop() {
+  [delegate_ didSourceCaptureStop];
   capture_state_ = CS_STOPPED;
 }
 
@@ -79,10 +87,29 @@ bool ObjCDesktopCapturer::IsRunning() {
 
 void ObjCDesktopCapturer::OnCaptureResult(webrtc::DesktopCapturer::Result result,
                                         std::unique_ptr<webrtc::DesktopFrame> frame) {
-  if (result != webrtc::DesktopCapturer::Result::SUCCESS) {
-    return;
+  if (result != result_) {
+    if (result == webrtc::DesktopCapturer::Result::ERROR_PERMANENT) {
+      [delegate_ didSourceCaptureError];
+      capture_state_ = CS_FAILED;
+      return;
+    }
+
+    if (result == webrtc::DesktopCapturer::Result::ERROR_TEMPORARY) {
+      result_ = result;
+      [delegate_ didSourceCapturePaused];
+      return;
+    }
+
+    if (result == webrtc::DesktopCapturer::Result::SUCCESS) {
+      result_ = result;
+      [delegate_ didSourceCaptureStart];
+    }
   }
-  
+
+  if (result == webrtc::DesktopCapturer::Result::ERROR_TEMPORARY) {
+      return;
+  }
+
   int width = frame->size().width();
   int height = frame->size().height();
   int real_width = width;

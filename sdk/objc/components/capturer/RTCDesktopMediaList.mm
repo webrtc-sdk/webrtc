@@ -22,55 +22,78 @@
 @implementation RTCDesktopMediaList {
      RTCDesktopSourceType _sourceType;
      NSMutableArray<RTCDesktopSource *>* _sources;
+     __weak id<RTC_OBJC_TYPE(RTCDesktopMediaListDelegate)> _delegate;
 }
 
 @synthesize sourceType = _sourceType;
 @synthesize nativeMediaList = _nativeMediaList;
 
-- (instancetype)initWithType:(RTCDesktopSourceType)type {
+- (instancetype)initWithType:(RTCDesktopSourceType)type delegate:(__weak id<RTC_OBJC_TYPE(RTCDesktopMediaListDelegate)>)delegate{
     if (self = [super init]) {
-        webrtc::ObjCDesktopMediaList::DesktopType captureType = webrtc::ObjCDesktopMediaList::kScreen;
+        webrtc::DesktopType captureType = webrtc::kScreen;
         if(type == RTCDesktopSourceTypeWindow) {
-            captureType = webrtc::ObjCDesktopMediaList::kWindow;
+            captureType = webrtc::kWindow;
         }
         _nativeMediaList = std::make_shared<webrtc::ObjCDesktopMediaList>(captureType, self);
         _sourceType = type;
+        _delegate = delegate;
     }
     return self;
 }
 
-- (int32_t)UpdateSourceList {
-    return _nativeMediaList->UpdateSourceList();
+- (int32_t)UpdateSourceList:(BOOL) updateThumbnail {
+    return _nativeMediaList->UpdateSourceList(updateThumbnail);
 }
 
 -(NSArray<RTCDesktopSource *>*) getSources {
     _sources = [NSMutableArray array];
     int sourceCount = _nativeMediaList->GetSourceCount();
     for (int i = 0; i < sourceCount; i++) {
-        webrtc::ObjCDesktopMediaList::MediaSource *mediaSource = _nativeMediaList->GetSource(i);
+        webrtc::MediaSource *mediaSource = _nativeMediaList->GetSource(i);
         [_sources addObject:[[RTCDesktopSource alloc] initWithNativeSource:mediaSource sourceType:_sourceType]];
     }
     return _sources;
 }
 
--(void)mediaSourceAdded:(int)index {
-
+-(void)mediaSourceAdded:(webrtc::MediaSource *) source {
+    RTCDesktopSource *desktopSource = [[RTCDesktopSource alloc] initWithNativeSource:source sourceType:_sourceType];
+    [_sources addObject:desktopSource];
+    [_delegate didDesktopSourceAdded:desktopSource];
 }
 
--(void)mediaSourceRemoved:(int)index {
-
+-(void)mediaSourceRemoved:(webrtc::MediaSource *) source {
+    RTCDesktopSource *desktopSource = [self getSourceById:source];
+    if(desktopSource != nil) {
+        [_sources removeObject:desktopSource];
+        [_delegate didDesktopSourceRemoved:desktopSource];
+    }
 }
 
--(void)mediaSourceMoved:(int) oldIndex newIndex:(int) newIndex {
-
+-(void)mediaSourceNameChanged:(webrtc::MediaSource *) source {
+    RTCDesktopSource *desktopSource = [self getSourceById:source];
+    if(desktopSource != nil) {
+        [desktopSource setName:source->name().c_str()];
+        [_delegate didDesktopSourceNameChanged:desktopSource];
+    }
 }
 
--(void)mediaSourceNameChanged:(int)index {
-
+-(void)mediaSourceThumbnailChanged:(webrtc::MediaSource *) source {
+    RTCDesktopSource *desktopSource = [self getSourceById:source];
+    if(desktopSource != nil) {
+        [desktopSource setThumbnail:source->thumbnail()];
+        [_delegate didDesktopSourceThumbnailChanged:desktopSource];
+    }
 }
 
--(void)mediaSourceThumbnailChanged:(int)index {
-
+-(RTCDesktopSource *)getSourceById:(webrtc::MediaSource *) source {
+    NSEnumerator *enumerator = [_sources objectEnumerator];
+    RTCDesktopSource *object;
+    while ((object = enumerator.nextObject) != nil) {
+        if(object.nativeMediaSource == source) {
+            return object;
+        }
+    }
+    return nil;
 }
 
 @end

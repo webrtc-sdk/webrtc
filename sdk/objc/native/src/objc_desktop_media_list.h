@@ -26,55 +26,59 @@
 #include "modules/desktop_capture/desktop_frame.h"
 #include "rtc_base/thread.h"
 
+#include "objc_desktop_capture.h"
+
 #import "components/capturer/RTCDesktopMediaList+Private.h"
 
 namespace webrtc {
 
+class MediaSource {
+ public:
+  MediaSource( ObjCDesktopMediaList *mediaList, DesktopCapturer::Source src, DesktopType type)
+      : source(src), mediaList_(mediaList), type_(type) {}
+  virtual ~MediaSource() {}
+
+  DesktopCapturer::Source source;
+
+  // source id
+  DesktopCapturer::SourceId id() const { return source.id; }
+
+  // source name
+  std::string name() const { return source.title; }
+
+  // Returns the thumbnail of the source, jpeg format.
+  std::vector<unsigned char> thumbnail() const { return thumbnail_; }
+
+  
+
+  DesktopType type() const { return type_; }
+
+  bool UpdateThumbnail();
+
+  void SaveCaptureResult(webrtc::DesktopCapturer::Result result,
+                         std::unique_ptr<webrtc::DesktopFrame> frame);
+
+ private:
+  std::vector<unsigned char> thumbnail_;
+  ObjCDesktopMediaList *mediaList_;
+  DesktopType type_;
+};
+
 class ObjCDesktopMediaList : public rtc::MessageHandler {
-public:
-    enum DesktopType { kScreen, kWindow };
-
-    class DesktopMediaListObserver {
-    public:
-        virtual void OnSourceAdded(int index) = 0;
-        virtual void OnSourceRemoved(int index) = 0;
-        virtual void OnSourceMoved(int old_index, int new_index) = 0;
-        virtual void OnSourceNameChanged(int index) = 0;
-        virtual void OnSourceThumbnailChanged(int index) = 0;
-        virtual void OnSourcePreviewChanged(size_t index) = 0;
-
-    protected:
-        virtual ~DesktopMediaListObserver() {}
-    };
-
-    class MediaSource {
-    public:
-        MediaSource(DesktopCapturer::Source src, DesktopType type)
-        : source(src), type_(type) {}
-        virtual ~MediaSource();
-        DesktopCapturer::Source source;
-        // source id
-        DesktopCapturer::SourceId id() const { return source.id; }
-        // source name
-        std::string name() const { return source.title; }
-        // Returns the thumbnail of the source, jpeg format.
-        std::vector<unsigned char> thumbnail() const { return thumbnail_; }
-
-        void SaveCaptureResult(webrtc::DesktopCapturer::Result result,
-                                        std::unique_ptr<webrtc::DesktopFrame> frame);
-    private:
-        std::vector<unsigned char> thumbnail_;
-        DesktopType type_;
-    };
+ public:
+  enum CaptureState { CS_RUNNING, CS_STOPPED, CS_FAILED};
  public:
   ObjCDesktopMediaList(DesktopType type, RTC_OBJC_TYPE(RTCDesktopMediaList)* objcMediaList);
+
   virtual ~ObjCDesktopMediaList();
 
-  virtual int32_t UpdateSourceList();
+  virtual int32_t UpdateSourceList(bool get_thumbnail = true);
 
   virtual int GetSourceCount() const;
   
   virtual MediaSource* GetSource(int index);
+
+  virtual bool GetThumbnail(MediaSource *source);
 
  protected:
   virtual void OnMessage(rtc::Message* msg) override;

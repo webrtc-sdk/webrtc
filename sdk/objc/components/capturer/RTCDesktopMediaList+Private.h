@@ -18,6 +18,7 @@
 
 namespace webrtc {
     class ObjCDesktopMediaList;
+    class MediaSource;
 }
 
 NS_ASSUME_NONNULL_BEGIN
@@ -26,15 +27,13 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property(nonatomic, readonly)std::shared_ptr<webrtc::ObjCDesktopMediaList> nativeMediaList;
 
--(void)mediaSourceAdded:(int)index;
+-(void)mediaSourceAdded:(webrtc::MediaSource *) source;
 
--(void)mediaSourceRemoved:(int)index;
+-(void)mediaSourceRemoved:(webrtc::MediaSource *) source;
 
--(void)mediaSourceMoved:(int) oldIndex newIndex:(int) newIndex;
+-(void)mediaSourceNameChanged:(webrtc::MediaSource *) source;
 
--(void)mediaSourceNameChanged:(int)index;
-
--(void)mediaSourceThumbnailChanged:(int)index;
+-(void)mediaSourceThumbnailChanged:(webrtc::MediaSource *) source;
 
 @end
 

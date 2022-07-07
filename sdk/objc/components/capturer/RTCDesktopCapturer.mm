@@ -26,27 +26,30 @@
 #import "RTCDesktopSource+Private.h"
 
 @implementation RTC_OBJC_TYPE (RTCDesktopCapturer) {
+    __weak id<RTC_OBJC_TYPE(RTCDesktopCapturerDelegate)> _delegate;
 }
 
 @synthesize nativeCapturer = _nativeCapturer;
 @synthesize source = _source;
 
-- (instancetype)initWithSource:(RTCDesktopSource*)source delegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)delegate {
-    if (self = [super initWithDelegate:delegate]) {
-      webrtc::ObjCDesktopCapturer::DesktopType captureType = webrtc::ObjCDesktopCapturer::kScreen;
+- (instancetype)initWithSource:(RTCDesktopSource*)source delegate:(__weak id<RTC_OBJC_TYPE(RTCDesktopCapturerDelegate)>)delegate captureDelegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)captureDelegate {
+    if (self = [super initWithDelegate:captureDelegate]) {
+      webrtc::DesktopType captureType = webrtc::kScreen;
       if(source.sourceType == RTCDesktopSourceTypeWindow) {
-          captureType = webrtc::ObjCDesktopCapturer::kWindow;
+          captureType = webrtc::kWindow;
       }
       _nativeCapturer = std::make_shared<webrtc::ObjCDesktopCapturer>(captureType, source.nativeMediaSource->id(), self);
       _source = source;
+      _delegate = delegate;
   }
   return self;
 }
 
-- (instancetype)initWithDefaultScreen:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)delegate {
-    if (self = [super initWithDelegate:delegate]) {
-      _nativeCapturer = std::make_unique<webrtc::ObjCDesktopCapturer>(webrtc::ObjCDesktopCapturer::kScreen, -1, self);
+- (instancetype)initWithDefaultScreen:(__weak id<RTC_OBJC_TYPE(RTCDesktopCapturerDelegate)>)delegate captureDelegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)captureDelegate {
+    if (self = [super initWithDelegate:captureDelegate]) {
+      _nativeCapturer = std::make_unique<webrtc::ObjCDesktopCapturer>(webrtc::kScreen, -1, self);
       _source = nil;
+      _delegate = delegate;
   }
   return self;
 }
@@ -58,6 +61,7 @@
 }
 
 - (void)startCapture {
+    [self didSourceCaptureStart];
     _nativeCapturer->Start(30);
 }
 
@@ -79,6 +83,22 @@
     if(completionHandler != nil) {
         completionHandler();
     }
+}
+
+-(void)didSourceCaptureStart {
+    [_delegate didSourceCaptureStart:self];
+}
+
+-(void)didSourceCapturePaused {
+   [_delegate didSourceCapturePaused:self];
+}
+
+-(void)didSourceCaptureStop {
+    [_delegate didSourceCaptureStop:self];
+}
+
+-(void)didSourceCaptureError {
+   [_delegate didSourceCaptureError:self];
 }
 
 @end

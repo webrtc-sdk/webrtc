@@ -32,7 +32,7 @@
 @synthesize sourceType = _sourceType;
 @synthesize nativeMediaSource = _nativeMediaSource;
 
-- (instancetype)initWithNativeSource:(const webrtc::ObjCDesktopMediaList::MediaSource*)nativeSource 
+- (instancetype)initWithNativeSource:(webrtc::MediaSource*)nativeSource 
                           sourceType:(RTCDesktopSourceType) sourceType {
     if (self = [super init]) {
         _nativeMediaSource = nativeSource;
@@ -48,6 +48,21 @@
     NSData* data = [[NSData alloc] initWithBytes:thumbnail.data() length:thumbnail.size()];
     NSImage *image = [[NSImage alloc] initWithData:data];
     return image;
+}
+
+-( NSImage *)UpdateThumbnail {
+    if(_nativeMediaSource->UpdateThumbnail()) {
+        _thumbnail = [self createThumbnailFromNativeSource:_nativeMediaSource->thumbnail()];
+    }
+    return _thumbnail;
+}
+
+-(void)setName:(const char *) name {
+    _name = [NSString stringWithUTF8String:name];
+}
+
+-(void)setThumbnail:(std::vector<unsigned char>) thumbnail {
+    _thumbnail = [self createThumbnailFromNativeSource:thumbnail];
 }
 
 @end

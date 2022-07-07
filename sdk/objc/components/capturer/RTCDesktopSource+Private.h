@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#import <Foundation/Foundation.h>
 
 #import "RTCDesktopSource.h"
 
@@ -22,10 +23,14 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface RTCDesktopSource ()
 
-- (instancetype)initWithNativeSource:(const webrtc::ObjCDesktopMediaList::MediaSource*) nativeSource 
+- (instancetype)initWithNativeSource:(webrtc::MediaSource*) nativeSource 
                           sourceType:(RTCDesktopSourceType) sourceType;
 
-@property(nonatomic, readonly)const webrtc::ObjCDesktopMediaList::MediaSource* nativeMediaSource;
+@property(nonatomic, readonly)webrtc::MediaSource* nativeMediaSource;
+
+-(void) setName:(const char *) name;
+
+-(void) setThumbnail:(std::vector<unsigned char>) thumbnail;
 
 @end
 

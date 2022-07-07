@@ -31,11 +31,11 @@
 
 namespace webrtc {
 
+enum DesktopType { kScreen, kWindow };
+
 class ObjCDesktopCapturer : public DesktopCapturer::Callback, public rtc::MessageHandler {
  public:
   enum CaptureState { CS_RUNNING, CS_STOPPED, CS_FAILED};
-
-  enum DesktopType { kScreen, kWindow };
 
  public:
   ObjCDesktopCapturer(DesktopType type,
@@ -65,6 +65,7 @@ class ObjCDesktopCapturer : public DesktopCapturer::Callback, public rtc::Messag
   webrtc::DesktopCapturer::SourceId source_id_;
   id<RTC_OBJC_TYPE(DesktopCapturerDelegate)> delegate_;
   uint32_t capture_delay_ = 1000; // 1s
+  webrtc::DesktopCapturer::Result result_ = webrtc::DesktopCapturer::Result::SUCCESS;
 };
 
 }  // namespace webrtc

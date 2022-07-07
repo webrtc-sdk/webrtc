@@ -23,7 +23,11 @@ NS_ASSUME_NONNULL_BEGIN
 RTC_OBJC_EXPORT
 @protocol RTC_OBJC_TYPE
 (DesktopCapturerDelegate)<NSObject>
-- (void)didCaptureVideoFrame:(RTC_OBJC_TYPE(RTCVideoFrame) *) frame;
+-(void)didCaptureVideoFrame:(RTC_OBJC_TYPE(RTCVideoFrame) *) frame;
+-(void)didSourceCaptureStart;
+-(void)didSourceCapturePaused;
+-(void)didSourceCaptureStop;
+-(void)didSourceCaptureError;
 @end
 
 @interface RTCDesktopCapturer ()
@@ -31,6 +35,14 @@ RTC_OBJC_EXPORT
 @property(nonatomic, readonly)std::shared_ptr<webrtc::ObjCDesktopCapturer> nativeCapturer;
 
 - (void)didCaptureVideoFrame:(RTC_OBJC_TYPE(RTCVideoFrame) *)frame;
+
+-(void)didSourceCaptureStart;
+
+-(void)didSourceCapturePaused;
+
+-(void)didSourceCaptureStop;
+
+-(void)didSourceCaptureError;
 
 @end
 

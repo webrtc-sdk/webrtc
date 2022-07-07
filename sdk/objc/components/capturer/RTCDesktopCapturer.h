@@ -23,6 +23,20 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+@class RTCDesktopCapturer;
+
+RTC_OBJC_EXPORT
+@protocol RTC_OBJC_TYPE
+(RTCDesktopCapturerDelegate)<NSObject>
+-(void)didSourceCaptureStart:(RTCDesktopCapturer *) capturer;
+
+-(void)didSourceCapturePaused:(RTCDesktopCapturer *) capturer;
+
+-(void)didSourceCaptureStop:(RTCDesktopCapturer *) capturer;
+
+-(void)didSourceCaptureError:(RTCDesktopCapturer *) capturer;
+@end
+
 RTC_OBJC_EXPORT
 // Screen capture that implements RTCVideoCapturer. Delivers frames to a
 // RTCVideoCapturerDelegate (usually RTCVideoSource).
@@ -30,9 +44,9 @@ RTC_OBJC_EXPORT
 
 @property(nonatomic, readonly) RTCDesktopSource *source;
 
-- (instancetype)initWithSource:(RTCDesktopSource*)source delegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)delegate;
+- (instancetype)initWithSource:(RTCDesktopSource*)source delegate:(__weak id<RTC_OBJC_TYPE(RTCDesktopCapturerDelegate)>)delegate captureDelegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)captureDelegate;
 
-- (instancetype)initWithDefaultScreen:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)delegate;
+- (instancetype)initWithDefaultScreen:(__weak id<RTC_OBJC_TYPE(RTCDesktopCapturerDelegate)>)delegate captureDelegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)captureDelegate;
 
 - (void)startCapture;
 

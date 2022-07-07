@@ -35,4 +35,6 @@ RTC_OBJC_EXPORT
 
 @property(nonatomic, readonly) RTCDesktopSourceType sourceType;
 
+-( NSImage *)UpdateThumbnail;
+
 @end
