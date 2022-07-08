@@ -42,7 +42,7 @@ RTC_OBJC_EXPORT
 
 @property(nonatomic, readonly) RTCDesktopSourceType sourceType;
 
-- (int32_t)UpdateSourceList:(BOOL) updateThumbnail;
+- (int32_t)UpdateSourceList:(BOOL)forceReload  updateAllThumbnails:(BOOL)updateThumbnail;
 
 - (NSArray<RTC_OBJC_TYPE (RTCDesktopSource) *>*) getSources;
 

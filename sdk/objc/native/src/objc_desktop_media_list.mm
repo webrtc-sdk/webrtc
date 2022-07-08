@@ -53,8 +53,15 @@ ObjCDesktopMediaList::~ObjCDesktopMediaList() {
   thread_->Stop();
 }
 
-int32_t ObjCDesktopMediaList::UpdateSourceList(bool get_thumbnail) {
-    
+int32_t ObjCDesktopMediaList::UpdateSourceList(bool force_reload, bool get_thumbnail) {
+
+  if(force_reload) {
+    for( auto source : sources_) {
+        [objcMediaList_ mediaSourceRemoved:source.get()];
+    }
+    sources_.clear();
+  }
+
   webrtc::DesktopCapturer::SourceList new_sources;
   capturer_->GetSourceList(&new_sources);
 

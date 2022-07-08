@@ -72,7 +72,7 @@ class ObjCDesktopMediaList : public rtc::MessageHandler {
 
   virtual ~ObjCDesktopMediaList();
 
-  virtual int32_t UpdateSourceList(bool get_thumbnail = true);
+  virtual int32_t UpdateSourceList(bool force_reload = false, bool get_thumbnail = true);
 
   virtual int GetSourceCount() const;
   

@@ -41,8 +41,8 @@
     return self;
 }
 
-- (int32_t)UpdateSourceList:(BOOL) updateThumbnail {
-    return _nativeMediaList->UpdateSourceList(updateThumbnail);
+- (int32_t)UpdateSourceList:(BOOL)forceReload  updateAllThumbnails:(BOOL)updateThumbnail {
+    return _nativeMediaList->UpdateSourceList(forceReload, updateThumbnail);
 }
 
 -(NSArray<RTCDesktopSource *>*) getSources {

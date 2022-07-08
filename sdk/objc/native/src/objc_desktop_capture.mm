@@ -32,9 +32,9 @@ ObjCDesktopCapturer::ObjCDesktopCapturer(DesktopType type,
   options_.set_detect_updated_region(true);
   options_.set_allow_iosurface(true);
   if (type == kScreen) {
-    capturer_ = webrtc::DesktopCapturer::CreateScreenCapturer(options_);
+    capturer_ = std::make_unique<DesktopAndCursorComposer>(webrtc::DesktopCapturer::CreateScreenCapturer(options_), options_);
   }
-  else { capturer_ = webrtc::DesktopCapturer::CreateWindowCapturer(options_); }
+  else { capturer_ = std::make_unique<DesktopAndCursorComposer>(webrtc::DesktopCapturer::CreateWindowCapturer(options_), options_); }
   type_ = type;
   thread_->Start();
 }

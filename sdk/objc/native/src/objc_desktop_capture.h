@@ -22,7 +22,7 @@
 #include "api/video/i420_buffer.h"
 #include "api/video/video_frame.h"
 #include "modules/desktop_capture/desktop_capture_options.h"
-#include "modules/desktop_capture/desktop_capturer.h"
+#include "modules/desktop_capture/desktop_and_cursor_composer.h"
 #include "modules/desktop_capture/desktop_frame.h"
 #include "rtc_base/thread.h"
 
@@ -57,7 +57,7 @@ class ObjCDesktopCapturer : public DesktopCapturer::Callback, public rtc::Messag
  private:
   void CaptureFrame();
   webrtc::DesktopCaptureOptions options_;
-  std::unique_ptr<webrtc::DesktopCapturer> capturer_;
+  std::unique_ptr<webrtc::DesktopAndCursorComposer> capturer_;
   std::unique_ptr<rtc::Thread> thread_;
   rtc::scoped_refptr<webrtc::I420Buffer> i420_buffer_;
   CaptureState capture_state_ = CS_STOPPED;
