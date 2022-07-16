@@ -149,9 +149,16 @@ void ObjCDesktopCapturer::OnCaptureResult(webrtc::DesktopCapturer::Result result
                         height,
                         libyuv::kRotate0,
                         libyuv::FOURCC_ARGB);
-
+  NSTimeInterval timeStampSeconds = CACurrentMediaTime();
+  int64_t timeStampNs = lroundf(timeStampSeconds * NSEC_PER_SEC);
   RTCVideoFrame* rtc_video_frame =
-      ToObjCVideoFrame(webrtc::VideoFrame(i420_buffer_, 0, 0, webrtc::kVideoRotation_0));
+      ToObjCVideoFrame(
+                       webrtc::VideoFrame::Builder()
+                           .set_video_frame_buffer(i420_buffer_)
+                           .set_rotation(webrtc::kVideoRotation_0)
+                           .set_timestamp_us(timeStampNs / 1000)
+                           .build()
+                       );
   [delegate_ didCaptureVideoFrame:rtc_video_frame];
 }
 
