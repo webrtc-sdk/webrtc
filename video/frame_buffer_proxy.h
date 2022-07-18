@@ -54,6 +54,7 @@ class FrameBufferProxy {
 
   // Run on the worker thread.
   virtual void StopOnWorker() = 0;
+  virtual void StartOnWorker() = 0;
   virtual void SetProtectionMode(VCMVideoProtection protection_mode) = 0;
   virtual void Clear() = 0;
   virtual absl::optional<int64_t> InsertFrame(
