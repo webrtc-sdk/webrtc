@@ -65,6 +65,14 @@ class FrameBuffer2Proxy : public FrameBufferProxy {
     });
   }
 
+  void StartOnWorker() override {
+    RTC_DCHECK_RUN_ON(&worker_sequence_checker_);
+    decode_queue_->PostTask([this] {
+      frame_buffer_.Start();
+      decode_safety_->SetAlive();
+    });
+  }
+
   void SetProtectionMode(VCMVideoProtection protection_mode) override {
     RTC_DCHECK_RUN_ON(&worker_sequence_checker_);
     frame_buffer_.SetProtectionMode(kProtectionNackFEC);
@@ -231,6 +239,14 @@ class FrameBuffer3Proxy : public FrameBufferProxy {
     decode_queue_->PostTask([this] {
       RTC_DCHECK_RUN_ON(decode_queue_);
       decode_safety_->SetNotAlive();
+    });
+  }
+
+  void StartOnWorker() override {
+    RTC_DCHECK_RUN_ON(&worker_sequence_checker_);
+    decode_queue_->PostTask([this] {
+      RTC_DCHECK_RUN_ON(decode_queue_);
+      decode_safety_->SetAlive();
     });
   }
 

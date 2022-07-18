@@ -361,7 +361,7 @@ void VideoReceiveStream2::Start() {
     return;
   }
 
-  frame_buffer_->Start();
+  frame_buffer_->StartOnWorker();
   const bool protected_by_fec = config_.rtp.protected_by_flexfec ||
                                 rtp_video_stream_receiver_.IsUlpfecEnabled();
 
