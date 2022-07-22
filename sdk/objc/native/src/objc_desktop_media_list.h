@@ -78,7 +78,7 @@ class ObjCDesktopMediaList : public rtc::MessageHandler {
   
   virtual MediaSource* GetSource(int index);
 
-  virtual bool GetThumbnail(MediaSource *source);
+  virtual bool GetThumbnail(MediaSource *source, bool notify);
 
  protected:
   virtual void OnMessage(rtc::Message* msg) override;

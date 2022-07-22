@@ -91,6 +91,7 @@ int32_t ObjCDesktopMediaList::UpdateSourceList(bool force_reload, bool get_thumb
       if (old_source_set.find(new_sources[i].id) == old_source_set.end()) {
         MediaSource* source = new MediaSource(this, new_sources[i],type_);
         sources_.insert(sources_.begin() + i, std::shared_ptr<MediaSource>(source));
+        GetThumbnail(source, false);
         [objcMediaList_ mediaSourceAdded:source];
       }
     }
@@ -127,18 +128,18 @@ int32_t ObjCDesktopMediaList::UpdateSourceList(bool force_reload, bool get_thumb
 
   if(get_thumbnail) {
     for( auto source : sources_) {
-       GetThumbnail(source.get());
+       GetThumbnail(source.get(), true);
     }
   }
   return sources_.size();
 }
 
-bool ObjCDesktopMediaList::GetThumbnail(MediaSource *source) {
+bool ObjCDesktopMediaList::GetThumbnail(MediaSource *source, bool notify) {
   callback_->SetCallback([&](webrtc::DesktopCapturer::Result result,
                              std::unique_ptr<webrtc::DesktopFrame> frame) {
     auto old_thumbnail = source->thumbnail();
     source->SaveCaptureResult(result, std::move(frame));
-    if(old_thumbnail.size() != source->thumbnail().size()) {
+    if(old_thumbnail.size() != source->thumbnail().size() && notify) {
       [objcMediaList_ mediaSourceThumbnailChanged:source];
     }
   });
@@ -158,7 +159,7 @@ MediaSource *ObjCDesktopMediaList::GetSource(int index) {
 }
 
 bool MediaSource::UpdateThumbnail() {
-  return mediaList_->GetThumbnail(this);
+  return mediaList_->GetThumbnail(this, true);
 }
 
 void MediaSource::SaveCaptureResult(webrtc::DesktopCapturer::Result result,
