@@ -141,6 +141,11 @@ class TestAudioDeviceModuleImpl
     return capturing_;
   }
 
+  int32_t SetAudioDeviceSink(AudioDeviceSink* sink) const override {
+    // no-op
+    return 0;
+  }
+
   // Blocks until the Renderer refuses to receive data.
   // Returns false if `timeout_ms` passes before that happens.
   bool WaitForPlayoutEnd(int timeout_ms = rtc::Event::kForever) override {

@@ -178,7 +178,8 @@ class AudioDeviceMac : public AudioDeviceGeneric {
 
   int32_t GetDeviceName(const AudioObjectPropertyScope scope,
                         const uint16_t index,
-                        char* name);
+                        char* name,
+                        char* guid);
 
   int32_t InitDevice(uint16_t userDeviceIndex,
                      AudioDeviceID& deviceId,
@@ -199,6 +200,8 @@ class AudioDeviceMac : public AudioDeviceGeneric {
                                   const AudioObjectPropertyAddress addresses[]);
 
   int32_t HandleDeviceChange();
+  int32_t HandleDefaultOutputDeviceChange();
+  int32_t HandleDefaultInputDeviceChange();
 
   int32_t HandleStreamFormatChange(AudioObjectID objectId,
                                    AudioObjectPropertyAddress propertyAddress);

@@ -377,6 +377,51 @@ if (is_ios || is_mac) {
       }
     }
 
+    if (is_mac) {
+      rtc_library("native_api_audio_device_module") {
+        visibility = [ "*" ]
+
+        sources = [
+          "objc/native/api/audio_device_module.h",
+          "objc/native/api/audio_device_module.mm",
+        ]
+
+        deps = [
+          ":audio_device",
+          "../modules/audio_device:audio_device_api",
+          "../modules/audio_device:audio_device_generic",
+          "../rtc_base:checks",
+          "../rtc_base:rtc_base_approved",
+          "../system_wrappers",
+        ]
+      }
+
+      rtc_library("audio_device") {
+        visibility = [ "*" ]
+
+        sources = [
+          "objc/native/src/audio/helpers.h",
+          "objc/native/src/audio/helpers.mm",
+        ]
+
+        deps = [
+          ":base_objc",
+          "../api:array_view",
+          "../modules/audio_device:audio_device_api",
+          "../modules/audio_device:audio_device_buffer",
+          "../modules/audio_device:audio_device_generic",
+          "../rtc_base",
+          "../rtc_base:checks",
+          "../rtc_base:threading",
+          "../system_wrappers:field_trial",
+          "../system_wrappers:metrics",
+        ]
+        absl_deps = [ "//third_party/abseil-cpp/absl/base:core_headers" ]
+
+        frameworks = [ "AudioToolbox.framework" ]
+      }
+    }
+
     rtc_library("videosource_objc") {
       sources = [
         "objc/api/peerconnection/RTCVideoSource+Private.h",
@@ -885,6 +930,13 @@ if (is_ios || is_mac) {
         "..:no_global_constructors",
       ]
       sources = [
+        "objc/api/peerconnection/RTCAudioDeviceModule.h",
+        "objc/api/peerconnection/RTCAudioDeviceModule+Private.h",
+        "objc/api/peerconnection/RTCAudioDeviceModule.mm",
+        "objc/api/peerconnection/RTCIODevice.h",
+        "objc/api/peerconnection/RTCIODevice.mm",
+        "objc/api/peerconnection/RTCAudioDevice.h",
+        "objc/api/peerconnection/RTCAudioDevice.mm",
         "objc/api/peerconnection/RTCAudioSource+Private.h",
         "objc/api/peerconnection/RTCAudioSource.h",
         "objc/api/peerconnection/RTCAudioSource.mm",
@@ -1037,7 +1089,7 @@ if (is_ios || is_mac) {
         "../system_wrappers:metrics",
       ]
 
-      if (is_ios) {
+      if (is_ios || is_mac) {
         deps += [ ":native_api_audio_device_module" ]
       }
     }
@@ -1277,6 +1329,9 @@ if (is_ios || is_mac) {
           "objc/helpers/RTCDispatcher.h",
           "objc/helpers/RTCYUVHelper.h",
           "objc/helpers/UIDevice+RTCDevice.h",
+          "objc/api/peerconnection/RTCAudioDeviceModule.h",
+          "objc/api/peerconnection/RTCAudioDevice.h",
+          "objc/api/peerconnection/RTCIODevice.h",
           "objc/api/peerconnection/RTCAudioSource.h",
           "objc/api/peerconnection/RTCAudioTrack.h",
           "objc/api/peerconnection/RTCConfiguration.h",
@@ -1391,6 +1446,9 @@ if (is_ios || is_mac) {
         output_name = "WebRTC"
 
         sources = [
+          "objc/api/peerconnection/RTCAudioDeviceModule.h",
+          "objc/api/peerconnection/RTCAudioDevice.h",
+          "objc/api/peerconnection/RTCIODevice.h",
           "objc/api/peerconnection/RTCAudioSource.h",
           "objc/api/peerconnection/RTCAudioTrack.h",
           "objc/api/peerconnection/RTCCertificate.h",
