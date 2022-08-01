@@ -37,7 +37,7 @@ namespace webrtc {
 ObjCVideoTrackSource::ObjCVideoTrackSource() : ObjCVideoTrackSource(false) {}
 
 ObjCVideoTrackSource::ObjCVideoTrackSource(bool is_screencast)
-    : AdaptedVideoTrackSource(/* required resolution alignment */ 2),
+    : AdaptedVideoTrackSource(/* required resolution alignment */ is_screencast? 16 : 2),
       is_screencast_(is_screencast) {}
 
 ObjCVideoTrackSource::ObjCVideoTrackSource(RTCObjCVideoSourceAdapter *adapter) : adapter_(adapter) {
