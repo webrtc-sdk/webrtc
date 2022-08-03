@@ -427,10 +427,6 @@ int32_t FileAudioDevice::PlayoutDelay(uint16_t& delayMS) const {
   return 0;
 }
 
-int32_t FileAudioDevice::SetAudioDeviceSink(AudioDeviceSink* sink) {
-  return -1;
-}
-
 void FileAudioDevice::AttachAudioBuffer(AudioDeviceBuffer* audioBuffer) {
   MutexLock lock(&mutex_);
 

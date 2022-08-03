@@ -72,6 +72,7 @@ class AudioDeviceWindowsCore : public AudioDeviceGeneric {
     ULONG __stdcall AddRef() override;
     ULONG __stdcall Release() override;
     HRESULT __stdcall QueryInterface(REFIID iid, void** object) override;
+
     void SetAudioDeviceSink(AudioDeviceSink *sink);
 
    private:

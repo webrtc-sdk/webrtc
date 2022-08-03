@@ -282,11 +282,6 @@ class AudioDeviceTemplate : public AudioDeviceGeneric {
     RTC_CHECK_NOTREACHED();
   }
 
-  int32_t SetAudioDeviceSink(AudioDeviceSink* sink) override {
-    RTC_CHECK_NOTREACHED();
-    return -1;
-  }
-
   int32_t SetSpeakerMute(bool enable) override { RTC_CHECK_NOTREACHED(); }
 
   int32_t SpeakerMute(bool& enabled) const override { RTC_CHECK_NOTREACHED(); }

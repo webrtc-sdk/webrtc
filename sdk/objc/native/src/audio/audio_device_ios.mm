@@ -261,6 +261,7 @@ int32_t AudioDeviceIOS::StopPlayout() {
     recording_is_initialized_ = false;
   }
   playing_.store(0, std::memory_order_release);
+  playout_is_initialized_ = false;
 
   // Derive average number of calls to OnGetPlayoutData() between detected
   // audio glitches and add the result to a histogram.
@@ -319,6 +320,7 @@ int32_t AudioDeviceIOS::StopRecording() {
     RestartAudioUnit(false);
   }
   recording_.store(0, std::memory_order_release);
+  recording_is_initialized_ = false;
   return 0;
 }
 

@@ -124,8 +124,6 @@ class AudioDeviceLinuxALSA : public AudioDeviceGeneric {
   void AttachAudioBuffer(AudioDeviceBuffer* audioBuffer)
       RTC_LOCKS_EXCLUDED(mutex_) override;
 
-  int32_t SetAudioDeviceSink(AudioDeviceSink* sink) override { return -1; }
-
  private:
   int32_t InitRecordingLocked() RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
   int32_t StopRecordingLocked() RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_);

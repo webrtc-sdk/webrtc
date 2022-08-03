@@ -39,7 +39,8 @@
                           nativeVideoEncoderFactory:std::move(_videoEncoderFactory)
                           nativeVideoDecoderFactory:std::move(_videoDecoderFactory)
                                   audioDeviceModule:_audioDeviceModule.get()
-                              audioProcessingModule:_audioProcessingModule];
+                              audioProcessingModule:_audioProcessingModule
+                              bypassVoiceProcessing:NO];
 }
 
 - (void)setVideoEncoderFactory:(std::unique_ptr<webrtc::VideoEncoderFactory>)videoEncoderFactory {

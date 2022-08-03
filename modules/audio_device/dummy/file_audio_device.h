@@ -123,8 +123,6 @@ class FileAudioDevice : public AudioDeviceGeneric {
   // Delay information and control
   int32_t PlayoutDelay(uint16_t& delayMS) const override;
 
-  int32_t SetAudioDeviceSink(AudioDeviceSink* sink) override;
-
   void AttachAudioBuffer(AudioDeviceBuffer* audioBuffer) override;
 
  private:

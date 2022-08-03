@@ -31,6 +31,8 @@ extern "C" {
 #include <fstream>
 #include <iostream>
 
+#import <CoreImage/CoreImage.h>
+
 namespace webrtc {
 
 ObjCDesktopMediaList::ObjCDesktopMediaList(DesktopType type,
