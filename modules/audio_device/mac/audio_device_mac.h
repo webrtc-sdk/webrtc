@@ -180,7 +180,8 @@ class AudioDeviceMac : public AudioDeviceGeneric {
 
   int32_t GetDeviceName(AudioObjectPropertyScope scope,
                         uint16_t index,
-                        rtc::ArrayView<char> name);
+                        rtc::ArrayView<char> name,
+                        rtc::ArrayView<char> guid);
 
   int32_t InitDevice(uint16_t userDeviceIndex,
                      AudioDeviceID& deviceId,

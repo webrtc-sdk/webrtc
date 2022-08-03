@@ -838,12 +838,9 @@ int32_t AudioDeviceMac::PlayoutDeviceName(uint16_t index,
   memset(name, 0, kAdmMaxDeviceNameSize);
   memset(guid, 0, kAdmMaxGuidSize);
 
-  if (guid != NULL) {
-    memset(guid, 0, kAdmMaxGuidSize);
-  }
-
   return GetDeviceName(kAudioDevicePropertyScopeOutput, index,
-                       rtc::ArrayView<char>(name, kAdmMaxDeviceNameSize));
+                       rtc::ArrayView<char>(name, kAdmMaxDeviceNameSize),
+                       rtc::ArrayView<char>(guid, kAdmMaxGuidSize));
 }
 
 int32_t AudioDeviceMac::RecordingDeviceName(uint16_t index,
@@ -862,7 +859,8 @@ int32_t AudioDeviceMac::RecordingDeviceName(uint16_t index,
   }
 
   return GetDeviceName(kAudioDevicePropertyScopeInput, index,
-                       rtc::ArrayView<char>(name, kAdmMaxDeviceNameSize));
+                       rtc::ArrayView<char>(name, kAdmMaxDeviceNameSize),
+                       rtc::ArrayView<char>(guid, kAdmMaxGuidSize));
 }
 
 int16_t AudioDeviceMac::RecordingDevices() {
@@ -1630,7 +1628,8 @@ int32_t AudioDeviceMac::GetNumberDevices(const AudioObjectPropertyScope scope,
 
 int32_t AudioDeviceMac::GetDeviceName(const AudioObjectPropertyScope scope,
                                       const uint16_t index,
-                                      rtc::ArrayView<char> name) {
+                                      rtc::ArrayView<char> name,
+                                      rtc::ArrayView<char> guid) {
   OSStatus err = noErr;
   AudioDeviceID deviceIds[MaxNumberDevices];
 
@@ -1669,7 +1668,7 @@ int32_t AudioDeviceMac::GetDeviceName(const AudioObjectPropertyScope scope,
   }
   AudioObjectPropertyAddress propertyAddress = {kAudioDevicePropertyDeviceName,
                                                 scope, 0};
-  std::string strData;
+  rtc::SimpleStringBuilder guid_ss(guid);
   if (isDefaultDevice) {
     std::array<char, kAdmMaxDeviceNameSize> devName;
     UInt32 len = devName.size();
@@ -1679,6 +1678,7 @@ int32_t AudioDeviceMac::GetDeviceName(const AudioObjectPropertyScope scope,
 
     rtc::SimpleStringBuilder ss(name);
     ss.AppendFormat("default (%s)", devName.data());
+    guid_ss << "default";
   } else {
     if (index < numberDevices) {
       usedID = deviceIds[index];
@@ -1686,7 +1686,7 @@ int32_t AudioDeviceMac::GetDeviceName(const AudioObjectPropertyScope scope,
       usedID = index;
     }
     UInt32 len = name.size();
-
+    guid_ss << std::to_string(deviceIds[index]);
     WEBRTC_CA_RETURN_ON_ERR(AudioObjectGetPropertyData(
         usedID, &propertyAddress, 0, NULL, &len, name.data()));
   }
