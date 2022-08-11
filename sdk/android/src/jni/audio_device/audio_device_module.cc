@@ -582,6 +582,9 @@ class AndroidAudioDeviceModule : public AudioDeviceModule {
     return 0;
   }
 
+  // Not supported on Android
+  int32_t SetAudioDeviceSink(AudioDeviceSink* sink) const override { return 0; }
+
  private:
   SequenceChecker thread_checker_;
 

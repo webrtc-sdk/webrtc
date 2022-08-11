@@ -484,6 +484,9 @@ class WindowsAudioDeviceModule : public AudioDeviceModuleForTest {
     return input_->SetSampleRate(sample_rate);
   }
 
+  // Not supported on Windows
+  int32_t SetAudioDeviceSink(AudioDeviceSink* sink) const override { return 0; }
+
  private:
   // Ensures that the class is used on the same thread as it is constructed
   // and destroyed on.
