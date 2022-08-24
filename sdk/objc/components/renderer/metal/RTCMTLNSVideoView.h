@@ -8,5 +8,5 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-// Deprecated
+// Deprecated: Use RTCMTLVideoView instead
 @compatibility_alias RTCMTLNSVideoView RTCMTLVideoView;

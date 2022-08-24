@@ -51,6 +51,14 @@
 @synthesize lastFrameTimeNs = _lastFrameTimeNs;
 @synthesize rotationOverride = _rotationOverride;
 
++ (BOOL)isMetalAvailable {
+#if TARGET_OS_IPHONE
+  return MTLCreateSystemDefaultDevice() != nil;
+#elif TARGET_OS_OSX
+  return [MTLCopyAllDevices() count] > 0;
+#endif
+}
+
 - (instancetype)initWithFrame:(CGRect)frameRect {
   self = [super initWithFrame:frameRect];
   if (self) {
@@ -87,10 +95,6 @@
 
 #pragma mark - Private
 
-+ (BOOL)isMetalAvailable {
-  return MTLCreateSystemDefaultDevice() != nil;
-}
-
 + (MTKView *)createMetalView:(CGRect)frame {
   return [[MTKViewClass alloc] initWithFrame:frame];
 }
@@ -122,8 +126,8 @@
 
 #if TARGET_OS_IPHONE
 - (void)setMultipleTouchEnabled:(BOOL)multipleTouchEnabled {
-    [super setMultipleTouchEnabled:multipleTouchEnabled];
-    self.metalView.multipleTouchEnabled = multipleTouchEnabled;
+  [super setMultipleTouchEnabled:multipleTouchEnabled];
+  self.metalView.multipleTouchEnabled = multipleTouchEnabled;
 }
 #endif
 
