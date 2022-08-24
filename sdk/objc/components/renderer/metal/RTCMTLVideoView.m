@@ -108,7 +108,7 @@
 }
 
 + (RTCMTLRGBRenderer *)createRGBRenderer {
-  return [[RTCMTLRGBRenderer alloc] init];
+  return [[RTCMTLRGBRendererClass alloc] init];
 }
 
 - (void)configure {
@@ -119,7 +119,10 @@
   self.metalView.delegate = self;
 #if TARGET_OS_IPHONE
   self.metalView.contentMode = UIViewContentModeScaleAspectFill;
+#elif TARGET_OS_OSX
+  self.metalView.layerContentsPlacement = NSViewLayerContentsPlacementScaleProportionallyToFit;
 #endif
+
   [self addSubview:self.metalView];
   self.videoFrameSize = CGSizeZero;
 }
@@ -267,7 +270,19 @@
     RTCLogInfo(@"Incoming frame is nil. Exiting render callback.");
     return;
   }
+
+#if TARGET_OS_IPHONE
   self.videoFrame = frame;
+#elif TARGET_OS_OSX
+  // Rendering native CVPixelBuffer is not supported on OS X.
+  BOOL useI420 = NO;
+  if ([frame.buffer isKindOfClass:[RTC_OBJC_TYPE(RTCCVPixelBuffer) class]]) {
+    RTC_OBJC_TYPE(RTCCVPixelBuffer) *buffer = (RTC_OBJC_TYPE(RTCCVPixelBuffer) *)frame.buffer;
+    const OSType pixelFormat = CVPixelBufferGetPixelFormatType(buffer.pixelBuffer);
+    useI420 = pixelFormat == kCVPixelFormatType_32BGRA || pixelFormat == kCVPixelFormatType_32ARGB;
+  }
+  self.videoFrame = useI420 ? [frame newI420VideoFrame] : frame;
+#endif
 }
 
 #pragma mark - Cross platform
