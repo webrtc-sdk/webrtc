@@ -625,8 +625,8 @@ if (is_ios || is_mac) {
       }
       if (is_mac) {
         sources += [
-          "objc/components/renderer/metal/RTCMTLNSVideoView.h",
-          "objc/components/renderer/metal/RTCMTLNSVideoView.m",
+          "objc/components/renderer/metal/RTCMTLVideoView.h",
+          "objc/components/renderer/metal/RTCMTLVideoView.m",
         ]
         frameworks += [ "AppKit.framework" ]
       }
@@ -1553,6 +1553,7 @@ if (is_ios || is_mac) {
           "objc/components/capturer/RTCDesktopCapturer.h",
           "objc/components/capturer/RTCDesktopSource.h",
           "objc/components/capturer/RTCDesktopMediaList.h",
+          "objc/components/renderer/metal/RTCMTLVideoView.h",
           "objc/components/renderer/metal/RTCMTLNSVideoView.h",
           "objc/components/renderer/opengl/RTCNSGLVideoView.h",
           "objc/components/renderer/opengl/RTCVideoViewShading.h",

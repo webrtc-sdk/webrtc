@@ -75,6 +75,7 @@
   self.metalView.paused = !enabled;
 }
 
+#if TARGET_OS_IPHONE
 - (UIViewContentMode)videoContentMode {
   return self.metalView.contentMode;
 }
@@ -82,6 +83,7 @@
 - (void)setVideoContentMode:(UIViewContentMode)mode {
   self.metalView.contentMode = mode;
 }
+#endif
 
 #pragma mark - Private
 
@@ -111,19 +113,21 @@
 
   self.metalView = [RTC_OBJC_TYPE(RTCMTLVideoView) createMetalView:self.bounds];
   self.metalView.delegate = self;
+#if TARGET_OS_IPHONE
   self.metalView.contentMode = UIViewContentModeScaleAspectFill;
+#endif
   [self addSubview:self.metalView];
   self.videoFrameSize = CGSizeZero;
 }
 
+#if TARGET_OS_IPHONE
 - (void)setMultipleTouchEnabled:(BOOL)multipleTouchEnabled {
     [super setMultipleTouchEnabled:multipleTouchEnabled];
     self.metalView.multipleTouchEnabled = multipleTouchEnabled;
 }
+#endif
 
-- (void)layoutSubviews {
-  [super layoutSubviews];
-
+- (void)performLayout {
   CGRect bounds = self.bounds;
   self.metalView.frame = bounds;
   if (!CGSizeEqualToSize(self.videoFrameSize, CGSizeZero)) {
@@ -203,10 +207,10 @@
   [self setNeedsLayout];
 }
 
-- (RTCVideoRotation)frameRotation {
+- (RTCVideoRotation)videoRotation {
   if (self.rotationOverride) {
     RTCVideoRotation rotation;
-    if (@available(iOS 11, *)) {
+    if (@available(iOS 11, macos 10.13, *)) {
       [self.rotationOverride getValue:&rotation size:sizeof(rotation)];
     } else {
       [self.rotationOverride getValue:&rotation];
@@ -220,10 +224,10 @@
 - (CGSize)drawableSize {
   // Flip width/height if the rotations are not the same.
   CGSize videoFrameSize = self.videoFrameSize;
-  RTCVideoRotation frameRotation = [self frameRotation];
+  RTCVideoRotation videoRotation = [self videoRotation];
 
   BOOL useLandscape =
-      (frameRotation == RTCVideoRotation_0) || (frameRotation == RTCVideoRotation_180);
+      (videoRotation == RTCVideoRotation_0) || (videoRotation == RTCVideoRotation_180);
   BOOL sizeIsLandscape = (self.videoFrame.rotation == RTCVideoRotation_0) ||
       (self.videoFrame.rotation == RTCVideoRotation_180);
 
@@ -261,5 +265,23 @@
   }
   self.videoFrame = frame;
 }
+
+#pragma mark - Cross platform
+
+#if TARGET_OS_IPHONE
+- (void)layoutSubviews {
+  [super layoutSubviews];
+  [self performLayout];
+}
+#elif TARGET_OS_OSX
+- (void)layout {
+  [super layout];
+  [self performLayout];
+}
+
+- (void)setNeedsLayout {
+  self.needsLayout = YES;
+}
+#endif
 
 @end
