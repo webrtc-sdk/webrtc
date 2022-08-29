@@ -63,10 +63,4 @@ int AudioDeviceGeneric::GetRecordAudioParameters(
 }
 #endif  // WEBRTC_IOS
 
-int32_t AudioDeviceGeneric::SetAudioDeviceSink(AudioDeviceSink* sink) {
-  RTC_LOG(LS_INFO) << __FUNCTION__ << "(" << sink << ")";
-  audio_device_module_sink_ = sink;
-  return 0;
-}
-
 }  // namespace webrtc
