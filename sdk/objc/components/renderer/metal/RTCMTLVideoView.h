@@ -53,7 +53,7 @@ RTC_OBJC_EXPORT
 
 /** @abstract Wrapped RTCVideoRotation, or nil.
  */
-@property(nonatomic, assign, nullable) NSValue* rotationOverride;
+@property(nonatomic, nullable) NSValue* rotationOverride;
 
 + (BOOL)isMetalAvailable;
 
