@@ -2452,7 +2452,7 @@ int32_t AudioDeviceWindowsCore::StopRecording() {
     RTC_DCHECK(_dmo);
     // This is necessary. Otherwise the DMO can generate garbage render
     // audio even after rendering has stopped.
-  HRESULT hr = _dmo->FreeStreamingResources();
+    HRESULT hr = _dmo->FreeStreamingResources();
     if (FAILED(hr)) {
       _TraceCOMError(hr);
       err = -1;
@@ -3940,23 +3940,19 @@ HRESULT AudioDeviceWindowsCore::DeviceStateListener::OnPropertyValueChanged(LPCW
   return S_OK;
 }
 
-
-// TODO(henrika): only used for debugging purposes currently.
 ULONG AudioDeviceWindowsCore::DeviceStateListener::AddRef() {
   ULONG new_ref = InterlockedIncrement(&ref_count_);
   // RTC_DLOG(LS_INFO) << "__AddRef => " << new_ref;
   return new_ref;
 }
 
-// TODO(henrika): does not call delete this.
 ULONG AudioDeviceWindowsCore::DeviceStateListener::Release() {
   ULONG new_ref = InterlockedDecrement(&ref_count_);
   // RTC_DLOG(LS_INFO) << "__Release => " << new_ref;
   return new_ref;
 }
 
-// TODO(henrika): can probably be replaced by "return S_OK" only.
-  HRESULT AudioDeviceWindowsCore::DeviceStateListener::QueryInterface(REFIID iid, void** object) {
+HRESULT AudioDeviceWindowsCore::DeviceStateListener::QueryInterface(REFIID iid, void** object) {
   if (object == nullptr) {
     return E_POINTER;
   }
