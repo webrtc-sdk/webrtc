@@ -222,5 +222,9 @@ int32_t AudioDeviceDummy::PlayoutDelay(uint16_t& delayMS) const {
   return -1;
 }
 
+int32_t AudioDeviceDummy::SetAudioDeviceSink(AudioDeviceSink* sink) {
+  return -1;
+}
+
 void AudioDeviceDummy::AttachAudioBuffer(AudioDeviceBuffer* audioBuffer) {}
 }  // namespace webrtc
