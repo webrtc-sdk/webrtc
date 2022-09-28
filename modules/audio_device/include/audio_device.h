@@ -26,7 +26,7 @@ class AudioDeviceSink {
   virtual ~AudioDeviceSink() = default;
 
   // input/output devices updated or default device changed
-  virtual void OnDevicesUpdated() {}
+  virtual void OnDevicesUpdated() = 0;
 };
 
 class AudioDeviceModule : public rtc::RefCountInterface {
