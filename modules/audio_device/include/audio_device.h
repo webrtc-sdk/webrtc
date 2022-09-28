@@ -21,6 +21,15 @@ namespace webrtc {
 
 class AudioDeviceModuleForTest;
 
+// Sink for callbacks related to a audio device.
+class AudioDeviceSink {
+ public:
+  virtual ~AudioDeviceSink() = default;
+
+  // input/output devices updated or default device changed
+  virtual void OnDevicesUpdated() = 0;
+};
+
 class AudioDeviceModule : public rtc::RefCountInterface {
  public:
   enum AudioLayer {
