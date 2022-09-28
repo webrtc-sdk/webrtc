@@ -1176,6 +1176,14 @@ public class PeerConnection {
     nativeNewGetStats(callback);
   }
 
+  public void getStats(RTCStatsCollectorCallback callback, RtpSender sender) {
+    nativeNewGetStatsForSender(callback, sender.getNativeRtpSender());
+  }
+
+  public void getStats(RTCStatsCollectorCallback callback, RtpReceiver receiver) {
+    nativeNewGetStatsForReceiver(callback, receiver.getNativeRtpReceiver());
+  }
+
   /**
    * Limits the bandwidth allocated for all RTP streams sent by this
    * PeerConnection. Pass null to leave a value unchanged.
@@ -1310,6 +1318,10 @@ public class PeerConnection {
   private native void nativeRemoveLocalStream(long stream);
   private native boolean nativeOldGetStats(StatsObserver observer, long nativeTrack);
   private native void nativeNewGetStats(RTCStatsCollectorCallback callback);
+  private native void nativeNewGetStatsForSender(
+      RTCStatsCollectorCallback callback, long nativeRtpSender);
+  private native void nativeNewGetStatsForReceiver(
+      RTCStatsCollectorCallback callback, long nativeRtpReceiver);
   private native RtpSender nativeCreateSender(String kind, String stream_id);
   private native List<RtpSender> nativeGetSenders();
   private native List<RtpReceiver> nativeGetReceivers();
