@@ -197,6 +197,8 @@ class AudioDeviceLinuxPulse : public AudioDeviceGeneric {
 
   void AttachAudioBuffer(AudioDeviceBuffer* audioBuffer) override;
 
+  int32_t SetAudioDeviceSink(AudioDeviceSink* sink) override { return -1; }
+
  private:
   void Lock() RTC_EXCLUSIVE_LOCK_FUNCTION(mutex_) { mutex_.Lock(); }
   void UnLock() RTC_UNLOCK_FUNCTION(mutex_) { mutex_.Unlock(); }
