@@ -22,7 +22,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-typedef void (^RTCOnAudioDevicesDidUpdate)();
+typedef void (^RTCOnAudioDevicesDidUpdate)(void);
 
 RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCAudioDeviceModule) : NSObject
