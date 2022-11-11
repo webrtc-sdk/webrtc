@@ -124,6 +124,17 @@ void AudioState::RemoveSendingStream(webrtc::AudioSendStream* stream) {
   UpdateAudioTransportWithSendingStreams();
   if (sending_streams_.empty()) {
     config_.audio_device_module->StopRecording();
+#if defined(WEBRTC_IOS)
+    auto* adm = config_.audio_device_module.get();
+    if (adm->Playing()) {
+      adm->StopPlayout();
+      if (adm->InitPlayout() == 0) {
+        if (playout_enabled_) {
+          adm->StartPlayout();
+        }
+      }
+    }
+#endif
   }
 }
 

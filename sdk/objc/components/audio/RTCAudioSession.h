@@ -253,8 +253,8 @@ RTC_OBJC_EXPORT
      *  returned.
      *  `lockForConfiguration` must be called first.
      */
-    - (BOOL)setConfiguration : (RTC_OBJC_TYPE(RTCAudioSessionConfiguration) *)configuration error
-    : (NSError **)outError;
+- (BOOL)setConfiguration: (RTC_OBJC_TYPE(RTCAudioSessionConfiguration) *)configuration
+                   error: (NSError **)outError;
 
 /** Convenience method that calls both setConfiguration and setActive.
  *  `lockForConfiguration` must be called first.
