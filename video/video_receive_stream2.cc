@@ -824,6 +824,14 @@ void VideoReceiveStream2::HandleEncodedFrame(
       }
     }
   }
+    
+  // here skip SEI frame is for solve HW decode failed in ios
+  const uint8_t *pBuf = frame->EncodedImage().data();
+  int size = frame->EncodedImage().size();
+  if (size >= 5 && pBuf[0] == 0x00 && pBuf[1] == 0x00 && pBuf[2] == 0x00 && pBuf[3] == 0x01 && pBuf[4] == 0x06) {
+//      RTC_LOG(LS_VERBOSE) << "Skip SEI frame, id:" << frame->Id() << ",  frame size: " << size;
+      return;
+  }
 
   int64_t frame_id = frame->Id();
   bool received_frame_is_keyframe =
