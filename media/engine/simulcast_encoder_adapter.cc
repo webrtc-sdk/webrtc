@@ -872,6 +872,10 @@ VideoEncoder::EncoderInfo SimulcastEncoderAdapter::GetEncoderInfo() const {
         primary_info.apply_alignment_to_all_simulcast_layers ||
         fallback_info.apply_alignment_to_all_simulcast_layers;
 
+    if (!primary_info.supports_simulcast || !fallback_info.supports_simulcast) {
+      encoder_info.apply_alignment_to_all_simulcast_layers = true;
+    }
+
     cached_encoder_contexts_.emplace_back(std::move(encoder_context));
 
     OverrideFromFieldTrial(&encoder_info);
@@ -926,7 +930,10 @@ VideoEncoder::EncoderInfo SimulcastEncoderAdapter::GetEncoderInfo() const {
         encoder_impl_info.requested_resolution_alignment);
     // request alignment on all layers if any of the encoders may need it, or
     // if any non-top layer encoder requests a non-trivial alignment.
-    if (encoder_impl_info.apply_alignment_to_all_simulcast_layers) {
+    if (encoder_impl_info.apply_alignment_to_all_simulcast_layers ||
+        (encoder_impl_info.requested_resolution_alignment > 1 &&
+         (codec_.simulcastStream[i].height < codec_.height ||
+          codec_.simulcastStream[i].width < codec_.width))) {
       encoder_info.apply_alignment_to_all_simulcast_layers = true;
     }
   }
