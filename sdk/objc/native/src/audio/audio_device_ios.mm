@@ -276,14 +276,11 @@ int32_t AudioDeviceIOS::StopPlayout() {
   if (!recording_) {
     ShutdownPlayOrRecord();
 
-    rtc::AtomicOps::ReleaseStore(&playout_is_initialized_, 0);
     rtc::AtomicOps::ReleaseStore(&recording_is_initialized_, 0);
-  } else if (playout_is_initialized_) {
-    // ...
-    rtc::AtomicOps::ReleaseStore(&playout_is_initialized_, 0);
   }
 
   rtc::AtomicOps::ReleaseStore(&playing_, 0);
+  rtc::AtomicOps::ReleaseStore(&playout_is_initialized_, 0);
 
   // Derive average number of calls to OnGetPlayoutData() between detected
   // audio glitches and add the result to a histogram.
@@ -339,14 +336,13 @@ int32_t AudioDeviceIOS::StopRecording() {
     ShutdownPlayOrRecord();
 
     rtc::AtomicOps::ReleaseStore(&playout_is_initialized_, 0);
-    rtc::AtomicOps::ReleaseStore(&recording_is_initialized_, 0);
   } else if (playout_is_initialized_) {
     // restart audio unit with no input
     RestartAudioUnit(false);
-    rtc::AtomicOps::ReleaseStore(&recording_is_initialized_, 0);
   }
 
   rtc::AtomicOps::ReleaseStore(&recording_, 0);
+  rtc::AtomicOps::ReleaseStore(&recording_is_initialized_, 0);
 
   return 0;
 }
