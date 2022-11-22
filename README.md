@@ -44,3 +44,6 @@ This repository contains a fork of WebRTC from Google with various improvements.
 - [flutter-webrtc](https://github.com/flutter-webrtc/flutter-webrtc)
 
 - [LiveKit](https://github.com/livekit)
+
+- [Membrane Framework](https://github.com/membraneframework/membrane_rtc_engine)
+
