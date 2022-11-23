@@ -114,8 +114,6 @@ ABSL_CONST_INIT thread_local bool mutex_locked = false;
                   options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld
                   context:(__bridge void *)RTC_OBJC_TYPE(RTCAudioSession).class];
 
-    _activeCategory = _session.category;
-
     RTCLog(@"RTC_OBJC_TYPE(RTCAudioSession) (%p): init.", self);
   }
   return self;
@@ -543,13 +541,6 @@ ABSL_CONST_INIT thread_local bool mutex_locked = false;
       break;
     case AVAudioSessionRouteChangeReasonCategoryChange:
       RTCLog(@"Audio route changed: CategoryChange to :%@", self.session.category);
-      {
-        if (![_session.category isEqualToString:_activeCategory]) {
-          _activeCategory = _session.category;
-          RTCLog(@"Audio route changed: Restarting Audio Unit");
-          [self notifyDidChangeAudioSessionRecordingEnabled];
-        }
-      }
       break;
     case AVAudioSessionRouteChangeReasonOverride:
       RTCLog(@"Audio route changed: Override");
@@ -1001,15 +992,6 @@ ABSL_CONST_INIT thread_local bool mutex_locked = false;
     SEL sel = @selector(audioSession:failedToSetActive:error:);
     if ([delegate respondsToSelector:sel]) {
       [delegate audioSession:self failedToSetActive:active error:error];
-    }
-  }
-}
-
-- (void)notifyDidChangeAudioSessionRecordingEnabled {
-  for (auto delegate : self.delegates) {
-    SEL sel = @selector(audioSessionDidChangeRecordingEnabled:);
-    if ([delegate respondsToSelector:sel]) {
-      [delegate audioSessionDidChangeRecordingEnabled:self];
     }
   }
 }
