@@ -709,41 +709,28 @@ bool AudioDeviceIOS::RestartAudioUnit(bool enable_input) {
     return false;
   }
 
-  // The audio unit is already initialized or started.
-  // Check to see if the sample rate or buffer size has changed.
-  RTC_OBJC_TYPE(RTCAudioSession)* session = [RTC_OBJC_TYPE(RTCAudioSession) sharedInstance];
-  const double session_sample_rate = session.sampleRate;
-
-  // Extra sanity check to ensure that the new sample rate is valid.
-  if (session_sample_rate <= 0.0) {
-    RTCLogError(@"Sample rate is invalid: %f", session_sample_rate);
-    return false;
-  }
-
   bool restart_audio_unit = false;
   if (audio_unit_->GetState() == VoiceProcessingAudioUnit::kStarted) {
     audio_unit_->Stop();
-    restart_audio_unit = true;
     PrepareForNewStart();
+    restart_audio_unit = true;
   }
 
   if (audio_unit_->GetState() == VoiceProcessingAudioUnit::kInitialized) {
     audio_unit_->Uninitialize();
   }
 
-  // Allocate new buffers given the new stream format.
-  SetupAudioBuffersForActiveAudioSession();
+  // Initialize the audio unit again with the same sample rate.
+  const double sample_rate = playout_parameters_.sample_rate();
 
-  // Initialize the audio unit again with the new sample rate.
-  RTC_DCHECK_EQ(playout_parameters_.sample_rate(), session_sample_rate);
-  if (!audio_unit_->Initialize(session_sample_rate, enable_input)) {
-    RTCLogError(@"Failed to initialize the audio unit with sample rate: %f", session_sample_rate);
+  if (!audio_unit_->Initialize(sample_rate, enable_input)) {
+    RTCLogError(@"Failed to initialize the audio unit with sample rate: %f", sample_rate);
     return false;
   }
 
   // Restart the audio unit if it was already running.
   if (restart_audio_unit && !audio_unit_->Start()) {
-    RTCLogError(@"Failed to start audio unit with sample rate: %f", session_sample_rate);
+    RTCLogError(@"Failed to start audio unit with sample rate: %f", sample_rate);
     return false;
   }
 
