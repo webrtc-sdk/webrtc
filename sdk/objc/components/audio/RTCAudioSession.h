@@ -102,9 +102,6 @@ RTC_OBJC_EXPORT
 - (void)audioSession:(RTC_OBJC_TYPE(RTCAudioSession) *)audioSession
     audioUnitStartFailedWithError:(NSError *)error;
 
-/** Called when audio session changed from output-only to input & output */
-- (void)audioSessionDidChangeRecordingEnabled:(RTC_OBJC_TYPE(RTCAudioSession) *)audioSession;
-
 @end
 
 /** This is a protocol used to inform RTCAudioSession when the audio session

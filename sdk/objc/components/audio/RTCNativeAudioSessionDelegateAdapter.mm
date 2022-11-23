@@ -86,9 +86,4 @@
   _observer->OnChangedOutputVolume();
 }
 
-- (void)audioSessionDidChangeRecordingEnabled:(RTC_OBJC_TYPE(RTCAudioSession) *)session {
-  // re-trigger audio unit init, by using interrupt ended callback
-  _observer->OnChangedRecordingEnabled();
-}
-
 @end
