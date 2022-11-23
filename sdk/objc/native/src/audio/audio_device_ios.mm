@@ -197,9 +197,6 @@ int32_t AudioDeviceIOS::InitPlayout() {
       RTC_LOG_F(LS_ERROR) << "InitPlayOrRecord failed for InitPlayout!";
       return -1;
     }
-  } else {
-    // recording is already initialized
-    // RestartAudioUnit(false);
   }
 
   rtc::AtomicOps::ReleaseStore(&playout_is_initialized_, 1);
