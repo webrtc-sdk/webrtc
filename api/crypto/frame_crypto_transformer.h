@@ -1,0 +1,63 @@
+/*
+ * Copyright 2022 LiveKit
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef WEBRTC_FRAME_CRYPTOR_TRANSFORMER_H_
+#define WEBRTC_FRAME_CRYPTOR_TRANSFORMER_H_
+
+#include "api/frame_transformer_interface.h"
+#include "rtc_base/buffer.h"
+#include "rtc_base/synchronization/mutex.h"
+
+namespace webrtc {
+
+class FrameCryptorTransformer
+    : public rtc::RefCountedObject<webrtc::FrameTransformerInterface> {
+ public:
+  enum class MediaType {
+    kAudioFrame = 0,
+    kVideoFrame,
+  };
+
+  explicit FrameCryptorTransformer(MediaType type);
+  virtual void SetKey(const std::vector<uint8_t>& key);
+
+ protected:
+  virtual void RegisterTransformedFrameCallback(
+      rtc::scoped_refptr<webrtc::TransformedFrameCallback>) override;
+  virtual void RegisterTransformedFrameSinkCallback(
+      rtc::scoped_refptr<webrtc::TransformedFrameCallback>,
+      uint32_t ssrc) override;
+  virtual void UnregisterTransformedFrameSinkCallback(uint32_t ssrc) override;
+  virtual void UnregisterTransformedFrameCallback() override;
+  virtual void Transform(
+      std::unique_ptr<webrtc::TransformableFrameInterface> frame) override;
+
+ private:
+  void encryptFrame(std::unique_ptr<webrtc::TransformableFrameInterface> frame);
+  void decryptFrame(std::unique_ptr<webrtc::TransformableFrameInterface> frame);
+  rtc::Buffer makeIv(uint32_t ssrc, uint32_t timestamp);
+
+ private:
+  mutable webrtc::Mutex mutex_;
+  MediaType type_;
+  rtc::scoped_refptr<webrtc::TransformedFrameCallback> sink_callback_;
+  std::vector<uint8_t> aesKey_;
+  std::map<uint32_t, uint32_t> sendCounts_;
+};
+
+}  // namespace webrtc
+
+#endif  // WEBRTC_FRAME_CRYPTOR_TRANSFORMER_H_
