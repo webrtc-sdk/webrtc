@@ -75,7 +75,7 @@ class VoiceProcessingAudioUnit {
   VoiceProcessingAudioUnit::State GetState() const;
 
   // Initializes the underlying audio unit with the given sample rate.
-  bool Initialize(Float64 sample_rate);
+  bool Initialize(Float64 sample_rate, bool enable_input);
 
   // Starts the underlying audio unit.
   OSStatus Start();

@@ -154,6 +154,11 @@ class AudioDeviceMac : public AudioDeviceGeneric {
   virtual void AttachAudioBuffer(AudioDeviceBuffer* audioBuffer)
       RTC_LOCKS_EXCLUDED(mutex_);
 
+  virtual int32_t SetAudioDeviceSink(AudioDeviceSink* sink) RTC_LOCKS_EXCLUDED(mutex_) {
+    audio_device_module_sink_ = sink;
+    return 0;
+  }
+
  private:
   int32_t InitSpeakerLocked() RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
   int32_t InitMicrophoneLocked() RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
@@ -346,6 +351,8 @@ class AudioDeviceMac : public AudioDeviceGeneric {
   // Typing detection
   // 0x5c is key "9", after that comes function keys.
   bool prev_key_state_[0x5d];
+
+  AudioDeviceSink *audio_device_module_sink_ = nullptr;
 };
 
 }  // namespace webrtc
