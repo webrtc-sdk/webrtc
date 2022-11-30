@@ -59,6 +59,8 @@ class AudioState : public rtc::RefCountInterface {
 
   virtual void SetStereoChannelSwapping(bool enable) = 0;
 
+  virtual void OnMuteStreamChanged() = 0;
+
   static rtc::scoped_refptr<AudioState> Create(
       const AudioState::Config& config);
 

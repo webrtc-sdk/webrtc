@@ -97,22 +97,24 @@ void AudioState::AddSendingStream(webrtc::AudioSendStream* stream,
   UpdateAudioTransportWithSendingStreams();
 
   // Make sure recording is initialized; start recording if enabled.
-  auto* adm = config_.audio_device_module.get();
-  if (!adm->Recording()) {
-    if (adm->InitRecording() == 0) {
-      if (recording_enabled_) {
-#if defined(WEBRTC_WIN)
-        if (adm->BuiltInAECIsAvailable() && !adm->Playing()) {
-          if (!adm->PlayoutIsInitialized()) {
-            adm->InitPlayout();
+  if (ShouldRecord()) {
+    auto* adm = config_.audio_device_module.get();
+    if (!adm->Recording()) {
+      if (adm->InitRecording() == 0) {
+        if (recording_enabled_) {
+  #if defined(WEBRTC_WIN)
+          if (adm->BuiltInAECIsAvailable() && !adm->Playing()) {
+            if (!adm->PlayoutIsInitialized()) {
+              adm->InitPlayout();
+            }
+            adm->StartPlayout();
           }
-          adm->StartPlayout();
+  #endif
+          adm->StartRecording();
         }
-#endif
-        adm->StartRecording();
+      } else {
+        RTC_DLOG_F(LS_ERROR) << "Failed to initialize recording.";
       }
-    } else {
-      RTC_DLOG_F(LS_ERROR) << "Failed to initialize recording.";
     }
   }
 }
@@ -122,7 +124,8 @@ void AudioState::RemoveSendingStream(webrtc::AudioSendStream* stream) {
   auto count = sending_streams_.erase(stream);
   RTC_DCHECK_EQ(1, count);
   UpdateAudioTransportWithSendingStreams();
-  if (sending_streams_.empty()) {
+
+  if (!ShouldRecord()) {
     config_.audio_device_module->StopRecording();
   }
 }
@@ -150,7 +153,7 @@ void AudioState::SetRecording(bool enabled) {
   if (recording_enabled_ != enabled) {
     recording_enabled_ = enabled;
     if (enabled) {
-      if (!sending_streams_.empty()) {
+      if (ShouldRecord()) {
         config_.audio_device_module->StartRecording();
       }
     } else {
@@ -188,6 +191,39 @@ void AudioState::UpdateNullAudioPollerState() {
     null_audio_poller_.reset();
   }
 }
+
+void AudioState::OnMuteStreamChanged() {
+
+  auto* adm = config_.audio_device_module.get();
+  bool should_record = ShouldRecord();
+
+  if (should_record && !adm->Recording()) {
+    if (adm->InitRecording() == 0) {
+      adm->StartRecording();
+    }
+  } else if (!should_record && adm->Recording()) {
+    adm->StopRecording();
+  }
+}
+
+bool AudioState::ShouldRecord() {
+  // no streams to send
+  if (sending_streams_.empty()) {
+    return false;
+  }
+
+  int stream_count = sending_streams_.size();
+
+  int muted_count = 0;
+  for (const auto& kv : sending_streams_) {
+    if (kv.first->GetMuted()) {
+      muted_count++;
+    }
+  }
+
+  return muted_count != stream_count;
+}
+
 }  // namespace internal
 
 rtc::scoped_refptr<AudioState> AudioState::Create(
