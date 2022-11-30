@@ -31,7 +31,6 @@
 #include "rtc_base/byte_buffer.h"
 #include "rtc_base/logging.h"
 
-
 #define IV_SIZE 12
 
 enum class EncryptOrDecrypt { kEncrypt = 0, kDecrypt };
@@ -48,6 +47,17 @@ const EVP_AEAD* GetAesGcmAlgorithmFromKeySize(size_t key_size_bytes) {
       return EVP_aead_aes_128_gcm();
     case 32:
       return EVP_aead_aes_256_gcm();
+    default:
+      return nullptr;
+  }
+}
+
+const EVP_CIPHER* GetAesCbcAlgorithmFromKeySize(size_t key_size_bytes) {
+  switch (key_size_bytes) {
+    case 16:
+      return EVP_aes_128_cbc();
+    case 32:
+      return EVP_aes_256_cbc();
     default:
       return nullptr;
   }
