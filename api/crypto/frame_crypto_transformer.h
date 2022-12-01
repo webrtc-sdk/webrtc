@@ -31,7 +31,12 @@ class FrameCryptorTransformer
     kVideoFrame,
   };
 
-  explicit FrameCryptorTransformer(MediaType type);
+  enum class Algorithm {
+    kAesGcm = 0,
+    kAesCbc,
+  };
+
+  explicit FrameCryptorTransformer(MediaType type, Algorithm algorithm = Algorithm::kAesGcm);
   virtual void SetKey(const std::vector<uint8_t>& key);
 
  protected:
@@ -53,6 +58,7 @@ class FrameCryptorTransformer
  private:
   mutable webrtc::Mutex mutex_;
   MediaType type_;
+  Algorithm algorithm_;
   rtc::scoped_refptr<webrtc::TransformedFrameCallback> sink_callback_;
   std::vector<uint8_t> aesKey_;
   std::map<uint32_t, uint32_t> sendCounts_;

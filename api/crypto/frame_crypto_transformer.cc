@@ -31,7 +31,7 @@
 #include "rtc_base/byte_buffer.h"
 #include "rtc_base/logging.h"
 
-#define IV_SIZE 12
+#define IV_SIZE 16
 
 enum class EncryptOrDecrypt { kEncrypt = 0, kDecrypt };
 
@@ -63,14 +63,14 @@ const EVP_CIPHER* GetAesCbcAlgorithmFromKeySize(size_t key_size_bytes) {
   }
 }
 
-int AeadEncryptDecrypt(EncryptOrDecrypt mode,
-                       const std::vector<uint8_t> raw_key,
-                       const rtc::ArrayView<uint8_t> data,
-                       unsigned int tag_length_bytes,
-                       rtc::ArrayView<uint8_t> iv,
-                       rtc::ArrayView<uint8_t> additional_data,
-                       const EVP_AEAD* aead_alg,
-                       std::vector<uint8_t>* buffer) {
+int AesGcmEncryptDecrypt(EncryptOrDecrypt mode,
+                         const std::vector<uint8_t> raw_key,
+                         const rtc::ArrayView<uint8_t> data,
+                         unsigned int tag_length_bytes,
+                         rtc::ArrayView<uint8_t> iv,
+                         rtc::ArrayView<uint8_t> additional_data,
+                         const EVP_AEAD* aead_alg,
+                         std::vector<uint8_t>* buffer) {
   bssl::ScopedEVP_AEAD_CTX ctx;
 
   if (!aead_alg) {
@@ -116,16 +116,60 @@ int AeadEncryptDecrypt(EncryptOrDecrypt mode,
   return Success;
 }
 
-int AesGcmEncryptDecrypt(EncryptOrDecrypt mode,
+int AesCbcEncryptDecrypt(EncryptOrDecrypt mode,
                          const std::vector<uint8_t>& raw_key,
                          rtc::ArrayView<uint8_t> iv,
-                         rtc::ArrayView<uint8_t> additional_data,
-                         const rtc::ArrayView<uint8_t> data,
-                         std::vector<uint8_t>* buffer) {
-  unsigned int tag_length_bits = 128;
-  return AeadEncryptDecrypt(
-      mode, raw_key, data, tag_length_bits / 8, iv, additional_data,
-      GetAesGcmAlgorithmFromKeySize(raw_key.size()), buffer);
+                         const rtc::ArrayView<uint8_t> input,
+                         std::vector<uint8_t>* output) {
+  const EVP_CIPHER* cipher = GetAesCbcAlgorithmFromKeySize(raw_key.size());
+  RTC_DCHECK(cipher);  // Already handled in Init();
+  RTC_DCHECK_EQ(EVP_CIPHER_iv_length(cipher), iv.size());
+  RTC_DCHECK_EQ(EVP_CIPHER_key_length(cipher), raw_key.size());
+
+  bssl::ScopedEVP_CIPHER_CTX ctx;
+  if (!EVP_CipherInit_ex(ctx.get(), cipher, nullptr,
+                         reinterpret_cast<const uint8_t*>(raw_key.data()),
+                         iv.data(),
+                         mode == EncryptOrDecrypt::kEncrypt ? 1 : 0)) {
+    return OperationError;
+  }
+
+  // Encrypting needs a block size of space to allow for any padding.
+  output->resize(input.size() +
+                 (mode == EncryptOrDecrypt::kEncrypt ? iv.size() : 0));
+  int out_len;
+  if (!EVP_CipherUpdate(ctx.get(), output->data(), &out_len, input.data(),
+                        input.size()))
+    return OperationError;
+
+  // Write out the final block plus padding (if any) to the end of the data
+  // just written.
+  int tail_len;
+  if (!EVP_CipherFinal_ex(ctx.get(), output->data() + out_len, &tail_len))
+    return OperationError;
+
+  out_len += tail_len;
+  RTC_CHECK_LE(out_len, static_cast<int>(output->size()));
+  return Success;
+}
+
+int AesEncryptDecrypt(EncryptOrDecrypt mode,
+                      webrtc::FrameCryptorTransformer::Algorithm algorithm,
+                      const std::vector<uint8_t>& raw_key,
+                      rtc::ArrayView<uint8_t> iv,
+                      rtc::ArrayView<uint8_t> additional_data,
+                      const rtc::ArrayView<uint8_t> data,
+                      std::vector<uint8_t>* buffer) {
+  switch (algorithm) {
+    case webrtc::FrameCryptorTransformer::Algorithm::kAesGcm: {
+      unsigned int tag_length_bits = 128;
+      return AesGcmEncryptDecrypt(
+          mode, raw_key, data, tag_length_bits / 8, iv, additional_data,
+          GetAesGcmAlgorithmFromKeySize(raw_key.size()), buffer);
+    }
+    case webrtc::FrameCryptorTransformer::Algorithm::kAesCbc:
+      return AesCbcEncryptDecrypt(mode, raw_key, iv, data, buffer);
+  }
 }
 
 namespace webrtc {
@@ -134,7 +178,9 @@ uint8_t get_unencrypted_bytes(webrtc::TransformableFrameInterface* frame,
                               FrameCryptorTransformer::MediaType type);
 std::string to_hex(unsigned char* data, int len);
 
-FrameCryptorTransformer::FrameCryptorTransformer(MediaType type) : type_(type) {
+FrameCryptorTransformer::FrameCryptorTransformer(MediaType type,
+                                                 Algorithm algorithm)
+    : type_(type), algorithm_(algorithm) {
   aesKey_.resize(32);
 }
 
@@ -220,8 +266,8 @@ void FrameCryptorTransformer::encryptFrame(
   }
 
   std::vector<uint8_t> buffer;
-  if (AesGcmEncryptDecrypt(EncryptOrDecrypt::kEncrypt, aesKey_, iv, frameHeader,
-                           payload, &buffer) == Success) {
+  if (AesEncryptDecrypt(EncryptOrDecrypt::kEncrypt, algorithm_, aesKey_, iv,
+                        frameHeader, payload, &buffer) == Success) {
     rtc::Buffer encrypted_payload(buffer.data(), buffer.size());
     rtc::Buffer data_out;
     data_out.AppendData(frameHeader);
@@ -277,8 +323,8 @@ void FrameCryptorTransformer::decryptFrame(
     encrypted_payload[i - unencrypted_bytes] = date_in[i];
   }
   std::vector<uint8_t> buffer;
-  if (AesGcmEncryptDecrypt(EncryptOrDecrypt::kDecrypt, aesKey_, iv, frameHeader,
-                           encrypted_payload, &buffer) == Success) {
+  if (AesEncryptDecrypt(EncryptOrDecrypt::kDecrypt, algorithm_, aesKey_, iv,
+                        frameHeader, encrypted_payload, &buffer) == Success) {
     rtc::Buffer payload(buffer.data(), buffer.size());
     rtc::Buffer data_out;
     data_out.AppendData(frameHeader);
