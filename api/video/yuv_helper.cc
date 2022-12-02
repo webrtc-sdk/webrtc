@@ -17,9 +17,6 @@
 #include "yuv_helper.h"
 
 #include "libyuv/convert.h"
-#include "libyuv/convert_argb.h"
-#include "libyuv/convert_from_argb.h"
-#include "libyuv/row.h"
 #include "third_party/libyuv/include/libyuv.h"
 #include "video_rotation.h"
 
@@ -61,6 +58,23 @@ int I420ToNV12(const uint8_t* src_y,
   return libyuv::I420ToNV12(src_y, src_stride_y, src_u, src_stride_u, src_v,
                             src_stride_v, dst_y, dst_stride_y, dst_uv,
                             dst_stride_uv, width, height);
+}
+
+int NV12ToI420(const uint8_t* src_y,
+               int src_stride_y,
+               const uint8_t* src_uv,
+               int src_stride_uv,
+               uint8_t* dst_y,
+               int dst_stride_y,
+               uint8_t* dst_u,
+               int dst_stride_u,
+               uint8_t* dst_v,
+               int dst_stride_v,
+               int width,
+               int height) {
+  return libyuv::NV12ToI420(src_y, src_stride_y, src_uv, src_stride_uv, dst_y,
+                            dst_stride_y, dst_u, dst_stride_u, dst_v,
+                            dst_stride_v, width, height);
 }
 
 int I420ToARGB(const uint8_t* src_y,
@@ -199,218 +213,6 @@ int ARGBToRGB24(const uint8_t* src_argb,
                 int height) {
   return libyuv::ARGBToRGB24(src_argb, src_stride_argb, dst_rgb24,
                              dst_stride_rgb24, width, height);
-}
-
-int NV12ToI420(const uint8_t* src_y,
-               int src_stride_y,
-               const uint8_t* src_uv,
-               int src_stride_uv,
-               uint8_t* dst_y,
-               int dst_stride_y,
-               uint8_t* dst_u,
-               int dst_stride_u,
-               uint8_t* dst_v,
-               int dst_stride_v,
-               int width,
-               int height) {
-  return libyuv::NV12ToI420(src_y, src_stride_y, src_uv, src_stride_uv, dst_y,
-                            dst_stride_y, dst_u, dst_stride_u, dst_v,
-                            dst_stride_v, width, height);
-}
-
-int I444ToI420(const uint8_t* src_y,
-               int src_stride_y,
-               const uint8_t* src_u,
-               int src_stride_u,
-               const uint8_t* src_v,
-               int src_stride_v,
-               uint8_t* dst_y,
-               int dst_stride_y,
-               uint8_t* dst_u,
-               int dst_stride_u,
-               uint8_t* dst_v,
-               int dst_stride_v,
-               int width,
-               int height) {
-  return libyuv::I444ToI420(src_y, src_stride_y, src_u, src_stride_u, src_v,
-                            src_stride_v, dst_y, dst_stride_y, dst_u,
-                            dst_stride_u, dst_v, dst_stride_v, width, height);
-}
-
-int I422ToI420(const uint8_t* src_y,
-               int src_stride_y,
-               const uint8_t* src_u,
-               int src_stride_u,
-               const uint8_t* src_v,
-               int src_stride_v,
-               uint8_t* dst_y,
-               int dst_stride_y,
-               uint8_t* dst_u,
-               int dst_stride_u,
-               uint8_t* dst_v,
-               int dst_stride_v,
-               int width,
-               int height) {
-  return libyuv::I422ToI420(src_y, src_stride_y, src_u, src_stride_u, src_v,
-                            src_stride_v, dst_y, dst_stride_y, dst_u,
-                            dst_stride_u, dst_v, dst_stride_v, width, height);
-}
-
-int I010ToI420(const uint16_t* src_y,
-               int src_stride_y,
-               const uint16_t* src_u,
-               int src_stride_u,
-               const uint16_t* src_v,
-               int src_stride_v,
-               uint8_t* dst_y,
-               int dst_stride_y,
-               uint8_t* dst_u,
-               int dst_stride_u,
-               uint8_t* dst_v,
-               int dst_stride_v,
-               int width,
-               int height) {
-  return libyuv::I010ToI420(src_y, src_stride_y, src_u, src_stride_u, src_v,
-                            src_stride_v, dst_y, dst_stride_y, dst_u,
-                            dst_stride_u, dst_v, dst_stride_v, width, height);
-}
-
-int NV12ToARGB(const uint8_t* src_y,
-               int src_stride_y,
-               const uint8_t* src_uv,
-               int src_stride_uv,
-               uint8_t* dst_argb,
-               int dst_stride_argb,
-               int width,
-               int height) {
-  return libyuv::NV12ToARGB(src_y, src_stride_y, src_uv, src_stride_uv,
-                            dst_argb, dst_stride_argb, width, height);
-}
-
-int NV12ToABGR(const uint8_t* src_y,
-               int src_stride_y,
-               const uint8_t* src_uv,
-               int src_stride_uv,
-               uint8_t* dst_abgr,
-               int dst_stride_abgr,
-               int width,
-               int height) {
-  return libyuv::NV12ToABGR(src_y, src_stride_y, src_uv, src_stride_uv,
-                            dst_abgr, dst_stride_abgr, width, height);
-}
-
-int I444ToARGB(const uint8_t* src_y,
-               int src_stride_y,
-               const uint8_t* src_u,
-               int src_stride_u,
-               const uint8_t* src_v,
-               int src_stride_v,
-               uint8_t* dst_abgr,
-               int dst_stride_abgr,
-               int width,
-               int height) {
-  return libyuv::I444ToARGB(src_y, src_stride_y, src_u, src_stride_u, src_v,
-                            src_stride_v, dst_abgr, dst_stride_abgr, width,
-                            height);
-}
-
-int I444ToABGR(const uint8_t* src_y,
-               int src_stride_y,
-               const uint8_t* src_u,
-               int src_stride_u,
-               const uint8_t* src_v,
-               int src_stride_v,
-               uint8_t* dst_abgr,
-               int dst_stride_abgr,
-               int width,
-               int height) {
-  return libyuv::I444ToABGR(src_y, src_stride_y, src_u, src_stride_u, src_v,
-                            src_stride_v, dst_abgr, dst_stride_abgr, width,
-                            height);
-}
-
-int I422ToARGB(const uint8_t* src_y,
-               int src_stride_y,
-               const uint8_t* src_u,
-               int src_stride_u,
-               const uint8_t* src_v,
-               int src_stride_v,
-               uint8_t* dst_argb,
-               int dst_stride_argb,
-               int width,
-               int height) {
-  return libyuv::I422ToARGB(src_y, src_stride_y, src_u, src_stride_u, src_v,
-                            src_stride_v, dst_argb, dst_stride_argb, width,
-                            height);
-}
-
-int I422ToABGR(const uint8_t* src_y,
-               int src_stride_y,
-               const uint8_t* src_u,
-               int src_stride_u,
-               const uint8_t* src_v,
-               int src_stride_v,
-               uint8_t* dst_abgr,
-               int dst_stride_abgr,
-               int width,
-               int height) {
-  return libyuv::I422ToABGR(src_y, src_stride_y, src_u, src_stride_u, src_v,
-                            src_stride_v, dst_abgr, dst_stride_abgr, width,
-                            height);
-}
-
-int I010ToARGB(const uint16_t* src_y,
-               int src_stride_y,
-               const uint16_t* src_u,
-               int src_stride_u,
-               const uint16_t* src_v,
-               int src_stride_v,
-               uint8_t* dst_argb,
-               int dst_stride_argb,
-               int width,
-               int height) {
-  return libyuv::I010ToARGB(src_y, src_stride_y, src_u, src_stride_u, src_v,
-                            src_stride_v, dst_argb, dst_stride_argb, width,
-                            height);
-}
-
-int I010ToABGR(const uint16_t* src_y,
-               int src_stride_y,
-               const uint16_t* src_u,
-               int src_stride_u,
-               const uint16_t* src_v,
-               int src_stride_v,
-               uint8_t* dst_abgr,
-               int dst_stride_abgr,
-               int width,
-               int height) {
-  return libyuv::I010ToABGR(src_y, src_stride_y, src_u, src_stride_u, src_v,
-                            src_stride_v, dst_abgr, dst_stride_abgr, width,
-                            height);
-}
-
-int ABGRToNV12(const uint8_t* src_abgr,
-               int src_stride_abgr,
-               uint8_t* dst_y,
-               int dst_stride_y,
-               uint8_t* dst_uv,
-               int dst_stride_uv,
-               int width,
-               int height) {
-  return libyuv::ABGRToNV12(src_abgr, src_stride_abgr, dst_y, dst_stride_y,
-                            dst_uv, dst_stride_uv, width, height);
-}
-
-int ARGBToNV12(const uint8_t* src_argb,
-               int src_stride_argb,
-               uint8_t* dst_y,
-               int dst_stride_y,
-               uint8_t* dst_uv,
-               int dst_stride_uv,
-               int width,
-               int height) {
-  return libyuv::ARGBToNV12(src_argb, src_stride_argb, dst_y, dst_stride_y,
-                            dst_uv, dst_stride_uv, width, height);
 }
 
 }  // namespace webrtc
