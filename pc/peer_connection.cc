@@ -445,6 +445,7 @@ bool PeerConnectionInterface::RTCConfiguration::operator==(
     std::vector<rtc::NetworkMask> vpn_list;
     PortAllocatorConfig port_allocator_config;
     absl::optional<TimeDelta> pacer_burst_interval;
+    bool enable_any_address_ports;
   };
   static_assert(sizeof(stuff_being_tested_for_equality) == sizeof(*this),
                 "Did you add something to RTCConfiguration and forget to "
@@ -506,7 +507,8 @@ bool PeerConnectionInterface::RTCConfiguration::operator==(
          port_allocator_config.min_port == o.port_allocator_config.min_port &&
          port_allocator_config.max_port == o.port_allocator_config.max_port &&
          port_allocator_config.flags == o.port_allocator_config.flags &&
-         pacer_burst_interval == o.pacer_burst_interval;
+         pacer_burst_interval == o.pacer_burst_interval &&
+         enable_any_address_ports == o.enable_any_address_ports;
 }
 
 bool PeerConnectionInterface::RTCConfiguration::operator!=(
@@ -2146,6 +2148,11 @@ PeerConnection::InitializePortAllocator_n(
   if (configuration.disable_link_local_networks) {
     port_allocator_flags |= cricket::PORTALLOCATOR_DISABLE_LINK_LOCAL_NETWORKS;
     RTC_LOG(LS_INFO) << "Disable candidates on link-local network interfaces.";
+  }
+
+  if (configuration.enable_any_address_ports) {
+    port_allocator_flags |= cricket::PORTALLOCATOR_ENABLE_ANY_ADDRESS_PORTS;
+    RTC_LOG(LS_INFO) << "Enable gathering on any address ports.";
   }
 
   port_allocator_->set_flags(port_allocator_flags);

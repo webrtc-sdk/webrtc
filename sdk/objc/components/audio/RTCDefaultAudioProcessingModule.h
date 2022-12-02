@@ -22,18 +22,17 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @class RTC_OBJC_TYPE(RTCAudioProcessingConfig);
-@protocol RTC_OBJC_TYPE
-(RTCAudioCustomProcessingDelegate);
+@protocol RTC_OBJC_TYPE (RTCAudioCustomProcessingDelegate);
 
 RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCDefaultAudioProcessingModule) : NSObject <RTC_OBJC_TYPE(RTCAudioProcessingModule)>
 
-- (instancetype)initWithConfig: (nullable RTCAudioProcessingConfig *)config
+- (instancetype)initWithConfig: (nullable RTC_OBJC_TYPE(RTCAudioProcessingConfig) *)config
  capturePostProcessingDelegate: (nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)capturePostProcessingDelegate
    renderPreProcessingDelegate: (nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)renderPreProcessingDelegate
    NS_SWIFT_NAME(init(config:capturePostProcessingDelegate:renderPreProcessingDelegate:)) NS_DESIGNATED_INITIALIZER;
 
-- (void)applyConfig:(RTCAudioProcessingConfig *)config;
+- (void)applyConfig:(RTC_OBJC_TYPE(RTCAudioProcessingConfig) *)config;
 
 // Dynamically update delegates at runtime
 

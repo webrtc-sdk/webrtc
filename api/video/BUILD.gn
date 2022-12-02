@@ -81,6 +81,19 @@ rtc_library("video_frame") {
   absl_deps = [ "//third_party/abseil-cpp/absl/types:optional" ]
 }
 
+rtc_library("yuv_helper") {
+  visibility = [ "*" ]
+  sources = [
+    "yuv_helper.cc",
+    "yuv_helper.h",
+  ]
+
+  deps = [
+    "../../rtc_base/system:rtc_export",
+    "//third_party/libyuv",
+  ]
+}
+
 if (is_android) {
   java_cpp_enum("video_frame_enums") {
     sources = [ "video_frame_buffer.h" ]

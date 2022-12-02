@@ -17,11 +17,11 @@
 #include "api/video/i420_buffer.h"
 #include "sdk/objc/native/src/objc_frame_buffer.h"
 
-@interface RTCObjCVideoSourceAdapter ()
+@interface RTC_OBJC_TYPE(RTCObjCVideoSourceAdapter) ()
 @property(nonatomic) webrtc::ObjCVideoTrackSource *objCVideoTrackSource;
 @end
 
-@implementation RTCObjCVideoSourceAdapter
+@implementation RTC_OBJC_TYPE(RTCObjCVideoSourceAdapter)
 
 @synthesize objCVideoTrackSource = _objCVideoTrackSource;
 
@@ -40,7 +40,7 @@ ObjCVideoTrackSource::ObjCVideoTrackSource(bool is_screencast)
     : AdaptedVideoTrackSource(/* required resolution alignment */ 2),
       is_screencast_(is_screencast) {}
 
-ObjCVideoTrackSource::ObjCVideoTrackSource(RTCObjCVideoSourceAdapter *adapter) : adapter_(adapter) {
+ObjCVideoTrackSource::ObjCVideoTrackSource(RTC_OBJC_TYPE(RTCObjCVideoSourceAdapter) *adapter) : adapter_(adapter) {
   adapter_.objCVideoTrackSource = this;
 }
 

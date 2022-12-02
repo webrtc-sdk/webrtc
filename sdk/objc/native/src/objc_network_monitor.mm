@@ -39,7 +39,7 @@ void ObjCNetworkMonitor::Start() {
   thread_ = rtc::Thread::Current();
   RTC_DCHECK_RUN_ON(thread_);
   safety_flag_->SetAlive();
-  network_monitor_ = [[RTCNetworkMonitor alloc] initWithObserver:this];
+  network_monitor_ = [[RTC_OBJC_TYPE(RTCNetworkMonitor) alloc] initWithObserver:this];
   if (network_monitor_ == nil) {
     RTC_LOG(LS_WARNING) << "Failed to create RTCNetworkMonitor; not available on this OS?";
   }

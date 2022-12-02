@@ -34,16 +34,16 @@ class ObjCEncodedImageBuffer : public webrtc::EncodedImageBufferInterface {
 
   NSData *data_;
 };
-}
+}  // namespace
 
 // A simple wrapper around webrtc::EncodedImageBufferInterface to make it usable with associated
 // objects.
-@interface RTCWrappedEncodedImageBuffer : NSObject
+@interface RTC_OBJC_TYPE (RTCWrappedEncodedImageBuffer): NSObject
 @property(nonatomic) rtc::scoped_refptr<webrtc::EncodedImageBufferInterface> buffer;
 - (instancetype)initWithEncodedImageBuffer:
     (rtc::scoped_refptr<webrtc::EncodedImageBufferInterface>)buffer;
 @end
-@implementation RTCWrappedEncodedImageBuffer
+@implementation RTC_OBJC_TYPE (RTCWrappedEncodedImageBuffer)
 @synthesize buffer = _buffer;
 - (instancetype)initWithEncodedImageBuffer:
     (rtc::scoped_refptr<webrtc::EncodedImageBufferInterface>)buffer {
@@ -59,7 +59,7 @@ class ObjCEncodedImageBuffer : public webrtc::EncodedImageBufferInterface {
 (Private)
 
     - (rtc::scoped_refptr<webrtc::EncodedImageBufferInterface>)encodedData {
-  RTCWrappedEncodedImageBuffer *wrappedBuffer =
+  RTC_OBJC_TYPE(RTCWrappedEncodedImageBuffer) *wrappedBuffer =
       objc_getAssociatedObject(self, @selector(encodedData));
   return wrappedBuffer.buffer;
 }
@@ -68,7 +68,7 @@ class ObjCEncodedImageBuffer : public webrtc::EncodedImageBufferInterface {
   return objc_setAssociatedObject(
       self,
       @selector(encodedData),
-      [[RTCWrappedEncodedImageBuffer alloc] initWithEncodedImageBuffer:buffer],
+      [[RTC_OBJC_TYPE(RTCWrappedEncodedImageBuffer) alloc] initWithEncodedImageBuffer:buffer],
       OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 

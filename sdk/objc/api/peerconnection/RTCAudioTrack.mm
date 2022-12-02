@@ -28,12 +28,12 @@ namespace webrtc {
 class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTrackSinkInterface {
  private:
   os_unfair_lock *lock_;
-  __weak RTCAudioTrack *audio_track_;
+  __weak RTC_OBJC_TYPE(RTCAudioTrack) *audio_track_;
   int64_t total_frames_ = 0;
   bool attached_ = false;
 
  public:
-  AudioSinkConverter(RTCAudioTrack *audioTrack, os_unfair_lock *lock) {
+  AudioSinkConverter(RTC_OBJC_TYPE(RTCAudioTrack) *audioTrack, os_unfair_lock *lock) {
     RTC_LOG(LS_INFO) << "RTCAudioTrack.AudioSinkConverter init";
     audio_track_ = audioTrack;
     lock_ = lock;
@@ -273,7 +273,7 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
   NSArray *renderers = [_renderers allObjects];
   os_unfair_lock_unlock(&_lock);
 
-  for (id<RTCAudioRenderer> renderer in renderers) {
+  for (id<RTC_OBJC_TYPE(RTCAudioRenderer)> renderer in renderers) {
     [renderer renderSampleBuffer:sampleBuffer];
   }
 }

@@ -67,7 +67,7 @@ RTC_OBJC_EXPORT
             audioProcessingModule:
                 (nullable id<RTC_OBJC_TYPE(RTCAudioProcessingModule)>)audioProcessingModule;
 
-@property(nonatomic, readonly) RTCAudioDeviceModule *audioDeviceModule;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioDeviceModule) *audioDeviceModule;
 
 /**
  * Valid kind values are kRTCMediaStreamTrackKindAudio and

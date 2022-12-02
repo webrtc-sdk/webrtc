@@ -19,7 +19,7 @@
 
 NSString *const kDefaultDeviceId = @"default";
 
-@implementation RTCIODevice
+@implementation RTC_OBJC_TYPE(RTCIODevice)
 
 @synthesize type = _type;
 @synthesize deviceId = _deviceId;

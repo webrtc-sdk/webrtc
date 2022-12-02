@@ -30,12 +30,12 @@ static NSString *const shaderSource = MTL_STRINGIFY(
     } Vertex;
 
     typedef struct {
-      float4 position[[position]];
+      float4 position [[position]];
       float2 texcoord;
     } VertexIO;
 
-    vertex VertexIO vertexPassthrough(constant Vertex *verticies[[buffer(0)]],
-                                      uint vid[[vertex_id]]) {
+    vertex VertexIO vertexPassthrough(constant Vertex * verticies [[buffer(0)]],
+                                      uint vid [[vertex_id]]) {
       VertexIO out;
       constant Vertex &v = verticies[vid];
       out.position = float4(float2(v.position), 0.0, 1.0);
@@ -43,9 +43,9 @@ static NSString *const shaderSource = MTL_STRINGIFY(
       return out;
     }
 
-    fragment half4 fragmentColorConversion(VertexIO in[[stage_in]],
-                                           texture2d<half, access::sample> texture[[texture(0)]],
-                                           constant bool &isARGB[[buffer(0)]]) {
+    fragment half4 fragmentColorConversion(VertexIO in [[stage_in]],
+                                           texture2d<half, access::sample> texture [[texture(0)]],
+                                           constant bool &isARGB [[buffer(0)]]) {
       constexpr sampler s(address::clamp_to_edge, filter::linear);
 
       half4 out = texture.sample(s, in.texcoord);
@@ -56,7 +56,7 @@ static NSString *const shaderSource = MTL_STRINGIFY(
       return out;
     });
 
-@implementation RTCMTLRGBRenderer {
+@implementation RTC_OBJC_TYPE (RTCMTLRGBRenderer) {
   // Textures.
   CVMetalTextureCacheRef _textureCache;
   id<MTLTexture> _texture;
@@ -73,8 +73,8 @@ static NSString *const shaderSource = MTL_STRINGIFY(
 }
 
 - (BOOL)initializeTextureCache {
-  CVReturn status = CVMetalTextureCacheCreate(kCFAllocatorDefault, nil, [self currentMetalDevice],
-                                              nil, &_textureCache);
+  CVReturn status = CVMetalTextureCacheCreate(
+      kCFAllocatorDefault, nil, [self currentMetalDevice], nil, &_textureCache);
   if (status != kCVReturnSuccess) {
     RTCLogError(@"Metal: Failed to initialize metal texture cache. Return status is %d", status);
     return NO;
@@ -130,9 +130,15 @@ static NSString *const shaderSource = MTL_STRINGIFY(
     return NO;
   }
 
-  CVReturn result = CVMetalTextureCacheCreateTextureFromImage(
-                kCFAllocatorDefault, _textureCache, pixelBuffer, nil, mtlPixelFormat,
-                width, height, 0, &textureOut);
+  CVReturn result = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault,
+                                                              _textureCache,
+                                                              pixelBuffer,
+                                                              nil,
+                                                              mtlPixelFormat,
+                                                              width,
+                                                              height,
+                                                              0,
+                                                              &textureOut);
   if (result == kCVReturnSuccess) {
     gpuTexture = CVMetalTextureGetTexture(textureOut);
   }

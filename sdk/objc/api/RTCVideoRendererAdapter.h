@@ -10,6 +10,8 @@
 
 #import <Foundation/Foundation.h>
 
+#import "RTCMacros.h"
+
 NS_ASSUME_NONNULL_BEGIN
 
 /*
@@ -18,7 +20,7 @@ NS_ASSUME_NONNULL_BEGIN
  * adapter adapts calls made to that interface to the RTCVideoRenderer supplied
  * during construction.
  */
-@interface RTCVideoRendererAdapter : NSObject
+@interface RTC_OBJC_TYPE (RTCVideoRendererAdapter): NSObject
 
 - (instancetype)init NS_UNAVAILABLE;
 
