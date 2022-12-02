@@ -86,6 +86,7 @@ rtc_library("yuv_helper") {
   ]
 
   deps = [
+    "../../rtc_base/system:rtc_export",
     "//third_party/libyuv",
   ]
 }

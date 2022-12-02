@@ -90,7 +90,7 @@ void I420ToARGB(const uint8_t* src_y,
                      src_stride_v, dst_argb, dst_stride_argb, width, height);
 }
 
-void I420ToBGRA(uint8_t* src_y,
+void I420ToBGRA(const uint8_t* src_y,
                 int src_stride_y,
                 const uint8_t* src_u,
                 int src_stride_u,
