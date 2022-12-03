@@ -41,7 +41,7 @@ class KeyManagerImpl : public KeyManager {
       return false;
     }
     webrtc::MutexLock lock(&mutex_);
-    if (index > keys_.size()) {
+    if (index > (int)keys_.size()) {
       keys_.resize(index + 1);
     }
     keys_[index] = key;
@@ -84,7 +84,7 @@ class FrameCryptorTransformer
   };
 
   explicit FrameCryptorTransformer(MediaType type,
-                                   Algorithm algorithm = Algorithm::kAesGcm,
+                                   Algorithm algorithm,
                                    std::shared_ptr<KeyManager> key_manager);
 
   virtual void SetKeyIndex(int index);
@@ -114,7 +114,7 @@ class FrameCryptorTransformer
   Algorithm algorithm_;
   rtc::scoped_refptr<webrtc::TransformedFrameCallback> sink_callback_;
 
-  int key_index_ RTC_GUARDED_BY(mutex_) = 0;
+  int key_index_ = 0;
   std::map<uint32_t, uint32_t> sendCounts_;
   std::shared_ptr<KeyManager> key_manager_;
 };
