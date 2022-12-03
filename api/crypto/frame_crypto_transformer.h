@@ -23,6 +23,53 @@
 
 namespace webrtc {
 
+class KeyManager {
+ public:
+  enum { kMaxKeySize = 32 };
+
+ public:
+  virtual const std::vector<std::vector<uint8_t>> keys() const = 0;
+
+ protected:
+  virtual ~KeyManager() {}
+};
+
+class KeyManagerImpl : public KeyManager {
+ public:
+  virtual bool SetKey(int index, std::vector<uint8_t> key) {
+    if (index > kMaxKeySize) {
+      return false;
+    }
+    webrtc::MutexLock lock(&mutex_);
+    if (index > keys_.size()) {
+      keys_.resize(index + 1);
+    }
+    keys_[index] = key;
+    return true;
+  }
+
+  virtual bool SetKeys(std::vector<std::vector<uint8_t>> keys) {
+    webrtc::MutexLock lock(&mutex_);
+    keys_ = keys;
+    return true;
+  }
+
+  virtual bool AddKey(std::vector<uint8_t> key) {
+    webrtc::MutexLock lock(&mutex_);
+    keys_.push_back(key);
+    return true;
+  }
+
+  const std::vector<std::vector<uint8_t>> keys() const override {
+    webrtc::MutexLock lock(&mutex_);
+    return keys_;
+  }
+
+ private:
+  mutable webrtc::Mutex mutex_;
+  std::vector<std::vector<uint8_t>> keys_;
+};
+
 class FrameCryptorTransformer
     : public rtc::RefCountedObject<webrtc::FrameTransformerInterface> {
  public:
@@ -36,8 +83,12 @@ class FrameCryptorTransformer
     kAesCbc,
   };
 
-  explicit FrameCryptorTransformer(MediaType type, Algorithm algorithm = Algorithm::kAesGcm);
-  virtual void SetKey(const std::vector<uint8_t>& key);
+  explicit FrameCryptorTransformer(MediaType type,
+                                   Algorithm algorithm = Algorithm::kAesGcm,
+                                   std::shared_ptr<KeyManager> key_manager);
+
+  virtual void SetKeyIndex(int index);
+  virtual void SetEnabled(bool enable);
 
  protected:
   virtual void RegisterTransformedFrameCallback(
@@ -57,11 +108,15 @@ class FrameCryptorTransformer
 
  private:
   mutable webrtc::Mutex mutex_;
+  mutable webrtc::Mutex sink_mutex_;
+  bool enabled_cryption_ RTC_GUARDED_BY(mutex_) = false;
   MediaType type_;
   Algorithm algorithm_;
   rtc::scoped_refptr<webrtc::TransformedFrameCallback> sink_callback_;
-  std::vector<uint8_t> aesKey_;
+
+  int key_index_ RTC_GUARDED_BY(mutex_) = 0;
   std::map<uint32_t, uint32_t> sendCounts_;
+  std::shared_ptr<KeyManager> key_manager_;
 };
 
 }  // namespace webrtc

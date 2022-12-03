@@ -178,47 +178,60 @@ uint8_t get_unencrypted_bytes(webrtc::TransformableFrameInterface* frame,
                               FrameCryptorTransformer::MediaType type);
 std::string to_hex(unsigned char* data, int len);
 
-FrameCryptorTransformer::FrameCryptorTransformer(MediaType type,
-                                                 Algorithm algorithm)
-    : type_(type), algorithm_(algorithm) {
-  aesKey_.resize(32);
-}
+FrameCryptorTransformer::FrameCryptorTransformer(
+    MediaType type,
+    Algorithm algorithm,
+    std::shared_ptr<KeyManager> key_manager)
+    : type_(type), algorithm_(algorithm), key_manager_(key_manager) {}
 
+/*
 void FrameCryptorTransformer::SetKey(const std::vector<uint8_t>& key) {
+  webrtc::MutexLock lock(&mutex_);
   if (key.size() != 16 && key.size() != 32) {
     RTC_LOG(LS_ERROR) << "key size must be 16 or 32 bytes";
     return;
   }
   aesKey_ = key;
 }
+*/
+
+void FrameCryptorTransformer::SetKeyIndex(int index) {
+  webrtc::MutexLock lock(&mutex_);
+  key_index_ = index;
+}
+
+void FrameCryptorTransformer::SetEnabled(bool enabled) {
+  webrtc::MutexLock lock(&mutex_);
+  enabled_cryption_ = enabled;
+}
 
 void FrameCryptorTransformer::RegisterTransformedFrameSinkCallback(
     rtc::scoped_refptr<webrtc::TransformedFrameCallback> callback,
     uint32_t ssrc) {
-  webrtc::MutexLock lock(&mutex_);
+  webrtc::MutexLock lock(&sink_mutex_);
   sink_callback_ = callback;
 }
 
 void FrameCryptorTransformer::UnregisterTransformedFrameSinkCallback(
     uint32_t ssrc) {
-  webrtc::MutexLock lock(&mutex_);
+  webrtc::MutexLock lock(&sink_mutex_);
   sink_callback_ = nullptr;
 }
 
 void FrameCryptorTransformer::RegisterTransformedFrameCallback(
     rtc::scoped_refptr<webrtc::TransformedFrameCallback> callback) {
-  webrtc::MutexLock lock(&mutex_);
+  webrtc::MutexLock lock(&sink_mutex_);
   sink_callback_ = callback;
 }
 
 void FrameCryptorTransformer::UnregisterTransformedFrameCallback() {
-  webrtc::MutexLock lock(&mutex_);
+  webrtc::MutexLock lock(&sink_mutex_);
   sink_callback_ = nullptr;
 }
 
 void FrameCryptorTransformer::Transform(
     std::unique_ptr<webrtc::TransformableFrameInterface> frame) {
-  webrtc::MutexLock lock(&mutex_);
+  webrtc::MutexLock lock(&sink_mutex_);
   if (sink_callback_ == nullptr)
     return;
   if (frame->GetData().size() == 0 && sink_callback_) {
@@ -253,11 +266,10 @@ void FrameCryptorTransformer::encryptFrame(
     frameHeader[i] = date_in[i];
   }
 
-  // TODO:
-  uint8_t keyIndex = 0;
+  std::vector<uint8_t> aes_key = key_manager_->keys()[key_index_];
   rtc::Buffer frameTrailer(2);
   frameTrailer[0] = IV_SIZE;
-  frameTrailer[1] = keyIndex;
+  frameTrailer[1] = key_index_;
   rtc::Buffer iv = makeIv(frame->GetSsrc(), frame->GetTimestamp());
 
   rtc::Buffer payload(date_in.size() - unencrypted_bytes);
@@ -266,7 +278,7 @@ void FrameCryptorTransformer::encryptFrame(
   }
 
   std::vector<uint8_t> buffer;
-  if (AesEncryptDecrypt(EncryptOrDecrypt::kEncrypt, algorithm_, aesKey_, iv,
+  if (AesEncryptDecrypt(EncryptOrDecrypt::kEncrypt, algorithm_, aes_key, iv,
                         frameHeader, payload, &buffer) == Success) {
     rtc::Buffer encrypted_payload(buffer.data(), buffer.size());
     rtc::Buffer data_out;
@@ -284,8 +296,8 @@ void FrameCryptorTransformer::encryptFrame(
     RTC_LOG(LS_INFO) << "FrameCryptorTransformer::encryptFrame() ivLength="
                      << static_cast<int>(iv.size()) << " unencrypted_bytes="
                      << static_cast<int>(unencrypted_bytes)
-                     << " keyIndex=" << static_cast<int>(keyIndex)
-                     << " aesKey=" << to_hex(aesKey_.data(), aesKey_.size())
+                     << " keyIndex=" << static_cast<int>(key_index_)
+                     << " aesKey=" << to_hex(aes_key.data(), aes_key.size())
                      << " iv=" << to_hex(iv.data(), iv.size());
   }
 
@@ -306,11 +318,13 @@ void FrameCryptorTransformer::decryptFrame(
   frameTrailer[0] = date_in[date_in.size() - 2];
   frameTrailer[1] = date_in[date_in.size() - 1];
   uint8_t ivLength = frameTrailer[0];
-  uint8_t keyIndex = frameTrailer[1];
+  uint8_t key_index = frameTrailer[1];
 
-  if (ivLength != IV_SIZE || (keyIndex < 0 || keyIndex >= 10)) {
+  if (ivLength != IV_SIZE ||
+      (key_index < 0 || key_index >= KeyManager::kMaxKeySize)) {
     return;
   }
+  std::vector<uint8_t> aes_key = key_manager_->keys()[key_index];
 
   rtc::Buffer iv = rtc::Buffer(ivLength);
   for (size_t i = 0; i < ivLength; i++) {
@@ -323,7 +337,7 @@ void FrameCryptorTransformer::decryptFrame(
     encrypted_payload[i - unencrypted_bytes] = date_in[i];
   }
   std::vector<uint8_t> buffer;
-  if (AesEncryptDecrypt(EncryptOrDecrypt::kDecrypt, algorithm_, aesKey_, iv,
+  if (AesEncryptDecrypt(EncryptOrDecrypt::kDecrypt, algorithm_, aes_key, iv,
                         frameHeader, encrypted_payload, &buffer) == Success) {
     rtc::Buffer payload(buffer.data(), buffer.size());
     rtc::Buffer data_out;
@@ -334,8 +348,8 @@ void FrameCryptorTransformer::decryptFrame(
     RTC_LOG(LS_INFO) << "FrameCryptorTransformer::decryptFrame() ivLength="
                      << static_cast<int>(ivLength) << " unencrypted_bytes="
                      << static_cast<int>(unencrypted_bytes)
-                     << " keyIndex=" << static_cast<int>(keyIndex)
-                     << " aesKey=" << to_hex(aesKey_.data(), aesKey_.size())
+                     << " keyIndex=" << static_cast<int>(key_index_)
+                     << " aesKey=" << to_hex(aes_key.data(), aes_key.size())
                      << " iv=" << to_hex(iv.data(), iv.size());
   }
   if (sink_callback_)
