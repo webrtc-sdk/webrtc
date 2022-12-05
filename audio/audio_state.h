@@ -65,6 +65,7 @@ class AudioState : public webrtc::AudioState {
   void UpdateAudioTransportWithSendingStreams();
   void UpdateNullAudioPollerState();
 
+  // Returns true when at least 1 stream exists and all streams are not muted.
   bool ShouldRecord();
 
   SequenceChecker thread_checker_;
