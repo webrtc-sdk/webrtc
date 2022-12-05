@@ -87,6 +87,7 @@ class WebRtcVoiceEngine final : public VoiceEngineInterface {
   // Stops AEC dump.
   void StopAecDump() override;
 
+  // Moved to public so WebRtcVoiceMediaChannel can access it.
   webrtc::AudioState* audio_state();
 
  private:
