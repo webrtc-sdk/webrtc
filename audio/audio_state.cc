@@ -102,6 +102,8 @@ void AudioState::AddSendingStream(webrtc::AudioSendStream* stream,
     if (!adm->Recording()) {
       if (adm->InitRecording() == 0) {
         if (recording_enabled_) {
+
+          // TODO: Verify if the following windows only logic is still required.
 #if defined(WEBRTC_WIN)
           if (adm->BuiltInAECIsAvailable() && !adm->Playing()) {
             if (!adm->PlayoutIsInitialized()) {
