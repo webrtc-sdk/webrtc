@@ -271,7 +271,8 @@
     return;
   }
 
-  // Rendering native CVPixelBuffer is not supported on OS X.
+  // Workaround to support RTCCVPixelBuffer rendering.
+  // RTCMTLRGBRenderer seems to be broken at the moment.
   BOOL useI420 = NO;
   if ([frame.buffer isKindOfClass:[RTC_OBJC_TYPE(RTCCVPixelBuffer) class]]) {
     RTC_OBJC_TYPE(RTCCVPixelBuffer) *buffer = (RTC_OBJC_TYPE(RTCCVPixelBuffer) *)frame.buffer;
