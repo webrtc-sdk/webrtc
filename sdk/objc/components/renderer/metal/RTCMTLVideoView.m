@@ -271,9 +271,6 @@
     return;
   }
 
-#if TARGET_OS_IPHONE
-  self.videoFrame = frame;
-#elif TARGET_OS_OSX
   // Rendering native CVPixelBuffer is not supported on OS X.
   BOOL useI420 = NO;
   if ([frame.buffer isKindOfClass:[RTC_OBJC_TYPE(RTCCVPixelBuffer) class]]) {
@@ -282,7 +279,6 @@
     useI420 = pixelFormat == kCVPixelFormatType_32BGRA || pixelFormat == kCVPixelFormatType_32ARGB;
   }
   self.videoFrame = useI420 ? [frame newI420VideoFrame] : frame;
-#endif
 }
 
 #pragma mark - Cross platform
