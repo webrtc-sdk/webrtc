@@ -31,8 +31,6 @@
 #include "rtc_base/byte_buffer.h"
 #include "rtc_base/logging.h"
 
-#define IV_SIZE 16
-
 enum class EncryptOrDecrypt { kEncrypt = 0, kDecrypt };
 
 #define Success 0
@@ -184,17 +182,6 @@ FrameCryptorTransformer::FrameCryptorTransformer(
     std::shared_ptr<KeyManager> key_manager)
     : type_(type), algorithm_(algorithm), key_manager_(key_manager) {}
 
-/*
-void FrameCryptorTransformer::SetKey(const std::vector<uint8_t>& key) {
-  webrtc::MutexLock lock(&mutex_);
-  if (key.size() != 16 && key.size() != 32) {
-    RTC_LOG(LS_ERROR) << "key size must be 16 or 32 bytes";
-    return;
-  }
-  aesKey_ = key;
-}
-*/
-
 void FrameCryptorTransformer::SetKeyIndex(int index) {
   webrtc::MutexLock lock(&mutex_);
   key_index_ = index;
@@ -268,7 +255,7 @@ void FrameCryptorTransformer::encryptFrame(
 
   std::vector<uint8_t> aes_key = key_manager_->keys()[key_index_];
   rtc::Buffer frameTrailer(2);
-  frameTrailer[0] = IV_SIZE;
+  frameTrailer[0] = getIvSize();
   frameTrailer[1] = key_index_;
   rtc::Buffer iv = makeIv(frame->GetSsrc(), frame->GetTimestamp());
 
@@ -320,7 +307,7 @@ void FrameCryptorTransformer::decryptFrame(
   uint8_t ivLength = frameTrailer[0];
   uint8_t key_index = frameTrailer[1];
 
-  if (ivLength != IV_SIZE ||
+  if (ivLength !=  getIvSize() ||
       (key_index < 0 || key_index >= KeyManager::kMaxKeySize)) {
     return;
   }
@@ -370,9 +357,20 @@ rtc::Buffer FrameCryptorTransformer::makeIv(uint32_t ssrc, uint32_t timestamp) {
   buf.WriteUInt32(sendCount % 0xFFFF);
   sendCounts_[ssrc] = sendCount + 1;
 
-  RTC_CHECK_EQ(buf.Length(), IV_SIZE);
+  RTC_CHECK_EQ(buf.Length(), getIvSize());
 
   return rtc::Buffer(buf.Data(), buf.Length());
+}
+
+uint8_t FrameCryptorTransformer::getIvSize() {
+  switch (algorithm_) {
+    case Algorithm::kAesGcm:
+      return 12;
+    case Algorithm::kAesCbc:
+      return 16;
+    default:
+      return 0;
+  }
 }
 
 uint8_t get_unencrypted_bytes(webrtc::TransformableFrameInterface* frame,

@@ -107,6 +107,7 @@ class FrameCryptorTransformer
   void encryptFrame(std::unique_ptr<webrtc::TransformableFrameInterface> frame);
   void decryptFrame(std::unique_ptr<webrtc::TransformableFrameInterface> frame);
   rtc::Buffer makeIv(uint32_t ssrc, uint32_t timestamp);
+  uint8_t getIvSize();
 
  private:
   mutable webrtc::Mutex mutex_;
@@ -115,7 +116,6 @@ class FrameCryptorTransformer
   MediaType type_;
   Algorithm algorithm_;
   rtc::scoped_refptr<webrtc::TransformedFrameCallback> sink_callback_;
-
   int key_index_ = 0;
   std::map<uint32_t, uint32_t> sendCounts_;
   std::shared_ptr<KeyManager> key_manager_;
