@@ -34,43 +34,6 @@ class KeyManager {
   virtual ~KeyManager() {}
 };
 
-class DefaultKeyManager : public KeyManager {
- public:
-  DefaultKeyManager() = default;
-
-  virtual bool SetKey(int index, std::vector<uint8_t> key) {
-    if (index > kMaxKeySize) {
-      return false;
-    }
-    webrtc::MutexLock lock(&mutex_);
-    if (index > (int)keys_.size()) {
-      keys_.resize(index + 1);
-    }
-    keys_[index] = key;
-    return true;
-  }
-
-  virtual bool SetKeys(std::vector<std::vector<uint8_t>> keys) {
-    webrtc::MutexLock lock(&mutex_);
-    keys_ = keys;
-    return true;
-  }
-
-  virtual bool AddKey(std::vector<uint8_t> key) {
-    webrtc::MutexLock lock(&mutex_);
-    keys_.push_back(key);
-    return true;
-  }
-
-  const std::vector<std::vector<uint8_t>> keys() const override {
-    webrtc::MutexLock lock(&mutex_);
-    return keys_;
-  }
-
- private:
-  mutable webrtc::Mutex mutex_;
-  std::vector<std::vector<uint8_t>> keys_;
-};
 
 class FrameCryptorTransformer
     : public rtc::RefCountedObject<webrtc::FrameTransformerInterface> {
