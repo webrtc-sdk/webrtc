@@ -34,7 +34,6 @@ class KeyManager {
   virtual ~KeyManager() {}
 };
 
-
 class FrameCryptorTransformer
     : public rtc::RefCountedObject<webrtc::FrameTransformerInterface> {
  public:
@@ -53,7 +52,12 @@ class FrameCryptorTransformer
                                    std::shared_ptr<KeyManager> key_manager);
 
   virtual void SetKeyIndex(int index);
+  virtual int key_index() const { return key_index_; };
   virtual void SetEnabled(bool enable);
+  virtual bool enabled() const {
+    webrtc::MutexLock lock(&mutex_);
+    return enabled_cryption_;
+  };
 
  protected:
   virtual void RegisterTransformedFrameCallback(
