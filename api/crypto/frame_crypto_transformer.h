@@ -34,9 +34,9 @@ class KeyManager {
   virtual ~KeyManager() {}
 };
 
-class KeyManagerImpl : public KeyManager {
+class DefaultKeyManager : public KeyManager {
  public:
-  KeyManagerImpl() = default;
+  DefaultKeyManager() = default;
 
   virtual bool SetKey(int index, std::vector<uint8_t> key) {
     if (index > kMaxKeySize) {
