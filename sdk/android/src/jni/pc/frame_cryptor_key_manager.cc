@@ -24,7 +24,7 @@ namespace jni {
 
 ScopedJavaLocalRef<jobject> NativeToJavaFrameCryptorKeyManager(
     JNIEnv* env,
-    rtc::scoped_refptr<KeyManager> key_manager) {
+    rtc::scoped_refptr<DefaultKeyManagerImpl> key_manager) {
   if (!key_manager)
     return nullptr;
   // Sender is now owned by the Java object, and will be freed from
@@ -35,26 +35,26 @@ ScopedJavaLocalRef<jobject> NativeToJavaFrameCryptorKeyManager(
 
 jboolean JNI_FrameCryptorKeyManager_SetKey(
     JNIEnv* jni,
-    jlong keyManagerPointer,
-    jint index,
+    jlong j_key_manager,
+    jint j_index,
     const base::android::JavaParamRef<jbyteArray>& j_key) {
   auto key = JavaToNativeByteArray(jni, j_key);
-  return true;
+  return reinterpret_cast<DefaultKeyManagerImpl*>(j_key_manager)
+      ->SetKey(j_index, key);
 }
 
 static jint JNI_FrameCryptorKeyManager_GetKeyCount(JNIEnv* jni,
                                                    jlong j_key_manager) {
-  return 0;
+  return reinterpret_cast<DefaultKeyManagerImpl*>(j_key_manager)->KeyCount();
 }
 
 static ScopedJavaLocalRef<jbyteArray> JNI_FrameCryptorKeyManager_GetKey(
     JNIEnv* jni,
     jlong j_key_manager,
     jint j_index) {
-  std::vector<int8_t> key = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-                             0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
-  rtc::ArrayView<int8_t> key_view(key);
-  return NativeToJavaByteArray(jni, key_view);
+  auto uint8Key = reinterpret_cast<DefaultKeyManagerImpl*>(j_key_manager)->GetKey(j_index);
+  std::vector<int8_t> int8tKey = std::vector<int8_t>(uint8Key.begin(), uint8Key.end());
+  return NativeToJavaByteArray(jni, rtc::ArrayView<int8_t>(int8tKey));
 }
 
 }  // namespace jni

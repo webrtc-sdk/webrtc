@@ -17,23 +17,27 @@
 package org.webrtc;
 
 public class FrameCryptorFactory {
+
+  public static FrameCryptorKeyManager createFrameCryptorKeyManager() {
+    return nativeCreateFrameCryptorKeyManager();
+  }
+
   public static FrameCryptor createFrameCryptorForRtpSender(
       RtpSender rtpSender, FrameCryptorAlgorithm algorithm, FrameCryptorKeyManager keyManager) {
-    long nativeFrameCryptor = nativeCreateFrameCryptorForRtpSender(rtpSender.getNativeRtpSender(),
-        algorithm.ordinal(), keyManager.getNativeKeyManager());
-    return new FrameCryptor(nativeFrameCryptor);
+    return nativeCreateFrameCryptorForRtpSender(
+        rtpSender.getNativeRtpSender(), algorithm.ordinal(), keyManager.getNativeKeyManager());
   }
 
   public static FrameCryptor createFrameCryptorForRtpReceiver(
       RtpReceiver rtpReceiver, FrameCryptorAlgorithm algorithm, FrameCryptorKeyManager keyManager) {
-    long nativeFrameCryptor =
-        nativeCreateFrameCryptorForRtpReceiver(rtpReceiver.getNativeRtpReceiver(),
-            algorithm.ordinal(), keyManager.getNativeKeyManager());
-    return new FrameCryptor(nativeFrameCryptor);
+    return nativeCreateFrameCryptorForRtpReceiver(
+        rtpReceiver.getNativeRtpReceiver(), algorithm.ordinal(), keyManager.getNativeKeyManager());
   }
 
-  private static native long nativeCreateFrameCryptorForRtpSender(
-      long nativeRtpSender, int algorithm, long nativeFrameCryptorKeyManager);
-  private static native long nativeCreateFrameCryptorForRtpReceiver(
-      long nativeRtpReceiver, int algorithm, long nativeFrameCryptorKeyManager);
+  private static native FrameCryptor nativeCreateFrameCryptorForRtpSender(
+      long rtpSender, int algorithm, long nativeFrameCryptorKeyManager);
+  private static native FrameCryptor nativeCreateFrameCryptorForRtpReceiver(
+      long rtpReceiver, int algorithm, long nativeFrameCryptorKeyManager);
+  
+  private static native FrameCryptorKeyManager nativeCreateFrameCryptorKeyManager();
 }

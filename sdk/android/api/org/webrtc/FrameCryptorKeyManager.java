@@ -39,7 +39,7 @@ public class FrameCryptorKeyManager {
   }
 
   public byte[] getKey(int index) {
-    return nativeGetKey(nativeKeyManager);
+    return nativeGetKey(nativeKeyManager, index);
   }
 
   public void dispose() {

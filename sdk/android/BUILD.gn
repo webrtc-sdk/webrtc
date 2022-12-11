@@ -1421,6 +1421,7 @@ if (current_os == "linux" || is_android) {
       "api/org/webrtc/DataChannel.java",
       "api/org/webrtc/DtmfSender.java",
       "api/org/webrtc/FrameCryptor.java",
+      "api/org/webrtc/FrameCryptorFactory.java",
       "api/org/webrtc/FrameCryptorKeyManager.java",
       "api/org/webrtc/IceCandidate.java",
       "api/org/webrtc/IceCandidateErrorEvent.java",
