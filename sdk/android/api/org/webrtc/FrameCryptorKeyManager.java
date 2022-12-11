@@ -21,8 +21,9 @@ import java.util.ArrayList;
 public class FrameCryptorKeyManager {
   private long nativeKeyManager;
 
-  public FrameCryptorKeyManager() {
-    this.nativeKeyManager = createNativeKeyManager();
+  @CalledByNative
+  public FrameCryptorKeyManager(long nativeKeyManager) {
+    this.nativeKeyManager = nativeKeyManager;
   }
 
   public long getNativeKeyManager() {
@@ -30,27 +31,31 @@ public class FrameCryptorKeyManager {
   }
 
   public boolean setKey(int index, byte[] key){
-    return nativeSetKey(index, key);
+    return nativeSetKey(nativeKeyManager, index, key);
   }
 
-  public boolean setKeys(ArrayList<byte[]> keys) {
-    return nativeSetKeys(keys);
+  public int getKeyCount(){
+    return nativeGetKeyCount(nativeKeyManager);
   }
 
-  public ArrayList<byte[]> getKeys() {
-    return nativeGetKeys();
+  public byte[] getKey(int index) {
+    return nativeGetKey(nativeKeyManager);
   }
 
   public void dispose() {
-    if (nativeKeyManager != 0) {
-      nativeDispose(nativeKeyManager);
-      nativeKeyManager = 0;
+    checkKeyManagerExists();
+    JniCommon.nativeReleaseRef(nativeKeyManager);
+    nativeKeyManager = 0;
+  }
+
+  private void checkKeyManagerExists() {
+    if (nativeKeyManager == 0) {
+      throw new IllegalStateException("FrameCryptorKeyManager has been disposed.");
     }
   }
 
-  private static native boolean nativeSetKey(int index, byte[] key);
-  private static native boolean nativeSetKeys(ArrayList<byte[]> keys);
-  private static native ArrayList<byte[]> nativeGetKeys();
   private static native long createNativeKeyManager();
-  private static native void nativeDispose(long nativeKeyManager);
+  private static native boolean nativeSetKey(long keyManagerPointer, int index, byte[] key);
+  private static native int nativeGetKeyCount(long keyManagerPointer);
+  private static native byte[] nativeGetKey(long keyManagerPointer, int index);
 }

@@ -16,6 +16,8 @@
 
 package org.webrtc;
 
+import androidx.annotation.Nullable;
+
 public class FrameCryptor {
   private long nativeFrameCryptor;
 
@@ -23,36 +25,46 @@ public class FrameCryptor {
     return nativeFrameCryptor;
   }
 
+  @CalledByNative
   public FrameCryptor(long nativeFrameCryptor) {
     this.nativeFrameCryptor = nativeFrameCryptor;
   }
 
   public void setEnabled(boolean enabled) {
-    nativeSetEnabled(enabled);
+    checkFrameCryptorExists();
+    nativeSetEnabled(nativeFrameCryptor, enabled);
   }
 
   public boolean isEnabled() {
-    return nativeIsEnabled();
-  }
-
-  public void setKeyIndex(int index) {
-    nativeSetKeyIndex(index);
+    checkFrameCryptorExists();
+    return nativeIsEnabled(nativeFrameCryptor);
   }
 
   public int getKeyIndex() {
-    return nativeGetKeyIndex();
+    checkFrameCryptorExists();
+    return nativeGetKeyIndex(nativeFrameCryptor);
   }
 
+  public void setKeyIndex(int index) {
+    checkFrameCryptorExists();
+    nativeSetKeyIndex(nativeFrameCryptor, index);
+  }
+
+
   public void dispose() {
-    if (nativeFrameCryptor != 0) {
-      nativeDispose(nativeFrameCryptor);
-      nativeFrameCryptor = 0;
+    checkFrameCryptorExists();
+    JniCommon.nativeReleaseRef(nativeFrameCryptor);
+    nativeFrameCryptor = 0;
+  }
+
+  private void checkFrameCryptorExists() {
+    if (nativeFrameCryptor == 0) {
+      throw new IllegalStateException("FrameCryptor has been disposed.");
     }
   }
 
-  private static native void nativeSetEnabled(boolean enabled);
-  private static native boolean nativeIsEnabled();
-  private static native void nativeSetKeyIndex(int index);
-  private static native int nativeGetKeyIndex();
-  private static native void nativeDispose(long nativeFrameCryptor);
+  private static native void nativeSetEnabled(long frameCryptorPointer, boolean enabled);
+  private static native boolean nativeIsEnabled(long frameCryptorPointer);
+  private static native void nativeSetKeyIndex(long frameCryptorPointer, int index);
+  private static native int nativeGetKeyIndex(long frameCryptorPointer);
 }
