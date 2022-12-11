@@ -23,7 +23,7 @@
 
 namespace webrtc {
 
-class KeyManager {
+class KeyManager : public rtc::RefCountInterface {
  public:
   enum { kMaxKeySize = 32 };
 
@@ -49,7 +49,7 @@ class FrameCryptorTransformer
 
   explicit FrameCryptorTransformer(MediaType type,
                                    Algorithm algorithm,
-                                   std::shared_ptr<KeyManager> key_manager);
+                                   rtc::scoped_refptr<KeyManager> key_manager);
 
   virtual void SetKeyIndex(int index);
   virtual int key_index() const { return key_index_; };
@@ -85,7 +85,7 @@ class FrameCryptorTransformer
   rtc::scoped_refptr<webrtc::TransformedFrameCallback> sink_callback_;
   int key_index_ = 0;
   std::map<uint32_t, uint32_t> sendCounts_;
-  std::shared_ptr<KeyManager> key_manager_;
+  rtc::scoped_refptr<KeyManager> key_manager_;
 };
 
 }  // namespace webrtc

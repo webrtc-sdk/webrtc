@@ -179,7 +179,7 @@ std::string to_hex(unsigned char* data, int len);
 FrameCryptorTransformer::FrameCryptorTransformer(
     MediaType type,
     Algorithm algorithm,
-    std::shared_ptr<KeyManager> key_manager)
+    rtc::scoped_refptr<KeyManager> key_manager)
     : type_(type), algorithm_(algorithm), key_manager_(key_manager) {}
 
 void FrameCryptorTransformer::SetKeyIndex(int index) {
