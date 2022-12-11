@@ -55,16 +55,16 @@ class DefaultKeyManagerImpl : public webrtc::KeyManager {
 };
 
 @implementation RTC_OBJC_TYPE (RTCFrameCryptorKeyManager) {
-  std::shared_ptr<DefaultKeyManagerImpl> _nativeKeyManager;
+  rtc::scoped_refptr<DefaultKeyManagerImpl> _nativeKeyManager;
 }
 
--(std::shared_ptr<webrtc::KeyManager>) nativeKeyManager {
+-(rtc::scoped_refptr<webrtc::KeyManager>) nativeKeyManager {
   return _nativeKeyManager;
 }
 
 - (instancetype)init {
     if (self = [super init]) {
-        _nativeKeyManager = std::make_shared<DefaultKeyManagerImpl>();
+        _nativeKeyManager = rtc::make_ref_counted<DefaultKeyManagerImpl>();
     }
     return self;
 }

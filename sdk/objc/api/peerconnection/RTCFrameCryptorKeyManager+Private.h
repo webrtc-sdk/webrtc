@@ -16,7 +16,7 @@
 
 #import "RTCFrameCryptorKeyManager.h"
 
-#include <memory>
+#include "rtc_base/ref_count.h"
 #include "api/crypto/frame_crypto_transformer.h"
 
 NS_ASSUME_NONNULL_BEGIN
@@ -24,7 +24,7 @@ NS_ASSUME_NONNULL_BEGIN
 @interface RTC_OBJC_TYPE (RTCFrameCryptorKeyManager)
 ()
 
-    @property(nonatomic, readonly) std::shared_ptr<webrtc::KeyManager> nativeKeyManager;
+    @property(nonatomic, readonly) rtc::scoped_refptr<webrtc::KeyManager> nativeKeyManager;
 
 @end
 
