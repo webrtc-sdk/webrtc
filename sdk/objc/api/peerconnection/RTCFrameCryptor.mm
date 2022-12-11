@@ -34,6 +34,17 @@
   rtc::scoped_refptr<webrtc::FrameCryptorTransformer> frame_crypto_transformer_;
 }
 
+- (webrtc::FrameCryptorTransformer::Algorithm)algorithmFromEnum:(RTCCyrptorAlgorithm)algorithm {
+  switch (algorithm) {
+    case RTCCyrptorAlgorithmAesGcm:
+      return webrtc::FrameCryptorTransformer::Algorithm::kAesGcm;
+    case RTCCyrptorAlgorithmAesCbc:
+      return webrtc::FrameCryptorTransformer::Algorithm::kAesCbc;
+    default:
+      return webrtc::FrameCryptorTransformer::Algorithm::kAesGcm;
+  }
+}
+
 - (instancetype)initWithRtpSender:(RTC_OBJC_TYPE(RTCRtpSender) *)sender
                         algorithm:(RTCCyrptorAlgorithm)algorithm
                        keyManager:(RTC_OBJC_TYPE(RTCFrameCryptorKeyManager) *)keyManager {
@@ -42,10 +53,9 @@
     auto mediaType = rtpSender->track()->kind() == "audio" ?
         webrtc::FrameCryptorTransformer::MediaType::kAudioFrame :
         webrtc::FrameCryptorTransformer::MediaType::kVideoFrame;
-    frame_crypto_transformer_ = rtc::scoped_refptr<webrtc::FrameCryptorTransformer>(
-        new webrtc::FrameCryptorTransformer(mediaType,
-                                            webrtc::FrameCryptorTransformer::Algorithm::kAesGcm,
-                                            keyManager.nativeKeyManager));
+    frame_crypto_transformer_ =
+        rtc::scoped_refptr<webrtc::FrameCryptorTransformer>(new webrtc::FrameCryptorTransformer(
+            mediaType, [self algorithmFromEnum:algorithm], keyManager.nativeKeyManager));
 
     rtpSender->SetEncoderToPacketizerFrameTransformer(frame_crypto_transformer_);
     frame_crypto_transformer_->SetEnabled(false);
@@ -61,10 +71,9 @@
     auto mediaType = rtpReceiver->track()->kind() == "audio" ?
         webrtc::FrameCryptorTransformer::MediaType::kAudioFrame :
         webrtc::FrameCryptorTransformer::MediaType::kVideoFrame;
-    frame_crypto_transformer_ = rtc::scoped_refptr<webrtc::FrameCryptorTransformer>(
-        new webrtc::FrameCryptorTransformer(mediaType,
-                                            webrtc::FrameCryptorTransformer::Algorithm::kAesGcm,
-                                            keyManager.nativeKeyManager));
+    frame_crypto_transformer_ =
+        rtc::scoped_refptr<webrtc::FrameCryptorTransformer>(new webrtc::FrameCryptorTransformer(
+            mediaType, [self algorithmFromEnum:algorithm], keyManager.nativeKeyManager));
 
     rtpReceiver->SetDepacketizerToDecoderFrameTransformer(frame_crypto_transformer_);
     frame_crypto_transformer_->SetEnabled(false);
