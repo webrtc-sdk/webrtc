@@ -221,7 +221,14 @@ void FrameCryptorTransformer::Transform(
   webrtc::MutexLock lock(&sink_mutex_);
   if (sink_callback_ == nullptr)
     return;
-  if (frame->GetData().size() == 0 && sink_callback_) {
+
+  bool enabled_cryption = false;
+  { 
+      webrtc::MutexLock lock(&mutex_);
+      enabled_cryption = enabled_cryption_;
+  }
+  if ((frame->GetData().size() == 0 && sink_callback_) || !key_manager_ ||
+      !enabled_cryption) {
     sink_callback_->OnTransformedFrame(std::move(frame));
     return;
   }
