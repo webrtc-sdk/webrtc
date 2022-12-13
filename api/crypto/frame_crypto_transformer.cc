@@ -177,10 +177,14 @@ uint8_t get_unencrypted_bytes(webrtc::TransformableFrameInterface* frame,
 std::string to_hex(unsigned char* data, int len);
 
 FrameCryptorTransformer::FrameCryptorTransformer(
+    const std::string cryptor_id,
     MediaType type,
     Algorithm algorithm,
     rtc::scoped_refptr<KeyManager> key_manager)
-    : type_(type), algorithm_(algorithm), key_manager_(key_manager) {}
+    : cryptor_id_(cryptor_id),
+      type_(type),
+      algorithm_(algorithm),
+      key_manager_(key_manager) {}
 
 void FrameCryptorTransformer::SetKeyIndex(int index) {
   webrtc::MutexLock lock(&mutex_);
@@ -223,9 +227,9 @@ void FrameCryptorTransformer::Transform(
     return;
 
   bool enabled_cryption = false;
-  { 
-      webrtc::MutexLock lock(&mutex_);
-      enabled_cryption = enabled_cryption_;
+  {
+    webrtc::MutexLock lock(&mutex_);
+    enabled_cryption = enabled_cryption_;
   }
   if ((frame->GetData().size() == 0 && sink_callback_) || !key_manager_ ||
       !enabled_cryption) {
@@ -260,7 +264,7 @@ void FrameCryptorTransformer::encryptFrame(
     frameHeader[i] = date_in[i];
   }
 
-  std::vector<uint8_t> aes_key = key_manager_->keys()[key_index_];
+  std::vector<uint8_t> aes_key = key_manager_->keys(cryptor_id_)[key_index_];
   rtc::Buffer frameTrailer(2);
   frameTrailer[0] = getIvSize();
   frameTrailer[1] = key_index_;
@@ -314,11 +318,11 @@ void FrameCryptorTransformer::decryptFrame(
   uint8_t ivLength = frameTrailer[0];
   uint8_t key_index = frameTrailer[1];
 
-  if (ivLength !=  getIvSize() ||
+  if (ivLength != getIvSize() ||
       (key_index < 0 || key_index >= KeyManager::kMaxKeySize)) {
     return;
   }
-  std::vector<uint8_t> aes_key = key_manager_->keys()[key_index];
+  std::vector<uint8_t> aes_key = key_manager_->keys(cryptor_id_)[key_index];
 
   rtc::Buffer iv = rtc::Buffer(ivLength);
   for (size_t i = 0; i < ivLength; i++) {
