@@ -40,7 +40,7 @@ class DefaultKeyManagerImpl : public webrtc::KeyManager {
       return false;
     }
     webrtc::MutexLock lock(&mutex_);
-    if (index > (int)keys_.size()) {
+    if (index + 1 > (int)keys_.size()) {
       keys_.resize(index + 1);
     }
     keys_[index] = key;
