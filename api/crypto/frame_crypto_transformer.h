@@ -80,6 +80,7 @@ class FrameCryptorTransformer
   uint8_t getIvSize();
 
  private:
+  std::string cryptor_id_;
   mutable webrtc::Mutex mutex_;
   mutable webrtc::Mutex sink_mutex_;
   bool enabled_cryption_ RTC_GUARDED_BY(mutex_) = false;
@@ -89,7 +90,6 @@ class FrameCryptorTransformer
   int key_index_ = 0;
   std::map<uint32_t, uint32_t> sendCounts_;
   rtc::scoped_refptr<KeyManager> key_manager_;
-  std::string cryptor_id_;
 };
 
 }  // namespace webrtc
