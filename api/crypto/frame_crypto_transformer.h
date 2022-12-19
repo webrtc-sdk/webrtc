@@ -29,7 +29,7 @@ class KeyManager : public rtc::RefCountInterface {
 
  public:
   virtual const std::vector<std::vector<uint8_t>> keys(
-      const std::string cryptor_id) const = 0;
+      const std::string participant_id) const = 0;
 
  protected:
   virtual ~KeyManager() {}
@@ -48,7 +48,7 @@ class FrameCryptorTransformer
     kAesCbc,
   };
 
-  explicit FrameCryptorTransformer(const std::string cryptor_id,
+  explicit FrameCryptorTransformer(const std::string participant_id,
                                    MediaType type,
                                    Algorithm algorithm,
                                    rtc::scoped_refptr<KeyManager> key_manager);
@@ -60,7 +60,7 @@ class FrameCryptorTransformer
     webrtc::MutexLock lock(&mutex_);
     return enabled_cryption_;
   };
-  virtual const std::string cryptor_id() const { return cryptor_id_; }
+  virtual const std::string participant_id() const { return participant_id_; }
 
  protected:
   virtual void RegisterTransformedFrameCallback(
@@ -80,7 +80,7 @@ class FrameCryptorTransformer
   uint8_t getIvSize();
 
  private:
-  std::string cryptor_id_;
+  std::string participant_id_;
   mutable webrtc::Mutex mutex_;
   mutable webrtc::Mutex sink_mutex_;
   bool enabled_cryption_ RTC_GUARDED_BY(mutex_) = false;
