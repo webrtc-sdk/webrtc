@@ -23,11 +23,11 @@ NS_ASSUME_NONNULL_BEGIN
 RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCFrameCryptorKeyManager) : NSObject
 
-@property(nonatomic, strong, readonly) NSArray<NSData*> *keys;
+- (void)setKey:(NSData *)key withIndex:(int)index forParticipant:(NSString *)participantId;
 
-- (void)setKey:(NSData*)key forIndex:(int)index;
+- (void)setKeys:(NSArray<NSData *> *)keys forParticipant:(NSString *)participantId;
 
-- (void)setKeys:(NSArray<NSData*> *)keys;
+- (NSArray<NSData*> *) getKeys:(NSString *)participantId;
 
 - (instancetype)init;
 

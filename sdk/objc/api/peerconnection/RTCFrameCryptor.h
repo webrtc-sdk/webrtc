@@ -36,11 +36,15 @@ RTC_OBJC_EXPORT
 
 @property(nonatomic, assign) int keyIndex;
 
+@property(nonatomic, readonly) NSString *participantId;
+
 - (instancetype)initWithRtpSender:(RTC_OBJC_TYPE(RTCRtpSender) *)sender
+                    participantId:(NSString *)participantId
                         algorithm:(RTCCyrptorAlgorithm)algorithm
                        keyManager:(RTC_OBJC_TYPE(RTCFrameCryptorKeyManager) *)keyManager;
 
 - (instancetype)initWithRtpReceiver:(RTC_OBJC_TYPE(RTCRtpReceiver) *)receiver
+                      participantId:(NSString *)participantId
                           algorithm:(RTCCyrptorAlgorithm)algorithm
                          keyManager:(RTC_OBJC_TYPE(RTCFrameCryptorKeyManager) *)keyManager;
 

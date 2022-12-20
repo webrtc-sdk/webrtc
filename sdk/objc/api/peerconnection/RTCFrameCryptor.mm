@@ -31,8 +31,11 @@
 @implementation RTC_OBJC_TYPE (RTCFrameCryptor) {
   const webrtc::RtpSenderInterface *_sender;
   const webrtc::RtpReceiverInterface *_receiver;
+  NSString *_participantId;
   rtc::scoped_refptr<webrtc::FrameCryptorTransformer> frame_crypto_transformer_;
 }
+
+@synthesize participantId = _participantId;
 
 - (webrtc::FrameCryptorTransformer::Algorithm)algorithmFromEnum:(RTCCyrptorAlgorithm)algorithm {
   switch (algorithm) {
@@ -46,16 +49,20 @@
 }
 
 - (instancetype)initWithRtpSender:(RTC_OBJC_TYPE(RTCRtpSender) *)sender
+                    participantId:(NSString *)participantId
                         algorithm:(RTCCyrptorAlgorithm)algorithm
                        keyManager:(RTC_OBJC_TYPE(RTCFrameCryptorKeyManager) *)keyManager {
   if (self = [super init]) {
+    _participantId = participantId;
     auto rtpSender = sender.nativeRtpSender;
     auto mediaType = rtpSender->track()->kind() == "audio" ?
         webrtc::FrameCryptorTransformer::MediaType::kAudioFrame :
         webrtc::FrameCryptorTransformer::MediaType::kVideoFrame;
-    frame_crypto_transformer_ =
-        rtc::scoped_refptr<webrtc::FrameCryptorTransformer>(new webrtc::FrameCryptorTransformer(
-            mediaType, [self algorithmFromEnum:algorithm], keyManager.nativeKeyManager));
+    frame_crypto_transformer_ = rtc::scoped_refptr<webrtc::FrameCryptorTransformer>(
+        new webrtc::FrameCryptorTransformer([participantId stdString],
+                                            mediaType,
+                                            [self algorithmFromEnum:algorithm],
+                                            keyManager.nativeKeyManager));
 
     rtpSender->SetEncoderToPacketizerFrameTransformer(frame_crypto_transformer_);
     frame_crypto_transformer_->SetEnabled(false);
@@ -64,16 +71,20 @@
 }
 
 - (instancetype)initWithRtpReceiver:(RTC_OBJC_TYPE(RTCRtpReceiver) *)receiver
+                      participantId:(NSString *)participantId
                           algorithm:(RTCCyrptorAlgorithm)algorithm
                          keyManager:(RTC_OBJC_TYPE(RTCFrameCryptorKeyManager) *)keyManager {
   if (self = [super init]) {
+    _participantId = participantId;
     auto rtpReceiver = receiver.nativeRtpReceiver;
     auto mediaType = rtpReceiver->track()->kind() == "audio" ?
         webrtc::FrameCryptorTransformer::MediaType::kAudioFrame :
         webrtc::FrameCryptorTransformer::MediaType::kVideoFrame;
-    frame_crypto_transformer_ =
-        rtc::scoped_refptr<webrtc::FrameCryptorTransformer>(new webrtc::FrameCryptorTransformer(
-            mediaType, [self algorithmFromEnum:algorithm], keyManager.nativeKeyManager));
+    frame_crypto_transformer_ = rtc::scoped_refptr<webrtc::FrameCryptorTransformer>(
+        new webrtc::FrameCryptorTransformer([participantId stdString],
+                                            mediaType,
+                                            [self algorithmFromEnum:algorithm],
+                                            keyManager.nativeKeyManager));
 
     rtpReceiver->SetDepacketizerToDecoderFrameTransformer(frame_crypto_transformer_);
     frame_crypto_transformer_->SetEnabled(false);
