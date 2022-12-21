@@ -79,9 +79,11 @@ static base::android::ScopedJavaLocalRef<jobject>
 JNI_FrameCryptorFactory_CreateFrameCryptorForRtpReceiver(
     JNIEnv* env,
     jlong j_rtp_receiver_pointer,
+    const base::android::JavaParamRef<jstring>& participantId,
     jint j_algorithm_index,
     jlong j_key_manager) {
   auto keyManager = reinterpret_cast<DefaultKeyManagerImpl*>(j_key_manager);
+  auto participant_id = JavaToStdString(env, participantId);
   auto rtpReceiver =
       reinterpret_cast<RtpReceiverInterface*>(j_rtp_receiver_pointer);
   auto mediaType =
@@ -91,10 +93,11 @@ JNI_FrameCryptorFactory_CreateFrameCryptorForRtpReceiver(
   auto frame_crypto_transformer =
       rtc::scoped_refptr<webrtc::FrameCryptorTransformer>(
           new webrtc::FrameCryptorTransformer(
-              mediaType, AlgorithmFromIndex(j_algorithm_index),
+              participant_id, mediaType, AlgorithmFromIndex(j_algorithm_index),
               rtc::scoped_refptr<webrtc::KeyManager>(keyManager)));
 
-  rtpReceiver->SetDepacketizerToDecoderFrameTransformer(frame_crypto_transformer);
+  rtpReceiver->SetDepacketizerToDecoderFrameTransformer(
+      frame_crypto_transformer);
   frame_crypto_transformer->SetEnabled(false);
 
   return NativeToJavaFrameCryptor(env, frame_crypto_transformer);
@@ -104,10 +107,12 @@ static base::android::ScopedJavaLocalRef<jobject>
 JNI_FrameCryptorFactory_CreateFrameCryptorForRtpSender(
     JNIEnv* env,
     jlong j_rtp_sender_pointer,
+    const base::android::JavaParamRef<jstring>& participantId,
     jint j_algorithm_index,
     jlong j_key_manager) {
   auto keyManager = reinterpret_cast<DefaultKeyManagerImpl*>(j_key_manager);
   auto rtpSender = reinterpret_cast<RtpSenderInterface*>(j_rtp_sender_pointer);
+  auto participant_id = JavaToStdString(env, participantId);
   auto mediaType =
       rtpSender->track()->kind() == "audio"
           ? webrtc::FrameCryptorTransformer::MediaType::kAudioFrame
@@ -115,7 +120,7 @@ JNI_FrameCryptorFactory_CreateFrameCryptorForRtpSender(
   auto frame_crypto_transformer =
       rtc::scoped_refptr<webrtc::FrameCryptorTransformer>(
           new webrtc::FrameCryptorTransformer(
-              mediaType, AlgorithmFromIndex(j_algorithm_index),
+              participant_id, mediaType, AlgorithmFromIndex(j_algorithm_index),
               rtc::scoped_refptr<webrtc::KeyManager>(keyManager)));
 
   rtpSender->SetEncoderToPacketizerFrameTransformer(frame_crypto_transformer);

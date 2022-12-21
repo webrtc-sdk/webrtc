@@ -50,7 +50,6 @@ public class FrameCryptor {
     nativeSetKeyIndex(nativeFrameCryptor, index);
   }
 
-
   public void dispose() {
     checkFrameCryptorExists();
     JniCommon.nativeReleaseRef(nativeFrameCryptor);

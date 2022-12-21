@@ -17,27 +17,26 @@
 package org.webrtc;
 
 public class FrameCryptorFactory {
-
   public static FrameCryptorKeyManager createFrameCryptorKeyManager() {
     return nativeCreateFrameCryptorKeyManager();
   }
 
-  public static FrameCryptor createFrameCryptorForRtpSender(
-      RtpSender rtpSender, FrameCryptorAlgorithm algorithm, FrameCryptorKeyManager keyManager) {
-    return nativeCreateFrameCryptorForRtpSender(
-        rtpSender.getNativeRtpSender(), algorithm.ordinal(), keyManager.getNativeKeyManager());
+  public static FrameCryptor createFrameCryptorForRtpSender(RtpSender rtpSender,
+      String participantId, FrameCryptorAlgorithm algorithm, FrameCryptorKeyManager keyManager) {
+    return nativeCreateFrameCryptorForRtpSender(rtpSender.getNativeRtpSender(), participantId,
+        algorithm.ordinal(), keyManager.getNativeKeyManager());
   }
 
-  public static FrameCryptor createFrameCryptorForRtpReceiver(
-      RtpReceiver rtpReceiver, FrameCryptorAlgorithm algorithm, FrameCryptorKeyManager keyManager) {
-    return nativeCreateFrameCryptorForRtpReceiver(
-        rtpReceiver.getNativeRtpReceiver(), algorithm.ordinal(), keyManager.getNativeKeyManager());
+  public static FrameCryptor createFrameCryptorForRtpReceiver(RtpReceiver rtpReceiver,
+      String participantId, FrameCryptorAlgorithm algorithm, FrameCryptorKeyManager keyManager) {
+    return nativeCreateFrameCryptorForRtpReceiver(rtpReceiver.getNativeRtpReceiver(), participantId,
+        algorithm.ordinal(), keyManager.getNativeKeyManager());
   }
 
   private static native FrameCryptor nativeCreateFrameCryptorForRtpSender(
-      long rtpSender, int algorithm, long nativeFrameCryptorKeyManager);
+      long rtpSender, String participantId, int algorithm, long nativeFrameCryptorKeyManager);
   private static native FrameCryptor nativeCreateFrameCryptorForRtpReceiver(
-      long rtpReceiver, int algorithm, long nativeFrameCryptorKeyManager);
-  
+      long rtpReceiver, String participantId, int algorithm, long nativeFrameCryptorKeyManager);
+
   private static native FrameCryptorKeyManager nativeCreateFrameCryptorKeyManager();
 }

@@ -30,16 +30,16 @@ public class FrameCryptorKeyManager {
     return nativeKeyManager;
   }
 
-  public boolean setKey(int index, byte[] key){
-    return nativeSetKey(nativeKeyManager, index, key);
+  public boolean setKey(String participantId, int index, byte[] key) {
+    return nativeSetKey(nativeKeyManager, participantId, index, key);
   }
 
-  public int getKeyCount(){
-    return nativeGetKeyCount(nativeKeyManager);
+  public boolean setKeys(String participantId, ArrayList<byte[]> keys) {
+    return nativeSetKeys(nativeKeyManager, participantId, keys);
   }
 
-  public byte[] getKey(int index) {
-    return nativeGetKey(nativeKeyManager, index);
+  public ArrayList<byte[]> getKeys(String participantId) {
+    return nativeGetKeys(nativeKeyManager, participantId);
   }
 
   public void dispose() {
@@ -55,7 +55,10 @@ public class FrameCryptorKeyManager {
   }
 
   private static native long createNativeKeyManager();
-  private static native boolean nativeSetKey(long keyManagerPointer, int index, byte[] key);
-  private static native int nativeGetKeyCount(long keyManagerPointer);
-  private static native byte[] nativeGetKey(long keyManagerPointer, int index);
+  private static native boolean nativeSetKey(
+      long keyManagerPointer, String participantId, int index, byte[] key);
+  private static native boolean nativeSetKeys(
+      long keyManagerPointer, String participantId, ArrayList<byte[]> keys);
+  private static native ArrayList<byte[]> nativeGetKeys(
+      long keyManagerPointer, String participantId);
 }
