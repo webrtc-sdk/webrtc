@@ -18,8 +18,10 @@
 #define WEBRTC_FRAME_CRYPTOR_TRANSFORMER_H_
 
 #include "api/frame_transformer_interface.h"
+
 #include "rtc_base/buffer.h"
 #include "rtc_base/synchronization/mutex.h"
+#include "rtc_base/system/rtc_export.h"
 
 namespace webrtc {
 
@@ -35,7 +37,7 @@ class KeyManager : public rtc::RefCountInterface {
   virtual ~KeyManager() {}
 };
 
-class FrameCryptorTransformer
+class RTC_EXPORT FrameCryptorTransformer
     : public rtc::RefCountedObject<webrtc::FrameTransformerInterface> {
  public:
   enum class MediaType {
