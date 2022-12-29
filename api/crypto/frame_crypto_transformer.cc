@@ -82,6 +82,72 @@ const EVP_CIPHER* GetAesCbcAlgorithmFromKeySize(size_t key_size_bytes) {
   }
 }
 
+std::string to_hex(const uint8_t* data, int len) {
+  std::stringstream ss;
+  ss << std::uppercase << std::hex << std::setfill('0');
+  for (int i = 0; i < len; i++) {
+    ss << std::setw(2) << static_cast<unsigned>(data[i]);
+  }
+  return ss.str();
+}
+
+uint8_t get_unencrypted_bytes(webrtc::TransformableFrameInterface* frame,
+                              webrtc::FrameCryptorTransformer::MediaType type) {
+  uint8_t unencrypted_bytes = 0;
+  switch (type) {
+    case webrtc::FrameCryptorTransformer::MediaType::kAudioFrame:
+      unencrypted_bytes = 1;
+      break;
+    case webrtc::FrameCryptorTransformer::MediaType::kVideoFrame: {
+      auto videoFrame =
+          static_cast<webrtc::TransformableVideoFrameInterface*>(frame);
+      if (videoFrame->header().codec ==
+          webrtc::VideoCodecType::kVideoCodecAV1) {
+        unencrypted_bytes = 0;
+      } else if (videoFrame->header().codec ==
+                 webrtc::VideoCodecType::kVideoCodecVP8) {
+        unencrypted_bytes = videoFrame->IsKeyFrame() ? 10 : 3;
+      } else if (videoFrame->header().codec ==
+                 webrtc::VideoCodecType::kVideoCodecH264) {
+        rtc::ArrayView<const uint8_t> date_in = frame->GetData();
+        std::vector<webrtc::H264::NaluIndex> nalu_indices =
+            webrtc::H264::FindNaluIndices(date_in.data(), date_in.size());
+
+        int idx = 0;
+        for (const auto& index : nalu_indices) {
+          const uint8_t* slice = date_in.data() + index.payload_start_offset;
+          webrtc::H264::NaluType nalu_type =
+              webrtc::H264::ParseNaluType(slice[0]);
+          switch (nalu_type) {
+            case webrtc::H264::NaluType::kSps:
+            case webrtc::H264::NaluType::kPps:
+            case webrtc::H264::NaluType::kAud:
+            case webrtc::H264::NaluType::kSei:
+            case webrtc::H264::NaluType::kPrefix:
+              RTC_LOG(LS_INFO)
+                  << "ParameterSetNalu payload_size: " << index.payload_size << ", nalu_type "
+                  << nalu_type << ", NaluIndex [" << idx++
+                  << "] offset: " << index.payload_start_offset;
+              break;  // Ignore these nalus, as we don't care about their
+                      // contents.
+            default:
+              RTC_LOG(LS_INFO)
+                  << "NonParameterSetNalu payload_size: " << index.payload_size << ", nalu_type "
+                  << nalu_type << ", NaluIndex [" << idx++
+                  << "] offset: " << index.payload_start_offset;
+              unencrypted_bytes = index.payload_start_offset + 1;
+              break;
+          }
+        }
+      }
+      break;
+    }
+    default:
+      break;
+  }
+  return unencrypted_bytes;
+}
+
 int AesGcmEncryptDecrypt(EncryptOrDecrypt mode,
                          const std::vector<uint8_t> raw_key,
                          const rtc::ArrayView<uint8_t> data,
@@ -193,10 +259,6 @@ int AesEncryptDecrypt(EncryptOrDecrypt mode,
 
 namespace webrtc {
 
-uint8_t get_unencrypted_bytes(webrtc::TransformableFrameInterface* frame,
-                              FrameCryptorTransformer::MediaType type);
-std::string to_hex(unsigned char* data, int len);
-
 FrameCryptorTransformer::FrameCryptorTransformer(
     const std::string participant_id,
     MediaType type,
@@ -207,56 +269,27 @@ FrameCryptorTransformer::FrameCryptorTransformer(
       algorithm_(algorithm),
       key_manager_(key_manager) {}
 
-void FrameCryptorTransformer::SetKeyIndex(int index) {
-  webrtc::MutexLock lock(&mutex_);
-  key_index_ = index;
-}
-
-void FrameCryptorTransformer::SetEnabled(bool enabled) {
-  webrtc::MutexLock lock(&mutex_);
-  enabled_cryption_ = enabled;
-}
-
-void FrameCryptorTransformer::RegisterTransformedFrameSinkCallback(
-    rtc::scoped_refptr<webrtc::TransformedFrameCallback> callback,
-    uint32_t ssrc) {
-  webrtc::MutexLock lock(&sink_mutex_);
-  sink_callback_ = callback;
-}
-
-void FrameCryptorTransformer::UnregisterTransformedFrameSinkCallback(
-    uint32_t ssrc) {
-  webrtc::MutexLock lock(&sink_mutex_);
-  sink_callback_ = nullptr;
-}
-
-void FrameCryptorTransformer::RegisterTransformedFrameCallback(
-    rtc::scoped_refptr<webrtc::TransformedFrameCallback> callback) {
-  webrtc::MutexLock lock(&sink_mutex_);
-  sink_callback_ = callback;
-}
-
-void FrameCryptorTransformer::UnregisterTransformedFrameCallback() {
-  webrtc::MutexLock lock(&sink_mutex_);
-  sink_callback_ = nullptr;
-}
-
 void FrameCryptorTransformer::Transform(
     std::unique_ptr<webrtc::TransformableFrameInterface> frame) {
   webrtc::MutexLock lock(&sink_mutex_);
-  if (sink_callback_ == nullptr)
+  if (sink_callback_ == nullptr) {
+    RTC_LOG(LS_WARNING)
+        << "FrameCryptorTransformer::Transform sink_callback_ is NULL";
     return;
+  }
 
   bool enabled_cryption = false;
   {
     webrtc::MutexLock lock(&mutex_);
     enabled_cryption = enabled_cryption_;
   }
+
   if ((frame->GetData().size() == 0 && sink_callback_) || !key_manager_ ||
       !enabled_cryption) {
     sink_callback_->OnTransformedFrame(std::move(frame));
     return;
   }
+
   // do encrypt or decrypt here...
   switch (frame->GetDirection()) {
     case webrtc::TransformableFrameInterface::Direction::kSender:
@@ -299,46 +332,25 @@ void ParseSlice(const uint8_t* slice, size_t length, bool enc) {
 
 void FrameCryptorTransformer::encryptFrame(
     std::unique_ptr<webrtc::TransformableFrameInterface> frame) {
-  uint8_t unencrypted_bytes = get_unencrypted_bytes(frame.get(), type_);
-  rtc::ArrayView<const uint8_t> date_in = frame->GetData();
-
-  if (type_ == FrameCryptorTransformer::MediaType::kVideoFrame) {
-    webrtc::VideoCodecType video_codec = get_video_codec_type(frame.get());
-    if (video_codec == webrtc::VideoCodecType::kVideoCodecH264) {
-      auto packetization_mode = get_h264_packetization_mode(frame.get());
-      RTC_LOG(LS_INFO) << "encryptFrame::packetization_mode: "
-                       << ToString(packetization_mode);
-
-      std::vector<webrtc::H264::NaluIndex> nalu_indices =
-          webrtc::H264::FindNaluIndices(date_in.data(), date_in.size());
-
-      int idx = 0;
-      for (const auto& index : nalu_indices) {
-        ParseSlice(date_in.data() + index.payload_start_offset,
-                   index.payload_size, true);
-        RTC_LOG(LS_INFO) << "encryptFrame::H264::NaluIndex [" << idx++
-                         << "] offset: " << index.payload_start_offset
-                         << ", payload_size: " << index.payload_size;
-      }
-
-      if (sink_callback_)
-        sink_callback_->OnTransformedFrame(std::move(frame));
-      return;
-    }
-  }
-
-  rtc::Buffer frameHeader(unencrypted_bytes);
-  for (size_t i = 0; i < unencrypted_bytes; i++) {
-    frameHeader[i] = date_in[i];
-  }
   auto keys = key_manager_->keys(participant_id_);
+
   if (keys.size() == 0 || key_index_ >= (int)keys.size()) {
-    RTC_LOG(LS_INFO) << "FrameCryptorTransformer::encryptFrame() no keys";
+    RTC_LOG(LS_INFO) << "FrameCryptorTransformer::encryptFrame() no keys, or "
+                        "key_index_ out of range";
     if (sink_callback_)
       sink_callback_->OnTransformedFrame(std::move(frame));
     return;
   }
   std::vector<uint8_t> aes_key = keys[key_index_];
+
+  uint8_t unencrypted_bytes = get_unencrypted_bytes(frame.get(), type_);
+  rtc::ArrayView<const uint8_t> date_in = frame->GetData();
+
+  rtc::Buffer frameHeader(unencrypted_bytes);
+  for (size_t i = 0; i < unencrypted_bytes; i++) {
+    frameHeader[i] = date_in[i];
+  }
+
   rtc::Buffer frameTrailer(2);
   frameTrailer[0] = getIvSize();
   frameTrailer[1] = key_index_;
@@ -382,30 +394,6 @@ void FrameCryptorTransformer::decryptFrame(
   uint8_t unencrypted_bytes = get_unencrypted_bytes(frame.get(), type_);
   rtc::ArrayView<const uint8_t> date_in = frame->GetData();
 
-  if (type_ == FrameCryptorTransformer::MediaType::kVideoFrame) {
-    webrtc::VideoCodecType video_codec = get_video_codec_type(frame.get());
-    if (video_codec == webrtc::VideoCodecType::kVideoCodecH264) {
-      auto packetization_mode = get_h264_packetization_mode(frame.get());
-      RTC_LOG(LS_INFO) << "decryptFrame::packetization_mode: "
-                       << ToString(packetization_mode);
-
-      std::vector<webrtc::H264::NaluIndex> nalu_indices =
-          webrtc::H264::FindNaluIndices(date_in.data(), date_in.size());
-      int idx = 0;
-      for (const auto& index : nalu_indices) {
-        ParseSlice(date_in.data() + index.payload_start_offset,
-                   index.payload_size, false);
-        RTC_LOG(LS_INFO) << "decryptFrame::H264::NaluIndex [" << idx++
-                         << "] offset: " << index.payload_start_offset
-                         << ", payload_size: " << index.payload_size;
-      }
-
-      if (sink_callback_)
-        sink_callback_->OnTransformedFrame(std::move(frame));
-      return;
-    }
-  }
-
   rtc::Buffer frameHeader(unencrypted_bytes);
   for (size_t i = 0; i < unencrypted_bytes; i++) {
     frameHeader[i] = date_in[i];
@@ -418,13 +406,16 @@ void FrameCryptorTransformer::decryptFrame(
   uint8_t key_index = frameTrailer[1];
 
   auto keys = key_manager_->keys(participant_id_);
-  if (ivLength != getIvSize() ||
-      (key_index < 0 || key_index >= KeyManager::kMaxKeySize) ||
-      keys.size() == 0) {
+
+  if (keys.size() == 0 || key_index >= (int)keys.size() ||
+      ivLength != getIvSize()) {
+    RTC_LOG(LS_INFO) << "FrameCryptorTransformer::decryptFrame() no keys, or "
+                        "key_index out of range";
+    if (sink_callback_)
+      sink_callback_->OnTransformedFrame(std::move(frame));
     return;
   }
-
-  std::vector<uint8_t> aes_key = keys[key_index_];
+  std::vector<uint8_t> aes_key = keys[key_index];
 
   rtc::Buffer iv = rtc::Buffer(ivLength);
   for (size_t i = 0; i < ivLength; i++) {
@@ -484,41 +475,6 @@ uint8_t FrameCryptorTransformer::getIvSize() {
     default:
       return 0;
   }
-}
-
-uint8_t get_unencrypted_bytes(webrtc::TransformableFrameInterface* frame,
-                              FrameCryptorTransformer::MediaType type) {
-  uint8_t unencrypted_bytes = 0;
-  switch (type) {
-    case FrameCryptorTransformer::MediaType::kAudioFrame:
-      unencrypted_bytes = 1;
-      break;
-    case FrameCryptorTransformer::MediaType::kVideoFrame: {
-      auto videoFrame =
-          static_cast<webrtc::TransformableVideoFrameInterface*>(frame);
-      if (videoFrame->header().codec ==
-              webrtc::VideoCodecType::kVideoCodecVP8 ||
-          videoFrame->header().codec == webrtc::VideoCodecType::kVideoCodecVP9)
-        unencrypted_bytes = videoFrame->IsKeyFrame() ? 10 : 3;
-      else if (videoFrame->header().codec ==
-               webrtc::VideoCodecType::kVideoCodecH264) {
-        unencrypted_bytes = 32;
-      }
-      break;
-    }
-    default:
-      break;
-  }
-  return unencrypted_bytes;
-}
-
-std::string to_hex(unsigned char* data, int len) {
-  std::stringstream ss;
-  ss << std::uppercase << std::hex << std::setfill('0');
-  for (int i = 0; i < len; i++) {
-    ss << std::setw(2) << static_cast<unsigned>(data[i]);
-  }
-  return ss.str();
 }
 
 }  // namespace webrtc

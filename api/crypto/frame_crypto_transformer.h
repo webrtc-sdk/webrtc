@@ -18,7 +18,6 @@
 #define WEBRTC_FRAME_CRYPTOR_TRANSFORMER_H_
 
 #include "api/frame_transformer_interface.h"
-
 #include "rtc_base/buffer.h"
 #include "rtc_base/synchronization/mutex.h"
 #include "rtc_base/system/rtc_export.h"
@@ -55,9 +54,16 @@ class RTC_EXPORT FrameCryptorTransformer
                                    Algorithm algorithm,
                                    rtc::scoped_refptr<KeyManager> key_manager);
 
-  virtual void SetKeyIndex(int index);
+  virtual void SetKeyIndex(int index) {
+    webrtc::MutexLock lock(&mutex_);
+    key_index_ = index;
+  }
+
   virtual int key_index() const { return key_index_; };
-  virtual void SetEnabled(bool enable);
+  virtual void SetEnabled(bool enabled) {
+    webrtc::MutexLock lock(&mutex_);
+    enabled_cryption_ = enabled;
+  }
   virtual bool enabled() const {
     webrtc::MutexLock lock(&mutex_);
     return enabled_cryption_;
@@ -66,12 +72,25 @@ class RTC_EXPORT FrameCryptorTransformer
 
  protected:
   virtual void RegisterTransformedFrameCallback(
-      rtc::scoped_refptr<webrtc::TransformedFrameCallback>) override;
+      rtc::scoped_refptr<webrtc::TransformedFrameCallback> callback) override {
+    webrtc::MutexLock lock(&sink_mutex_);
+    sink_callback_ = callback;
+  }
+  virtual void UnregisterTransformedFrameCallback() override {
+    webrtc::MutexLock lock(&sink_mutex_);
+    sink_callback_ = nullptr;
+  }
   virtual void RegisterTransformedFrameSinkCallback(
-      rtc::scoped_refptr<webrtc::TransformedFrameCallback>,
-      uint32_t ssrc) override;
-  virtual void UnregisterTransformedFrameSinkCallback(uint32_t ssrc) override;
-  virtual void UnregisterTransformedFrameCallback() override;
+      rtc::scoped_refptr<webrtc::TransformedFrameCallback> callback,
+      uint32_t ssrc) override {
+    webrtc::MutexLock lock(&sink_mutex_);
+    sink_callback_ = callback;
+  }
+  virtual void UnregisterTransformedFrameSinkCallback(uint32_t ssrc) override {
+    webrtc::MutexLock lock(&sink_mutex_);
+    sink_callback_ = nullptr;
+  }
+
   virtual void Transform(
       std::unique_ptr<webrtc::TransformableFrameInterface> frame) override;
 
