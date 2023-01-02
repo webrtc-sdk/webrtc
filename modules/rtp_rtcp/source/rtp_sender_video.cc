@@ -494,6 +494,14 @@ bool RTPSenderVideo::SendVideo(
     retransmission_settings = kRetransmitBaseLayer | kRetransmitHigherLayers;
   }
 
+#ifdef WEBRTC_USE_H265
+  else if (codec_type == VideoCodecType::kVideoCodecH265) {
+    if (!absl::get<RTPVideoHeaderH265>(video_header.video_type_header)
+             .has_last_fragement) {
+      frame_completed = false;
+    }
+  }
+#endif
   MaybeUpdateCurrentPlayoutDelay(video_header);
   if (video_header.frame_type == VideoFrameType::kVideoFrameKey) {
     if (!IsNoopDelay(current_playout_delay_)) {

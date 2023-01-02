@@ -19,6 +19,7 @@
 #include "absl/types/variant.h"
 #include "api/video/video_timing.h"
 #include "modules/video_coding/codecs/h264/include/h264_globals.h"
+#include "modules/video_coding/codecs/h265/include/h265_globals.h"
 #include "modules/video_coding/codecs/interface/common_constants.h"
 #include "modules/video_coding/codecs/vp8/include/vp8_globals.h"
 #include "modules/video_coding/codecs/vp9/include/vp9_globals.h"
@@ -98,6 +99,15 @@ void PopulateRtpWithCodecSpecifics(const CodecSpecificInfo& info,
       rtp->simulcastIdx = spatial_index.value_or(0);
       return;
     }
+#ifdef WEBRTC_USE_H265
+    case kVideoCodecH265: {
+      auto& h265_header = rtp->video_type_header.emplace<RTPVideoHeaderH265>();
+      h265_header.packetization_mode =
+          info.codecSpecific.H265.packetization_mode;
+      h265_header.picture_id = info.codecSpecific.H265.picture_id;
+    }
+      return;
+#endif
     case kVideoCodecMultiplex:
     case kVideoCodecGeneric:
       rtp->codec = kVideoCodecGeneric;
@@ -304,6 +314,21 @@ void RtpPayloadParams::SetGeneric(const CodecSpecificInfo* codec_specific_info,
                                   int64_t frame_id,
                                   bool is_keyframe,
                                   RTPVideoHeader* rtp_video_header) {
+  if (codec_specific_info->codecType == webrtc::kVideoCodecH265 &&
+      codec_specific_info->codecSpecific.H265.picture_id > 0) {
+    // H265ToGeneric implementation. Only set it when picture id is valid.
+    rtp_video_header->generic->frame_id =
+        codec_specific_info->codecSpecific.H265.picture_id;
+    rtp_video_header->generic->spatial_index = 0;   // Not enabled at present.
+    rtp_video_header->generic->temporal_index = 0;  // Not enabled at present.
+    for (int dep_idx = 0; dep_idx < 5; dep_idx++) {
+      if (codec_specific_info->codecSpecific.H265.dependencies[dep_idx] <= 0)
+        break;
+      rtp_video_header->generic->dependencies[dep_idx] =
+          codec_specific_info->codecSpecific.H265.dependencies[dep_idx];
+    }
+    return;
+  }
   if (codec_specific_info && codec_specific_info->generic_frame_info &&
       !codec_specific_info->generic_frame_info->encoder_buffers.empty()) {
     if (is_keyframe) {
@@ -341,6 +366,8 @@ void RtpPayloadParams::SetGeneric(const CodecSpecificInfo* codec_specific_info,
                       is_keyframe, rtp_video_header);
       }
       return;
+    // No further special handling for H.265
+    case VideoCodecType::kVideoCodecH265:
     case VideoCodecType::kVideoCodecMultiplex:
       return;
   }
@@ -404,6 +431,7 @@ absl::optional<FrameDependencyStructure> RtpPayloadParams::GenericStructure(
     }
     case VideoCodecType::kVideoCodecAV1:
     case VideoCodecType::kVideoCodecH264:
+    case VideoCodecType::kVideoCodecH265:
     case VideoCodecType::kVideoCodecMultiplex:
       return absl::nullopt;
   }
