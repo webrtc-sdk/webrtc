@@ -24,6 +24,9 @@
 #import "RTCPeerConnection+Private.h"
 #import "RTCVideoSource+Private.h"
 #import "RTCVideoTrack+Private.h"
+#import "RTCRtpReceiver+Private.h"
+#import "RTCRtpCodecCapability.h"
+#import "RTCRtpCodecCapability+Private.h"
 #import "base/RTCLogging.h"
 #import "base/RTCVideoDecoderFactory.h"
 #import "base/RTCVideoEncoderFactory.h"
@@ -111,6 +114,34 @@
                            audioProcessingModule:nullptr
                            bypassVoiceProcessing:NO];
 #endif
+}
+
+- (NSArray<RTC_OBJC_TYPE(RTCRtpCodecCapability) *> *)rtpSenderCapabilities:(RTCRtpMediaType)mediaType {
+
+  NSMutableArray *result = [NSMutableArray array];
+
+  webrtc::RtpCapabilities capabilities = _nativeFactory->GetRtpSenderCapabilities([RTCRtpReceiver nativeMediaTypeForMediaType: mediaType]);
+
+  for (auto & element : capabilities.codecs) {
+    RTCRtpCodecCapability *object = [[RTCRtpCodecCapability alloc] initWithNativeCodecCapability: element];
+    [result addObject: object];
+  }
+
+  return result;
+}
+
+- (NSArray<RTC_OBJC_TYPE(RTCRtpCodecCapability) *> *)rtpReceiverCapabilities:(RTCRtpMediaType)mediaType {
+
+  NSMutableArray *result = [NSMutableArray array];
+
+  webrtc::RtpCapabilities capabilities = _nativeFactory->GetRtpReceiverCapabilities([RTCRtpReceiver nativeMediaTypeForMediaType: mediaType]);
+
+  for (auto & element : capabilities.codecs) {
+    RTCRtpCodecCapability *object = [[RTCRtpCodecCapability alloc] initWithNativeCodecCapability: element];
+    [result addObject: object];
+  }
+
+  return result;
 }
 
 - (instancetype)

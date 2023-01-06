@@ -24,6 +24,9 @@ NS_ASSUME_NONNULL_BEGIN
 @class RTC_OBJC_TYPE(RTCVideoTrack);
 @class RTC_OBJC_TYPE(RTCPeerConnectionFactoryOptions);
 @class RTC_OBJC_TYPE(RTCAudioDeviceModule);
+@class RTC_OBJC_TYPE(RTCRtpCodecCapability);
+
+typedef NS_ENUM(NSInteger, RTCRtpMediaType);
 
 @protocol RTC_OBJC_TYPE
 (RTCPeerConnectionDelegate);
@@ -53,6 +56,10 @@ RTC_OBJC_EXPORT
                        (nullable id<RTC_OBJC_TYPE(RTCVideoDecoderFactory)>)decoderFactory;
 
 @property(nonatomic, readonly) RTCAudioDeviceModule *audioDeviceModule;
+
+- (NSArray<RTC_OBJC_TYPE(RTCRtpCodecCapability) *> *)rtpSenderCapabilities:(RTCRtpMediaType)mediaType;
+
+- (NSArray<RTC_OBJC_TYPE(RTCRtpCodecCapability) *> *)rtpReceiverCapabilities:(RTCRtpMediaType)mediaType;
 
 /** Initialize an RTCAudioSource with constraints. */
 - (RTC_OBJC_TYPE(RTCAudioSource) *)audioSourceWithConstraints:
