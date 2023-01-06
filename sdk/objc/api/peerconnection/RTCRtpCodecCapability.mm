@@ -21,8 +21,7 @@
 @synthesize nativeCodecCapability = _nativeCodecCapability;
 
 - (instancetype)init {
-  webrtc::RtpCodecCapability nativeCodecCapability;
-  return [self initWithNativeCodecCapability:nativeCodecCapability];
+  return [self initWithNativeCodecCapability:webrtc::RtpCodecCapability()];
 }
 
 - (instancetype)initWithNativeCodecCapability:(const webrtc::RtpCodecCapability &)nativeCodecCapability {

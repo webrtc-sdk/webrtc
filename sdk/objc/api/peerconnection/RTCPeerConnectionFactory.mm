@@ -25,7 +25,7 @@
 #import "RTCVideoSource+Private.h"
 #import "RTCVideoTrack+Private.h"
 #import "RTCRtpReceiver+Private.h"
-#import "RTCRtpCodecCapability.h"
+#import "RTCRtpCapabilities+Private.h"
 #import "RTCRtpCodecCapability+Private.h"
 #import "base/RTCLogging.h"
 #import "base/RTCVideoDecoderFactory.h"
@@ -116,32 +116,37 @@
 #endif
 }
 
-- (NSArray<RTC_OBJC_TYPE(RTCRtpCodecCapability) *> *)rtpSenderCapabilitiesFor:(RTCRtpMediaType)mediaType {
+- (RTC_OBJC_TYPE(RTCRtpCapabilities) *)rtpSenderCapabilitiesFor:(RTCRtpMediaType)mediaType {
 
-  NSMutableArray *result = [NSMutableArray array];
+  // NSMutableArray *result = [NSMutableArray array];
 
   webrtc::RtpCapabilities capabilities = _nativeFactory->GetRtpSenderCapabilities([RTCRtpReceiver nativeMediaTypeForMediaType: mediaType]);
 
-  for (auto & element : capabilities.codecs) {
-    RTCRtpCodecCapability *object = [[RTCRtpCodecCapability alloc] initWithNativeCodecCapability: element];
-    [result addObject: object];
-  }
+  return [[RTCRtpCapabilities alloc] initWithNativeCapabilities: capabilities];
 
-  return result;
+  // for (auto & element : capabilities) {
+  //   RTCRtpCapabilities *object = [[RTCRtpCapabilities alloc] initWithNativeCapabilities: element];
+  //   [result addObject: object];
+  // }
+
+  // return result;
 }
 
-- (NSArray<RTC_OBJC_TYPE(RTCRtpCodecCapability) *> *)rtpReceiverCapabilitiesFor:(RTCRtpMediaType)mediaType {
+- (RTC_OBJC_TYPE(RTCRtpCapabilities) *)rtpReceiverCapabilitiesFor:(RTCRtpMediaType)mediaType {
 
-  NSMutableArray *result = [NSMutableArray array];
+  // NSArray<RTC_OBJC_TYPE(RTCRtpCapabilities) *>
+  // NSMutableArray *result = [NSMutableArray array];
 
   webrtc::RtpCapabilities capabilities = _nativeFactory->GetRtpReceiverCapabilities([RTCRtpReceiver nativeMediaTypeForMediaType: mediaType]);
 
-  for (auto & element : capabilities.codecs) {
-    RTCRtpCodecCapability *object = [[RTCRtpCodecCapability alloc] initWithNativeCodecCapability: element];
-    [result addObject: object];
-  }
+  return [[RTCRtpCapabilities alloc] initWithNativeCapabilities: capabilities];
 
-  return result;
+  // for (auto & element : capabilities) {
+  //   RTCRtpCapabilities *object = [[RTCRtpCapabilities alloc] initWithNativeCapabilities: element];
+  //   [result addObject: object];
+  // }
+
+  // return result;
 }
 
 - (instancetype)
