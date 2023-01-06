@@ -118,35 +118,16 @@
 
 - (RTC_OBJC_TYPE(RTCRtpCapabilities) *)rtpSenderCapabilitiesFor:(RTCRtpMediaType)mediaType {
 
-  // NSMutableArray *result = [NSMutableArray array];
-
   webrtc::RtpCapabilities capabilities = _nativeFactory->GetRtpSenderCapabilities([RTCRtpReceiver nativeMediaTypeForMediaType: mediaType]);
 
   return [[RTCRtpCapabilities alloc] initWithNativeCapabilities: capabilities];
-
-  // for (auto & element : capabilities) {
-  //   RTCRtpCapabilities *object = [[RTCRtpCapabilities alloc] initWithNativeCapabilities: element];
-  //   [result addObject: object];
-  // }
-
-  // return result;
 }
 
 - (RTC_OBJC_TYPE(RTCRtpCapabilities) *)rtpReceiverCapabilitiesFor:(RTCRtpMediaType)mediaType {
 
-  // NSArray<RTC_OBJC_TYPE(RTCRtpCapabilities) *>
-  // NSMutableArray *result = [NSMutableArray array];
-
   webrtc::RtpCapabilities capabilities = _nativeFactory->GetRtpReceiverCapabilities([RTCRtpReceiver nativeMediaTypeForMediaType: mediaType]);
 
   return [[RTCRtpCapabilities alloc] initWithNativeCapabilities: capabilities];
-
-  // for (auto & element : capabilities) {
-  //   RTCRtpCapabilities *object = [[RTCRtpCapabilities alloc] initWithNativeCapabilities: element];
-  //   [result addObject: object];
-  // }
-
-  // return result;
 }
 
 - (instancetype)
