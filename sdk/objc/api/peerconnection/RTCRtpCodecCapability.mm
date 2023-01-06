@@ -10,6 +10,8 @@
 
 #import "RTCRtpCodecCapability+Private.h"
 
+#import "RTCRtpReceiver+Private.h"
+
 #import "RTCMediaStreamTrack.h"
 #import "helpers/NSString+StdString.h"
 
@@ -43,6 +45,14 @@
 
 - (void)setName:(NSString *)name {
   _nativeCodecCapability.name = std::string([name UTF8String]);
+}
+
+- (RTCRtpMediaType)kind {
+  return [RTCRtpReceiver mediaTypeForNativeMediaType:_nativeCodecCapability.kind];
+}
+
+- (void)setKind:(RTCRtpMediaType)kind {
+  _nativeCodecCapability.kind = [RTCRtpReceiver nativeMediaTypeForMediaType:kind];
 }
 
 @end
