@@ -57,9 +57,9 @@ RTC_OBJC_EXPORT
 
 @property(nonatomic, readonly) RTCAudioDeviceModule *audioDeviceModule;
 
-- (NSArray<RTC_OBJC_TYPE(RTCRtpCodecCapability) *> *)rtpSenderCapabilities:(RTCRtpMediaType)mediaType;
+- (NSArray<RTC_OBJC_TYPE(RTCRtpCodecCapability) *> *)rtpSenderCapabilitiesFor:(RTCRtpMediaType)mediaType;
 
-- (NSArray<RTC_OBJC_TYPE(RTCRtpCodecCapability) *> *)rtpReceiverCapabilities:(RTCRtpMediaType)mediaType;
+- (NSArray<RTC_OBJC_TYPE(RTCRtpCodecCapability) *> *)rtpReceiverCapabilitiesFor:(RTCRtpMediaType)mediaType;
 
 /** Initialize an RTCAudioSource with constraints. */
 - (RTC_OBJC_TYPE(RTCAudioSource) *)audioSourceWithConstraints:

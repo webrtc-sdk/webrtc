@@ -116,7 +116,7 @@
 #endif
 }
 
-- (NSArray<RTC_OBJC_TYPE(RTCRtpCodecCapability) *> *)rtpSenderCapabilities:(RTCRtpMediaType)mediaType {
+- (NSArray<RTC_OBJC_TYPE(RTCRtpCodecCapability) *> *)rtpSenderCapabilitiesFor:(RTCRtpMediaType)mediaType {
 
   NSMutableArray *result = [NSMutableArray array];
 
@@ -130,7 +130,7 @@
   return result;
 }
 
-- (NSArray<RTC_OBJC_TYPE(RTCRtpCodecCapability) *> *)rtpReceiverCapabilities:(RTCRtpMediaType)mediaType {
+- (NSArray<RTC_OBJC_TYPE(RTCRtpCodecCapability) *> *)rtpReceiverCapabilitiesFor:(RTCRtpMediaType)mediaType {
 
   NSMutableArray *result = [NSMutableArray array];
 
