@@ -106,7 +106,6 @@ RTC_OBJC_EXPORT
  */
 @property(nonatomic, readonly) RTCRtpTransceiverDirection direction;
 
-// NSArray<RTC_OBJC_TYPE(RTCRtpEncodingParameters) *> *
 @property(nonatomic, copy) NSArray<RTC_OBJC_TYPE(RTCRtpCodecCapability) *> *codecPreferences;
 
 /** The currentDirection attribute indicates the current direction negotiated
