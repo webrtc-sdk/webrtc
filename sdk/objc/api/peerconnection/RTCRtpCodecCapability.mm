@@ -99,4 +99,23 @@
   _nativeCodecCapability.preferred_payload_type = absl::optional<int>(preferredPayloadType.intValue);
 }
 
+- (NSNumber *)numChannels {
+
+  if (!_nativeCodecCapability.num_channels) {
+    return nil;
+  }
+
+  return [NSNumber numberWithInt: *_nativeCodecCapability.num_channels];
+}
+
+- (void)setNumChannels:(NSNumber *)numChannels {
+
+  if (numChannels == nil) {
+    _nativeCodecCapability.num_channels = absl::optional<int>();
+    return;
+  }
+
+  _nativeCodecCapability.num_channels = absl::optional<int>(numChannels.intValue);
+}
+
 @end

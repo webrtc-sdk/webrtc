@@ -42,7 +42,7 @@ RTC_OBJC_EXPORT
 @property(nonatomic, copy, nullable) NSNumber *preferredPayloadType;
 
 // The number of audio channels supported. Unused for video codecs.
-// absl::optional<int> num_channels;
+@property(nonatomic, copy, nullable) NSNumber *numChannels;
 
 // Feedback mechanisms supported for this codec.
 // std::vector<RtcpFeedback> rtcp_feedback;
