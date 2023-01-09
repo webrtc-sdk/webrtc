@@ -23,10 +23,10 @@ NS_ASSUME_NONNULL_BEGIN
 @interface RTC_OBJC_TYPE (RTCRtpCodecCapability)
 ()
 
-@property(nonatomic, readonly) webrtc::RtpCodecCapability nativeCodecCapability;
+    @property(nonatomic, readonly) webrtc::RtpCodecCapability nativeCodecCapability;
 
-- (instancetype)initWithNativeCodecCapability:(const webrtc::RtpCodecCapability &)nativeCodecCapability
-  NS_DESIGNATED_INITIALIZER;
+- (instancetype)initWithNativeCodecCapability:
+    (const webrtc::RtpCodecCapability &)nativeCodecCapability NS_DESIGNATED_INITIALIZER;
 
 @end
 
