@@ -44,9 +44,6 @@ RTC_OBJC_EXPORT
 // The number of audio channels supported. Unused for video codecs.
 @property(nonatomic, copy, nullable) NSNumber *numChannels;
 
-// Feedback mechanisms supported for this codec.
-// std::vector<RtcpFeedback> rtcp_feedback;
-
 // Codec-specific parameters that must be signaled to the remote party.
 //
 // Corresponds to "a=fmtp" parameters in SDP.
@@ -56,6 +53,10 @@ RTC_OBJC_EXPORT
 // Boolean values are represented by the string "1".
 // std::map<std::string, std::string> parameters;
 @property(nonatomic, copy) NSDictionary<NSString *, NSString *> *parameters;
+
+// Feedback mechanisms supported for this codec.
+// std::vector<RtcpFeedback> rtcp_feedback;
+// Not implemented.
 
 @end
 
