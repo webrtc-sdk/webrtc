@@ -55,6 +55,7 @@ RTC_OBJC_EXPORT
 // This helps make the mapping to SDP simpler, if an application is using SDP.
 // Boolean values are represented by the string "1".
 // std::map<std::string, std::string> parameters;
+@property(nonatomic, copy) NSDictionary<NSString *, NSString *> *parameters;
 
 @end
 

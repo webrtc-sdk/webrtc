@@ -32,8 +32,8 @@
   return [self initWithNativeCodecCapability:webrtc::RtpCodecCapability()];
 }
 
-- (instancetype)initWithNativeCodecCapability:(const webrtc::RtpCodecCapability &)nativeCodecCapability {
-
+- (instancetype)initWithNativeCodecCapability:
+    (const webrtc::RtpCodecCapability &)nativeCodecCapability {
   if (self = [super init]) {
     _nativeCodecCapability = nativeCodecCapability;
   }
@@ -62,16 +62,14 @@
 }
 
 - (NSNumber *)clockRate {
-
   if (!_nativeCodecCapability.clock_rate) {
     return nil;
   }
 
-  return [NSNumber numberWithInt: *_nativeCodecCapability.clock_rate];
+  return [NSNumber numberWithInt:*_nativeCodecCapability.clock_rate];
 }
 
 - (void)setClockRate:(NSNumber *)clockRate {
-
   if (clockRate == nil) {
     _nativeCodecCapability.clock_rate = absl::optional<int>();
     return;
@@ -81,41 +79,60 @@
 }
 
 - (NSNumber *)preferredPayloadType {
-
   if (!_nativeCodecCapability.preferred_payload_type) {
     return nil;
   }
 
-  return [NSNumber numberWithInt: *_nativeCodecCapability.preferred_payload_type];
+  return [NSNumber numberWithInt:*_nativeCodecCapability.preferred_payload_type];
 }
 
 - (void)setPreferredPayloadType:(NSNumber *)preferredPayloadType {
-
   if (preferredPayloadType == nil) {
     _nativeCodecCapability.preferred_payload_type = absl::optional<int>();
     return;
   }
 
-  _nativeCodecCapability.preferred_payload_type = absl::optional<int>(preferredPayloadType.intValue);
+  _nativeCodecCapability.preferred_payload_type =
+      absl::optional<int>(preferredPayloadType.intValue);
 }
 
 - (NSNumber *)numChannels {
-
   if (!_nativeCodecCapability.num_channels) {
     return nil;
   }
 
-  return [NSNumber numberWithInt: *_nativeCodecCapability.num_channels];
+  return [NSNumber numberWithInt:*_nativeCodecCapability.num_channels];
 }
 
 - (void)setNumChannels:(NSNumber *)numChannels {
-
   if (numChannels == nil) {
     _nativeCodecCapability.num_channels = absl::optional<int>();
     return;
   }
 
   _nativeCodecCapability.num_channels = absl::optional<int>(numChannels.intValue);
+}
+
+- (NSDictionary<NSString *, NSString *> *)parameters {
+  NSMutableDictionary *result = [NSMutableDictionary dictionary];
+  auto _parameters = _nativeCodecCapability.parameters;
+  for (auto it = _parameters.begin(); it != _parameters.end(); ++it) {
+    [result setObject:[NSString stringForStdString:it->second]
+               forKey:[NSString stringForStdString:it->first]];
+  }
+
+  return result;
+}
+
+- (void)setParameters:(NSDictionary<NSString *, NSString *> *)parameters {
+  std::map<std::string, std::string> _parameters;
+  for (NSString *paramKey in parameters.allKeys) {
+    std::string key = [NSString stdStringForString:paramKey];
+    std::string value = [NSString stdStringForString:parameters[paramKey]];
+    _parameters[key] = value;
+  }
+
+  _nativeCodecCapability.parameters = _parameters;
 }
 
 @end
