@@ -28,7 +28,6 @@
 @synthesize nativeCapabilities = _nativeCapabilities;
 
 - (instancetype)initWithNativeCapabilities:(const webrtc::RtpCapabilities &)nativeCapabilities {
-
   if (self = [super init]) {
     _nativeCapabilities = nativeCapabilities;
   }
@@ -37,12 +36,12 @@
 }
 
 - (NSArray<RTC_OBJC_TYPE(RTCRtpCodecCapability) *> *)codecs {
-
   NSMutableArray *result = [NSMutableArray array];
 
-  for (auto & element : _nativeCapabilities.codecs) {
-    RTCRtpCodecCapability *object = [[RTCRtpCodecCapability alloc] initWithNativeCodecCapability: element];
-    [result addObject: object];
+  for (auto &element : _nativeCapabilities.codecs) {
+    RTCRtpCodecCapability *object =
+        [[RTCRtpCodecCapability alloc] initWithNativeCodecCapability:element];
+    [result addObject:object];
   }
 
   return result;

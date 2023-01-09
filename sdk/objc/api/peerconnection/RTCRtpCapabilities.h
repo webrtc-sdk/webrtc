@@ -32,7 +32,7 @@ RTC_OBJC_EXPORT
 // Not implemented.
 // std::vector<RtpHeaderExtensionCapability> header_extensions;
 
-//Not implemented.
+// Not implemented.
 // std::vector<FecMechanism> fec;
 
 @end
