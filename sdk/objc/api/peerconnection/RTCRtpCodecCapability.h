@@ -39,7 +39,7 @@ RTC_OBJC_EXPORT
 
 // Default payload type for this codec. Mainly needed for codecs that use
 // that have statically assigned payload types.
-// absl::optional<int> preferred_payload_type;
+@property(nonatomic, copy, nullable) NSNumber *preferredPayloadType;
 
 // The number of audio channels supported. Unused for video codecs.
 // absl::optional<int> num_channels;

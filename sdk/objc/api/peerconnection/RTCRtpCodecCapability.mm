@@ -80,4 +80,23 @@
   _nativeCodecCapability.clock_rate = absl::optional<int>(clockRate.intValue);
 }
 
+- (NSNumber *)preferredPayloadType {
+
+  if (!_nativeCodecCapability.preferred_payload_type) {
+    return nil;
+  }
+
+  return [NSNumber numberWithInt: *_nativeCodecCapability.preferred_payload_type];
+}
+
+- (void)setPreferredPayloadType:(NSNumber *)preferredPayloadType {
+
+  if (preferredPayloadType == nil) {
+    _nativeCodecCapability.preferred_payload_type = absl::optional<int>();
+    return;
+  }
+
+  _nativeCodecCapability.preferred_payload_type = absl::optional<int>(preferredPayloadType.intValue);
+}
+
 @end
