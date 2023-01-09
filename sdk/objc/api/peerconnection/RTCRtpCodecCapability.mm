@@ -61,4 +61,23 @@
   _nativeCodecCapability.kind = [RTCRtpReceiver nativeMediaTypeForMediaType:kind];
 }
 
+- (NSNumber *)clockRate {
+
+  if (!_nativeCodecCapability.clock_rate) {
+    return nil;
+  }
+
+  return [NSNumber numberWithInt: *_nativeCodecCapability.clock_rate];
+}
+
+- (void)setClockRate:(NSNumber *)clockRate {
+
+  if (clockRate == nil) {
+    _nativeCodecCapability.clock_rate = absl::optional<int>();
+    return;
+  }
+
+  _nativeCodecCapability.clock_rate = absl::optional<int>(clockRate.intValue);
+}
+
 @end

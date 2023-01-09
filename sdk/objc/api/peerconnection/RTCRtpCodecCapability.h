@@ -35,7 +35,7 @@ RTC_OBJC_EXPORT
 @property(nonatomic, assign) RTCRtpMediaType kind;
 
 // Clock rate in Hertz. If unset, the codec is applicable to any clock rate.
-// absl::optional<int> clock_rate;
+@property(nonatomic, copy, nullable) NSNumber *clockRate;
 
 // Default payload type for this codec. Mainly needed for codecs that use
 // that have statically assigned payload types.
