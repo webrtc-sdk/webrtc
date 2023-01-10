@@ -679,18 +679,19 @@ WebRtcVideoEngine::GetRtpHeaderExtensions() const {
         webrtc::RtpExtension::kVideoContentTypeUri,
         webrtc::RtpExtension::kVideoTimingUri,
         webrtc::RtpExtension::kColorSpaceUri, webrtc::RtpExtension::kMidUri,
-        webrtc::RtpExtension::kRidUri, webrtc::RtpExtension::kRepairedRidUri}) {
+        webrtc::RtpExtension::kRidUri, webrtc::RtpExtension::kRepairedRidUri,
+        webrtc::RtpExtension::kDependencyDescriptorUri}) {
     result.emplace_back(uri, id++, webrtc::RtpTransceiverDirection::kSendRecv);
   }
   result.emplace_back(webrtc::RtpExtension::kGenericFrameDescriptorUri00, id++,
                       IsEnabled(trials_, "WebRTC-GenericDescriptorAdvertised")
                           ? webrtc::RtpTransceiverDirection::kSendRecv
                           : webrtc::RtpTransceiverDirection::kStopped);
-  result.emplace_back(
-      webrtc::RtpExtension::kDependencyDescriptorUri, id++,
-      IsEnabled(trials_, "WebRTC-DependencyDescriptorAdvertised")
-          ? webrtc::RtpTransceiverDirection::kSendRecv
-          : webrtc::RtpTransceiverDirection::kStopped);
+  // result.emplace_back(
+  //     webrtc::RtpExtension::kDependencyDescriptorUri, id++,
+  //     IsEnabled(trials_, "WebRTC-DependencyDescriptorAdvertised")
+  //         ? webrtc::RtpTransceiverDirection::kSendRecv
+  //         : webrtc::RtpTransceiverDirection::kStopped);
 
   result.emplace_back(
       webrtc::RtpExtension::kVideoLayersAllocationUri, id++,
