@@ -75,7 +75,8 @@ NSString *const kRTCRtpTransceiverErrorDomain = @"org.webrtc.RTCRtpTranceiver";
     objects.push_back(object.nativeCodecCapability);
   }
 
-  webrtc::RTCError error = _nativeRtpTransceiver->SetCodecPreferences(rtc::ArrayView<webrtc::RtpCodecCapability>(objects.data(), objects.size()));
+  //webrtc::RTCError error = 
+  _nativeRtpTransceiver->SetCodecPreferences(rtc::ArrayView<webrtc::RtpCodecCapability>(objects.data(), objects.size()));
 
   // if (!error.ok()) {
   //   [NSException raise:@"setCodecPreferences" format:@"SDK returned error: %@", [NSString stringWithUTF8String: error.message()]];
