@@ -307,29 +307,6 @@ void FrameCryptorTransformer::Transform(
   }
 }
 
-void ParseSlice(const uint8_t* slice, size_t length, bool enc) {
-  H264::NaluType nalu_type = H264::ParseNaluType(slice[0]);
-  switch (nalu_type) {
-    case H264::NaluType::kSps:
-    case H264::NaluType::kPps:
-    case H264::NaluType::kAud:
-    case H264::NaluType::kSei:
-    case H264::NaluType::kPrefix:
-      RTC_LOG(LS_INFO) << (enc ? "encrypto" : "decrypto")
-                       << ": ParameterSetNalu length: " << length
-                       << ", nalu_type " << nalu_type;
-      break;  // Ignore these nalus, as we don't care about their contents.
-    default:
-      RTC_LOG(LS_INFO) << (enc ? "encrypto" : "decrypto")
-                       << ": NonParameterSetNalu length: " << length
-                       << ", nalu_type " << nalu_type;
-      for (size_t i = 1; i < length; i++) {
-        ((uint8_t*)slice)[i] = slice[i] ^ 0x05;
-      }
-      break;
-  }
-}
-
 void FrameCryptorTransformer::encryptFrame(
     std::unique_ptr<webrtc::TransformableFrameInterface> frame) {
   auto keys = key_manager_->keys(participant_id_);
@@ -411,8 +388,8 @@ void FrameCryptorTransformer::decryptFrame(
       ivLength != getIvSize()) {
     RTC_LOG(LS_INFO) << "FrameCryptorTransformer::decryptFrame() no keys, or "
                         "key_index out of range";
-    if (sink_callback_)
-      sink_callback_->OnTransformedFrame(std::move(frame));
+    if(observer_)
+      observer_->OnDecryptionFailed(participant_id_, FrameCryptorError::kInvalidKey);
     return;
   }
   std::vector<uint8_t> aes_key = keys[key_index];
@@ -442,6 +419,10 @@ void FrameCryptorTransformer::decryptFrame(
                      << " keyIndex=" << static_cast<int>(key_index_)
                      << " aesKey=" << to_hex(aes_key.data(), aes_key.size())
                      << " iv=" << to_hex(iv.data(), iv.size());
+  } else {
+    if(observer_)
+      observer_->OnDecryptionFailed(participant_id_, FrameCryptorError::kDecryptoFailed);
+    return;
   }
   if (sink_callback_)
     sink_callback_->OnTransformedFrame(std::move(frame));

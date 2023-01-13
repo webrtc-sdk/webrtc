@@ -36,6 +36,19 @@ class KeyManager : public rtc::RefCountInterface {
   virtual ~KeyManager() {}
 };
 
+enum class FrameCryptorError {
+  kDecryptoFailed = 0,
+  kInvalidKey,
+};
+
+class FrameCryptorTransformerObserver {
+ public:
+  virtual void OnDecryptionFailed(const std::string participant_id, FrameCryptorError error) = 0;
+
+ protected:
+  virtual ~FrameCryptorTransformerObserver() {}
+};
+
 class RTC_EXPORT FrameCryptorTransformer
     : public rtc::RefCountedObject<webrtc::FrameTransformerInterface> {
  public:
@@ -53,6 +66,12 @@ class RTC_EXPORT FrameCryptorTransformer
                                    MediaType type,
                                    Algorithm algorithm,
                                    rtc::scoped_refptr<KeyManager> key_manager);
+
+  virtual void SetFrameCryptorTransformerObserver(
+      FrameCryptorTransformerObserver* observer) {
+    webrtc::MutexLock lock(&mutex_);
+    observer_ = observer;
+  }
 
   virtual void SetKeyIndex(int index) {
     webrtc::MutexLock lock(&mutex_);
@@ -111,6 +130,7 @@ class RTC_EXPORT FrameCryptorTransformer
   int key_index_ = 0;
   std::map<uint32_t, uint32_t> sendCounts_;
   rtc::scoped_refptr<KeyManager> key_manager_;
+  FrameCryptorTransformerObserver* observer_ = nullptr;
 };
 
 }  // namespace webrtc
