@@ -30,6 +30,7 @@ RTC_EXTERN const NSString *const kRTCComfortNoiseCodecName;
 RTC_EXTERN const NSString *const kRTCVp8CodecName;
 RTC_EXTERN const NSString *const kRTCVp9CodecName;
 RTC_EXTERN const NSString *const kRTCH264CodecName;
+RTC_EXTERN const NSString *const kRTCAv1CodecName;
 
 /** Defined in https://www.w3.org/TR/webrtc/#idl-def-rtcrtpcodecparameters */
 RTC_OBJC_EXPORT

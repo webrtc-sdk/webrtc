@@ -642,18 +642,15 @@ WebRtcVideoEngine::GetRtpHeaderExtensions() const {
         webrtc::RtpExtension::kVideoContentTypeUri,
         webrtc::RtpExtension::kVideoTimingUri,
         webrtc::RtpExtension::kColorSpaceUri, webrtc::RtpExtension::kMidUri,
-        webrtc::RtpExtension::kRidUri, webrtc::RtpExtension::kRepairedRidUri}) {
+        webrtc::RtpExtension::kRidUri, webrtc::RtpExtension::kRepairedRidUri,
+        // "WebRTC-DependencyDescriptorAdvertised"
+        webrtc::RtpExtension::kDependencyDescriptorUri}) {
     result.emplace_back(uri, id++, webrtc::RtpTransceiverDirection::kSendRecv);
   }
   result.emplace_back(webrtc::RtpExtension::kGenericFrameDescriptorUri00, id++,
                       IsEnabled(trials_, "WebRTC-GenericDescriptorAdvertised")
                           ? webrtc::RtpTransceiverDirection::kSendRecv
                           : webrtc::RtpTransceiverDirection::kStopped);
-  result.emplace_back(
-      webrtc::RtpExtension::kDependencyDescriptorUri, id++,
-      IsEnabled(trials_, "WebRTC-DependencyDescriptorAdvertised")
-          ? webrtc::RtpTransceiverDirection::kSendRecv
-          : webrtc::RtpTransceiverDirection::kStopped);
 
   result.emplace_back(
       webrtc::RtpExtension::kVideoLayersAllocationUri, id++,
@@ -931,7 +928,7 @@ void WebRtcVideoChannel::RequestEncoderSwitch(
 void WebRtcVideoChannel::StartReceive(uint32_t ssrc) {
   RTC_DCHECK_RUN_ON(&thread_checker_);
   WebRtcVideoReceiveStream* stream = FindReceiveStream(ssrc);
-  if(!stream) {
+  if (!stream) {
     return;
   }
   stream->StartStream();
@@ -940,7 +937,7 @@ void WebRtcVideoChannel::StartReceive(uint32_t ssrc) {
 void WebRtcVideoChannel::StopReceive(uint32_t ssrc) {
   RTC_DCHECK_RUN_ON(&thread_checker_);
   WebRtcVideoReceiveStream* stream = FindReceiveStream(ssrc);
-  if(!stream) {
+  if (!stream) {
     return;
   }
   stream->StopStream();
@@ -3200,12 +3197,12 @@ void WebRtcVideoChannel::WebRtcVideoReceiveStream::SetRecvParameters(
   }
 }
 
-void WebRtcVideoChannel::WebRtcVideoReceiveStream::StartStream(){
+void WebRtcVideoChannel::WebRtcVideoReceiveStream::StartStream() {
   if (stream_) {
     stream_->Start();
   }
 }
-void WebRtcVideoChannel::WebRtcVideoReceiveStream::StopStream(){
+void WebRtcVideoChannel::WebRtcVideoReceiveStream::StopStream() {
   if (stream_) {
     stream_->Stop();
   }
