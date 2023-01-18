@@ -265,19 +265,23 @@ class AudioDeviceIOS : public AudioDeviceGeneric,
   rtc::BufferT<int16_t> record_audio_buffer_;
 
   // Set to 1 when recording is initialized and 0 otherwise.
-  volatile int recording_is_initialized_;
+  std::atomic<int> recording_is_initialized_;
 
   // Set to 1 when recording is active and 0 otherwise.
   std::atomic<int> recording_;
 
   // Set to 1 when playout is initialized and 0 otherwise.
-  volatile int playout_is_initialized_;
+  std::atomic<int> playout_is_initialized_;
 
   // Set to 1 when playout is active and 0 otherwise.
   std::atomic<int> playing_;
 
   // Set to true after successful call to Init(), false otherwise.
   bool initialized_ RTC_GUARDED_BY(thread_);
+
+  // Set to true after successful call to InitRecording() or InitPlayout(),
+  // false otherwise.
+  bool audio_is_initialized_;
 
   // Set to true if audio session is interrupted, false otherwise.
   bool is_interrupted_;

@@ -33,7 +33,7 @@ namespace webrtc {
 
 enum DesktopType { kScreen, kWindow };
 
-class ObjCDesktopCapturer : public DesktopCapturer::Callback, public rtc::MessageHandler {
+class ObjCDesktopCapturer : public DesktopCapturer::Callback {
  public:
   enum CaptureState { CS_RUNNING, CS_STOPPED, CS_FAILED};
 
@@ -52,7 +52,6 @@ class ObjCDesktopCapturer : public DesktopCapturer::Callback, public rtc::Messag
  protected:
   virtual void OnCaptureResult(webrtc::DesktopCapturer::Result result,
                                std::unique_ptr<webrtc::DesktopFrame> frame) override;
-  virtual void OnMessage(rtc::Message* msg) override;
 
  private:
   void CaptureFrame();

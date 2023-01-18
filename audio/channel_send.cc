@@ -163,10 +163,6 @@ class ChannelSend : public ChannelSendInterface,
                    size_t payloadSize,
                    int64_t absolute_capture_timestamp_ms) override;
 
-  bool InputMute() const;
-
-  void OnUplinkPacketLossRate(float packet_loss_rate);
-
   int32_t SendRtpAudio(AudioFrameType frameType,
                        uint8_t payloadType,
                        uint32_t rtp_timestamp,

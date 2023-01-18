@@ -46,15 +46,12 @@ VideoRtpReceiver::VideoRtpReceiver(
       worker_thread_safety_(PendingTaskSafetyFlag::CreateDetachedInactive()) {
   RTC_DCHECK(worker_thread_);
   SetStreams(streams);
-  track_->RegisterObserver(this);
   RTC_DCHECK_EQ(source_->state(), MediaSourceInterface::kInitializing);
 }
 
 VideoRtpReceiver::~VideoRtpReceiver() {
   RTC_DCHECK_RUN_ON(&signaling_thread_checker_);
   RTC_DCHECK(!media_channel_);
-
-  track_->UnregisterObserver(this);
 }
 
 std::vector<std::string> VideoRtpReceiver::stream_ids() const {

@@ -58,10 +58,13 @@
   std::unique_ptr<rtc::Thread> _networkThread;
   std::unique_ptr<rtc::Thread> _workerThread;
   std::unique_ptr<rtc::Thread> _signalingThread;
+  rtc::scoped_refptr<webrtc::AudioDeviceModule> _nativeAudioDeviceModule;
+
   BOOL _hasStartedAecDump;
 }
 
 @synthesize nativeFactory = _nativeFactory;
+@synthesize audioDeviceModule = _audioDeviceModule;
 
 - (rtc::scoped_refptr<webrtc::AudioDeviceModule>)audioDeviceModule:(BOOL)bypassVoiceProcessing {
 #if defined(WEBRTC_IOS)
@@ -108,7 +111,7 @@
   if (audioDevice) {
     audio_device_module = webrtc::CreateAudioDeviceModule(audioDevice);
   } else {
-    audio_device_module = [self audioDeviceModule];
+    audio_device_module = [self audioDeviceModule:false];
   }
   return [self initWithNativeAudioEncoderFactory:webrtc::CreateBuiltinAudioEncoderFactory()
                        nativeAudioDecoderFactory:webrtc::CreateBuiltinAudioDecoderFactory()

@@ -42,8 +42,7 @@
 
 namespace webrtc {
 
-class VideoRtpReceiver : public RtpReceiverInternal,
-                         public ObserverInterface {
+class VideoRtpReceiver : public RtpReceiverInternal {
  public:
   // An SSRC of 0 will create a receiver that will match the first SSRC it
   // sees. Must be called on signaling thread.
@@ -60,9 +59,6 @@ class VideoRtpReceiver : public RtpReceiverInternal,
   virtual ~VideoRtpReceiver();
 
   rtc::scoped_refptr<VideoTrackInterface> video_track() const { return track_; }
-
-  // ObserverInterface implementation
-  void OnChanged() override;
 
   // RtpReceiverInterface implementation
   rtc::scoped_refptr<MediaStreamTrackInterface> track() const override {

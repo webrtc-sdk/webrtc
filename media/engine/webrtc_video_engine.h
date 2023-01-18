@@ -261,8 +261,8 @@ class WebRtcVideoChannel : public VideoMediaChannel,
       uint32_t ssrc,
       rtc::scoped_refptr<webrtc::FrameTransformerInterface> frame_transformer)
       override;
-  void StartReceive(uint32_t ssrc) override;
-  void StopReceive(uint32_t ssrc) override;
+  void StartReceive(uint32_t ssrc);
+  void StopReceive(uint32_t ssrc);
  private:
   class WebRtcVideoReceiveStream;
 

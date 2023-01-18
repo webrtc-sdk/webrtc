@@ -44,7 +44,7 @@ ObjCDesktopMediaList::ObjCDesktopMediaList(DesktopType type,
   
   callback_ = std::make_unique<CallbackProxy>();
 
-  thread_->Invoke<void>(RTC_FROM_HERE, [this, type] {
+  thread_->PostTask([this, type] {
      if (type == kScreen) {
       capturer_ = webrtc::DesktopCapturer::CreateScreenCapturer(options_);
     } else { 
@@ -56,7 +56,7 @@ ObjCDesktopMediaList::ObjCDesktopMediaList(DesktopType type,
 }
 
 ObjCDesktopMediaList::~ObjCDesktopMediaList() {
-  thread_->Invoke<void>(RTC_FROM_HERE, [this] {
+  thread_->PostTask([this] {
     capturer_.reset();
   });
 }
@@ -72,7 +72,7 @@ int32_t ObjCDesktopMediaList::UpdateSourceList(bool force_reload, bool get_thumb
 
   webrtc::DesktopCapturer::SourceList new_sources;
 
-  thread_->Invoke<void>(RTC_FROM_HERE, [this,&new_sources] {
+  thread_->PostTask([this,&new_sources] {
     capturer_->GetSourceList(&new_sources);
   });
 
@@ -147,7 +147,7 @@ int32_t ObjCDesktopMediaList::UpdateSourceList(bool force_reload, bool get_thumb
 
 bool ObjCDesktopMediaList::GetThumbnail(MediaSource *source, bool notify) {
   
-  thread_->PostTask(ToQueuedTask(
+  thread_->PostTask(
       [this, source, notify] {
       if(capturer_->SelectSource(source->id())){
         callback_->SetCallback([&](webrtc::DesktopCapturer::Result result,
@@ -160,7 +160,7 @@ bool ObjCDesktopMediaList::GetThumbnail(MediaSource *source, bool notify) {
         });
         capturer_->CaptureFrame();
       }
-  }));
+  });
 
   return true;
 }
@@ -237,10 +237,6 @@ void MediaSource::SaveCaptureResult(webrtc::DesktopCapturer::Result result,
         , thumbnail_.begin());
 
   free(out_buffer);
-}
-
-void ObjCDesktopMediaList::OnMessage(rtc::Message* msg) {
-  
 }
 
 }  // namespace webrtc
