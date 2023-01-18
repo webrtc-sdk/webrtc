@@ -14,6 +14,8 @@
 #import "RTCRtpReceiver.h"
 #import "RTCRtpSender.h"
 
+@class RTC_OBJC_TYPE(RTCRtpCodecCapability);
+
 NS_ASSUME_NONNULL_BEGIN
 
 extern NSString *const kRTCRtpTransceiverErrorDomain;
@@ -103,6 +105,8 @@ RTC_OBJC_EXPORT
  *  https://w3c.github.io/webrtc-pc/#dom-rtcrtptransceiver-direction
  */
 @property(nonatomic, readonly) RTCRtpTransceiverDirection direction;
+
+@property(nonatomic, copy) NSArray<RTC_OBJC_TYPE(RTCRtpCodecCapability) *> *codecPreferences;
 
 /** The currentDirection attribute indicates the current direction negotiated
  *  for this transceiver. If this transceiver has never been represented in an

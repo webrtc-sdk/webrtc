@@ -102,6 +102,8 @@ class ChannelSend : public ChannelSendInterface,
   // Muting, Volume and Level.
   void SetInputMute(bool enable) override;
 
+  bool InputMute() const override;
+
   // Stats.
   ANAStats GetANAStatistics() const override;
 
@@ -164,7 +166,6 @@ class ChannelSend : public ChannelSendInterface,
                    int64_t absolute_capture_timestamp_ms) override;
 
   void OnUplinkPacketLossRate(float packet_loss_rate);
-  bool InputMute() const;
 
   int32_t SendRtpAudio(AudioFrameType frameType,
                        uint8_t payloadType,
