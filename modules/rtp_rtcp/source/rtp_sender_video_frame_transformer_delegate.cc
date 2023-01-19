@@ -67,9 +67,7 @@ class TransformableVideoSenderFrame : public TransformableVideoFrameInterface {
     return RtpDescriptorAuthentication(header_);
   }
 
-  const RTPVideoHeader& header () const override {
-    return header_;
-  }
+  const RTPVideoHeader& header() const override { return header_; }
 
   const VideoFrameMetadata& GetMetadata() const override { return metadata_; }
 
@@ -137,7 +135,10 @@ bool RTPSenderVideoFrameTransformerDelegate::TransformFrame(
 void RTPSenderVideoFrameTransformerDelegate::OnTransformedFrame(
     std::unique_ptr<TransformableFrameInterface> frame) {
   MutexLock lock(&sender_lock_);
-
+  if (!encoder_queue_) {
+    TaskQueueBase* current = TaskQueueBase::Current();
+    encoder_queue_ = current ? current : send_transport_queue_;
+  }
   // The encoder queue normally gets destroyed after the sender;
   // however, it might still be null by the time a previously queued frame
   // arrives.

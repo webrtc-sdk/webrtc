@@ -125,15 +125,15 @@ uint8_t get_unencrypted_bytes(webrtc::TransformableFrameInterface* frame,
             case webrtc::H264::NaluType::kSei:
             case webrtc::H264::NaluType::kPrefix:
               RTC_LOG(LS_INFO)
-                  << "ParameterSetNalu payload_size: " << index.payload_size << ", nalu_type "
-                  << nalu_type << ", NaluIndex [" << idx++
+                  << "ParameterSetNalu payload_size: " << index.payload_size
+                  << ", nalu_type " << nalu_type << ", NaluIndex [" << idx++
                   << "] offset: " << index.payload_start_offset;
               break;  // Ignore these nalus, as we don't care about their
                       // contents.
             default:
               RTC_LOG(LS_INFO)
-                  << "NonParameterSetNalu payload_size: " << index.payload_size << ", nalu_type "
-                  << nalu_type << ", NaluIndex [" << idx++
+                  << "NonParameterSetNalu payload_size: " << index.payload_size
+                  << ", nalu_type " << nalu_type << ", NaluIndex [" << idx++
                   << "] offset: " << index.payload_start_offset;
               unencrypted_bytes = index.payload_start_offset + 1;
               break;
@@ -272,21 +272,9 @@ FrameCryptorTransformer::FrameCryptorTransformer(
 void FrameCryptorTransformer::Transform(
     std::unique_ptr<webrtc::TransformableFrameInterface> frame) {
   webrtc::MutexLock lock(&sink_mutex_);
-  if (sink_callback_ == nullptr) {
+  if (sink_callback_ == nullptr && sink_callbacks_.size() == 0) {
     RTC_LOG(LS_WARNING)
         << "FrameCryptorTransformer::Transform sink_callback_ is NULL";
-    return;
-  }
-
-  bool enabled_cryption = false;
-  {
-    webrtc::MutexLock lock(&mutex_);
-    enabled_cryption = enabled_cryption_;
-  }
-
-  if ((frame->GetData().size() == 0 && sink_callback_) || !key_manager_ ||
-      !enabled_cryption) {
-    sink_callback_->OnTransformedFrame(std::move(frame));
     return;
   }
 
@@ -301,27 +289,37 @@ void FrameCryptorTransformer::Transform(
     case webrtc::TransformableFrameInterface::Direction::kUnknown:
       // do nothing
       RTC_LOG(LS_INFO) << "FrameCryptorTransformer::Transform() kUnknown";
-      if (sink_callback_)
-        sink_callback_->OnTransformedFrame(std::move(frame));
       break;
   }
 }
 
 void FrameCryptorTransformer::encryptFrame(
     std::unique_ptr<webrtc::TransformableFrameInterface> frame) {
+  rtc::ArrayView<const uint8_t> date_in = frame->GetData();
   auto keys = key_manager_->keys(participant_id_);
 
-  if (keys.size() == 0 || key_index_ >= (int)keys.size()) {
+  bool enabled_cryption = false;
+  rtc::scoped_refptr<webrtc::TransformedFrameCallback> sink_callback = nullptr;
+  {
+    webrtc::MutexLock lock(&mutex_);
+    enabled_cryption = enabled_cryption_;
+    if (type_ == webrtc::FrameCryptorTransformer::MediaType::kAudioFrame) {
+      sink_callback = sink_callback_;
+    } else {
+      sink_callback = sink_callbacks_[frame->GetSsrc()];
+    }
+  }
+
+  if (date_in.size() == 0 || keys.size() == 0 ||
+      key_index_ >= (int)keys.size() || !key_manager_ || !enabled_cryption) {
     RTC_LOG(LS_INFO) << "FrameCryptorTransformer::encryptFrame() no keys, or "
                         "key_index_ out of range";
-    if (sink_callback_)
-      sink_callback_->OnTransformedFrame(std::move(frame));
+    if (sink_callback)
+      sink_callback->OnTransformedFrame(std::move(frame));
     return;
   }
   std::vector<uint8_t> aes_key = keys[key_index_];
-
   uint8_t unencrypted_bytes = get_unencrypted_bytes(frame.get(), type_);
-  rtc::ArrayView<const uint8_t> date_in = frame->GetData();
 
   rtc::Buffer frameHeader(unencrypted_bytes);
   for (size_t i = 0; i < unencrypted_bytes; i++) {
@@ -362,14 +360,33 @@ void FrameCryptorTransformer::encryptFrame(
                      << " iv=" << to_hex(iv.data(), iv.size());
   }
 
-  if (sink_callback_)
-    sink_callback_->OnTransformedFrame(std::move(frame));
+  if (sink_callback)
+    sink_callback->OnTransformedFrame(std::move(frame));
 }
 
 void FrameCryptorTransformer::decryptFrame(
     std::unique_ptr<webrtc::TransformableFrameInterface> frame) {
-  uint8_t unencrypted_bytes = get_unencrypted_bytes(frame.get(), type_);
   rtc::ArrayView<const uint8_t> date_in = frame->GetData();
+
+  bool enabled_cryption = false;
+  rtc::scoped_refptr<webrtc::TransformedFrameCallback> sink_callback = nullptr;
+  {
+    webrtc::MutexLock lock(&mutex_);
+    enabled_cryption = enabled_cryption_;
+    if (type_ == webrtc::FrameCryptorTransformer::MediaType::kAudioFrame) {
+      sink_callback = sink_callback_;
+    } else {
+      sink_callback = sink_callbacks_[frame->GetSsrc()];
+    }
+  }
+
+  if (date_in.size() == 0 || !key_manager_ || !enabled_cryption) {
+    if (sink_callback)
+      sink_callback->OnTransformedFrame(std::move(frame));
+    return;
+  }
+
+  uint8_t unencrypted_bytes = get_unencrypted_bytes(frame.get(), type_);
 
   rtc::Buffer frameHeader(unencrypted_bytes);
   for (size_t i = 0; i < unencrypted_bytes; i++) {
@@ -388,8 +405,9 @@ void FrameCryptorTransformer::decryptFrame(
       ivLength != getIvSize()) {
     RTC_LOG(LS_INFO) << "FrameCryptorTransformer::decryptFrame() no keys, or "
                         "key_index out of range";
-    if(observer_)
-      observer_->OnDecryptionFailed(participant_id_, FrameCryptorError::kInvalidKey);
+    if (observer_)
+      observer_->OnDecryptionFailed(participant_id_,
+                                    FrameCryptorError::kInvalidKey);
     return;
   }
   std::vector<uint8_t> aes_key = keys[key_index];
@@ -420,12 +438,13 @@ void FrameCryptorTransformer::decryptFrame(
                      << " aesKey=" << to_hex(aes_key.data(), aes_key.size())
                      << " iv=" << to_hex(iv.data(), iv.size());
   } else {
-    if(observer_)
-      observer_->OnDecryptionFailed(participant_id_, FrameCryptorError::kDecryptoFailed);
+    if (observer_)
+      observer_->OnDecryptionFailed(participant_id_,
+                                    FrameCryptorError::kDecryptoFailed);
     return;
   }
-  if (sink_callback_)
-    sink_callback_->OnTransformedFrame(std::move(frame));
+  if (sink_callback)
+    sink_callback->OnTransformedFrame(std::move(frame));
 }
 
 rtc::Buffer FrameCryptorTransformer::makeIv(uint32_t ssrc, uint32_t timestamp) {

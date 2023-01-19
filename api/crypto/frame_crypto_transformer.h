@@ -21,6 +21,7 @@
 #include "rtc_base/buffer.h"
 #include "rtc_base/synchronization/mutex.h"
 #include "rtc_base/system/rtc_export.h"
+#include "rtc_base/thread.h"
 
 namespace webrtc {
 
@@ -43,7 +44,8 @@ enum class FrameCryptorError {
 
 class FrameCryptorTransformerObserver {
  public:
-  virtual void OnDecryptionFailed(const std::string participant_id, FrameCryptorError error) = 0;
+  virtual void OnDecryptionFailed(const std::string participant_id,
+                                  FrameCryptorError error) = 0;
 
  protected:
   virtual ~FrameCryptorTransformerObserver() {}
@@ -103,11 +105,14 @@ class RTC_EXPORT FrameCryptorTransformer
       rtc::scoped_refptr<webrtc::TransformedFrameCallback> callback,
       uint32_t ssrc) override {
     webrtc::MutexLock lock(&sink_mutex_);
-    sink_callback_ = callback;
+    sink_callbacks_[ssrc] = callback;
   }
   virtual void UnregisterTransformedFrameSinkCallback(uint32_t ssrc) override {
     webrtc::MutexLock lock(&sink_mutex_);
-    sink_callback_ = nullptr;
+    auto it = sink_callbacks_.find(ssrc);
+    if (it != sink_callbacks_.end()) {
+      sink_callbacks_.erase(it);
+    }
   }
 
   virtual void Transform(
@@ -127,10 +132,13 @@ class RTC_EXPORT FrameCryptorTransformer
   MediaType type_;
   Algorithm algorithm_;
   rtc::scoped_refptr<webrtc::TransformedFrameCallback> sink_callback_;
+  std::map<uint32_t, rtc::scoped_refptr<webrtc::TransformedFrameCallback>>
+      sink_callbacks_;
   int key_index_ = 0;
   std::map<uint32_t, uint32_t> sendCounts_;
   rtc::scoped_refptr<KeyManager> key_manager_;
   FrameCryptorTransformerObserver* observer_ = nullptr;
+  std::unique_ptr<rtc::Thread> thread_;
 };
 
 }  // namespace webrtc
