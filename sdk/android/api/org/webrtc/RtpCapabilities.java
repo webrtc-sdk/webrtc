@@ -1,3 +1,19 @@
+/*
+ * Copyright 2023 LiveKit
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.webrtc;
 
 import androidx.annotation.Nullable;
@@ -18,16 +34,19 @@ public class RtpCapabilities {
     public Integer numChannels;
     // The "format specific parameters" field from the "a=fmtp" line in the SDP
     public Map<String, String> parameters;
+    // The MIME type of the codec. This is a convenience field.
+    public String mimeType;
 
     @CalledByNative("CodecCapability")
     CodecCapability(int preferredPayloadType, String name, MediaStreamTrack.MediaType kind,
-        Integer clockRate, Integer numChannels, Map<String, String> parameters) {
+        Integer clockRate, Integer numChannels, String mimeType, Map<String, String> parameters) {
       this.preferredPayloadType = preferredPayloadType;
       this.name = name;
       this.kind = kind;
       this.clockRate = clockRate;
       this.numChannels = numChannels;
       this.parameters = parameters;
+      this.mimeType = mimeType;
     }
 
     @CalledByNative("CodecCapability")
