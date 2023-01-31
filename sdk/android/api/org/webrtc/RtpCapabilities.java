@@ -27,7 +27,7 @@ public class RtpCapabilities {
     // Name used to identify the codec. Equivalent to MIME subtype.
     public String name;
     // The media type of this codec. Equivalent to MIME top-level type.
-    MediaStreamTrack.MediaType kind;
+    public MediaStreamTrack.MediaType kind;
     // Clock rate in Hertz.
     public Integer clockRate;
     // The number of audio channels used. Set to null for video codecs.
@@ -36,6 +36,8 @@ public class RtpCapabilities {
     public Map<String, String> parameters;
     // The MIME type of the codec. This is a convenience field.
     public String mimeType;
+
+    public CodecCapability() {}
 
     @CalledByNative("CodecCapability")
     CodecCapability(int preferredPayloadType, String name, MediaStreamTrack.MediaType kind,

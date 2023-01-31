@@ -215,7 +215,7 @@ public class RtpTransceiver {
     nativeStopInternal(nativeRtpTransceiver);
   }
 
-  public void setCodecPreferences(List<RtpParameters.Codec> codecs) {
+  public void setCodecPreferences(List<RtpCapabilities.CodecCapability> codecs) {
     checkRtpTransceiverExists();
     nativeSetCodecPreferences(nativeRtpTransceiver, codecs);
   }
@@ -268,5 +268,5 @@ public class RtpTransceiver {
   private static native void nativeStopStandard(long rtpTransceiver);
   private static native boolean nativeSetDirection(
       long rtpTransceiver, RtpTransceiverDirection rtpTransceiverDirection);
-  private static native void nativeSetCodecPreferences(long rtpTransceiver, List<RtpParameters.Codec> codecs);
+  private static native void nativeSetCodecPreferences(long rtpTransceiver, List<RtpCapabilities.CodecCapability> codecs);
 }
