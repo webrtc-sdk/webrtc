@@ -119,23 +119,15 @@ uint8_t get_unencrypted_bytes(webrtc::TransformableFrameInterface* frame,
           webrtc::H264::NaluType nalu_type =
               webrtc::H264::ParseNaluType(slice[0]);
           switch (nalu_type) {
-            case webrtc::H264::NaluType::kSps:
-            case webrtc::H264::NaluType::kPps:
-            case webrtc::H264::NaluType::kAud:
-            case webrtc::H264::NaluType::kSei:
-            case webrtc::H264::NaluType::kPrefix:
+            case webrtc::H264::NaluType::kIdr:
+            case webrtc::H264::NaluType::kSlice:
+              unencrypted_bytes = index.payload_start_offset + 2;
               RTC_LOG(LS_INFO)
-                  << "ParameterSetNalu payload_size: " << index.payload_size
-                  << ", nalu_type " << nalu_type << ", NaluIndex [" << idx++
+                  << "NonParameterSetNalu::payload_size: " << index.payload_size << ", nalu_type "
+                  << nalu_type << ", NaluIndex [" << idx++
                   << "] offset: " << index.payload_start_offset;
-              break;  // Ignore these nalus, as we don't care about their
-                      // contents.
+              break;
             default:
-              RTC_LOG(LS_INFO)
-                  << "NonParameterSetNalu payload_size: " << index.payload_size
-                  << ", nalu_type " << nalu_type << ", NaluIndex [" << idx++
-                  << "] offset: " << index.payload_start_offset;
-              unencrypted_bytes = index.payload_start_offset + 1;
               break;
           }
         }
@@ -458,7 +450,7 @@ rtc::Buffer FrameCryptorTransformer::makeIv(uint32_t ssrc, uint32_t timestamp) {
   rtc::ByteBufferWriter buf;
   buf.WriteUInt32(ssrc);
   buf.WriteUInt32(timestamp);
-  buf.WriteUInt32(sendCount % 0xFFFF);
+  buf.WriteUInt32(timestamp - (sendCount % 0xFFFF));
   sendCounts_[ssrc] = sendCount + 1;
 
   RTC_CHECK_EQ(buf.Length(), getIvSize());
