@@ -18,6 +18,7 @@ import org.webrtc.Logging.Severity;
 import org.webrtc.PeerConnection;
 import org.webrtc.audio.AudioDeviceModule;
 import org.webrtc.audio.JavaAudioDeviceModule;
+import org.webrtc.RtpCapabilities;
 
 /**
  * Java wrapper for a C++ PeerConnectionFactoryInterface.  Main entry point to
@@ -471,6 +472,16 @@ public class PeerConnectionFactory {
     return new AudioTrack(nativeCreateAudioTrack(nativeFactory, id, source.getNativeAudioSource()));
   }
 
+  public RtpCapabilities getRtpReceiverCapabilities(MediaStreamTrack.MediaType mediaType) {
+    checkPeerConnectionFactoryExists();
+    return nativeGetRtpReceiverCapabilities(nativeFactory, mediaType);
+  }
+
+  public RtpCapabilities getRtpSenderCapabilities(MediaStreamTrack.MediaType mediaType) {
+    checkPeerConnectionFactoryExists();
+    return nativeGetRtpSenderCapabilities(nativeFactory, mediaType);
+  }
+
   // Starts recording an AEC dump. Ownership of the file is transfered to the
   // native code. If an AEC dump is already in progress, it will be stopped and
   // a new one will start using the provided file.
@@ -615,4 +626,6 @@ public class PeerConnectionFactory {
   private static native void nativeInjectLoggable(JNILogging jniLogging, int severity);
   private static native void nativeDeleteLoggable();
   private static native void nativePrintStackTrace(int tid);
+  private static native RtpCapabilities nativeGetRtpSenderCapabilities(long factory, MediaStreamTrack.MediaType mediaType);
+  private static native RtpCapabilities nativeGetRtpReceiverCapabilities(long factory, MediaStreamTrack.MediaType mediaType);
 }
