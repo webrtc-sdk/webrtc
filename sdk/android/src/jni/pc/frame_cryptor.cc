@@ -27,6 +27,23 @@
 namespace webrtc {
 namespace jni {
 
+FrameCryptorObserverJni::FrameCryptorObserverJni(
+    JNIEnv* jni,
+    const JavaRef<jobject>& j_observer) {
+  j_observer_global_ = JavaRef<jobject>(jni, j_observer);
+  j_observer_ = JavaRef<jobject>(jni, j_observer);
+}
+FrameCryptorObserverJni::~FrameCryptorObserverJni() {}
+
+void FrameCryptorObserverJni::OnFrameCryptionError(
+    const std::string participant_id,
+    FrameCryptionError new_state) {
+  JNIEnv* env = AttachCurrentThreadIfNeeded();
+  Java_Observer_onFrameCryptorErrorState(
+      env, j_observer_global_, NativeToJavaString(env, participant_id),
+      Java_FrameCryptorErrorState_fromNativeIndex(env, new_state));
+}
+
 ScopedJavaLocalRef<jobject> NativeToJavaFrameCryptor(
     JNIEnv* env,
     rtc::scoped_refptr<FrameCryptorTransformer> cryptor) {
@@ -62,6 +79,17 @@ static jint JNI_FrameCryptor_GetKeyIndex(JNIEnv* jni,
                                          jlong j_frame_cryptor_pointer) {
   return reinterpret_cast<FrameCryptorTransformer*>(j_frame_cryptor_pointer)
       ->key_index();
+}
+
+static jlong JNI_FrameCryptor_SetObserver(
+    JNIEnv* jni,
+    jlong j_frame_cryptor_pointer,
+    const JavaParamRef<jobject>& j_observer) {
+  auto observer =
+      jlongFromPointer(new FrameCryptorObserverJni(jni, j_observer));
+  reinterpret_cast<FrameCryptorTransformer*>(j_frame_cryptor_pointer)
+      ->SetObserver(observer);
+  return observer;
 }
 
 webrtc::FrameCryptorTransformer::Algorithm AlgorithmFromIndex(int index) {

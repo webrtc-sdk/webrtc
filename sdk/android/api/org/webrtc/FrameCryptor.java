@@ -19,6 +19,24 @@ package org.webrtc;
 import androidx.annotation.Nullable;
 
 public class FrameCryptor {
+  public enum FrameCryptorErrorState {
+    OK,
+    EncryptionFailed,
+    DecryptionFailed,
+    MissingKey,
+    InternalError;
+
+    @CalledByNative("FrameCryptorErrorState")
+    static FrameCryptorErrorState fromNativeIndex(int nativeIndex) {
+      return values()[nativeIndex];
+    }
+  }
+
+  public static interface Observer {
+    @CalledByNative("Observer")
+    void onFrameCryptorErrorState(String participantId, FrameCryptorErrorState newState);
+  }
+
   private long nativeFrameCryptor;
 
   public long getNativeFrameCryptor() {
@@ -56,6 +74,11 @@ public class FrameCryptor {
     nativeFrameCryptor = 0;
   }
 
+  public void setObserver(@Nullable Observer observer) {
+    checkFrameCryptorExists();
+    nativeSetObserver(nativeFrameCryptor, observer);
+  }
+
   private void checkFrameCryptorExists() {
     if (nativeFrameCryptor == 0) {
       throw new IllegalStateException("FrameCryptor has been disposed.");
@@ -66,4 +89,5 @@ public class FrameCryptor {
   private static native boolean nativeIsEnabled(long frameCryptorPointer);
   private static native void nativeSetKeyIndex(long frameCryptorPointer, int index);
   private static native int nativeGetKeyIndex(long frameCryptorPointer);
+  private static native void nativeSetObserver(long frameCryptorPointer, Observer observer);
 }
