@@ -29,10 +29,9 @@ namespace jni {
 
 FrameCryptorObserverJni::FrameCryptorObserverJni(
     JNIEnv* jni,
-    const JavaRef<jobject>& j_observer) {
-  j_observer_global_ = JavaRef<jobject>(jni, j_observer);
-  j_observer_ = JavaRef<jobject>(jni, j_observer);
-}
+    const JavaRef<jobject>& j_observer)
+    : j_observer_global_(jni, j_observer) {}
+
 FrameCryptorObserverJni::~FrameCryptorObserverJni() {}
 
 void FrameCryptorObserverJni::OnFrameCryptionError(
@@ -85,11 +84,11 @@ static jlong JNI_FrameCryptor_SetObserver(
     JNIEnv* jni,
     jlong j_frame_cryptor_pointer,
     const JavaParamRef<jobject>& j_observer) {
-  auto observer =
-      jlongFromPointer(new FrameCryptorObserverJni(jni, j_observer));
+  auto observer = rtc::make_ref_counted<FrameCryptorObserverJni>(jni, j_observer);
+  observer->AddRef();
   reinterpret_cast<FrameCryptorTransformer*>(j_frame_cryptor_pointer)
-      ->SetObserver(observer);
-  return observer;
+      ->SetFrameCryptorTransformerObserver(observer.get());
+  return  jlongFromPointer(observer.get());
 }
 
 webrtc::FrameCryptorTransformer::Algorithm AlgorithmFromIndex(int index) {

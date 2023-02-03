@@ -37,7 +37,7 @@ class KeyManager : public rtc::RefCountInterface {
   virtual ~KeyManager() {}
 };
 
-enum class FrameCryptionError {
+enum FrameCryptionError {
   kNoneError = 0,
   kEncryptionFailed,
   kDecryptionFailed,

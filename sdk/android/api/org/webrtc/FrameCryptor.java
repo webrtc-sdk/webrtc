@@ -19,12 +19,13 @@ package org.webrtc;
 import androidx.annotation.Nullable;
 
 public class FrameCryptor {
+
   public enum FrameCryptorErrorState {
     OK,
-    EncryptionFailed,
-    DecryptionFailed,
-    MissingKey,
-    InternalError;
+    ENCRYPTIONFAILED,
+    DECRYPTIONFAILED,
+    MISSINGKEY,
+    INTERNALERROR;
 
     @CalledByNative("FrameCryptorErrorState")
     static FrameCryptorErrorState fromNativeIndex(int nativeIndex) {
@@ -38,6 +39,7 @@ public class FrameCryptor {
   }
 
   private long nativeFrameCryptor;
+  private long observerPtr;
 
   public long getNativeFrameCryptor() {
     return nativeFrameCryptor;
@@ -46,6 +48,7 @@ public class FrameCryptor {
   @CalledByNative
   public FrameCryptor(long nativeFrameCryptor) {
     this.nativeFrameCryptor = nativeFrameCryptor;
+    this.observerPtr = 0;
   }
 
   public void setEnabled(boolean enabled) {
@@ -72,11 +75,20 @@ public class FrameCryptor {
     checkFrameCryptorExists();
     JniCommon.nativeReleaseRef(nativeFrameCryptor);
     nativeFrameCryptor = 0;
+    if(observerPtr != 0) {
+      JniCommon.nativeReleaseRef(observerPtr);
+      observerPtr = 0;
+    }
   }
 
   public void setObserver(@Nullable Observer observer) {
     checkFrameCryptorExists();
-    nativeSetObserver(nativeFrameCryptor, observer);
+    long newPtr = nativeSetObserver(nativeFrameCryptor, observer);
+    if(observerPtr != 0) {
+      JniCommon.nativeReleaseRef(observerPtr);
+      observerPtr = 0;
+    }
+    newPtr= observerPtr;
   }
 
   private void checkFrameCryptorExists() {
@@ -89,5 +101,5 @@ public class FrameCryptor {
   private static native boolean nativeIsEnabled(long frameCryptorPointer);
   private static native void nativeSetKeyIndex(long frameCryptorPointer, int index);
   private static native int nativeGetKeyIndex(long frameCryptorPointer);
-  private static native void nativeSetObserver(long frameCryptorPointer, Observer observer);
+  private static native long nativeSetObserver(long frameCryptorPointer, Observer observer);
 }
