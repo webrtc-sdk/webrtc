@@ -28,14 +28,66 @@
 #include "api/rtp_receiver_interface.h"
 #include "api/rtp_sender_interface.h"
 
+namespace webrtc {
+
+RTCFrameCryptorDelegateAdapter::RTCFrameCryptorDelegateAdapter(RTC_OBJC_TYPE(RTCFrameCryptor) *
+                                                               frameCryptor)
+    : frame_cryptor_(frameCryptor) {}
+
+RTCFrameCryptorDelegateAdapter::~RTCFrameCryptorDelegateAdapter() {}
+
+/*
+  kNoneError = 0,
+  kEncryptionFailed,
+  kDecryptionFailed,
+  kMissingKey,
+  kInternalError,
+*/
+void RTCFrameCryptorDelegateAdapter::OnFrameCryptionError(const std::string participant_id,
+                                                          FrameCryptionError error) {
+  RTC_OBJC_TYPE(RTCFrameCryptor) *frameCryptor = frame_cryptor_;
+  if (frameCryptor.delegate) {
+    switch (error) {
+      case FrameCryptionError::kNoneError:
+        [frameCryptor.delegate frameCryptor:frameCryptor
+            didStateChangeWithParticipantId:[NSString stringForStdString:participant_id]
+                                  withState:RTCFrameCryptorErrorStateOk];
+        break;
+      case FrameCryptionError::kEncryptionFailed:
+        [frameCryptor.delegate frameCryptor:frameCryptor
+            didStateChangeWithParticipantId:[NSString stringForStdString:participant_id]
+                                  withState:RTCFrameCryptorErrorStateEncryptionFailed];
+        break;
+      case FrameCryptionError::kDecryptionFailed:
+        [frameCryptor.delegate frameCryptor:frameCryptor
+            didStateChangeWithParticipantId:[NSString stringForStdString:participant_id]
+                                  withState:RTCFrameCryptorErrorStateDecryptionFailed];
+        break;
+      case FrameCryptionError::kMissingKey:
+        [frameCryptor.delegate frameCryptor:frameCryptor
+            didStateChangeWithParticipantId:[NSString stringForStdString:participant_id]
+                                  withState:RTCFrameCryptorErrorStateMissingKey];
+        break;
+      case FrameCryptionError::kInternalError:
+        [frameCryptor.delegate frameCryptor:frameCryptor
+            didStateChangeWithParticipantId:[NSString stringForStdString:participant_id]
+                                  withState:RTCFrameCryptorErrorStateInternalError];
+        break;
+    }
+  }
+}
+}  // namespace webrtc
+
 @implementation RTC_OBJC_TYPE (RTCFrameCryptor) {
   const webrtc::RtpSenderInterface *_sender;
   const webrtc::RtpReceiverInterface *_receiver;
   NSString *_participantId;
   rtc::scoped_refptr<webrtc::FrameCryptorTransformer> frame_crypto_transformer_;
+  std::unique_ptr<webrtc::RTCFrameCryptorDelegateAdapter> _observer;
 }
 
 @synthesize participantId = _participantId;
+@synthesize delegate = _delegate;
 
 - (webrtc::FrameCryptorTransformer::Algorithm)algorithmFromEnum:(RTCCyrptorAlgorithm)algorithm {
   switch (algorithm) {
@@ -53,6 +105,7 @@
                         algorithm:(RTCCyrptorAlgorithm)algorithm
                        keyManager:(RTC_OBJC_TYPE(RTCFrameCryptorKeyManager) *)keyManager {
   if (self = [super init]) {
+    _observer.reset(new webrtc::RTCFrameCryptorDelegateAdapter(self));
     _participantId = participantId;
     auto rtpSender = sender.nativeRtpSender;
     auto mediaType = rtpSender->track()->kind() == "audio" ?
@@ -66,6 +119,7 @@
 
     rtpSender->SetEncoderToPacketizerFrameTransformer(frame_crypto_transformer_);
     frame_crypto_transformer_->SetEnabled(false);
+    frame_crypto_transformer_->SetFrameCryptorTransformerObserver(_observer.get());
   }
   return self;
 }

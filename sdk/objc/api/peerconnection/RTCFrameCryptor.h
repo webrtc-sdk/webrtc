@@ -18,16 +18,34 @@
 
 #import "RTCMacros.h"
 
-typedef NS_ENUM(NSUInteger, RTCCyrptorAlgorithm) {
-  RTCCyrptorAlgorithmAesGcm = 0,
-  RTCCyrptorAlgorithmAesCbc,
-};
-
 NS_ASSUME_NONNULL_BEGIN
 
 @class RTC_OBJC_TYPE(RTCRtpSender);
 @class RTC_OBJC_TYPE(RTCRtpReceiver);
 @class RTC_OBJC_TYPE(RTCFrameCryptorKeyManager);
+@class RTC_OBJC_TYPE(RTCFrameCryptor);
+
+typedef NS_ENUM(NSUInteger, RTCCyrptorAlgorithm) {
+  RTCCyrptorAlgorithmAesGcm = 0,
+  RTCCyrptorAlgorithmAesCbc,
+};
+
+typedef NS_ENUM(NSInteger, RTCFrameCryptorErrorState) {
+  RTCFrameCryptorErrorStateOk = 0,
+  RTCFrameCryptorErrorStateEncryptionFailed,
+  RTCFrameCryptorErrorStateDecryptionFailed,
+  RTCFrameCryptorErrorStateMissingKey,
+  RTCFrameCryptorErrorStateInternalError,
+};
+
+RTC_OBJC_EXPORT
+@protocol RTC_OBJC_TYPE
+(RTCFrameCryptorDelegate)<NSObject>
+    /** Called when the RTCFrameCryptor got errors. */
+    - (void)frameCryptor
+    : (RTC_OBJC_TYPE(RTCFrameCryptor) *)frameCryptor didStateChangeWithParticipantId
+    : (NSString *)participantId withState : (RTCFrameCryptorErrorState)stateChanged;
+@end
 
 RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCFrameCryptor) : NSObject
@@ -37,6 +55,8 @@ RTC_OBJC_EXPORT
 @property(nonatomic, assign) int keyIndex;
 
 @property(nonatomic, readonly) NSString *participantId;
+
+@property(nonatomic, weak, nullable) id<RTC_OBJC_TYPE(RTCFrameCryptorDelegate)> delegate;
 
 - (instancetype)initWithRtpSender:(RTC_OBJC_TYPE(RTCRtpSender) *)sender
                     participantId:(NSString *)participantId
