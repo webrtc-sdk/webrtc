@@ -31,6 +31,7 @@ typedef NS_ENUM(NSUInteger, RTCCyrptorAlgorithm) {
 };
 
 typedef NS_ENUM(NSInteger, RTCFrameCryptorErrorState) {
+  RTCFrameCryptorErrorStateNew = 0,
   RTCFrameCryptorErrorStateOk = 0,
   RTCFrameCryptorErrorStateEncryptionFailed,
   RTCFrameCryptorErrorStateDecryptionFailed,

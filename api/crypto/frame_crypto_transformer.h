@@ -38,7 +38,8 @@ class KeyManager : public rtc::RefCountInterface {
 };
 
 enum FrameCryptionError {
-  kNoneError = 0,
+  kNew = 0,
+  kOk,
   kEncryptionFailed,
   kDecryptionFailed,
   kMissingKey,
@@ -142,8 +143,8 @@ class RTC_EXPORT FrameCryptorTransformer
   rtc::scoped_refptr<KeyManager> key_manager_;
   FrameCryptorTransformerObserver* observer_ = nullptr;
   std::unique_ptr<rtc::Thread> thread_;
-  FrameCryptionError last_enc_error_ = FrameCryptionError::kNoneError;
-  FrameCryptionError last_dec_error_ = FrameCryptionError::kNoneError;
+  FrameCryptionError last_enc_error_ = FrameCryptionError::kNew;
+  FrameCryptionError last_dec_error_ = FrameCryptionError::kNew;
 };
 
 }  // namespace webrtc

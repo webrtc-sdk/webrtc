@@ -37,7 +37,8 @@ RTCFrameCryptorDelegateAdapter::RTCFrameCryptorDelegateAdapter(RTC_OBJC_TYPE(RTC
 RTCFrameCryptorDelegateAdapter::~RTCFrameCryptorDelegateAdapter() {}
 
 /*
-  kNoneError = 0,
+  kNew = 0,
+  kOk,
   kEncryptionFailed,
   kDecryptionFailed,
   kMissingKey,
@@ -48,7 +49,12 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionError(const std::string part
   RTC_OBJC_TYPE(RTCFrameCryptor) *frameCryptor = frame_cryptor_;
   if (frameCryptor.delegate) {
     switch (error) {
-      case FrameCryptionError::kNoneError:
+      case FrameCryptionError::kNew:
+        [frameCryptor.delegate frameCryptor:frameCryptor
+            didStateChangeWithParticipantId:[NSString stringForStdString:participant_id]
+                                  withState:RTCFrameCryptorErrorStateNew];
+        break;
+      case FrameCryptionError::kOk:
         [frameCryptor.delegate frameCryptor:frameCryptor
             didStateChangeWithParticipantId:[NSString stringForStdString:participant_id]
                                   withState:RTCFrameCryptorErrorStateOk];

@@ -21,6 +21,7 @@ import androidx.annotation.Nullable;
 public class FrameCryptor {
 
   public enum FrameCryptorErrorState {
+    NEW,
     OK,
     ENCRYPTIONFAILED,
     DECRYPTIONFAILED,

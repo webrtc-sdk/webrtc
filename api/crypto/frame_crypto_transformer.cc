@@ -372,7 +372,11 @@ void FrameCryptorTransformer::encryptFrame(
                      << " keyIndex=" << static_cast<int>(key_index_)
                      << " aesKey=" << to_hex(aes_key.data(), aes_key.size())
                      << " iv=" << to_hex(iv.data(), iv.size());
-    last_enc_error_ = FrameCryptionError::kNoneError;
+    if (last_enc_error_ != FrameCryptionError::kOk) {
+      last_enc_error_ = FrameCryptionError::kOk;
+      if (observer_)
+        observer_->OnFrameCryptionError(participant_id_, last_enc_error_);
+    }
     sink_callback->OnTransformedFrame(std::move(frame));
   } else {
     if (last_enc_error_ != FrameCryptionError::kEncryptionFailed) {
@@ -480,7 +484,12 @@ void FrameCryptorTransformer::decryptFrame(
                      << " keyIndex=" << static_cast<int>(key_index_)
                      << " aesKey=" << to_hex(aes_key.data(), aes_key.size())
                      << " iv=" << to_hex(iv.data(), iv.size());
-    last_dec_error_ = FrameCryptionError::kNoneError;
+
+    if (last_dec_error_ != FrameCryptionError::kOk) {
+      last_dec_error_ = FrameCryptionError::kOk;
+      if (observer_)
+        observer_->OnFrameCryptionError(participant_id_, last_dec_error_);
+    }
     sink_callback->OnTransformedFrame(std::move(frame));
   } else {
     if (last_dec_error_ != FrameCryptionError::kDecryptionFailed) {
