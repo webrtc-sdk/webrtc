@@ -135,6 +135,7 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionError(const std::string part
                           algorithm:(RTCCyrptorAlgorithm)algorithm
                          keyManager:(RTC_OBJC_TYPE(RTCFrameCryptorKeyManager) *)keyManager {
   if (self = [super init]) {
+    _observer.reset(new webrtc::RTCFrameCryptorDelegateAdapter(self));
     _participantId = participantId;
     auto rtpReceiver = receiver.nativeRtpReceiver;
     auto mediaType = rtpReceiver->track()->kind() == "audio" ?
@@ -148,6 +149,7 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionError(const std::string part
 
     rtpReceiver->SetDepacketizerToDecoderFrameTransformer(frame_crypto_transformer_);
     frame_crypto_transformer_->SetEnabled(false);
+    frame_crypto_transformer_->SetFrameCryptorTransformerObserver(_observer.get());
   }
   return self;
 }
