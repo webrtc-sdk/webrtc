@@ -80,6 +80,7 @@ public class FrameCryptor {
       JniCommon.nativeReleaseRef(observerPtr);
       observerPtr = 0;
     }
+    nativeUnSetObserver(nativeFrameCryptor);
   }
 
   public void setObserver(@Nullable Observer observer) {
@@ -103,4 +104,5 @@ public class FrameCryptor {
   private static native void nativeSetKeyIndex(long frameCryptorPointer, int index);
   private static native int nativeGetKeyIndex(long frameCryptorPointer);
   private static native long nativeSetObserver(long frameCryptorPointer, Observer observer);
+  private static native void nativeUnSetObserver(long frameCryptorPointer);
 }

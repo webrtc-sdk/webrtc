@@ -170,4 +170,8 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionError(const std::string part
   frame_crypto_transformer_->SetKeyIndex(keyIndex);
 }
 
+- (void)dealloc {
+  frame_crypto_transformer_->SetFrameCryptorTransformerObserver(nullptr);
+}
+
 @end

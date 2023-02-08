@@ -91,6 +91,12 @@ static jlong JNI_FrameCryptor_SetObserver(
   return  jlongFromPointer(observer.get());
 }
 
+static void JNI_FrameCryptor_UnSetObserver(JNIEnv* jni,
+                                         jlong j_frame_cryptor_pointer) {
+  reinterpret_cast<FrameCryptorTransformer*>(j_frame_cryptor_pointer)->SetFrameCryptorTransformerObserver(nullptr);
+}
+
+
 webrtc::FrameCryptorTransformer::Algorithm AlgorithmFromIndex(int index) {
   switch (index) {
     case 0:
