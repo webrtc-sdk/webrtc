@@ -98,6 +98,14 @@ void PopulateRtpWithCodecSpecifics(const CodecSpecificInfo& info,
       rtp->simulcastIdx = spatial_index.value_or(0);
       return;
     }
+#ifdef WEBRTC_USE_H265
+    case kVideoCodecH265: {
+      auto& h265_header = rtp->video_type_header.emplace<RTPVideoHeaderH265>();
+      h265_header.packetization_mode =
+          info.codecSpecific.H265.packetization_mode;
+    }
+    return;
+#endif
     case kVideoCodecMultiplex:
     case kVideoCodecGeneric:
       rtp->codec = kVideoCodecGeneric;
@@ -341,6 +349,12 @@ void RtpPayloadParams::SetGeneric(const CodecSpecificInfo* codec_specific_info,
                       is_keyframe, rtp_video_header);
       }
       return;
+    case VideoCodecType::kVideoCodecH265:
+      if (codec_specific_info) {
+        H265ToGeneric(codec_specific_info->codecSpecific.H265, frame_id,
+                      is_keyframe, rtp_video_header);
+      }
+      return;
     case VideoCodecType::kVideoCodecMultiplex:
       return;
   }
@@ -404,6 +418,7 @@ absl::optional<FrameDependencyStructure> RtpPayloadParams::GenericStructure(
     }
     case VideoCodecType::kVideoCodecAV1:
     case VideoCodecType::kVideoCodecH264:
+    case VideoCodecType::kVideoCodecH265:
     case VideoCodecType::kVideoCodecMultiplex:
       return absl::nullopt;
   }
@@ -484,6 +499,26 @@ void RtpPayloadParams::H264ToGeneric(const CodecSpecificInfoH264& h264_info,
   }
 
   last_shared_frame_id_[/*spatial_index*/ 0][temporal_index] = shared_frame_id;
+}
+
+void RtpPayloadParams::H265ToGeneric(const CodecSpecificInfoH265& h265_info,
+                                     int64_t shared_frame_id,
+                                     bool is_keyframe,
+                                     RTPVideoHeader* rtp_video_header) {
+  if (h265_info.picture_id <= 0) {
+    // picture_id is only used by cloud gaming.
+    return;
+  }
+  RTPVideoHeader::GenericDescriptorInfo& generic =
+      rtp_video_header->generic.emplace();
+  generic.frame_id = h265_info.picture_id;
+  generic.spatial_index = 0;   // Not enabled at present.
+  generic.temporal_index = 0;  // Not enabled at present.
+  for (int dep_idx = 0; dep_idx < 5; dep_idx++) {
+    if (h265_info.dependencies[dep_idx] <= 0)
+      break;
+    generic.dependencies[dep_idx] = h265_info.dependencies[dep_idx];
+  }
 }
 
 void RtpPayloadParams::Vp8ToGeneric(const CodecSpecificInfoVP8& vp8_info,
