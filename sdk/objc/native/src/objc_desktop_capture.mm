@@ -21,14 +21,15 @@
 #include "third_party/libyuv/include/libyuv.h"
 
 #import "components/capturer/RTCDesktopCapturer+Private.h"
+#import "components/video_frame_buffer/RTCCVPixelBuffer.h"
 
 namespace webrtc {
 
 enum { kCaptureDelay = 33, kCaptureMessageId = 1000 };
 
 ObjCDesktopCapturer::ObjCDesktopCapturer(DesktopType type,
-                                     webrtc::DesktopCapturer::SourceId source_id, 
-                                     id<RTC_OBJC_TYPE(DesktopCapturerDelegate)> delegate)
+                                         webrtc::DesktopCapturer::SourceId source_id,
+                                         id<RTC_OBJC_TYPE(DesktopCapturerDelegate)> delegate)
     : thread_(rtc::Thread::Create()), source_id_(source_id), delegate_(delegate) {
   RTC_DCHECK(thread_);
   type_ = type;
@@ -38,9 +39,11 @@ ObjCDesktopCapturer::ObjCDesktopCapturer(DesktopType type,
   options_.set_allow_iosurface(true);
   thread_->BlockingCall([this, type] {
     if (type == kScreen) {
-      capturer_ = std::make_unique<DesktopAndCursorComposer>(webrtc::DesktopCapturer::CreateScreenCapturer(options_), options_);
-    } else { 
-      capturer_ = std::make_unique<DesktopAndCursorComposer>(webrtc::DesktopCapturer::CreateWindowCapturer(options_), options_); 
+      capturer_ = std::make_unique<DesktopAndCursorComposer>(
+          webrtc::DesktopCapturer::CreateScreenCapturer(options_), options_);
+    } else {
+      capturer_ = std::make_unique<DesktopAndCursorComposer>(
+          webrtc::DesktopCapturer::CreateWindowCapturer(options_), options_);
     }
   });
 }
@@ -61,19 +64,19 @@ ObjCDesktopCapturer::CaptureState ObjCDesktopCapturer::Start(uint32_t fps) {
     return capture_state_;
   }
 
-  if(fps >= 60) {
+  if (fps >= 60) {
     capture_delay_ = uint32_t(1000.0 / 60.0);
   } else {
     capture_delay_ = uint32_t(1000.0 / fps);
   }
 
-  if(source_id_ != -1) {
-    if(!capturer_->SelectSource(source_id_)) {
-        capture_state_ = CS_FAILED;
-        return capture_state_;
+  if (source_id_ != -1) {
+    if (!capturer_->SelectSource(source_id_)) {
+      capture_state_ = CS_FAILED;
+      return capture_state_;
     }
-    if(type_ == kWindow) {
-      if(!capturer_->FocusOnSelectedSource()) {
+    if (type_ == kWindow) {
+      if (!capturer_->FocusOnSelectedSource()) {
         capture_state_ = CS_FAILED;
         return capture_state_;
       }
@@ -103,7 +106,7 @@ bool ObjCDesktopCapturer::IsRunning() {
 }
 
 void ObjCDesktopCapturer::OnCaptureResult(webrtc::DesktopCapturer::Result result,
-                                        std::unique_ptr<webrtc::DesktopFrame> frame) {
+                                          std::unique_ptr<webrtc::DesktopFrame> frame) {
   if (result != result_) {
     if (result == webrtc::DesktopCapturer::Result::ERROR_PERMANENT) {
       [delegate_ didSourceCaptureError];
@@ -124,14 +127,14 @@ void ObjCDesktopCapturer::OnCaptureResult(webrtc::DesktopCapturer::Result result
   }
 
   if (result == webrtc::DesktopCapturer::Result::ERROR_TEMPORARY) {
-      return;
+    return;
   }
 
   int width = frame->size().width();
   int height = frame->size().height();
   int real_width = width;
 
-  if(type_ == kWindow) {
+  if (type_ == kWindow) {
     int multiple = 0;
 #if defined(WEBRTC_ARCH_X86_FAMILY)
     multiple = 16;
@@ -140,24 +143,26 @@ void ObjCDesktopCapturer::OnCaptureResult(webrtc::DesktopCapturer::Result result
 #endif
     // A multiple of $multiple must be used as the width of the src frame,
     // and the right black border needs to be cropped during conversion.
-    if( multiple != 0 && (width % multiple) != 0 ) {
+    if (multiple != 0 && (width % multiple) != 0) {
       width = (width / multiple + 1) * multiple;
     }
   }
- 
-  if (!i420_buffer_ || !i420_buffer_.get() ||
-      i420_buffer_->width() * i420_buffer_->height() != real_width * height) {
-    i420_buffer_ = webrtc::I420Buffer::Create(real_width, height);
-  }
 
-  libyuv::ConvertToI420(frame->data(),
-                        0,
-                        i420_buffer_->MutableDataY(),
-                        i420_buffer_->StrideY(),
-                        i420_buffer_->MutableDataU(),
-                        i420_buffer_->StrideU(),
-                        i420_buffer_->MutableDataV(),
-                        i420_buffer_->StrideV(),
+  CVPixelBufferRef pixelBuffer = NULL;
+
+  NSDictionary *pixelAttributes = @{(NSString *)kCVPixelBufferIOSurfacePropertiesKey : @{}};
+  CVReturn res = CVPixelBufferCreate(kCFAllocatorDefault,
+                                     width,
+                                     height,
+                                     kCVPixelFormatType_32BGRA,
+                                     (__bridge CFDictionaryRef)(pixelAttributes),
+                                     &pixelBuffer);
+  CVPixelBufferLockBaseAddress(pixelBuffer, 0);
+  uint8_t *pxdata = (uint8_t *)CVPixelBufferGetBaseAddress(pixelBuffer);
+  libyuv::ConvertToARGB(reinterpret_cast<uint8_t *>(frame->data()),
+                        real_width * height * 4,
+                        reinterpret_cast<uint8_t *>(pxdata),
+                        width * 4,
                         0,
                         0,
                         width,
@@ -166,17 +171,23 @@ void ObjCDesktopCapturer::OnCaptureResult(webrtc::DesktopCapturer::Result result
                         height,
                         libyuv::kRotate0,
                         libyuv::FOURCC_ARGB);
+  CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
+
+  if (res != kCVReturnSuccess) {
+    NSLog(@"Unable to create cvpixelbuffer %d", res);
+    return;
+  }
+
+  RTC_OBJC_TYPE(RTCCVPixelBuffer) *rtcPixelBuffer =
+      [[RTC_OBJC_TYPE(RTCCVPixelBuffer) alloc] initWithPixelBuffer:pixelBuffer];
   NSTimeInterval timeStampSeconds = CACurrentMediaTime();
   int64_t timeStampNs = lroundf(timeStampSeconds * NSEC_PER_SEC);
-  RTCVideoFrame* rtc_video_frame =
-      ToObjCVideoFrame(
-                       webrtc::VideoFrame::Builder()
-                           .set_video_frame_buffer(i420_buffer_)
-                           .set_rotation(webrtc::kVideoRotation_0)
-                           .set_timestamp_us(timeStampNs / 1000)
-                           .build()
-                       );
-  [delegate_ didCaptureVideoFrame:rtc_video_frame];
+  RTC_OBJC_TYPE(RTCVideoFrame) *videoFrame =
+      [[RTC_OBJC_TYPE(RTCVideoFrame) alloc] initWithBuffer:rtcPixelBuffer
+                                                  rotation:RTCVideoRotation_0
+                                               timeStampNs:timeStampNs];
+  CVPixelBufferRelease(pixelBuffer);
+  [delegate_ didCaptureVideoFrame:videoFrame];
 }
 
 void ObjCDesktopCapturer::CaptureFrame() {
