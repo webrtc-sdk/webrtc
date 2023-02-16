@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include "sdk/objc/native/src/objc_desktop_media_list.h"
-#include "sdk/objc/native/src/objc_video_frame.h"
 #include "rtc_base/checks.h"
+#include "sdk/objc/native/src/objc_video_frame.h"
 #include "third_party/libyuv/include/libyuv.h"
 
 extern "C" {
@@ -28,59 +28,54 @@ extern "C" {
 #endif
 }
 
-#include <iostream>
 #include <fstream>
+#include <iostream>
 
 namespace webrtc {
 
 ObjCDesktopMediaList::ObjCDesktopMediaList(DesktopType type,
-                                      RTC_OBJC_TYPE(RTCDesktopMediaList)* objcMediaList)
-    :thread_(rtc::Thread::Create()),objcMediaList_(objcMediaList),type_(type) {
+                                           RTC_OBJC_TYPE(RTCDesktopMediaList) * objcMediaList)
+    : thread_(rtc::Thread::Create()), objcMediaList_(objcMediaList), type_(type) {
   RTC_DCHECK(thread_);
   thread_->Start();
   options_ = webrtc::DesktopCaptureOptions::CreateDefault();
   options_.set_detect_updated_region(true);
   options_.set_allow_iosurface(true);
-  
+
   callback_ = std::make_unique<CallbackProxy>();
 
   thread_->Invoke<void>(RTC_FROM_HERE, [this, type] {
-     if (type == kScreen) {
+    if (type == kScreen) {
       capturer_ = webrtc::DesktopCapturer::CreateScreenCapturer(options_);
-    } else { 
-      capturer_ = webrtc::DesktopCapturer::CreateWindowCapturer(options_); 
+    } else {
+      capturer_ = webrtc::DesktopCapturer::CreateWindowCapturer(options_);
     }
     capturer_->Start(callback_.get());
   });
-
 }
 
 ObjCDesktopMediaList::~ObjCDesktopMediaList() {
-  thread_->Invoke<void>(RTC_FROM_HERE, [this] {
-    capturer_.reset();
-  });
+  thread_->Invoke<void>(RTC_FROM_HERE, [this] { capturer_.reset(); });
 }
 
 int32_t ObjCDesktopMediaList::UpdateSourceList(bool force_reload, bool get_thumbnail) {
-
-  if(force_reload) {
-    for( auto source : sources_) {
-        [objcMediaList_ mediaSourceRemoved:source.get()];
+  if (force_reload) {
+    for (auto source : sources_) {
+      [objcMediaList_ mediaSourceRemoved:source.get()];
     }
     sources_.clear();
   }
 
   webrtc::DesktopCapturer::SourceList new_sources;
 
-  thread_->Invoke<void>(RTC_FROM_HERE, [this,&new_sources] {
-    capturer_->GetSourceList(&new_sources);
-  });
+  thread_->Invoke<void>(RTC_FROM_HERE,
+                        [this, &new_sources] { capturer_->GetSourceList(&new_sources); });
 
   typedef std::set<DesktopCapturer::SourceId> SourceSet;
   SourceSet new_source_set;
   for (size_t i = 0; i < new_sources.size(); ++i) {
-    if(type_ == kScreen && new_sources[i].title.length() == 0) {
-        new_sources[i].title = std::string("Screen " + std::to_string(i+1));
+    if (type_ == kScreen && new_sources[i].title.length() == 0) {
+      new_sources[i].title = std::string("Screen " + std::to_string(i + 1));
     }
     new_source_set.insert(new_sources[i].id);
   }
@@ -100,7 +95,7 @@ int32_t ObjCDesktopMediaList::UpdateSourceList(bool force_reload, bool get_thumb
     }
     for (size_t i = 0; i < new_sources.size(); ++i) {
       if (old_source_set.find(new_sources[i].id) == old_source_set.end()) {
-        MediaSource* source = new MediaSource(this, new_sources[i],type_);
+        MediaSource *source = new MediaSource(this, new_sources[i], type_);
         sources_.insert(sources_.begin() + i, std::shared_ptr<MediaSource>(source));
         [objcMediaList_ mediaSourceAdded:source];
         GetThumbnail(source, true);
@@ -118,8 +113,7 @@ int32_t ObjCDesktopMediaList::UpdateSourceList(bool force_reload, bool get_thumb
       // of |sources_|, because entries before |pos| should have been sorted.
       size_t old_pos = pos + 1;
       for (; old_pos < sources_.size(); ++old_pos) {
-        if (sources_[old_pos]->id() == new_sources[pos].id)
-          break;
+        if (sources_[old_pos]->id() == new_sources[pos].id) break;
       }
       RTC_DCHECK(sources_[old_pos]->id() == new_sources[pos].id);
 
@@ -137,40 +131,38 @@ int32_t ObjCDesktopMediaList::UpdateSourceList(bool force_reload, bool get_thumb
     ++pos;
   }
 
-  if(get_thumbnail) {
-    for( auto source : sources_) {
-       GetThumbnail(source.get(), true);
+  if (get_thumbnail) {
+    for (auto source : sources_) {
+      GetThumbnail(source.get(), true);
     }
   }
   return sources_.size();
 }
 
 bool ObjCDesktopMediaList::GetThumbnail(MediaSource *source, bool notify) {
-  
-  thread_->PostTask(ToQueuedTask(
-      [this, source, notify] {
-      if(capturer_->SelectSource(source->id())){
-        callback_->SetCallback([&](webrtc::DesktopCapturer::Result result,
-                             std::unique_ptr<webrtc::DesktopFrame> frame) {
-          auto old_thumbnail = source->thumbnail();
-          source->SaveCaptureResult(result, std::move(frame));
-          if(old_thumbnail.size() != source->thumbnail().size() && notify) {
-            [objcMediaList_ mediaSourceThumbnailChanged:source];
-          }
-        });
-        capturer_->CaptureFrame();
-      }
+  thread_->PostTask(ToQueuedTask([this, source, notify] {
+    if (capturer_->SelectSource(source->id())) {
+      callback_->SetCallback(
+          [&](webrtc::DesktopCapturer::Result result, std::unique_ptr<webrtc::DesktopFrame> frame) {
+            auto old_thumbnail = source->thumbnail();
+            source->SaveCaptureResult(result, std::move(frame));
+            if (old_thumbnail.size() != source->thumbnail().size() && notify) {
+              [objcMediaList_ mediaSourceThumbnailChanged:source];
+            }
+          });
+      capturer_->CaptureFrame();
+    }
   }));
 
   return true;
 }
 
 int ObjCDesktopMediaList::GetSourceCount() const {
-    return sources_.size();
+  return sources_.size();
 }
-  
+
 MediaSource *ObjCDesktopMediaList::GetSource(int index) {
-    return sources_[index].get();
+  return sources_[index].get();
 }
 
 bool MediaSource::UpdateThumbnail() {
@@ -178,28 +170,15 @@ bool MediaSource::UpdateThumbnail() {
 }
 
 void MediaSource::SaveCaptureResult(webrtc::DesktopCapturer::Result result,
-                                        std::unique_ptr<webrtc::DesktopFrame> frame) {
+                                    std::unique_ptr<webrtc::DesktopFrame> frame) {
   if (result != webrtc::DesktopCapturer::Result::SUCCESS) {
     return;
   }
-  int quality = 80;
-  const int kColorPlanes = 4;  // alpha, R, G and B.
-  unsigned char* out_buffer = NULL;
-  unsigned long out_size = 0;
-  // Invoking LIBJPEG
-  struct jpeg_compress_struct cinfo;
-  struct jpeg_error_mgr jerr;
-  JSAMPROW row_pointer[1];
-  cinfo.err = jpeg_std_error(&jerr);
-  jpeg_create_compress(&cinfo);
-
-  jpeg_mem_dest(&cinfo, &out_buffer, &out_size);
-
   int width = frame->size().width();
   int height = frame->size().height();
   int real_width = width;
 
-  if(type_ == kWindow) {
+  if (type_ == kWindow) {
     int multiple = 0;
 #if defined(WEBRTC_ARCH_X86_FAMILY)
     multiple = 16;
@@ -208,39 +187,63 @@ void MediaSource::SaveCaptureResult(webrtc::DesktopCapturer::Result result,
 #endif
     // A multiple of $multiple must be used as the width of the src frame,
     // and the right black border needs to be cropped during conversion.
-    if( multiple != 0 && (width % multiple) != 0 ) {
+    if (multiple != 0 && (width % multiple) != 0) {
       width = (width / multiple + 1) * multiple;
     }
   }
 
-  cinfo.image_width = real_width;
-  cinfo.image_height = height;
-  cinfo.input_components = kColorPlanes;
-  cinfo.in_color_space = JCS_EXT_BGRA;
-  jpeg_set_defaults(&cinfo);
-  jpeg_set_quality(&cinfo, quality, TRUE);
+  CVPixelBufferRef pixelBuffer = NULL;
 
-  jpeg_start_compress(&cinfo, TRUE);
-  int row_stride = width * kColorPlanes;
-  while (cinfo.next_scanline < cinfo.image_height) {
-    row_pointer[0] = &frame->data()[cinfo.next_scanline * row_stride];
-    jpeg_write_scanlines(&cinfo, row_pointer, 1);
+  NSDictionary *pixelAttributes = @{(NSString *)kCVPixelBufferIOSurfacePropertiesKey : @{}};
+  CVReturn res = CVPixelBufferCreate(kCFAllocatorDefault,
+                                     width,
+                                     height,
+                                     kCVPixelFormatType_32BGRA,
+                                     (__bridge CFDictionaryRef)(pixelAttributes),
+                                     &pixelBuffer);
+  CVPixelBufferLockBaseAddress(pixelBuffer, 0);
+  uint8_t *pxdata = (uint8_t *)CVPixelBufferGetBaseAddress(pixelBuffer);
+  libyuv::ConvertToARGB(reinterpret_cast<uint8_t *>(frame->data()),
+                        real_width * height * 4,
+                        reinterpret_cast<uint8_t *>(pxdata),
+                        width * 4,
+                        0,
+                        0,
+                        width,
+                        height,
+                        real_width,
+                        height,
+                        libyuv::kRotate0,
+                        libyuv::FOURCC_ARGB);
+  CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
+
+  if (res != kCVReturnSuccess) {
+    NSLog(@"Unable to create cvpixelbuffer %d", res);
+    return;
   }
 
-  jpeg_finish_compress(&cinfo);
-  jpeg_destroy_compress(&cinfo);
+  CIImage *ciImage = [CIImage imageWithCVPixelBuffer:pixelBuffer];
+  CGRect outputSize = CGRectMake(0, 0, width, height);
 
-  thumbnail_.resize(out_size);
+  CIContext *tempContext = [CIContext contextWithOptions:nil];
+  CGImageRef cgImage = [tempContext createCGImage:ciImage fromRect:outputSize];
+  NSData *imageData;
+  NSBitmapImageRep *newRep = [[NSBitmapImageRep alloc] initWithCGImage:cgImage];
+  [newRep setSize:NSSizeToCGSize(outputSize.size)];
+  imageData = [newRep representationUsingType:NSJPEGFileType
+                                   properties:@{
+                                     NSImageCompressionFactor : @1.0f
+                                   }];
 
-  std::copy(out_buffer
-        , out_buffer + out_size
-        , thumbnail_.begin());
+  thumbnail_.resize(imageData.length);
+  const void *_Nullable rawData = [imageData bytes];
+  char *src = (char *)rawData;
+  std::copy(src, src + imageData.length, thumbnail_.begin());
 
-  free(out_buffer);
+  CGImageRelease(cgImage);
+  CVPixelBufferRelease(pixelBuffer);
 }
 
-void ObjCDesktopMediaList::OnMessage(rtc::Message* msg) {
-  
-}
+void ObjCDesktopMediaList::OnMessage(rtc::Message *msg) {}
 
 }  // namespace webrtc
