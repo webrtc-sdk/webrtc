@@ -16,6 +16,24 @@ group("crypto") {
   ]
 }
 
+rtc_library("frame_crypto_transformer") {
+  visibility = [ "*" ]
+  sources = [
+    "frame_crypto_transformer.cc",
+    "frame_crypto_transformer.h",
+  ]
+
+  deps = [
+   "//api:frame_transformer_interface",
+  ]
+
+  if (rtc_build_ssl) {
+    deps += [ "//third_party/boringssl" ]
+  } else {
+    configs += [ ":external_ssl_library" ]
+  }
+}
+
 rtc_library("options") {
   visibility = [ "*" ]
   sources = [
