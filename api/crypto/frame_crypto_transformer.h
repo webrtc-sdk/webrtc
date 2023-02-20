@@ -27,7 +27,7 @@ namespace webrtc {
 
 class KeyManager : public rtc::RefCountInterface {
  public:
-  enum { kMaxKeySize = 32 };
+  enum { kRawKeySize = 32 };
 
  public:
   virtual const std::vector<std::vector<uint8_t>> keys(

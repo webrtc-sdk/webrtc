@@ -28,15 +28,12 @@ class DefaultKeyManagerImpl : public webrtc::KeyManager {
 
   /// Set the key at the given index.
   bool SetKey(const std::string participant_id, int index, std::vector<uint8_t> key) {
-    if (index > webrtc::KeyManager::kMaxKeySize) {
-      return false;
-    }
+    webrtc::MutexLock lock(&mutex_);
 
     if (keys_.find(participant_id) == keys_.end()) {
       keys_[participant_id] = std::vector<std::vector<uint8_t>>();
     }
 
-    webrtc::MutexLock lock(&mutex_);
     if (index + 1 > (int)keys_[participant_id].size()) {
       keys_[participant_id].resize(index + 1);
     }
@@ -49,15 +46,6 @@ class DefaultKeyManagerImpl : public webrtc::KeyManager {
     webrtc::MutexLock lock(&mutex_);
     keys_[participant_id] = keys;
     return true;
-  }
-
-  const std::vector<std::vector<uint8_t>> GetKeys(const std::string participant_id) const {
-    webrtc::MutexLock lock(&mutex_);
-    if (keys_.find(participant_id) == keys_.end()) {
-      return std::vector<std::vector<uint8_t>>();
-    }
-
-    return keys_.find(participant_id)->second;
   }
 
   const std::vector<std::vector<uint8_t>> keys(const std::string participant_id) const override {
@@ -107,7 +95,7 @@ class DefaultKeyManagerImpl : public webrtc::KeyManager {
 
 - (NSArray<NSData *> *)getKeys:(NSString *)participantId {
   std::vector<std::vector<uint8_t>> nativeKeys =
-      _nativeKeyManager->GetKeys([participantId stdString]);
+      _nativeKeyManager->keys([participantId stdString]);
   NSMutableArray<NSData *> *keys = [NSMutableArray array];
   for (std::vector<uint8_t> key : nativeKeys) {
     [keys addObject:[NSData dataWithBytes:key.data() length:key.size()]];

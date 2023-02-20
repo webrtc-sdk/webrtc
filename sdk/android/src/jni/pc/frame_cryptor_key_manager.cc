@@ -72,7 +72,7 @@ static ScopedJavaLocalRef<jobject> JNI_FrameCryptorKeyManager_GetKeys(
     const base::android::JavaParamRef<jstring>& participantId) {
   auto participant_id = JavaToStdString(jni, participantId);
   auto keys = reinterpret_cast<DefaultKeyManagerImpl*>(j_key_manager)
-                  ->GetKeys(participant_id);
+                  ->keys(participant_id);
   JavaListBuilder j_keys(jni);
   for (size_t i = 0; i < keys.size(); i++) {
     auto uint8Key = keys[i];
