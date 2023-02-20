@@ -298,7 +298,7 @@ void AudioRtpReceiver::Reconfigure(bool track_enabled) {
     media_channel_->SetFrameDecryptor(*signaled_ssrc_, frame_decryptor_);
   }
 
-  if (frame_transformer_) {
+  if (frame_transformer_ && track_enabled) {
     media_channel_->SetDepacketizerToDecoderFrameTransformer(
         signaled_ssrc_.value_or(0), frame_transformer_);
   }

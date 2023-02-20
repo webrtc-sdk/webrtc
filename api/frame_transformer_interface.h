@@ -64,6 +64,8 @@ class TransformableVideoFrameInterface : public TransformableFrameInterface {
   virtual VideoFrameMetadata Metadata() const = 0;
 
   virtual void SetMetadata(const VideoFrameMetadata&) = 0;
+
+  virtual const RTPVideoHeader& header () const = 0;
 };
 
 // Extends the TransformableFrameInterface to expose audio-specific information.
