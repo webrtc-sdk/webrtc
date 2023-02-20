@@ -17,6 +17,7 @@
 #import "RTCFrameCryptorKeyManager+Private.h"
 
 #include <memory>
+#include <unordered_map>
 
 #import "base/RTCLogging.h"
 #import "helpers/NSString+StdString.h"
