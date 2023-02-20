@@ -16,11 +16,9 @@
 
 #import "RTCFrameCryptor+Private.h"
 #import "RTCFrameCryptorKeyProvider+Private.h"
-#import "RTCPeerConnectionFactory+Private.h"
 #import "RTCRtpReceiver+Private.h"
 #import "RTCRtpSender+Private.h"
 
-#import <os/lock.h>
 #include <memory>
 
 #import "base/RTCLogging.h"
@@ -94,143 +92,91 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
 @implementation RTC_OBJC_TYPE (RTCFrameCryptor) {
   const webrtc::RtpSenderInterface *_sender;
   const webrtc::RtpReceiverInterface *_receiver;
-  rtc::scoped_refptr<webrtc::FrameCryptorTransformer> _frame_crypto_transformer;
-  rtc::scoped_refptr<webrtc::RTCFrameCryptorDelegateAdapter> _observer;
-  os_unfair_lock _lock;
+  NSString *_participantId;
+  rtc::scoped_refptr<webrtc::FrameCryptorTransformer> frame_crypto_transformer_;
+  std::unique_ptr<webrtc::RTCFrameCryptorDelegateAdapter> _observer;
 }
 
 @synthesize participantId = _participantId;
 @synthesize delegate = _delegate;
 
-- (webrtc::FrameCryptorTransformer::Algorithm)algorithmFromEnum:(RTCCryptorAlgorithm)algorithm {
+- (webrtc::FrameCryptorTransformer::Algorithm)algorithmFromEnum:(RTCCyrptorAlgorithm)algorithm {
   switch (algorithm) {
-    case RTCCryptorAlgorithmAesGcm:
+    case RTCCyrptorAlgorithmAesGcm:
       return webrtc::FrameCryptorTransformer::Algorithm::kAesGcm;
-    case RTCCryptorAlgorithmAesCbc:
+    case RTCCyrptorAlgorithmAesCbc:
       return webrtc::FrameCryptorTransformer::Algorithm::kAesCbc;
     default:
       return webrtc::FrameCryptorTransformer::Algorithm::kAesGcm;
   }
 }
 
-- (nullable instancetype)initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
-                               rtpSender:(RTC_OBJC_TYPE(RTCRtpSender) *)sender
-                           participantId:(NSString *)participantId
-                               algorithm:(RTCCryptorAlgorithm)algorithm
-                             keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider {
+- (instancetype)initWithRtpSender:(RTC_OBJC_TYPE(RTCRtpSender) *)sender
+                    participantId:(NSString *)participantId
+                        algorithm:(RTCCyrptorAlgorithm)algorithm
+                       keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider {
   if (self = [super init]) {
-    _lock = OS_UNFAIR_LOCK_INIT;
-
-    rtc::scoped_refptr<webrtc::RtpSenderInterface> nativeRtpSender = sender.nativeRtpSender;
-    if (nativeRtpSender == nullptr) return nil;
-
-    rtc::scoped_refptr<webrtc::MediaStreamTrackInterface> nativeTrack = nativeRtpSender->track();
-    if (nativeTrack == nullptr) return nil;
-
-    webrtc::FrameCryptorTransformer::MediaType mediaType =
-        nativeTrack->kind() == "audio" ? webrtc::FrameCryptorTransformer::MediaType::kAudioFrame
-                                       : webrtc::FrameCryptorTransformer::MediaType::kVideoFrame;
-
-    os_unfair_lock_lock(&_lock);
-    _observer = rtc::make_ref_counted<webrtc::RTCFrameCryptorDelegateAdapter>(self);
+    _observer.reset(new webrtc::RTCFrameCryptorDelegateAdapter(self));
     _participantId = participantId;
+    auto rtpSender = sender.nativeRtpSender;
+    auto mediaType = rtpSender->track()->kind() == "audio" ?
+        webrtc::FrameCryptorTransformer::MediaType::kAudioFrame :
+        webrtc::FrameCryptorTransformer::MediaType::kVideoFrame;
+    frame_crypto_transformer_ = rtc::scoped_refptr<webrtc::FrameCryptorTransformer>(
+        new webrtc::FrameCryptorTransformer([participantId stdString],
+                                            mediaType,
+                                            [self algorithmFromEnum:algorithm],
+                                            keyProvider.nativeKeyProvider));
 
-    _frame_crypto_transformer =
-        rtc::scoped_refptr<webrtc::FrameCryptorTransformer>(new webrtc::FrameCryptorTransformer(
-            factory.signalingThread, [participantId stdString], mediaType,
-            [self algorithmFromEnum:algorithm], keyProvider.nativeKeyProvider));
-
-    factory.workerThread->BlockingCall([self, nativeRtpSender] {
-      // Must be called on Worker thread
-      nativeRtpSender->SetEncoderToPacketizerFrameTransformer(_frame_crypto_transformer);
-    });
-
-    _frame_crypto_transformer->SetEnabled(false);
-    _frame_crypto_transformer->RegisterFrameCryptorTransformerObserver(_observer);
-    os_unfair_lock_unlock(&_lock);
+    rtpSender->SetEncoderToPacketizerFrameTransformer(frame_crypto_transformer_);
+    frame_crypto_transformer_->SetEnabled(false);
+    frame_crypto_transformer_->SetFrameCryptorTransformerObserver(_observer.get());
   }
-
   return self;
 }
 
-- (nullable instancetype)initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
-                             rtpReceiver:(RTC_OBJC_TYPE(RTCRtpReceiver) *)receiver
-                           participantId:(NSString *)participantId
-                               algorithm:(RTCCryptorAlgorithm)algorithm
-                             keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider {
+- (instancetype)initWithRtpReceiver:(RTC_OBJC_TYPE(RTCRtpReceiver) *)receiver
+                      participantId:(NSString *)participantId
+                          algorithm:(RTCCyrptorAlgorithm)algorithm
+                         keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider {
   if (self = [super init]) {
-    _lock = OS_UNFAIR_LOCK_INIT;
-
-    rtc::scoped_refptr<webrtc::RtpReceiverInterface> nativeRtpReceiver = receiver.nativeRtpReceiver;
-    if (nativeRtpReceiver == nullptr) return nil;
-
-    rtc::scoped_refptr<webrtc::MediaStreamTrackInterface> nativeTrack = nativeRtpReceiver->track();
-    if (nativeTrack == nullptr) return nil;
-
-    webrtc::FrameCryptorTransformer::MediaType mediaType =
-        nativeTrack->kind() == "audio" ? webrtc::FrameCryptorTransformer::MediaType::kAudioFrame
-                                       : webrtc::FrameCryptorTransformer::MediaType::kVideoFrame;
-
-    os_unfair_lock_lock(&_lock);
-    _observer = rtc::make_ref_counted<webrtc::RTCFrameCryptorDelegateAdapter>(self);
+    _observer.reset(new webrtc::RTCFrameCryptorDelegateAdapter(self));
     _participantId = participantId;
+    auto rtpReceiver = receiver.nativeRtpReceiver;
+    auto mediaType = rtpReceiver->track()->kind() == "audio" ?
+        webrtc::FrameCryptorTransformer::MediaType::kAudioFrame :
+        webrtc::FrameCryptorTransformer::MediaType::kVideoFrame;
+    frame_crypto_transformer_ = rtc::scoped_refptr<webrtc::FrameCryptorTransformer>(
+        new webrtc::FrameCryptorTransformer([participantId stdString],
+                                            mediaType,
+                                            [self algorithmFromEnum:algorithm],
+                                            keyProvider.nativeKeyProvider));
 
-    _frame_crypto_transformer =
-        rtc::scoped_refptr<webrtc::FrameCryptorTransformer>(new webrtc::FrameCryptorTransformer(
-            factory.signalingThread, [participantId stdString], mediaType,
-            [self algorithmFromEnum:algorithm], keyProvider.nativeKeyProvider));
-
-    factory.workerThread->BlockingCall([self, nativeRtpReceiver] {
-      // Must be called on Worker thread
-      nativeRtpReceiver->SetDepacketizerToDecoderFrameTransformer(_frame_crypto_transformer);
-    });
-
-    _frame_crypto_transformer->SetEnabled(false);
-    _frame_crypto_transformer->RegisterFrameCryptorTransformerObserver(_observer);
-    os_unfair_lock_unlock(&_lock);
+    rtpReceiver->SetDepacketizerToDecoderFrameTransformer(frame_crypto_transformer_);
+    frame_crypto_transformer_->SetEnabled(false);
+    frame_crypto_transformer_->SetFrameCryptorTransformerObserver(_observer.get());
   }
-
   return self;
-}
-
-- (void)dealloc {
-  os_unfair_lock_lock(&_lock);
-  if (_frame_crypto_transformer != nullptr) {
-    _frame_crypto_transformer->UnRegisterFrameCryptorTransformerObserver();
-    _frame_crypto_transformer = nullptr;
-  }
-  _observer = nullptr;
-  os_unfair_lock_unlock(&_lock);
 }
 
 - (BOOL)enabled {
-  os_unfair_lock_lock(&_lock);
-  BOOL result = _frame_crypto_transformer != nullptr ? _frame_crypto_transformer->enabled() : NO;
-  os_unfair_lock_unlock(&_lock);
-  return result;
+  return frame_crypto_transformer_->enabled();
 }
 
 - (void)setEnabled:(BOOL)enabled {
-  os_unfair_lock_lock(&_lock);
-  if (_frame_crypto_transformer != nullptr) {
-    _frame_crypto_transformer->SetEnabled(enabled);
-  }
-  os_unfair_lock_unlock(&_lock);
+  frame_crypto_transformer_->SetEnabled(enabled);
 }
 
 - (int)keyIndex {
-  os_unfair_lock_lock(&_lock);
-  int result = _frame_crypto_transformer != nullptr ? _frame_crypto_transformer->key_index() : 0;
-  os_unfair_lock_unlock(&_lock);
-  return result;
+  return frame_crypto_transformer_->key_index();
 }
 
 - (void)setKeyIndex:(int)keyIndex {
-  os_unfair_lock_lock(&_lock);
-  if (_frame_crypto_transformer != nullptr) {
-    _frame_crypto_transformer->SetKeyIndex(keyIndex);
-  }
-  os_unfair_lock_unlock(&_lock);
+  frame_crypto_transformer_->SetKeyIndex(keyIndex);
+}
+
+- (void)dealloc {
+  frame_crypto_transformer_->SetFrameCryptorTransformerObserver(nullptr);
 }
 
 @end

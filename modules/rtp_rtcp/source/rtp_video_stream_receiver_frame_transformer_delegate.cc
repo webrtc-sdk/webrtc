@@ -76,6 +76,10 @@ class TransformableVideoReceiverFrame
     return frame_->GetRtpVideoHeader();
   }
 
+  const RTPVideoHeader& header () const override {
+    return frame_->GetRtpVideoHeader();
+  }
+
   std::unique_ptr<RtpFrameObject> ExtractFrame() && {
     return std::move(frame_);
   }

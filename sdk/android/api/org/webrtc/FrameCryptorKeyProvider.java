@@ -30,21 +30,6 @@ public class FrameCryptorKeyProvider {
     return nativeKeyProvider;
   }
 
-  public boolean setSharedKey(int index, byte[] key) {
-    checkKeyProviderExists();
-    return nativeSetSharedKey(nativeKeyProvider,index, key);
-  }
-
-  public byte[] ratchetSharedKey(int index) {
-    checkKeyProviderExists();
-    return nativeRatchetSharedKey(nativeKeyProvider, index);
-  }
-
-  public byte[] exportSharedKey(int index) {
-    checkKeyProviderExists();
-    return nativeExportSharedKey(nativeKeyProvider, index);
-  }
-
   public boolean setKey(String participantId, int index, byte[] key) {
     checkKeyProviderExists();
     return nativeSetKey(nativeKeyProvider, participantId, index, key);
@@ -60,11 +45,6 @@ public class FrameCryptorKeyProvider {
     return nativeExportKey(nativeKeyProvider, participantId, index);
   }
 
-  public void setSifTrailer(byte[] sifTrailer) {
-    checkKeyProviderExists();
-    nativeSetSifTrailer(nativeKeyProvider, sifTrailer);
-  }
-
   public void dispose() {
     checkKeyProviderExists();
     JniCommon.nativeReleaseRef(nativeKeyProvider);
@@ -76,18 +56,11 @@ public class FrameCryptorKeyProvider {
       throw new IllegalStateException("FrameCryptorKeyProvider has been disposed.");
     }
   }
-  private static native boolean nativeSetSharedKey(
-      long keyProviderPointer, int index, byte[] key);
-  private static native byte[] nativeRatchetSharedKey(
-      long keyProviderPointer, int index);
-  private static native byte[] nativeExportSharedKey(
-      long keyProviderPointer, int index);
+
   private static native boolean nativeSetKey(
       long keyProviderPointer, String participantId, int index, byte[] key);
   private static native byte[] nativeRatchetKey(
       long keyProviderPointer, String participantId, int index);
   private static native byte[] nativeExportKey(
       long keyProviderPointer, String participantId, int index);
-  private static native void nativeSetSifTrailer(
-      long keyProviderPointer, byte[] sifTrailer);
 }
