@@ -53,6 +53,10 @@ class TransformableVideoReceiverFrame
     return RtpDescriptorAuthentication(frame_->GetRtpVideoHeader());
   }
 
+  const RTPVideoHeader& header () const override {
+    return frame_->GetRtpVideoHeader();
+  }
+
   const VideoFrameMetadata& GetMetadata() const override { return metadata_; }
 
   std::unique_ptr<RtpFrameObject> ExtractFrame() && {
