@@ -59,7 +59,7 @@ class DefaultKeyManagerImpl : public webrtc::KeyManager {
 
  private:
   mutable webrtc::Mutex mutex_;
-  std::map<std::string, std::vector<std::vector<uint8_t>>> keys_;
+  std::unordered_map<std::string, std::vector<std::vector<uint8_t>>> keys_;
 };
 
 @implementation RTC_OBJC_TYPE (RTCFrameCryptorKeyManager) {
