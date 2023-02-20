@@ -357,7 +357,6 @@ void ChannelReceive::OnReceivedPayloadData(
 void ChannelReceive::InitFrameTransformerDelegate(
     rtc::scoped_refptr<webrtc::FrameTransformerInterface> frame_transformer) {
   RTC_DCHECK(frame_transformer);
-  RTC_DCHECK(!frame_transformer_delegate_);
   RTC_DCHECK(worker_thread_->IsCurrent());
 
   // Pass a callback to ChannelReceive::OnReceivedPayloadData, to be called by
@@ -920,11 +919,9 @@ void ChannelReceive::SetAssociatedSendChannel(
 void ChannelReceive::SetDepacketizerToDecoderFrameTransformer(
     rtc::scoped_refptr<webrtc::FrameTransformerInterface> frame_transformer) {
   RTC_DCHECK_RUN_ON(&worker_thread_checker_);
-  // Depending on when the channel is created, the transformer might be set
-  // twice. Don't replace the delegate if it was already initialized.
-  if (!frame_transformer || frame_transformer_delegate_) {
-    RTC_DCHECK_NOTREACHED() << "Not setting the transformer?";
-    return;
+
+  if(frame_transformer_delegate_ && frame_transformer) {
+    frame_transformer_delegate_->Reset();
   }
 
   InitFrameTransformerDelegate(std::move(frame_transformer));
