@@ -54,14 +54,7 @@ class DefaultKeyManagerImpl : public webrtc::KeyManager {
   bool SetKeys(const std::string participant_id,
                std::vector<std::vector<uint8_t>> keys) {
     webrtc::MutexLock lock(&mutex_);
-    if (keys_.find(participant_id) == keys_.end()) {
-      keys_[participant_id] = std::vector<std::vector<uint8_t>>();
-    }
-
-    keys_[participant_id].clear();
-    for (auto key : keys) {
-      keys_[participant_id].push_back(key);
-    }
+    keys_[participant_id] = keys;
     return true;
   }
 
