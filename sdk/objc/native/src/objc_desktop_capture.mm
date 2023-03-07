@@ -173,6 +173,7 @@ void ObjCDesktopCapturer::OnCaptureResult(webrtc::DesktopCapturer::Result result
                                                   rotation:RTCVideoRotation_0
                                                timeStampNs:timeStampNs];
 
+  CVPixelBufferRelease(pixelBuffer);
   [delegate_ didCaptureVideoFrame:videoFrame];
 }
 
