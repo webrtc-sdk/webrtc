@@ -25,55 +25,9 @@
 namespace webrtc {
 namespace jni {
 
-class DefaultKeyManagerImpl : public webrtc::KeyManager {
- public:
-  DefaultKeyManagerImpl() = default;
-  ~DefaultKeyManagerImpl() override = default;
-
-  /// Set the key at the given index.
-  bool SetKey(const std::string participant_id,
-              int index,
-              std::vector<uint8_t> key) {
-    webrtc::MutexLock lock(&mutex_);
-
-    if (keys_.find(participant_id) == keys_.end()) {
-      keys_[participant_id] = std::vector<std::vector<uint8_t>>();
-    }
- 
-    if (index + 1 > (int)keys_[participant_id].size()) {
-      keys_[participant_id].resize(index + 1);
-    }
-
-    keys_[participant_id][index] = key;
-    return true;
-  }
-
-  /// Set the keys.
-  bool SetKeys(const std::string participant_id,
-               std::vector<std::vector<uint8_t>> keys) {
-    webrtc::MutexLock lock(&mutex_);
-    keys_[participant_id] = keys;
-    return true;
-  }
-
-  const std::vector<std::vector<uint8_t>> keys(
-      const std::string participant_id) const override {
-    webrtc::MutexLock lock(&mutex_);
-    if (keys_.find(participant_id) == keys_.end()) {
-      return std::vector<std::vector<uint8_t>>();
-    }
-
-    return keys_.find(participant_id)->second;
-  }
-
- private:
-  mutable webrtc::Mutex mutex_;
-  std::map<std::string, std::vector<std::vector<uint8_t>>> keys_;
-};
-
 ScopedJavaLocalRef<jobject> NativeToJavaFrameCryptorKeyManager(
     JNIEnv* env,
-    rtc::scoped_refptr<DefaultKeyManagerImpl> cryptor);
+    rtc::scoped_refptr<webrtc::DefaultKeyManagerImpl> cryptor);
 
 }  // namespace jni
 }  // namespace webrtc

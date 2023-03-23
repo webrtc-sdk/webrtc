@@ -115,7 +115,7 @@ JNI_FrameCryptorFactory_CreateFrameCryptorForRtpReceiver(
     const base::android::JavaParamRef<jstring>& participantId,
     jint j_algorithm_index,
     jlong j_key_manager) {
-  auto keyManager = reinterpret_cast<DefaultKeyManagerImpl*>(j_key_manager);
+  auto keyManager = reinterpret_cast<webrtc::DefaultKeyManagerImpl*>(j_key_manager);
   auto participant_id = JavaToStdString(env, participantId);
   auto rtpReceiver =
       reinterpret_cast<RtpReceiverInterface*>(j_rtp_receiver_pointer);
@@ -143,7 +143,7 @@ JNI_FrameCryptorFactory_CreateFrameCryptorForRtpSender(
     const base::android::JavaParamRef<jstring>& participantId,
     jint j_algorithm_index,
     jlong j_key_manager) {
-  auto keyManager = reinterpret_cast<DefaultKeyManagerImpl*>(j_key_manager);
+  auto keyManager = reinterpret_cast<webrtc::DefaultKeyManagerImpl*>(j_key_manager);
   auto rtpSender = reinterpret_cast<RtpSenderInterface*>(j_rtp_sender_pointer);
   auto participant_id = JavaToStdString(env, participantId);
   auto mediaType =
@@ -165,7 +165,7 @@ JNI_FrameCryptorFactory_CreateFrameCryptorForRtpSender(
 static base::android::ScopedJavaLocalRef<jobject>
 JNI_FrameCryptorFactory_CreateFrameCryptorKeyManager(JNIEnv* env) {
   return NativeToJavaFrameCryptorKeyManager(
-      env, rtc::make_ref_counted<DefaultKeyManagerImpl>());
+      env, rtc::make_ref_counted<webrtc::DefaultKeyManagerImpl>());
 }
 
 }  // namespace jni

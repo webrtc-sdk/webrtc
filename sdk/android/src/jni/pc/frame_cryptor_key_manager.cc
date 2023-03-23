@@ -24,7 +24,7 @@ namespace jni {
 
 ScopedJavaLocalRef<jobject> NativeToJavaFrameCryptorKeyManager(
     JNIEnv* env,
-    rtc::scoped_refptr<DefaultKeyManagerImpl> key_manager) {
+    rtc::scoped_refptr<webrtc::DefaultKeyManagerImpl> key_manager) {
   if (!key_manager)
     return nullptr;
   // Sender is now owned by the Java object, and will be freed from
@@ -41,7 +41,7 @@ static jboolean JNI_FrameCryptorKeyManager_SetKey(
     const base::android::JavaParamRef<jbyteArray>& j_key) {
   auto key = JavaToNativeByteArray(jni, j_key);
   auto participant_id = JavaToStdString(jni, participantId);
-  return reinterpret_cast<DefaultKeyManagerImpl*>(j_key_manager)
+  return reinterpret_cast<webrtc::DefaultKeyManagerImpl*>(j_key_manager)
       ->SetKey(participant_id, j_index,
                std::vector<uint8_t>(key.begin(), key.end()));
 }
@@ -53,7 +53,7 @@ static jboolean JNI_FrameCryptorKeyManager_SetKeys(
     const base::android::JavaParamRef<jobject>& keys) {
   auto participant_id = JavaToStdString(env, participantId);
   auto key_manager =
-      reinterpret_cast<DefaultKeyManagerImpl*>(keyManagerPointer);
+      reinterpret_cast<webrtc::DefaultKeyManagerImpl*>(keyManagerPointer);
   auto keys_size = env->GetArrayLength((jobjectArray)keys.obj());
   std::vector<std::vector<uint8_t>> keys_vector;
   for (int i = 0; i < keys_size; i++) {
@@ -71,7 +71,7 @@ static ScopedJavaLocalRef<jobject> JNI_FrameCryptorKeyManager_GetKeys(
     jlong j_key_manager,
     const base::android::JavaParamRef<jstring>& participantId) {
   auto participant_id = JavaToStdString(jni, participantId);
-  auto keys = reinterpret_cast<DefaultKeyManagerImpl*>(j_key_manager)
+  auto keys = reinterpret_cast<webrtc::DefaultKeyManagerImpl*>(j_key_manager)
                   ->keys(participant_id);
   JavaListBuilder j_keys(jni);
   for (size_t i = 0; i < keys.size(); i++) {
