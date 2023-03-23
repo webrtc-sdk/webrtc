@@ -25,6 +25,65 @@
 
 namespace webrtc {
 
+int DeriveAesKeyFromRawKey(const std::vector<uint8_t> raw_key,
+                           const std::vector<uint8_t>& salt,
+                           unsigned int optional_length_bits,
+                           std::vector<uint8_t>* derived_key);
+
+const size_t KEYRING_SIZE = 16;
+
+class ParticipantKeyHandler {
+ public:
+  struct KeySet {
+    std::vector<uint8_t> material;
+    std::vector<uint8_t> encryptionKey;
+    KeySet(std::vector<uint8_t> material, std::vector<uint8_t> encryptionKey)
+        : material(material), encryptionKey(encryptionKey) {}
+  };
+
+ public:
+  int currentKeyIndex = 0;
+  std::vector<std::shared_ptr<KeySet>> cryptoKeyRing_;
+  bool enabled_;
+
+  ParticipantKeyHandler(bool enabled, KeyManager::KeyProviderOptions options)
+      : enabled_(enabled), options_(options) {
+    cryptoKeyRing_.resize(KEYRING_SIZE);
+  }
+
+  bool ratchetKey(int keyIndex) {
+    std::shared_ptr<KeySet> currentMaterial = getKey(keyIndex);
+    std::shared_ptr<KeySet> newMaterial =
+        deriveBits(currentMaterial->encryptionKey, options_.ratchetSalt);
+    setKeyFromMaterial(newMaterial->encryptionKey,
+                       keyIndex != -1 ? keyIndex : currentKeyIndex);
+  }
+
+  std::shared_ptr<KeySet> getKey(int keyIndex) {
+    return cryptoKeyRing_[keyIndex != -1 ? keyIndex : currentKeyIndex];
+  }
+
+  void setKeyFromMaterial(std::vector<uint8_t> password, int keyIndex) {
+    if (keyIndex >= 0) {
+      currentKeyIndex = keyIndex % cryptoKeyRing_.size();
+    }
+    cryptoKeyRing_[currentKeyIndex] =
+        deriveBits(password, options_.ratchetSalt);
+  }
+
+  std::shared_ptr<KeySet> deriveBits(std::vector<uint8_t> password,
+                                     std::vector<uint8_t> ratchetSalt) {
+    std::vector<uint8_t> derived_key;
+    if (DeriveAesKeyFromRawKey(password, ratchetSalt, 256, &derived_key) == 0) {
+      return std::make_shared<KeySet>(password, derived_key);
+    }
+    return nullptr;
+  }
+
+ private:
+  KeyManager::KeyProviderOptions options_;
+};
+
 class KeyManager : public rtc::RefCountInterface {
  public:
   enum { kRawKeySize = 32 };
@@ -39,13 +98,12 @@ class KeyManager : public rtc::RefCountInterface {
   virtual const std::vector<std::vector<uint8_t>> keys(
       const std::string participant_id) const = 0;
 
-  //virtual void ratchetKey(const std::string participant_id, int keyIndex) = 0;
+  virtual void ratchetKey(const std::string participant_id, int keyIndex) = 0;
 
  protected:
   virtual ~KeyManager() {}
 
-private:
-  //std::vector<uint8_t> deriveKeys(std::vector<uint8_t> material, std::vector<uint8_t> ratchetSalt);
+ private:
   KeyProviderOptions options_;
 };
 
@@ -63,7 +121,7 @@ class DefaultKeyManagerImpl : public KeyManager {
     if (keys_.find(participant_id) == keys_.end()) {
       keys_[participant_id] = std::vector<std::vector<uint8_t>>();
     }
- 
+
     if (index + 1 > (int)keys_[participant_id].size()) {
       keys_[participant_id].resize(index + 1);
     }
@@ -90,6 +148,10 @@ class DefaultKeyManagerImpl : public KeyManager {
     return keys_.find(participant_id)->second;
   }
 
+  virtual void ratchetKey(const std::string participant_id,
+                          int keyIndex) override {}
+
+ private:
  private:
   mutable webrtc::Mutex mutex_;
   std::map<std::string, std::vector<std::vector<uint8_t>>> keys_;
