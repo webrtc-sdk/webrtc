@@ -17,6 +17,8 @@
 #ifndef WEBRTC_FRAME_CRYPTOR_TRANSFORMER_H_
 #define WEBRTC_FRAME_CRYPTOR_TRANSFORMER_H_
 
+#include <unordered_map>
+
 #include "api/frame_transformer_interface.h"
 #include "rtc_base/buffer.h"
 #include "rtc_base/synchronization/mutex.h"
@@ -154,7 +156,7 @@ class DefaultKeyManagerImpl : public KeyManager {
  private:
  private:
   mutable webrtc::Mutex mutex_;
-  std::map<std::string, std::vector<std::vector<uint8_t>>> keys_;
+  std::unordered_map<std::string, std::vector<std::vector<uint8_t>>> keys_;
 };
 
 enum FrameCryptionError {

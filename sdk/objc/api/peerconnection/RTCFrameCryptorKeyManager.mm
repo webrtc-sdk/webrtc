@@ -17,7 +17,6 @@
 #import "RTCFrameCryptorKeyManager+Private.h"
 
 #include <memory>
-#include <unordered_map>
 #include "api/crypto/frame_crypto_transformer.h"
 
 #import "base/RTCLogging.h"
