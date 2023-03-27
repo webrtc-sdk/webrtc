@@ -25,10 +25,10 @@
 #include "rtc_base/system/rtc_export.h"
 #include "rtc_base/thread.h"
 
-int DeriveAesKeyFromRawKey(const std::vector<uint8_t> raw_key,
-                           const std::vector<uint8_t>& salt,
-                           unsigned int optional_length_bits,
-                           std::vector<uint8_t>* derived_key);
+int DerivePBKDF2KeyFromRawKey(const std::vector<uint8_t> raw_key,
+                              const std::vector<uint8_t>& salt,
+                              unsigned int optional_length_bits,
+                              std::vector<uint8_t>* derived_key);
 
 namespace webrtc {
 
@@ -82,7 +82,7 @@ class ParticipantKeyHandler {
   std::shared_ptr<KeySet> DeriveBits(std::vector<uint8_t> password,
                                      std::vector<uint8_t> ratchet_salt) {
     std::vector<uint8_t> derived_key;
-    if (DeriveAesKeyFromRawKey(password, ratchet_salt, 256, &derived_key) ==
+    if (DerivePBKDF2KeyFromRawKey(password, ratchet_salt, 128, &derived_key) ==
         0) {
       return std::make_shared<KeySet>(password, derived_key);
     }

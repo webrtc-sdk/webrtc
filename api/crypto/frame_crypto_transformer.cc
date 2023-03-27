@@ -140,18 +140,27 @@ uint8_t get_unencrypted_bytes(webrtc::TransformableFrameInterface* frame,
   return unencrypted_bytes;
 }
 
-int DeriveAesKeyFromRawKey(const std::vector<uint8_t> raw_key,
-                           const std::vector<uint8_t>& salt,
-                           unsigned int optional_length_bits,
-                           std::vector<uint8_t>* derived_key) {
+int DerivePBKDF2KeyFromRawKey(const std::vector<uint8_t> raw_key,
+                              const std::vector<uint8_t>& salt,
+                              unsigned int optional_length_bits,
+                              std::vector<uint8_t>* derived_key) {
   size_t key_size_bytes = optional_length_bits / 8;
   derived_key->resize(key_size_bytes);
+
   if (PKCS5_PBKDF2_HMAC((const char*)raw_key.data(), raw_key.size(),
-                        salt.data(), salt.size(), 10000, EVP_sha256(),
+                        salt.data(), salt.size(), 100000, EVP_sha256(),
                         key_size_bytes, derived_key->data()) != 1) {
     RTC_LOG(LS_ERROR) << "Failed to derive AES key from password.";
     return ErrorUnexpected;
   }
+  /*
+  RTC_LOG(LS_INFO) << "raw_key " << to_hex(raw_key.data(), raw_key.size())
+                   << " len " << raw_key.size() << " slat << "
+                   << to_hex(salt.data(), salt.size()) << " len " << salt.size()
+                   << "\n derived_key "
+                   << to_hex(derived_key->data(), derived_key->size())
+                   << " len " << derived_key->size();
+  */
   return Success;
 }
 
@@ -463,7 +472,8 @@ void FrameCryptorTransformer::decryptFrame(
   }
 
   auto key_handler = key_manager_->GetKey(participant_id_);
-  if (key_index >= KEYRING_SIZE ||  key_handler == nullptr || key_handler->GetKeySet(key_index) == nullptr) {
+  if (key_index >= KEYRING_SIZE || key_handler == nullptr ||
+      key_handler->GetKeySet(key_index) == nullptr) {
     RTC_LOG(LS_INFO) << "FrameCryptorTransformer::decryptFrame() no keys, or "
                         "key_index["
                      << key_index_ << "] out of range for participant "
