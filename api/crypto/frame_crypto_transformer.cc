@@ -333,13 +333,13 @@ void FrameCryptorTransformer::encryptFrame(
     return;
   }
 
-  auto keys = key_manager_->keys(participant_id_);
-  if (keys.size() == 0 || key_index_ >= (int)keys.size()) {
+  auto key_handler = key_manager_->GetKey(participant_id_);
+  if (key_handler == nullptr || key_handler->GetKeySet(key_index_) == nullptr) {
     RTC_LOG(LS_INFO) << "FrameCryptorTransformer::encryptFrame() no keys, or "
                         "key_index["
                      << key_index_ << "] out of range for participant "
                      << participant_id_;
-    if (keys.size() && last_enc_error_ != FrameCryptionError::kMissingKey) {
+    if (last_enc_error_ != FrameCryptionError::kMissingKey) {
       last_enc_error_ = FrameCryptionError::kMissingKey;
       if (observer_)
         observer_->OnFrameCryptionError(participant_id_, last_enc_error_);
@@ -347,7 +347,7 @@ void FrameCryptorTransformer::encryptFrame(
     return;
   }
 
-  std::vector<uint8_t> aes_key = keys[key_index_];
+  auto key_set = key_handler->GetKeySet(key_index_);
   uint8_t unencrypted_bytes = get_unencrypted_bytes(frame.get(), type_);
 
   rtc::Buffer frameHeader(unencrypted_bytes);
@@ -366,7 +366,7 @@ void FrameCryptorTransformer::encryptFrame(
   }
 
   std::vector<uint8_t> buffer;
-  if (AesEncryptDecrypt(EncryptOrDecrypt::kEncrypt, algorithm_, aes_key, iv,
+  if (AesEncryptDecrypt(EncryptOrDecrypt::kEncrypt, algorithm_, key_set->encryptionKey, iv,
                         frameHeader, payload, &buffer) == Success) {
     rtc::Buffer encrypted_payload(buffer.data(), buffer.size());
     rtc::Buffer data_out;
@@ -385,7 +385,7 @@ void FrameCryptorTransformer::encryptFrame(
                      << static_cast<int>(iv.size()) << " unencrypted_bytes="
                      << static_cast<int>(unencrypted_bytes)
                      << " keyIndex=" << static_cast<int>(key_index_)
-                     << " aesKey=" << to_hex(aes_key.data(), aes_key.size())
+                     << " aesKey=" << to_hex(key_set->encryptionKey.data(), key_set->encryptionKey.size())
                      << " iv=" << to_hex(iv.data(), iv.size());
     if (last_enc_error_ != FrameCryptionError::kOk) {
       last_enc_error_ = FrameCryptionError::kOk;
@@ -459,8 +459,8 @@ void FrameCryptorTransformer::decryptFrame(
     return;
   }
 
-  auto keys = key_manager_->keys(participant_id_);
-  if (keys.size() == 0 || key_index >= (int)keys.size()) {
+  auto key_handler = key_manager_->GetKey(participant_id_);
+  if (key_handler == nullptr || key_handler->GetKeySet(key_index) == nullptr) {
     RTC_LOG(LS_INFO) << "FrameCryptorTransformer::decryptFrame() no keys, or "
                         "key_index["
                      << key_index_ << "] out of range for participant "
@@ -472,7 +472,8 @@ void FrameCryptorTransformer::decryptFrame(
     }
     return;
   }
-  std::vector<uint8_t> aes_key = keys[key_index];
+
+  auto key_set = key_handler->GetKeySet(key_index);
 
   rtc::Buffer iv = rtc::Buffer(ivLength);
   for (size_t i = 0; i < ivLength; i++) {
@@ -485,7 +486,7 @@ void FrameCryptorTransformer::decryptFrame(
     encrypted_payload[i - unencrypted_bytes] = date_in[i];
   }
   std::vector<uint8_t> buffer;
-  if (AesEncryptDecrypt(EncryptOrDecrypt::kDecrypt, algorithm_, aes_key, iv,
+  if (AesEncryptDecrypt(EncryptOrDecrypt::kDecrypt, algorithm_, key_set->encryptionKey, iv,
                         frameHeader, encrypted_payload, &buffer) == Success) {
     rtc::Buffer payload(buffer.data(), buffer.size());
     rtc::Buffer data_out;
@@ -497,7 +498,7 @@ void FrameCryptorTransformer::decryptFrame(
                      << static_cast<int>(ivLength) << " unencrypted_bytes="
                      << static_cast<int>(unencrypted_bytes)
                      << " keyIndex=" << static_cast<int>(key_index_)
-                     << " aesKey=" << to_hex(aes_key.data(), aes_key.size())
+                     << " aesKey=" << to_hex(key_set->encryptionKey.data(), key_set->encryptionKey.size())
                      << " iv=" << to_hex(iv.data(), iv.size());
 
     if (last_dec_error_ != FrameCryptionError::kOk) {

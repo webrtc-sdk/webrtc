@@ -25,14 +25,25 @@
 #include "rtc_base/system/rtc_export.h"
 #include "rtc_base/thread.h"
 
-namespace webrtc {
-
 int DeriveAesKeyFromRawKey(const std::vector<uint8_t> raw_key,
                            const std::vector<uint8_t>& salt,
                            unsigned int optional_length_bits,
                            std::vector<uint8_t>* derived_key);
 
+namespace webrtc {
+
 const size_t KEYRING_SIZE = 16;
+
+struct KeyProviderOptions {
+  bool shared_key;
+  std::vector<uint8_t> ratchet_salt;
+  int ratchet_window_size;
+  KeyProviderOptions() : shared_key(false), ratchet_window_size(0) {}
+  KeyProviderOptions(KeyProviderOptions& copy)
+      : shared_key(copy.shared_key),
+        ratchet_salt(copy.ratchet_salt),
+        ratchet_window_size(copy.ratchet_window_size) {}
+};
 
 class ParticipantKeyHandler {
  public:
@@ -44,74 +55,63 @@ class ParticipantKeyHandler {
   };
 
  public:
-  int currentKeyIndex = 0;
-  std::vector<std::shared_ptr<KeySet>> cryptoKeyRing_;
-  bool enabled_;
-
-  ParticipantKeyHandler(bool enabled, KeyManager::KeyProviderOptions options)
-      : enabled_(enabled), options_(options) {
+  ParticipantKeyHandler(KeyProviderOptions options) : options_(options) {
     cryptoKeyRing_.resize(KEYRING_SIZE);
   }
 
-  bool ratchetKey(int keyIndex) {
-    std::shared_ptr<KeySet> currentMaterial = getKey(keyIndex);
+  void RatchetKey(int keyIndex) {
+    std::shared_ptr<KeySet> currentMaterial = GetKeySet(keyIndex);
     std::shared_ptr<KeySet> newMaterial =
-        deriveBits(currentMaterial->encryptionKey, options_.ratchetSalt);
-    setKeyFromMaterial(newMaterial->encryptionKey,
+        DeriveBits(currentMaterial->encryptionKey, options_.ratchet_salt);
+    SetKeyFromMaterial(newMaterial->encryptionKey,
                        keyIndex != -1 ? keyIndex : currentKeyIndex);
   }
 
-  std::shared_ptr<KeySet> getKey(int keyIndex) {
+  std::shared_ptr<KeySet> GetKeySet(int keyIndex) {
     return cryptoKeyRing_[keyIndex != -1 ? keyIndex : currentKeyIndex];
   }
 
-  void setKeyFromMaterial(std::vector<uint8_t> password, int keyIndex) {
+  void SetKeyFromMaterial(std::vector<uint8_t> password, int keyIndex) {
     if (keyIndex >= 0) {
       currentKeyIndex = keyIndex % cryptoKeyRing_.size();
     }
     cryptoKeyRing_[currentKeyIndex] =
-        deriveBits(password, options_.ratchetSalt);
+        DeriveBits(password, options_.ratchet_salt);
   }
 
-  std::shared_ptr<KeySet> deriveBits(std::vector<uint8_t> password,
-                                     std::vector<uint8_t> ratchetSalt) {
+  std::shared_ptr<KeySet> DeriveBits(std::vector<uint8_t> password,
+                                     std::vector<uint8_t> ratchet_salt) {
     std::vector<uint8_t> derived_key;
-    if (DeriveAesKeyFromRawKey(password, ratchetSalt, 256, &derived_key) == 0) {
+    if (DeriveAesKeyFromRawKey(password, ratchet_salt, 256, &derived_key) ==
+        0) {
       return std::make_shared<KeySet>(password, derived_key);
     }
     return nullptr;
   }
 
  private:
-  KeyManager::KeyProviderOptions options_;
+  int currentKeyIndex = 0;
+  KeyProviderOptions options_;
+  std::vector<std::shared_ptr<KeySet>> cryptoKeyRing_;
 };
 
 class KeyManager : public rtc::RefCountInterface {
  public:
   enum { kRawKeySize = 32 };
 
-  struct KeyProviderOptions {
-    bool sharedKey;
-    std::vector<uint8_t> ratchetSalt;
-    int ratchetWindowSize;
-  };
-
  public:
-  virtual const std::vector<std::vector<uint8_t>> keys(
+  virtual const std::shared_ptr<ParticipantKeyHandler> GetKey(
       const std::string participant_id) const = 0;
 
-  virtual void ratchetKey(const std::string participant_id, int keyIndex) = 0;
+  virtual void RatchetKey(const std::string participant_id, int key_index) = 0;
 
  protected:
   virtual ~KeyManager() {}
-
- private:
-  KeyProviderOptions options_;
 };
 
 class DefaultKeyManagerImpl : public KeyManager {
  public:
-  DefaultKeyManagerImpl() = default;
+  DefaultKeyManagerImpl(KeyProviderOptions options) : options_(options) {}
   ~DefaultKeyManagerImpl() override = default;
 
   /// Set the key at the given index.
@@ -120,43 +120,51 @@ class DefaultKeyManagerImpl : public KeyManager {
               std::vector<uint8_t> key) {
     webrtc::MutexLock lock(&mutex_);
 
+    if (options_.shared_key) {
+      return SetSharedKey(index, key);
+    }
+
     if (keys_.find(participant_id) == keys_.end()) {
-      keys_[participant_id] = std::vector<std::vector<uint8_t>>();
+      keys_[participant_id] = std::make_shared<ParticipantKeyHandler>(options_);
     }
+    auto keyHandler = keys_[participant_id];
+    keyHandler->SetKeyFromMaterial(key, index);
 
-    if (index + 1 > (int)keys_[participant_id].size()) {
-      keys_[participant_id].resize(index + 1);
-    }
-
-    keys_[participant_id][index] = key;
     return true;
   }
 
-  /// Set the keys.
-  bool SetKeys(const std::string participant_id,
-               std::vector<std::vector<uint8_t>> keys) {
+  bool SetSharedKey(int index, std::vector<uint8_t> key) {
     webrtc::MutexLock lock(&mutex_);
-    keys_[participant_id] = keys;
+    for (auto const& [_, val] : keys_) {
+      val->SetKeyFromMaterial(key, index);
+    }
     return true;
   }
 
-  const std::vector<std::vector<uint8_t>> keys(
+  const std::shared_ptr<ParticipantKeyHandler> GetKey(
       const std::string participant_id) const override {
     webrtc::MutexLock lock(&mutex_);
     if (keys_.find(participant_id) == keys_.end()) {
-      return std::vector<std::vector<uint8_t>>();
+      return nullptr;
     }
 
     return keys_.find(participant_id)->second;
   }
 
-  virtual void ratchetKey(const std::string participant_id,
-                          int keyIndex) override {}
+  void RatchetKey(const std::string participant_id,
+                          int key_index) override {
+    webrtc::MutexLock lock(&mutex_);
+    if (keys_.find(participant_id) == keys_.end()) {
+      return;
+    }
+
+    return keys_[participant_id]->RatchetKey(key_index);
+  }
 
  private:
- private:
   mutable webrtc::Mutex mutex_;
-  std::unordered_map<std::string, std::vector<std::vector<uint8_t>>> keys_;
+  KeyProviderOptions options_;
+  std::unordered_map<std::string, std::shared_ptr<ParticipantKeyHandler>> keys_;
 };
 
 enum FrameCryptionError {
@@ -207,6 +215,7 @@ class RTC_EXPORT FrameCryptorTransformer
   }
 
   virtual int key_index() const { return key_index_; };
+
   virtual void SetEnabled(bool enabled) {
     webrtc::MutexLock lock(&mutex_);
     enabled_cryption_ = enabled;
