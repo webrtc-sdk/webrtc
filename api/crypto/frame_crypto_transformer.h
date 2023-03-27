@@ -122,13 +122,14 @@ class DefaultKeyManagerImpl : public KeyManager {
               std::vector<uint8_t> key) {
     webrtc::MutexLock lock(&mutex_);
 
+    if (keys_.find(participant_id) == keys_.end()) {
+      keys_[participant_id] = std::make_shared<ParticipantKeyHandler>(options_);
+    }
+
     if (options_.shared_key) {
       return SetSharedKey(index, key);
     }
 
-    if (keys_.find(participant_id) == keys_.end()) {
-      keys_[participant_id] = std::make_shared<ParticipantKeyHandler>(options_);
-    }
     auto keyHandler = keys_[participant_id];
     keyHandler->SetKeyFromMaterial(key, index);
 
