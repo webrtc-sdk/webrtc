@@ -49,9 +49,9 @@ class ParticipantKeyHandler {
  public:
   struct KeySet {
     std::vector<uint8_t> material;
-    std::vector<uint8_t> encryptionKey;
+    std::vector<uint8_t> encryption_key;
     KeySet(std::vector<uint8_t> material, std::vector<uint8_t> encryptionKey)
-        : material(material), encryptionKey(encryptionKey) {}
+        : material(material), encryption_key(encryptionKey) {}
   };
 
  public:
@@ -62,8 +62,8 @@ class ParticipantKeyHandler {
   void RatchetKey(int keyIndex) {
     std::shared_ptr<KeySet> currentMaterial = GetKeySet(keyIndex);
     std::shared_ptr<KeySet> newMaterial =
-        DeriveBits(currentMaterial->encryptionKey, options_.ratchet_salt);
-    SetKeyFromMaterial(newMaterial->encryptionKey,
+        DeriveBits(currentMaterial->encryption_key, options_.ratchet_salt);
+    SetKeyFromMaterial(newMaterial->encryption_key,
                        keyIndex != -1 ? keyIndex : currentKeyIndex);
   }
 
@@ -88,6 +88,8 @@ class ParticipantKeyHandler {
     }
     return nullptr;
   }
+
+  KeyProviderOptions& options() { return options_; }
 
  private:
   int currentKeyIndex = 0;
@@ -151,8 +153,7 @@ class DefaultKeyManagerImpl : public KeyManager {
     return keys_.find(participant_id)->second;
   }
 
-  void RatchetKey(const std::string participant_id,
-                          int key_index) override {
+  void RatchetKey(const std::string participant_id, int key_index) override {
     webrtc::MutexLock lock(&mutex_);
     if (keys_.find(participant_id) == keys_.end()) {
       return;
