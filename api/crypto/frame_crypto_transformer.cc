@@ -463,7 +463,7 @@ void FrameCryptorTransformer::decryptFrame(
   }
 
   auto key_handler = key_manager_->GetKey(participant_id_);
-  if (key_handler == nullptr || key_handler->GetKeySet(key_index) == nullptr) {
+  if (key_index >= KEYRING_SIZE ||  key_handler == nullptr || key_handler->GetKeySet(key_index) == nullptr) {
     RTC_LOG(LS_INFO) << "FrameCryptorTransformer::decryptFrame() no keys, or "
                         "key_index["
                      << key_index_ << "] out of range for participant "
