@@ -328,10 +328,10 @@ void FrameCryptorTransformer::encryptFrame(
   if (sink_callback == nullptr) {
     RTC_LOG(LS_WARNING)
         << "FrameCryptorTransformer::encryptFrame() sink_callback is NULL";
-    if (last_enc_error_ != FrameCryptionError::kInternalError) {
-      last_enc_error_ = FrameCryptionError::kInternalError;
+    if (last_enc_error_ != FrameCryptionState::kInternalError) {
+      last_enc_error_ = FrameCryptionState::kInternalError;
       if (observer_)
-        observer_->OnFrameCryptionError(participant_id_, last_enc_error_);
+        observer_->OnFrameCryptionStateChanged(participant_id_, last_enc_error_);
     }
     return;
   }
@@ -348,10 +348,10 @@ void FrameCryptorTransformer::encryptFrame(
                         "key_index["
                      << key_index_ << "] out of range for participant "
                      << participant_id_;
-    if (last_enc_error_ != FrameCryptionError::kMissingKey) {
-      last_enc_error_ = FrameCryptionError::kMissingKey;
+    if (last_enc_error_ != FrameCryptionState::kMissingKey) {
+      last_enc_error_ = FrameCryptionState::kMissingKey;
       if (observer_)
-        observer_->OnFrameCryptionError(participant_id_, last_enc_error_);
+        observer_->OnFrameCryptionStateChanged(participant_id_, last_enc_error_);
     }
     return;
   }
@@ -399,17 +399,17 @@ void FrameCryptorTransformer::encryptFrame(
                      << to_hex(key_set->encryption_key.data(),
                                key_set->encryption_key.size())
                      << " iv=" << to_hex(iv.data(), iv.size());
-    if (last_enc_error_ != FrameCryptionError::kOk) {
-      last_enc_error_ = FrameCryptionError::kOk;
+    if (last_enc_error_ != FrameCryptionState::kOk) {
+      last_enc_error_ = FrameCryptionState::kOk;
       if (observer_)
-        observer_->OnFrameCryptionError(participant_id_, last_enc_error_);
+        observer_->OnFrameCryptionStateChanged(participant_id_, last_enc_error_);
     }
     sink_callback->OnTransformedFrame(std::move(frame));
   } else {
-    if (last_enc_error_ != FrameCryptionError::kEncryptionFailed) {
-      last_enc_error_ = FrameCryptionError::kEncryptionFailed;
+    if (last_enc_error_ != FrameCryptionState::kEncryptionFailed) {
+      last_enc_error_ = FrameCryptionState::kEncryptionFailed;
       if (observer_)
-        observer_->OnFrameCryptionError(participant_id_, last_enc_error_);
+        observer_->OnFrameCryptionStateChanged(participant_id_, last_enc_error_);
     }
     RTC_LOG(LS_ERROR) << "FrameCryptorTransformer::encryptFrame() failed";
   }
@@ -432,10 +432,10 @@ void FrameCryptorTransformer::decryptFrame(
   if (sink_callback == nullptr) {
     RTC_LOG(LS_WARNING)
         << "FrameCryptorTransformer::decryptFrame() sink_callback is NULL";
-    if (last_dec_error_ != FrameCryptionError::kInternalError) {
-      last_dec_error_ = FrameCryptionError::kInternalError;
+    if (last_dec_error_ != FrameCryptionState::kInternalError) {
+      last_dec_error_ = FrameCryptionState::kInternalError;
       if (observer_)
-        observer_->OnFrameCryptionError(participant_id_, last_dec_error_);
+        observer_->OnFrameCryptionStateChanged(participant_id_, last_dec_error_);
     }
     return;
   }
@@ -463,10 +463,10 @@ void FrameCryptorTransformer::decryptFrame(
     RTC_LOG(LS_ERROR) << "FrameCryptorTransformer::decryptFrame() ivLength["
                       << static_cast<int>(ivLength) << "] != getIvSize()["
                       << static_cast<int>(getIvSize()) << "]";
-    if (last_dec_error_ != FrameCryptionError::kDecryptionFailed) {
-      last_dec_error_ = FrameCryptionError::kDecryptionFailed;
+    if (last_dec_error_ != FrameCryptionState::kDecryptionFailed) {
+      last_dec_error_ = FrameCryptionState::kDecryptionFailed;
       if (observer_)
-        observer_->OnFrameCryptionError(participant_id_, last_dec_error_);
+        observer_->OnFrameCryptionStateChanged(participant_id_, last_dec_error_);
     }
     return;
   }
@@ -478,10 +478,10 @@ void FrameCryptorTransformer::decryptFrame(
                         "key_index["
                      << key_index_ << "] out of range for participant "
                      << participant_id_;
-    if (last_dec_error_ != FrameCryptionError::kMissingKey) {
-      last_dec_error_ = FrameCryptionError::kMissingKey;
+    if (last_dec_error_ != FrameCryptionState::kMissingKey) {
+      last_dec_error_ = FrameCryptionState::kMissingKey;
       if (observer_)
-        observer_->OnFrameCryptionError(participant_id_, last_dec_error_);
+        observer_->OnFrameCryptionStateChanged(participant_id_, last_dec_error_);
     }
     return;
   }
@@ -519,6 +519,12 @@ void FrameCryptorTransformer::decryptFrame(
 
         key_handler->RatchetKey(key_index);
 
+        if (last_dec_error_ != FrameCryptionState::kKeyRatcheted) {
+          last_dec_error_ = FrameCryptionState::kKeyRatcheted;
+          if (observer_)
+            observer_->OnFrameCryptionStateChanged(participant_id_, last_dec_error_);
+        }
+
         if (AesEncryptDecrypt(EncryptOrDecrypt::kDecrypt, algorithm_,
                               key_set->encryption_key, iv, frameHeader,
                               encrypted_payload, &buffer) == Success) {
@@ -543,10 +549,10 @@ void FrameCryptorTransformer::decryptFrame(
   }
 
   if (!decryption_success) {
-    if (last_dec_error_ != FrameCryptionError::kDecryptionFailed) {
-      last_dec_error_ = FrameCryptionError::kDecryptionFailed;
+    if (last_dec_error_ != FrameCryptionState::kDecryptionFailed) {
+      last_dec_error_ = FrameCryptionState::kDecryptionFailed;
       if (observer_)
-        observer_->OnFrameCryptionError(participant_id_, last_dec_error_);
+        observer_->OnFrameCryptionStateChanged(participant_id_, last_dec_error_);
     }
     return;
   }
@@ -565,10 +571,10 @@ void FrameCryptorTransformer::decryptFrame(
                              key_set->encryption_key.size())
                    << " iv=" << to_hex(iv.data(), iv.size());
 
-  if (last_dec_error_ != FrameCryptionError::kOk) {
-    last_dec_error_ = FrameCryptionError::kOk;
+  if (last_dec_error_ != FrameCryptionState::kOk) {
+    last_dec_error_ = FrameCryptionState::kOk;
     if (observer_)
-      observer_->OnFrameCryptionError(participant_id_, last_dec_error_);
+      observer_->OnFrameCryptionStateChanged(participant_id_, last_dec_error_);
   }
   sink_callback->OnTransformedFrame(std::move(frame));
 }

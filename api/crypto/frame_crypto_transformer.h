@@ -59,26 +59,32 @@ class ParticipantKeyHandler {
     cryptoKeyRing_.resize(KEYRING_SIZE);
   }
 
-  void RatchetKey(int keyIndex) {
+  virtual ~ParticipantKeyHandler() = default;
+
+  virtual std::vector<uint8_t> RatchetKey(int keyIndex) {
     std::shared_ptr<KeySet> currentMaterial = GetKeySet(keyIndex);
     std::shared_ptr<KeySet> newMaterial =
         DeriveBits(currentMaterial->encryption_key, options_.ratchet_salt);
     SetKeyFromMaterial(newMaterial->encryption_key,
                        keyIndex != -1 ? keyIndex : currentKeyIndex);
+    return newMaterial->material;
   }
 
-  std::shared_ptr<KeySet> GetKeySet(int keyIndex) {
+  virtual std::shared_ptr<KeySet> GetKeySet(int keyIndex) {
     return cryptoKeyRing_[keyIndex != -1 ? keyIndex : currentKeyIndex];
   }
 
-  void SetKeyFromMaterial(std::vector<uint8_t> password, int keyIndex) {
+  virtual void SetKeyFromMaterial(std::vector<uint8_t> password, int keyIndex) {
     if (keyIndex >= 0) {
       currentKeyIndex = keyIndex % cryptoKeyRing_.size();
     }
     cryptoKeyRing_[currentKeyIndex] =
         DeriveBits(password, options_.ratchet_salt);
   }
+  
+  virtual KeyProviderOptions& options() { return options_; }
 
+private:
   std::shared_ptr<KeySet> DeriveBits(std::vector<uint8_t> password,
                                      std::vector<uint8_t> ratchet_salt) {
     std::vector<uint8_t> derived_key;
@@ -88,8 +94,6 @@ class ParticipantKeyHandler {
     }
     return nullptr;
   }
-
-  KeyProviderOptions& options() { return options_; }
 
  private:
   int currentKeyIndex = 0;
@@ -105,7 +109,12 @@ class KeyManager : public rtc::RefCountInterface {
   virtual const std::shared_ptr<ParticipantKeyHandler> GetKey(
       const std::string participant_id) const = 0;
 
-  virtual void RatchetKey(const std::string participant_id, int key_index) = 0;
+  virtual bool SetKey(const std::string participant_id,
+              int index,
+              std::vector<uint8_t> key) = 0;
+
+  virtual std::vector<uint8_t> RatchetKey(const std::string participant_id,
+                                          int key_index) = 0;
 
  protected:
   virtual ~KeyManager() {}
@@ -119,7 +128,7 @@ class DefaultKeyManagerImpl : public KeyManager {
   /// Set the key at the given index.
   bool SetKey(const std::string participant_id,
               int index,
-              std::vector<uint8_t> key) {
+              std::vector<uint8_t> key) override {
     webrtc::MutexLock lock(&mutex_);
 
     if (keys_.find(participant_id) == keys_.end()) {
@@ -154,10 +163,11 @@ class DefaultKeyManagerImpl : public KeyManager {
     return keys_.find(participant_id)->second;
   }
 
-  void RatchetKey(const std::string participant_id, int key_index) override {
+  std::vector<uint8_t> RatchetKey(const std::string participant_id,
+                                  int key_index) override {
     webrtc::MutexLock lock(&mutex_);
     if (keys_.find(participant_id) == keys_.end()) {
-      return;
+      return std::vector<uint8_t>();
     }
 
     return keys_[participant_id]->RatchetKey(key_index);
@@ -169,19 +179,20 @@ class DefaultKeyManagerImpl : public KeyManager {
   std::unordered_map<std::string, std::shared_ptr<ParticipantKeyHandler>> keys_;
 };
 
-enum FrameCryptionError {
+enum FrameCryptionState {
   kNew = 0,
   kOk,
   kEncryptionFailed,
   kDecryptionFailed,
   kMissingKey,
+  kKeyRatcheted,
   kInternalError,
 };
 
 class FrameCryptorTransformerObserver {
  public:
-  virtual void OnFrameCryptionError(const std::string participant_id,
-                                    FrameCryptionError error) = 0;
+  virtual void OnFrameCryptionStateChanged(const std::string participant_id,
+                                           FrameCryptionState error) = 0;
 
  protected:
   virtual ~FrameCryptorTransformerObserver() {}
@@ -276,8 +287,8 @@ class RTC_EXPORT FrameCryptorTransformer
   rtc::scoped_refptr<KeyManager> key_manager_;
   FrameCryptorTransformerObserver* observer_ = nullptr;
   std::unique_ptr<rtc::Thread> thread_;
-  FrameCryptionError last_enc_error_ = FrameCryptionError::kNew;
-  FrameCryptionError last_dec_error_ = FrameCryptionError::kNew;
+  FrameCryptionState last_enc_error_ = FrameCryptionState::kNew;
+  FrameCryptionState last_dec_error_ = FrameCryptionState::kNew;
 };
 
 }  // namespace webrtc
