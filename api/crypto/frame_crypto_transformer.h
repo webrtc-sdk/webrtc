@@ -62,12 +62,15 @@ class ParticipantKeyHandler {
   virtual ~ParticipantKeyHandler() = default;
 
   virtual std::vector<uint8_t> RatchetKey(int keyIndex) {
-    std::shared_ptr<KeySet> currentMaterial = GetKeySet(keyIndex);
-    std::shared_ptr<KeySet> newMaterial =
-        DeriveBits(currentMaterial->encryption_key, options_.ratchet_salt);
-    SetKeyFromMaterial(newMaterial->encryption_key,
+    auto currentMaterial = GetKeySet(keyIndex)->material;
+    std::vector<uint8_t> newMaterial;
+    if (DerivePBKDF2KeyFromRawKey(currentMaterial, options_.ratchet_salt, 256,
+                                  &newMaterial) != 0) {
+      return std::vector<uint8_t>();
+    }
+    SetKeyFromMaterial(newMaterial,
                        keyIndex != -1 ? keyIndex : currentKeyIndex);
-    return newMaterial->material;
+    return newMaterial;
   }
 
   virtual std::shared_ptr<KeySet> GetKeySet(int keyIndex) {
@@ -79,16 +82,18 @@ class ParticipantKeyHandler {
       currentKeyIndex = keyIndex % cryptoKeyRing_.size();
     }
     cryptoKeyRing_[currentKeyIndex] =
-        DeriveBits(password, options_.ratchet_salt);
+        DeriveKey(password, options_.ratchet_salt, 128);
   }
   
   virtual KeyProviderOptions& options() { return options_; }
 
 private:
-  std::shared_ptr<KeySet> DeriveBits(std::vector<uint8_t> password,
-                                     std::vector<uint8_t> ratchet_salt) {
+  std::shared_ptr<KeySet> DeriveKey(std::vector<uint8_t> password,
+                                     std::vector<uint8_t> ratchet_salt,
+                                    unsigned int optional_length_bits ) {
     std::vector<uint8_t> derived_key;
-    if (DerivePBKDF2KeyFromRawKey(password, ratchet_salt, 128, &derived_key) ==
+    if (DerivePBKDF2KeyFromRawKey(password, ratchet_salt, optional_length_bits,
+                                  &derived_key) ==
         0) {
       return std::make_shared<KeySet>(password, derived_key);
     }

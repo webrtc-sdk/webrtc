@@ -518,15 +518,16 @@ void FrameCryptorTransformer::decryptFrame(
                          << key_handler->options().ratchet_window_size;
 
         key_handler->RatchetKey(key_index);
-
         if (last_dec_error_ != FrameCryptionState::kKeyRatcheted) {
           last_dec_error_ = FrameCryptionState::kKeyRatcheted;
           if (observer_)
             observer_->OnFrameCryptionStateChanged(participant_id_, last_dec_error_);
         }
 
+        auto ratchetedKeySet = key_handler->GetKeySet(key_index);
+
         if (AesEncryptDecrypt(EncryptOrDecrypt::kDecrypt, algorithm_,
-                              key_set->encryption_key, iv, frameHeader,
+                              ratchetedKeySet->encryption_key, iv, frameHeader,
                               encrypted_payload, &buffer) == Success) {
           RTC_LOG(LS_INFO) << "FrameCryptorTransformer::decryptFrame() "
                               "ratcheted to keyIndex="
