@@ -141,7 +141,10 @@ class DefaultKeyManagerImpl : public KeyManager {
     }
 
     if (options_.shared_key) {
-      return SetSharedKey(index, key);
+      for (auto const& [_, val] : keys_) {
+        val->SetKeyFromMaterial(key, index);
+      }
+      return true;
     }
 
     auto keyHandler = keys_[participant_id];

@@ -30,9 +30,13 @@
   return _nativeKeyManager;
 }
 
-- (instancetype)init {
+- (instancetype)initWithRatchetSalt:(NSData *)salt ratchetWindowSize:(int)windowSize sharedKeyMode:(BOOL)sharedKey {
   if (self = [super init]) {
-    _nativeKeyManager = rtc::make_ref_counted<webrtc::DefaultKeyManagerImpl>();
+    webrtc::KeyProviderOptions options;
+    options.ratchet_salt = std::vector<uint8_t>((const uint8_t *)salt.bytes, ((const uint8_t *)salt.bytes) + salt.length);
+    options.ratchet_window_size = windowSize;
+    options.shared_key = sharedKey;
+    _nativeKeyManager = rtc::make_ref_counted<webrtc::DefaultKeyManagerImpl>(options);
   }
   return self;
 }
@@ -44,23 +48,9 @@
       std::vector<uint8_t>((const uint8_t *)key.bytes, ((const uint8_t *)key.bytes) + key.length));
 }
 
-- (void)setKeys:(NSArray<NSData *> *)keys forParticipant:(NSString *)participantId {
-  std::vector<std::vector<uint8_t>> nativeKeys;
-  for (NSData *key in keys) {
-    nativeKeys.push_back(std::vector<uint8_t>((const uint8_t *)key.bytes,
-                                              ((const uint8_t *)key.bytes) + key.length));
-  }
-  _nativeKeyManager->SetKeys([participantId stdString], nativeKeys);
-}
-
-- (NSArray<NSData *> *)getKeys:(NSString *)participantId {
-  std::vector<std::vector<uint8_t>> nativeKeys =
-      _nativeKeyManager->keys([participantId stdString]);
-  NSMutableArray<NSData *> *keys = [NSMutableArray array];
-  for (std::vector<uint8_t> key : nativeKeys) {
-    [keys addObject:[NSData dataWithBytes:key.data() length:key.size()]];
-  }
-  return keys;
+- (NSData*)ratchetKey:(NSString *)participantId withIndex:(int)index {
+  std::vector<uint8_t> nativeKey = _nativeKeyManager->RatchetKey([participantId stdString], index);
+  return [NSData dataWithBytes:nativeKey.data() length:nativeKey.size()];
 }
 
 @end

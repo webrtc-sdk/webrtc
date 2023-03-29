@@ -25,11 +25,9 @@ RTC_OBJC_EXPORT
 
 - (void)setKey:(NSData *)key withIndex:(int)index forParticipant:(NSString *)participantId;
 
-- (void)setKeys:(NSArray<NSData *> *)keys forParticipant:(NSString *)participantId;
+- (NSData*)ratchetKey:(NSString *)participantId withIndex:(int)index;
 
-- (NSArray<NSData*> *) getKeys:(NSString *)participantId;
-
-- (instancetype)init;
+- (instancetype)initWithRatchetSalt:(NSData *)salt ratchetWindowSize:(int)windowSize sharedKeyMode:(BOOL)sharedKey;
 
 @end
 

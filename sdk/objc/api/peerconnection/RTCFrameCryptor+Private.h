@@ -33,8 +33,8 @@ class RTCFrameCryptorDelegateAdapter : public FrameCryptorTransformerObserver {
   RTCFrameCryptorDelegateAdapter(RTC_OBJC_TYPE(RTCFrameCryptor) * frameCryptor);
   ~RTCFrameCryptorDelegateAdapter() override;
 
-  void OnFrameCryptionError(const std::string participant_id,
-                                    FrameCryptionError error) override;
+  void OnFrameCryptionStateChanged(const std::string participant_id,
+                                    FrameCryptionState state) override;
 
  private:
   __weak RTC_OBJC_TYPE(RTCFrameCryptor) * frame_cryptor_;
