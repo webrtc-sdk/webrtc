@@ -34,13 +34,13 @@ FrameCryptorObserverJni::FrameCryptorObserverJni(
 
 FrameCryptorObserverJni::~FrameCryptorObserverJni() {}
 
-void FrameCryptorObserverJni::OnFrameCryptionError(
+void FrameCryptorObserverJni::OnFrameCryptionStateChanged(
     const std::string participant_id,
-    FrameCryptionError new_state) {
+    FrameCryptionState new_state) {
   JNIEnv* env = AttachCurrentThreadIfNeeded();
-  Java_Observer_onFrameCryptorErrorState(
+  Java_Observer_onFrameCryptionStateChanged(
       env, j_observer_global_, NativeToJavaString(env, participant_id),
-      Java_FrameCryptorErrorState_fromNativeIndex(env, new_state));
+      Java_FrameCryptionState_fromNativeIndex(env, new_state));
 }
 
 ScopedJavaLocalRef<jobject> NativeToJavaFrameCryptor(
@@ -163,9 +163,15 @@ JNI_FrameCryptorFactory_CreateFrameCryptorForRtpSender(
 }
 
 static base::android::ScopedJavaLocalRef<jobject>
-JNI_FrameCryptorFactory_CreateFrameCryptorKeyManager(JNIEnv* env) {
+JNI_FrameCryptorFactory_CreateFrameCryptorKeyManager(JNIEnv* env, jboolean j_shared,
+    const base::android::JavaParamRef<jbyteArray>& j_ratchetSalt,  jint j_ratchetWindowSize) {
+  auto ratchetSalt = JavaToNativeByteArray(env, j_ratchetSalt);
+  KeyProviderOptions options;
+  options.ratchet_salt =  std::vector<uint8_t>(ratchetSalt.begin(), ratchetSalt.end());
+  options.ratchet_window_size = j_ratchetWindowSize;
+  options.shared_key = j_shared;
   return NativeToJavaFrameCryptorKeyManager(
-      env, rtc::make_ref_counted<webrtc::DefaultKeyManagerImpl>());
+      env, rtc::make_ref_counted<webrtc::DefaultKeyManagerImpl>(options));
 }
 
 }  // namespace jni

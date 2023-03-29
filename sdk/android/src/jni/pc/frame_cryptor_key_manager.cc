@@ -46,43 +46,18 @@ static jboolean JNI_FrameCryptorKeyManager_SetKey(
                std::vector<uint8_t>(key.begin(), key.end()));
 }
 
-static jboolean JNI_FrameCryptorKeyManager_SetKeys(
+static base::android::ScopedJavaLocalRef<jbyteArray> JNI_FrameCryptorKeyManager_RatchetKey(
     JNIEnv* env,
     jlong keyManagerPointer,
     const base::android::JavaParamRef<jstring>& participantId,
-    const base::android::JavaParamRef<jobject>& keys) {
+    jint j_index) {
   auto participant_id = JavaToStdString(env, participantId);
   auto key_manager =
       reinterpret_cast<webrtc::DefaultKeyManagerImpl*>(keyManagerPointer);
-  auto keys_size = env->GetArrayLength((jobjectArray)keys.obj());
-  std::vector<std::vector<uint8_t>> keys_vector;
-  for (int i = 0; i < keys_size; i++) {
-    auto key = JavaToNativeByteArray(
-        env, base::android::JavaParamRef<jbyteArray>(
-                 env, (jbyteArray)env->GetObjectArrayElement(
-                          (jobjectArray)keys.obj(), i)));
-    keys_vector.push_back(std::vector<uint8_t>(key.begin(), key.end()));
-  }
-  return key_manager->SetKeys(participant_id, keys_vector);
+  auto newKey = key_manager->RatchetKey(participant_id, j_index);
+  std::vector<int8_t> int8tKey =
+      std::vector<int8_t>(newKey.begin(), newKey.end());
+  return NativeToJavaByteArray(env, rtc::ArrayView<int8_t>(int8tKey));
 }
-
-static ScopedJavaLocalRef<jobject> JNI_FrameCryptorKeyManager_GetKeys(
-    JNIEnv* jni,
-    jlong j_key_manager,
-    const base::android::JavaParamRef<jstring>& participantId) {
-  auto participant_id = JavaToStdString(jni, participantId);
-  auto keys = reinterpret_cast<webrtc::DefaultKeyManagerImpl*>(j_key_manager)
-                  ->keys(participant_id);
-  JavaListBuilder j_keys(jni);
-  for (size_t i = 0; i < keys.size(); i++) {
-    auto uint8Key = keys[i];
-    std::vector<int8_t> int8tKey =
-        std::vector<int8_t>(uint8Key.begin(), uint8Key.end());
-    auto j_key = NativeToJavaByteArray(jni, rtc::ArrayView<int8_t>(int8tKey));
-    j_keys.add(j_key);
-  }
-  return j_keys.java_list();
-}
-
 }  // namespace jni
 }  // namespace webrtc

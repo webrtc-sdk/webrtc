@@ -35,8 +35,8 @@ class FrameCryptorObserverJni : public FrameCryptorTransformerObserver, public r
   ~FrameCryptorObserverJni() override;
 
  protected:
-  void OnFrameCryptionError(const std::string participant_id,
-                            FrameCryptionError error) override;
+  void OnFrameCryptionStateChanged(const std::string participant_id,
+                            FrameCryptionState state) override;
 
  private:
   const ScopedJavaGlobalRef<jobject> j_observer_global_;

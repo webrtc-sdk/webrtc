@@ -34,12 +34,8 @@ public class FrameCryptorKeyManager {
     return nativeSetKey(nativeKeyManager, participantId, index, key);
   }
 
-  public boolean setKeys(String participantId, ArrayList<byte[]> keys) {
-    return nativeSetKeys(nativeKeyManager, participantId, keys);
-  }
-
-  public ArrayList<byte[]> getKeys(String participantId) {
-    return nativeGetKeys(nativeKeyManager, participantId);
+  public byte[] ratchetKey(String participantId, int index) {
+    return nativeRatchetKey(nativeKeyManager, participantId, index);
   }
 
   public void dispose() {
@@ -53,12 +49,9 @@ public class FrameCryptorKeyManager {
       throw new IllegalStateException("FrameCryptorKeyManager has been disposed.");
     }
   }
-
-  private static native long createNativeKeyManager();
+  
   private static native boolean nativeSetKey(
       long keyManagerPointer, String participantId, int index, byte[] key);
-  private static native boolean nativeSetKeys(
-      long keyManagerPointer, String participantId, ArrayList<byte[]> keys);
-  private static native ArrayList<byte[]> nativeGetKeys(
-      long keyManagerPointer, String participantId);
+  private static native byte[] nativeRatchetKey(
+      long keyManagerPointer,  String participantId, int index);
 }

@@ -20,23 +20,24 @@ import androidx.annotation.Nullable;
 
 public class FrameCryptor {
 
-  public enum FrameCryptorErrorState {
+  public enum FrameCryptionState {
     NEW,
     OK,
     ENCRYPTIONFAILED,
     DECRYPTIONFAILED,
     MISSINGKEY,
+    KEYRATCHETED,
     INTERNALERROR;
 
-    @CalledByNative("FrameCryptorErrorState")
-    static FrameCryptorErrorState fromNativeIndex(int nativeIndex) {
+    @CalledByNative("FrameCryptionState")
+    static FrameCryptionState fromNativeIndex(int nativeIndex) {
       return values()[nativeIndex];
     }
   }
 
   public static interface Observer {
     @CalledByNative("Observer")
-    void onFrameCryptorErrorState(String participantId, FrameCryptorErrorState newState);
+    void onFrameCryptionStateChanged(String participantId, FrameCryptionState newState);
   }
 
   private long nativeFrameCryptor;
