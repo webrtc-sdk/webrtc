@@ -75,13 +75,13 @@ public class FrameCryptor {
 
   public void dispose() {
     checkFrameCryptorExists();
+    nativeUnSetObserver(nativeFrameCryptor);
     JniCommon.nativeReleaseRef(nativeFrameCryptor);
     nativeFrameCryptor = 0;
     if(observerPtr != 0) {
       JniCommon.nativeReleaseRef(observerPtr);
       observerPtr = 0;
     }
-    nativeUnSetObserver(nativeFrameCryptor);
   }
 
   public void setObserver(@Nullable Observer observer) {
