@@ -45,7 +45,7 @@ RTCFrameCryptorDelegateAdapter::~RTCFrameCryptorDelegateAdapter() {}
   kInternalError,
 */
 void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::string participant_id,
-                                                          FrameCryptionState state) {
+                                                                 FrameCryptionState state) {
   RTC_OBJC_TYPE(RTCFrameCryptor) *frameCryptor = frame_cryptor_;
   if (frameCryptor.delegate) {
     switch (state) {

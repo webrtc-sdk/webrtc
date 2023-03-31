@@ -16,15 +16,15 @@
 
 #import "RTCFrameCryptor.h"
 
-#include "api/crypto/frame_crypto_transformer.h"
 #include <string>
+#include "api/crypto/frame_crypto_transformer.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
 @interface RTC_OBJC_TYPE (RTCFrameCryptor)
 ()
 
-@end
+    @end
 
 namespace webrtc {
 
@@ -34,12 +34,12 @@ class RTCFrameCryptorDelegateAdapter : public FrameCryptorTransformerObserver {
   ~RTCFrameCryptorDelegateAdapter() override;
 
   void OnFrameCryptionStateChanged(const std::string participant_id,
-                                    FrameCryptionState state) override;
+                                   FrameCryptionState state) override;
 
  private:
   __weak RTC_OBJC_TYPE(RTCFrameCryptor) * frame_cryptor_;
 };
 
-}
+}  // namespace webrtc
 
 NS_ASSUME_NONNULL_END
