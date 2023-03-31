@@ -82,6 +82,16 @@ const EVP_CIPHER* GetAesCbcAlgorithmFromKeySize(size_t key_size_bytes) {
   }
 }
 
+std::string to_uint8_list(const uint8_t* data, int len) {
+  std::stringstream ss;
+  ss << "[";
+  for (int i = 0; i < len; i++) {
+    ss << static_cast<unsigned>(data[i]) << ",";
+  }
+  ss << "]";
+  return ss.str();
+}
+
 std::string to_hex(const uint8_t* data, int len) {
   std::stringstream ss;
   ss << std::uppercase << std::hex << std::setfill('0');
@@ -153,14 +163,15 @@ int DerivePBKDF2KeyFromRawKey(const std::vector<uint8_t> raw_key,
     RTC_LOG(LS_ERROR) << "Failed to derive AES key from password.";
     return ErrorUnexpected;
   }
-  /*
-  RTC_LOG(LS_INFO) << "raw_key " << to_hex(raw_key.data(), raw_key.size())
+  
+  RTC_LOG(LS_INFO) << "raw_key " << to_uint8_list(raw_key.data(), raw_key.size())
                    << " len " << raw_key.size() << " slat << "
-                   << to_hex(salt.data(), salt.size()) << " len " << salt.size()
+                   << to_uint8_list(salt.data(), salt.size()) << " len "
+                   << salt.size()
                    << "\n derived_key "
-                   << to_hex(derived_key->data(), derived_key->size())
+                   << to_uint8_list(derived_key->data(), derived_key->size())
                    << " len " << derived_key->size();
-  */
+  
   return Success;
 }
 
@@ -501,7 +512,7 @@ void FrameCryptorTransformer::decryptFrame(
   std::vector<uint8_t> buffer;
 
   int ratchet_count = 0;
-  auto initialKey = key_set->encryption_key;
+  auto initialKey = key_set->material;
   bool decryption_success = false;
   if (AesEncryptDecrypt(EncryptOrDecrypt::kDecrypt, algorithm_,
                         key_set->encryption_key, iv, frameHeader,
@@ -543,7 +554,8 @@ void FrameCryptorTransformer::decryptFrame(
         course, did not solve the problem. So if we fail RATCHET_WINDOW_SIZE
         times, we come back to the initial key.
        */
-      if (ratchet_count >= key_handler->options().ratchet_window_size) {
+      if (!decryption_success || ratchet_count >=
+          key_handler->options().ratchet_window_size) {
         key_handler->SetKeyFromMaterial(initialKey, key_index);
       }
     }
