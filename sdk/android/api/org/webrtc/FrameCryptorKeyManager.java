@@ -31,11 +31,18 @@ public class FrameCryptorKeyManager {
   }
 
   public boolean setKey(String participantId, int index, byte[] key) {
+    checkKeyManagerExists();
     return nativeSetKey(nativeKeyManager, participantId, index, key);
   }
 
   public byte[] ratchetKey(String participantId, int index) {
+    checkKeyManagerExists();
     return nativeRatchetKey(nativeKeyManager, participantId, index);
+  }
+
+  public byte[] exportKey(String participantId, int index) {
+    checkKeyManagerExists();
+    return nativeExportKey(nativeKeyManager, participantId, index);
   }
 
   public void dispose() {
@@ -54,4 +61,6 @@ public class FrameCryptorKeyManager {
       long keyManagerPointer, String participantId, int index, byte[] key);
   private static native byte[] nativeRatchetKey(
       long keyManagerPointer,  String participantId, int index);
+  private static native byte[] nativeExportKey(
+      long keyManagerPointer, String participantId, int index);
 }
