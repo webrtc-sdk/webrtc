@@ -84,17 +84,16 @@ class ParticipantKeyHandler {
     cryptoKeyRing_[currentKeyIndex] =
         DeriveKey(password, options_.ratchet_salt, 128);
   }
-  
+
   virtual KeyProviderOptions& options() { return options_; }
 
-private:
+ private:
   std::shared_ptr<KeySet> DeriveKey(std::vector<uint8_t> password,
-                                     std::vector<uint8_t> ratchet_salt,
-                                    unsigned int optional_length_bits ) {
+                                    std::vector<uint8_t> ratchet_salt,
+                                    unsigned int optional_length_bits) {
     std::vector<uint8_t> derived_key;
     if (DerivePBKDF2KeyFromRawKey(password, ratchet_salt, optional_length_bits,
-                                  &derived_key) ==
-        0) {
+                                  &derived_key) == 0) {
       return std::make_shared<KeySet>(password, derived_key);
     }
     return nullptr;
@@ -115,15 +114,15 @@ class KeyManager : public rtc::RefCountInterface {
       const std::string participant_id) const = 0;
 
   virtual bool SetKey(const std::string participant_id,
-              int index,
-              std::vector<uint8_t> key) = 0;
+                      int index,
+                      std::vector<uint8_t> key) = 0;
 
-  virtual const std::vector<uint8_t> RatchetKey(const std::string participant_id,
-                                          int key_index) = 0;
-
-  virtual const std::vector<uint8_t> ExportKey(
+  virtual const std::vector<uint8_t> RatchetKey(
       const std::string participant_id,
-      int key_index) const = 0;
+      int key_index) = 0;
+
+  virtual const std::vector<uint8_t> ExportKey(const std::string participant_id,
+                                               int key_index) const = 0;
 
  protected:
   virtual ~KeyManager() {}
@@ -161,7 +160,7 @@ class DefaultKeyManagerImpl : public KeyManager {
   }
 
   const std::vector<uint8_t> RatchetKey(const std::string participant_id,
-                                  int key_index) override {
+                                        int key_index) override {
     webrtc::MutexLock lock(&mutex_);
     if (keys_.find(participant_id) == keys_.end()) {
       return std::vector<uint8_t>();
@@ -170,9 +169,8 @@ class DefaultKeyManagerImpl : public KeyManager {
     return keys_[participant_id]->RatchetKey(key_index);
   }
 
-  const std::vector<uint8_t> ExportKey(
-      const std::string participant_id,
-      int key_index) const override {
+  const std::vector<uint8_t> ExportKey(const std::string participant_id,
+                                       int key_index) const override {
     webrtc::MutexLock lock(&mutex_);
     if (keys_.find(participant_id) == keys_.end()) {
       return std::vector<uint8_t>();

@@ -163,15 +163,15 @@ int DerivePBKDF2KeyFromRawKey(const std::vector<uint8_t> raw_key,
     RTC_LOG(LS_ERROR) << "Failed to derive AES key from password.";
     return ErrorUnexpected;
   }
-  
-  RTC_LOG(LS_INFO) << "raw_key " << to_uint8_list(raw_key.data(), raw_key.size())
-                   << " len " << raw_key.size() << " slat << "
+
+  RTC_LOG(LS_INFO) << "raw_key "
+                   << to_uint8_list(raw_key.data(), raw_key.size()) << " len "
+                   << raw_key.size() << " slat << "
                    << to_uint8_list(salt.data(), salt.size()) << " len "
-                   << salt.size()
-                   << "\n derived_key "
+                   << salt.size() << "\n derived_key "
                    << to_uint8_list(derived_key->data(), derived_key->size())
                    << " len " << derived_key->size();
-  
+
   return Success;
 }
 
@@ -342,7 +342,8 @@ void FrameCryptorTransformer::encryptFrame(
     if (last_enc_error_ != FrameCryptionState::kInternalError) {
       last_enc_error_ = FrameCryptionState::kInternalError;
       if (observer_)
-        observer_->OnFrameCryptionStateChanged(participant_id_, last_enc_error_);
+        observer_->OnFrameCryptionStateChanged(participant_id_,
+                                               last_enc_error_);
     }
     return;
   }
@@ -362,7 +363,8 @@ void FrameCryptorTransformer::encryptFrame(
     if (last_enc_error_ != FrameCryptionState::kMissingKey) {
       last_enc_error_ = FrameCryptionState::kMissingKey;
       if (observer_)
-        observer_->OnFrameCryptionStateChanged(participant_id_, last_enc_error_);
+        observer_->OnFrameCryptionStateChanged(participant_id_,
+                                               last_enc_error_);
     }
     return;
   }
@@ -413,14 +415,16 @@ void FrameCryptorTransformer::encryptFrame(
     if (last_enc_error_ != FrameCryptionState::kOk) {
       last_enc_error_ = FrameCryptionState::kOk;
       if (observer_)
-        observer_->OnFrameCryptionStateChanged(participant_id_, last_enc_error_);
+        observer_->OnFrameCryptionStateChanged(participant_id_,
+                                               last_enc_error_);
     }
     sink_callback->OnTransformedFrame(std::move(frame));
   } else {
     if (last_enc_error_ != FrameCryptionState::kEncryptionFailed) {
       last_enc_error_ = FrameCryptionState::kEncryptionFailed;
       if (observer_)
-        observer_->OnFrameCryptionStateChanged(participant_id_, last_enc_error_);
+        observer_->OnFrameCryptionStateChanged(participant_id_,
+                                               last_enc_error_);
     }
     RTC_LOG(LS_ERROR) << "FrameCryptorTransformer::encryptFrame() failed";
   }
@@ -446,7 +450,8 @@ void FrameCryptorTransformer::decryptFrame(
     if (last_dec_error_ != FrameCryptionState::kInternalError) {
       last_dec_error_ = FrameCryptionState::kInternalError;
       if (observer_)
-        observer_->OnFrameCryptionStateChanged(participant_id_, last_dec_error_);
+        observer_->OnFrameCryptionStateChanged(participant_id_,
+                                               last_dec_error_);
     }
     return;
   }
@@ -477,7 +482,8 @@ void FrameCryptorTransformer::decryptFrame(
     if (last_dec_error_ != FrameCryptionState::kDecryptionFailed) {
       last_dec_error_ = FrameCryptionState::kDecryptionFailed;
       if (observer_)
-        observer_->OnFrameCryptionStateChanged(participant_id_, last_dec_error_);
+        observer_->OnFrameCryptionStateChanged(participant_id_,
+                                               last_dec_error_);
     }
     return;
   }
@@ -492,7 +498,8 @@ void FrameCryptorTransformer::decryptFrame(
     if (last_dec_error_ != FrameCryptionState::kMissingKey) {
       last_dec_error_ = FrameCryptionState::kMissingKey;
       if (observer_)
-        observer_->OnFrameCryptionStateChanged(participant_id_, last_dec_error_);
+        observer_->OnFrameCryptionStateChanged(participant_id_,
+                                               last_dec_error_);
     }
     return;
   }
@@ -532,7 +539,8 @@ void FrameCryptorTransformer::decryptFrame(
         if (last_dec_error_ != FrameCryptionState::kKeyRatcheted) {
           last_dec_error_ = FrameCryptionState::kKeyRatcheted;
           if (observer_)
-            observer_->OnFrameCryptionStateChanged(participant_id_, last_dec_error_);
+            observer_->OnFrameCryptionStateChanged(participant_id_,
+                                                   last_dec_error_);
         }
 
         auto ratchetedKeySet = key_handler->GetKeySet(key_index);
@@ -554,8 +562,8 @@ void FrameCryptorTransformer::decryptFrame(
         course, did not solve the problem. So if we fail RATCHET_WINDOW_SIZE
         times, we come back to the initial key.
        */
-      if (!decryption_success || ratchet_count >=
-          key_handler->options().ratchet_window_size) {
+      if (!decryption_success ||
+          ratchet_count >= key_handler->options().ratchet_window_size) {
         key_handler->SetKeyFromMaterial(initialKey, key_index);
       }
     }
@@ -565,7 +573,8 @@ void FrameCryptorTransformer::decryptFrame(
     if (last_dec_error_ != FrameCryptionState::kDecryptionFailed) {
       last_dec_error_ = FrameCryptionState::kDecryptionFailed;
       if (observer_)
-        observer_->OnFrameCryptionStateChanged(participant_id_, last_dec_error_);
+        observer_->OnFrameCryptionStateChanged(participant_id_,
+                                               last_dec_error_);
     }
     return;
   }

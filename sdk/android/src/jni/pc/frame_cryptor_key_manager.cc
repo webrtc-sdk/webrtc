@@ -46,7 +46,8 @@ static jboolean JNI_FrameCryptorKeyManager_SetKey(
                std::vector<uint8_t>(key.begin(), key.end()));
 }
 
-static base::android::ScopedJavaLocalRef<jbyteArray> JNI_FrameCryptorKeyManager_RatchetKey(
+static base::android::ScopedJavaLocalRef<jbyteArray>
+JNI_FrameCryptorKeyManager_RatchetKey(
     JNIEnv* env,
     jlong keyManagerPointer,
     const base::android::JavaParamRef<jstring>& participantId,
@@ -60,7 +61,8 @@ static base::android::ScopedJavaLocalRef<jbyteArray> JNI_FrameCryptorKeyManager_
   return NativeToJavaByteArray(env, rtc::ArrayView<int8_t>(int8tKey));
 }
 
-static base::android::ScopedJavaLocalRef<jbyteArray> JNI_FrameCryptorKeyManager_ExportKey(
+static base::android::ScopedJavaLocalRef<jbyteArray>
+JNI_FrameCryptorKeyManager_ExportKey(
     JNIEnv* env,
     jlong keyManagerPointer,
     const base::android::JavaParamRef<jstring>& participantId,
@@ -69,8 +71,7 @@ static base::android::ScopedJavaLocalRef<jbyteArray> JNI_FrameCryptorKeyManager_
   auto key_manager =
       reinterpret_cast<webrtc::DefaultKeyManagerImpl*>(keyManagerPointer);
   auto key = key_manager->ExportKey(participant_id, j_index);
-  std::vector<int8_t> int8tKey =
-      std::vector<int8_t>(key.begin(), key.end());
+  std::vector<int8_t> int8tKey = std::vector<int8_t>(key.begin(), key.end());
   return NativeToJavaByteArray(env, rtc::ArrayView<int8_t>(int8tKey));
 }
 

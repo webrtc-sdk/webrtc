@@ -56,11 +56,11 @@ public class FrameCryptorKeyManager {
       throw new IllegalStateException("FrameCryptorKeyManager has been disposed.");
     }
   }
-  
+
   private static native boolean nativeSetKey(
       long keyManagerPointer, String participantId, int index, byte[] key);
   private static native byte[] nativeRatchetKey(
-      long keyManagerPointer,  String participantId, int index);
+      long keyManagerPointer, String participantId, int index);
   private static native byte[] nativeExportKey(
       long keyManagerPointer, String participantId, int index);
 }

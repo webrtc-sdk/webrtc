@@ -84,18 +84,19 @@ static jlong JNI_FrameCryptor_SetObserver(
     JNIEnv* jni,
     jlong j_frame_cryptor_pointer,
     const JavaParamRef<jobject>& j_observer) {
-  auto observer = rtc::make_ref_counted<FrameCryptorObserverJni>(jni, j_observer);
+  auto observer =
+      rtc::make_ref_counted<FrameCryptorObserverJni>(jni, j_observer);
   observer->AddRef();
   reinterpret_cast<FrameCryptorTransformer*>(j_frame_cryptor_pointer)
       ->SetFrameCryptorTransformerObserver(observer.get());
-  return  jlongFromPointer(observer.get());
+  return jlongFromPointer(observer.get());
 }
 
 static void JNI_FrameCryptor_UnSetObserver(JNIEnv* jni,
-                                         jlong j_frame_cryptor_pointer) {
-  reinterpret_cast<FrameCryptorTransformer*>(j_frame_cryptor_pointer)->SetFrameCryptorTransformerObserver(nullptr);
+                                           jlong j_frame_cryptor_pointer) {
+  reinterpret_cast<FrameCryptorTransformer*>(j_frame_cryptor_pointer)
+      ->SetFrameCryptorTransformerObserver(nullptr);
 }
-
 
 webrtc::FrameCryptorTransformer::Algorithm AlgorithmFromIndex(int index) {
   switch (index) {
@@ -115,7 +116,8 @@ JNI_FrameCryptorFactory_CreateFrameCryptorForRtpReceiver(
     const base::android::JavaParamRef<jstring>& participantId,
     jint j_algorithm_index,
     jlong j_key_manager) {
-  auto keyManager = reinterpret_cast<webrtc::DefaultKeyManagerImpl*>(j_key_manager);
+  auto keyManager =
+      reinterpret_cast<webrtc::DefaultKeyManagerImpl*>(j_key_manager);
   auto participant_id = JavaToStdString(env, participantId);
   auto rtpReceiver =
       reinterpret_cast<RtpReceiverInterface*>(j_rtp_receiver_pointer);
@@ -143,7 +145,8 @@ JNI_FrameCryptorFactory_CreateFrameCryptorForRtpSender(
     const base::android::JavaParamRef<jstring>& participantId,
     jint j_algorithm_index,
     jlong j_key_manager) {
-  auto keyManager = reinterpret_cast<webrtc::DefaultKeyManagerImpl*>(j_key_manager);
+  auto keyManager =
+      reinterpret_cast<webrtc::DefaultKeyManagerImpl*>(j_key_manager);
   auto rtpSender = reinterpret_cast<RtpSenderInterface*>(j_rtp_sender_pointer);
   auto participant_id = JavaToStdString(env, participantId);
   auto mediaType =
@@ -163,11 +166,15 @@ JNI_FrameCryptorFactory_CreateFrameCryptorForRtpSender(
 }
 
 static base::android::ScopedJavaLocalRef<jobject>
-JNI_FrameCryptorFactory_CreateFrameCryptorKeyManager(JNIEnv* env, jboolean j_shared,
-    const base::android::JavaParamRef<jbyteArray>& j_ratchetSalt,  jint j_ratchetWindowSize) {
+JNI_FrameCryptorFactory_CreateFrameCryptorKeyManager(
+    JNIEnv* env,
+    jboolean j_shared,
+    const base::android::JavaParamRef<jbyteArray>& j_ratchetSalt,
+    jint j_ratchetWindowSize) {
   auto ratchetSalt = JavaToNativeByteArray(env, j_ratchetSalt);
   KeyProviderOptions options;
-  options.ratchet_salt =  std::vector<uint8_t>(ratchetSalt.begin(), ratchetSalt.end());
+  options.ratchet_salt =
+      std::vector<uint8_t>(ratchetSalt.begin(), ratchetSalt.end());
   options.ratchet_window_size = j_ratchetWindowSize;
   options.shared_key = j_shared;
   return NativeToJavaFrameCryptorKeyManager(

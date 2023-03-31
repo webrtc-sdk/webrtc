@@ -19,7 +19,6 @@ package org.webrtc;
 import androidx.annotation.Nullable;
 
 public class FrameCryptor {
-
   public enum FrameCryptionState {
     NEW,
     OK,
@@ -78,7 +77,7 @@ public class FrameCryptor {
     nativeUnSetObserver(nativeFrameCryptor);
     JniCommon.nativeReleaseRef(nativeFrameCryptor);
     nativeFrameCryptor = 0;
-    if(observerPtr != 0) {
+    if (observerPtr != 0) {
       JniCommon.nativeReleaseRef(observerPtr);
       observerPtr = 0;
     }
@@ -87,11 +86,11 @@ public class FrameCryptor {
   public void setObserver(@Nullable Observer observer) {
     checkFrameCryptorExists();
     long newPtr = nativeSetObserver(nativeFrameCryptor, observer);
-    if(observerPtr != 0) {
+    if (observerPtr != 0) {
       JniCommon.nativeReleaseRef(observerPtr);
       observerPtr = 0;
     }
-    newPtr= observerPtr;
+    newPtr = observerPtr;
   }
 
   private void checkFrameCryptorExists() {
