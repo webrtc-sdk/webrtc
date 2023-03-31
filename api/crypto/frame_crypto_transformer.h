@@ -118,8 +118,12 @@ class KeyManager : public rtc::RefCountInterface {
               int index,
               std::vector<uint8_t> key) = 0;
 
-  virtual std::vector<uint8_t> RatchetKey(const std::string participant_id,
+  virtual const std::vector<uint8_t> RatchetKey(const std::string participant_id,
                                           int key_index) = 0;
+
+  virtual const std::vector<uint8_t> ExportKey(
+      const std::string participant_id,
+      int key_index) const = 0;
 
  protected:
   virtual ~KeyManager() {}
@@ -156,7 +160,7 @@ class DefaultKeyManagerImpl : public KeyManager {
     return keys_.find(participant_id)->second;
   }
 
-  std::vector<uint8_t> RatchetKey(const std::string participant_id,
+  const std::vector<uint8_t> RatchetKey(const std::string participant_id,
                                   int key_index) override {
     webrtc::MutexLock lock(&mutex_);
     if (keys_.find(participant_id) == keys_.end()) {
@@ -164,6 +168,23 @@ class DefaultKeyManagerImpl : public KeyManager {
     }
 
     return keys_[participant_id]->RatchetKey(key_index);
+  }
+
+  const std::vector<uint8_t> ExportKey(
+      const std::string participant_id,
+      int key_index) const override {
+    webrtc::MutexLock lock(&mutex_);
+    if (keys_.find(participant_id) == keys_.end()) {
+      return std::vector<uint8_t>();
+    }
+
+    auto keySet = GetKey(participant_id);
+
+    if (!keySet) {
+      return std::vector<uint8_t>();
+    }
+
+    return keySet->GetKeySet(key_index)->material;
   }
 
  private:
