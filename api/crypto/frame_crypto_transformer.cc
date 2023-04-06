@@ -519,7 +519,7 @@ void FrameCryptorTransformer::decryptFrame(
   std::vector<uint8_t> buffer;
 
   int ratchet_count = 0;
-  auto initialKey = key_set->material;
+  auto initialKeyMaterial = key_set->material;
   bool decryption_success = false;
   if (AesEncryptDecrypt(EncryptOrDecrypt::kDecrypt, algorithm_,
                         key_set->encryption_key, iv, frameHeader,
@@ -527,7 +527,8 @@ void FrameCryptorTransformer::decryptFrame(
     decryption_success = true;
   } else {
     RTC_LOG(LS_ERROR) << "FrameCryptorTransformer::decryptFrame() failed";
-
+    std::shared_ptr<ParticipantKeyHandler::KeySet> ratchetedKeySet;
+    auto currentKeyMaterial = key_set->material;
     if (key_handler->options().ratchet_window_size > 0) {
       while (ratchet_count < key_handler->options().ratchet_window_size) {
         ratchet_count++;
@@ -535,15 +536,15 @@ void FrameCryptorTransformer::decryptFrame(
         RTC_LOG(LS_INFO) << "ratcheting key attempt " << ratchet_count << " of "
                          << key_handler->options().ratchet_window_size;
 
-        key_handler->RatchetKey(key_index);
+        auto newMaterial = key_handler->RatchetKeyMaterial(currentKeyMaterial);
+        ratchetedKeySet = key_handler->DeriveKeys(newMaterial, key_handler->options().ratchet_salt, 256);
+
         if (last_dec_error_ != FrameCryptionState::kKeyRatcheted) {
           last_dec_error_ = FrameCryptionState::kKeyRatcheted;
           if (observer_)
             observer_->OnFrameCryptionStateChanged(participant_id_,
                                                    last_dec_error_);
         }
-
-        auto ratchetedKeySet = key_handler->GetKeySet(key_index);
 
         if (AesEncryptDecrypt(EncryptOrDecrypt::kDecrypt, algorithm_,
                               ratchetedKeySet->encryption_key, iv, frameHeader,
@@ -552,8 +553,12 @@ void FrameCryptorTransformer::decryptFrame(
                               "ratcheted to keyIndex="
                            << static_cast<int>(key_index);
           decryption_success = true;
+          // success, so we set the new key
+          key_handler->SetKeyFromMaterial(newMaterial, key_index);
           break;
         }
+        // for the next ratchet attempt
+        currentKeyMaterial = newMaterial;
       }
 
       /* Since the key it is first send and only afterwards actually used for
@@ -564,7 +569,7 @@ void FrameCryptorTransformer::decryptFrame(
        */
       if (!decryption_success ||
           ratchet_count >= key_handler->options().ratchet_window_size) {
-        key_handler->SetKeyFromMaterial(initialKey, key_index);
+        key_handler->SetKeyFromMaterial(initialKeyMaterial, key_index);
       }
     }
   }
