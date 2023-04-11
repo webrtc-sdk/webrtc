@@ -17,10 +17,12 @@
 #include <string>
 
 #include "absl/types/optional.h"
+#include "api/array_view.h"
 #include "api/call/audio_sink.h"
 #include "api/media_stream_interface.h"
 #include "api/notifier.h"
 #include "media/base/media_channel.h"
+#include "modules/audio_processing/rms_level.h"
 #include "rtc_base/message_handler.h"
 #include "rtc_base/synchronization/mutex.h"
 #include "rtc_base/thread.h"
@@ -69,6 +71,8 @@ class RemoteAudioSource : public Notifier<AudioSourceInterface>,
 
   // AudioSourceInterface implementation.
   void SetVolume(double volume) override;
+  bool GetSignalLevel(int* level) override;
+
   void RegisterAudioObserver(AudioObserver* observer) override;
   void UnregisterAudioObserver(AudioObserver* observer) override;
 
@@ -94,6 +98,8 @@ class RemoteAudioSource : public Notifier<AudioSourceInterface>,
   Mutex sink_lock_;
   std::list<AudioTrackSinkInterface*> sinks_;
   SourceState state_;
+  Mutex rms_level_lock_;
+  RmsLevel rms_level_;
 };
 
 }  // namespace webrtc

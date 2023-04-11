@@ -81,6 +81,8 @@ void RemoteAudioSource::Start(cricket::VoiceMediaChannel* media_channel,
                                         std::make_unique<AudioDataProxy>(this))
        : media_channel->SetDefaultRawAudioSink(
              std::make_unique<AudioDataProxy>(this));
+  MutexLock lock(&rms_level_lock_);
+  rms_level_.Reset();
 }
 
 void RemoteAudioSource::Stop(cricket::VoiceMediaChannel* media_channel,
@@ -89,6 +91,8 @@ void RemoteAudioSource::Stop(cricket::VoiceMediaChannel* media_channel,
   RTC_DCHECK(media_channel);
   ssrc ? media_channel->SetRawAudioSink(*ssrc, nullptr)
        : media_channel->SetDefaultRawAudioSink(nullptr);
+  MutexLock lock(&rms_level_lock_);
+  rms_level_.Reset();
 }
 
 void RemoteAudioSource::SetState(SourceState new_state) {
@@ -119,6 +123,12 @@ void RemoteAudioSource::SetVolume(double volume) {
   }
 }
 
+bool RemoteAudioSource::GetSignalLevel(int* level) {
+  MutexLock lock(&rms_level_lock_);
+  *level = rms_level_.Average();
+  return true;
+ }
+
 void RemoteAudioSource::RegisterAudioObserver(AudioObserver* observer) {
   RTC_DCHECK(observer != NULL);
   RTC_DCHECK(!absl::c_linear_search(audio_observers_, observer));
@@ -148,6 +158,11 @@ void RemoteAudioSource::RemoveSink(AudioTrackSinkInterface* sink) {
 }
 
 void RemoteAudioSource::OnData(const AudioSinkInterface::Data& audio) {
+  {
+    MutexLock lock(&rms_level_lock_);
+    size_t length = audio.samples_per_channel * audio.channels;
+    rms_level_.Analyze(rtc::ArrayView<const int16_t>(audio.data, length));
+  }
   // Called on the externally-owned audio callback thread, via/from webrtc.
   MutexLock lock(&sink_lock_);
   for (auto* sink : sinks_) {

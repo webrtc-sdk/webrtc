@@ -253,6 +253,8 @@ class RTC_EXPORT AudioSourceInterface : public MediaSourceInterface {
   // be applied in the track in a way that does not affect clones of the track.
   virtual void SetVolume(double volume) {}
 
+  virtual bool GetSignalLevel(int* level) { return false; }
+
   // Registers/unregisters observers to the audio source.
   virtual void RegisterAudioObserver(AudioObserver* observer) {}
   virtual void UnregisterAudioObserver(AudioObserver* observer) {}
