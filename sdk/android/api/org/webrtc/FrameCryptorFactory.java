@@ -18,8 +18,8 @@ package org.webrtc;
 
 public class FrameCryptorFactory {
   public static FrameCryptorKeyManager createFrameCryptorKeyManager(
-      boolean sharedKey, byte[] ratchetSalt, int ratchetWindowSize) {
-    return nativeCreateFrameCryptorKeyManager(sharedKey, ratchetSalt, ratchetWindowSize);
+      boolean sharedKey, byte[] ratchetSalt, int ratchetWindowSize, byte[] uncryptedMagicBytes) {
+    return nativeCreateFrameCryptorKeyManager(sharedKey, ratchetSalt, ratchetWindowSize, uncryptedMagicBytes);
   }
 
   public static FrameCryptor createFrameCryptorForRtpSender(RtpSender rtpSender,
@@ -40,5 +40,5 @@ public class FrameCryptorFactory {
       long rtpReceiver, String participantId, int algorithm, long nativeFrameCryptorKeyManager);
 
   private static native FrameCryptorKeyManager nativeCreateFrameCryptorKeyManager(
-      boolean sharedKey, byte[] ratchetSalt, int ratchetWindowSize);
+      boolean sharedKey, byte[] ratchetSalt, int ratchetWindowSize, byte[] uncryptedMagicBytes);
 }

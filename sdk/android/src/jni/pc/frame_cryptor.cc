@@ -170,12 +170,17 @@ JNI_FrameCryptorFactory_CreateFrameCryptorKeyManager(
     JNIEnv* env,
     jboolean j_shared,
     const base::android::JavaParamRef<jbyteArray>& j_ratchetSalt,
-    jint j_ratchetWindowSize) {
+    jint j_ratchetWindowSize,
+    const base::android::JavaParamRef<jbyteArray>& j_uncryptedMagicBytes) {
   auto ratchetSalt = JavaToNativeByteArray(env, j_ratchetSalt);
   KeyProviderOptions options;
   options.ratchet_salt =
       std::vector<uint8_t>(ratchetSalt.begin(), ratchetSalt.end());
   options.ratchet_window_size = j_ratchetWindowSize;
+
+  auto uncryptedMagicBytes = JavaToNativeByteArray(env, j_uncryptedMagicBytes);
+  options.uncrypted_magic_bytes =
+      std::vector<uint8_t>(uncryptedMagicBytes.begin(), uncryptedMagicBytes.end());
   options.shared_key = j_shared;
   return NativeToJavaFrameCryptorKeyManager(
       env, rtc::make_ref_counted<webrtc::DefaultKeyManagerImpl>(options));
