@@ -37,11 +37,13 @@ const size_t KEYRING_SIZE = 16;
 struct KeyProviderOptions {
   bool shared_key;
   std::vector<uint8_t> ratchet_salt;
+  std::vector<uint8_t> uncrypted_magic_bytes;
   int ratchet_window_size;
   KeyProviderOptions() : shared_key(false), ratchet_window_size(0) {}
   KeyProviderOptions(KeyProviderOptions& copy)
       : shared_key(copy.shared_key),
         ratchet_salt(copy.ratchet_salt),
+        uncrypted_magic_bytes(copy.uncrypted_magic_bytes),
         ratchet_window_size(copy.ratchet_window_size) {}
 };
 
@@ -133,6 +135,8 @@ class KeyManager : public rtc::RefCountInterface {
   virtual const std::vector<uint8_t> ExportKey(const std::string participant_id,
                                                int key_index) const = 0;
 
+  virtual KeyProviderOptions& options() = 0;
+
  protected:
   virtual ~KeyManager() {}
 };
@@ -193,6 +197,8 @@ class DefaultKeyManagerImpl : public KeyManager {
 
     return keySet->GetKeySet(key_index)->material;
   }
+
+  KeyProviderOptions& options() override { return options_; }
 
  private:
   mutable webrtc::Mutex mutex_;

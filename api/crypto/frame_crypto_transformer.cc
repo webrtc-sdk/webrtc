@@ -457,10 +457,43 @@ void FrameCryptorTransformer::decryptFrame(
   }
 
   rtc::ArrayView<const uint8_t> date_in = frame->GetData();
+
   if (date_in.size() == 0 || !enabled_cryption) {
     sink_callback->OnTransformedFrame(std::move(frame));
     return;
   }
+  
+  auto uncrypted_magic_bytes = key_manager_->options().uncrypted_magic_bytes;
+  if (uncrypted_magic_bytes.size() > 0 &&
+      date_in.size() >= uncrypted_magic_bytes.size() + 1) {
+    auto tmp = date_in.subview(date_in.size() - (uncrypted_magic_bytes.size() + 1),
+                               uncrypted_magic_bytes.size());
+
+
+
+    if (uncrypted_magic_bytes == std::vector<uint8_t>(tmp.begin(), tmp.end())) {
+
+      RTC_CHECK_EQ(tmp.size(), uncrypted_magic_bytes.size());
+      auto frame_type = date_in.subview(date_in.size() - 1, 1);
+      RTC_CHECK_EQ(frame_type.size(), 1);
+
+      RTC_LOG(LS_INFO) << "FrameCryptorTransformer::uncrypted_magic_bytes( type "
+                       << frame_type[0] << ", tmp "
+                       << to_hex(tmp.data(), tmp.size()) << ", magic bytes "
+                       << to_hex(uncrypted_magic_bytes.data(),
+                                 uncrypted_magic_bytes.size())
+                       << ")";
+
+      // magic bytes detected, this is a non-encrypted frame, skip frame decryption.
+      rtc::Buffer data_out;
+      data_out.AppendData(
+          date_in.subview(0, date_in.size() - uncrypted_magic_bytes.size() - 1));
+      frame->SetData(data_out);
+      sink_callback->OnTransformedFrame(std::move(frame));
+      return;
+    }
+  }
+
 
   uint8_t unencrypted_bytes = get_unencrypted_bytes(frame.get(), type_);
 
