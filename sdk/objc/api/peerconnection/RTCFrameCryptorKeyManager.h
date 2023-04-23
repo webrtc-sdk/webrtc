@@ -31,7 +31,8 @@ RTC_OBJC_EXPORT
 
 - (instancetype)initWithRatchetSalt:(NSData *)salt
                   ratchetWindowSize:(int)windowSize
-                      sharedKeyMode:(BOOL)sharedKey;
+                      sharedKeyMode:(BOOL)sharedKey
+                uncryptedMagicBytes:(nullable NSData *)uncryptedMagicBytes;
 
 @end
 

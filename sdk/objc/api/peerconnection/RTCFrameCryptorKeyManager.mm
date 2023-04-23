@@ -32,13 +32,18 @@
 
 - (instancetype)initWithRatchetSalt:(NSData *)salt
                   ratchetWindowSize:(int)windowSize
-                      sharedKeyMode:(BOOL)sharedKey {
+                      sharedKeyMode:(BOOL)sharedKey
+                uncryptedMagicBytes:(NSData *)uncryptedMagicBytes {
   if (self = [super init]) {
     webrtc::KeyProviderOptions options;
     options.ratchet_salt = std::vector<uint8_t>((const uint8_t *)salt.bytes,
                                                 ((const uint8_t *)salt.bytes) + salt.length);
     options.ratchet_window_size = windowSize;
     options.shared_key = sharedKey;
+    if(uncryptedMagicBytes != nil) {
+      options.uncrypted_magic_bytes = std::vector<uint8_t>((const uint8_t *)uncryptedMagicBytes.bytes,
+                                                          ((const uint8_t *)uncryptedMagicBytes.bytes) + uncryptedMagicBytes.length);
+    }
     _nativeKeyManager = rtc::make_ref_counted<webrtc::DefaultKeyManagerImpl>(options);
   }
   return self;
