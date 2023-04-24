@@ -570,7 +570,7 @@ void FrameCryptorTransformer::decryptFrame(
                          << key_handler->options().ratchet_window_size;
 
         auto newMaterial = key_handler->RatchetKeyMaterial(currentKeyMaterial);
-        ratchetedKeySet = key_handler->DeriveKeys(newMaterial, key_handler->options().ratchet_salt, 256);
+        ratchetedKeySet = key_handler->DeriveKeys(newMaterial, key_handler->options().ratchet_salt, 128);
 
         if (last_dec_error_ != FrameCryptionState::kKeyRatcheted) {
           last_dec_error_ = FrameCryptionState::kKeyRatcheted;
