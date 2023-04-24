@@ -290,12 +290,12 @@ FrameCryptorTransformer::FrameCryptorTransformer(
     const std::string participant_id,
     MediaType type,
     Algorithm algorithm,
-    rtc::scoped_refptr<KeyManager> key_manager)
+    rtc::scoped_refptr<KeyProvider> key_provider)
     : participant_id_(participant_id),
       type_(type),
       algorithm_(algorithm),
-      key_manager_(key_manager) {
-  RTC_DCHECK(key_manager_ != nullptr);
+      key_provider_(key_provider) {
+  RTC_DCHECK(key_provider_ != nullptr);
 }
 
 void FrameCryptorTransformer::Transform(
@@ -354,7 +354,7 @@ void FrameCryptorTransformer::encryptFrame(
     return;
   }
 
-  auto key_handler = key_manager_->GetKey(participant_id_);
+  auto key_handler = key_provider_->GetKey(participant_id_);
   if (key_handler == nullptr || key_handler->GetKeySet(key_index_) == nullptr) {
     RTC_LOG(LS_INFO) << "FrameCryptorTransformer::encryptFrame() no keys, or "
                         "key_index["
@@ -463,7 +463,7 @@ void FrameCryptorTransformer::decryptFrame(
     return;
   }
   
-  auto uncrypted_magic_bytes = key_manager_->options().uncrypted_magic_bytes;
+  auto uncrypted_magic_bytes = key_provider_->options().uncrypted_magic_bytes;
   if (uncrypted_magic_bytes.size() > 0 &&
       date_in.size() >= uncrypted_magic_bytes.size() + 1) {
     auto tmp = date_in.subview(date_in.size() - (uncrypted_magic_bytes.size() + 1),
@@ -521,7 +521,7 @@ void FrameCryptorTransformer::decryptFrame(
     return;
   }
 
-  auto key_handler = key_manager_->GetKey(participant_id_);
+  auto key_handler = key_provider_->GetKey(participant_id_);
   if (key_index >= KEYRING_SIZE || key_handler == nullptr ||
       key_handler->GetKeySet(key_index) == nullptr) {
     RTC_LOG(LS_INFO) << "FrameCryptorTransformer::decryptFrame() no keys, or "

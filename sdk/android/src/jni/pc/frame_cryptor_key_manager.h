@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef SDK_ANDROID_SRC_JNI_PC_FRAME_CRYPTOR_KEY_MANAGER_H_
-#define SDK_ANDROID_SRC_JNI_PC_FRAME_CRYPTOR_KEY_MANAGER_H_
+#ifndef SDK_ANDROID_SRC_JNI_PC_FRAME_CRYPTOR_KEY_PROVIDER_H_
+#define SDK_ANDROID_SRC_JNI_PC_FRAME_CRYPTOR_KEY_PROVIDER_H_
 
 #include <jni.h>
 
@@ -25,11 +25,11 @@
 namespace webrtc {
 namespace jni {
 
-ScopedJavaLocalRef<jobject> NativeToJavaFrameCryptorKeyManager(
+ScopedJavaLocalRef<jobject> NativeToJavaFrameCryptorKeyProvider(
     JNIEnv* env,
-    rtc::scoped_refptr<webrtc::DefaultKeyManagerImpl> cryptor);
+    rtc::scoped_refptr<webrtc::DefaultKeyProviderImpl> cryptor);
 
 }  // namespace jni
 }  // namespace webrtc
 
-#endif  // SDK_ANDROID_SRC_JNI_PC_FRAME_CRYPTOR_KEY_MANAGER_H_
+#endif  // SDK_ANDROID_SRC_JNI_PC_FRAME_CRYPTOR_KEY_PROVIDER_H_

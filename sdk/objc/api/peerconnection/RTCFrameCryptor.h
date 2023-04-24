@@ -22,7 +22,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @class RTC_OBJC_TYPE(RTCRtpSender);
 @class RTC_OBJC_TYPE(RTCRtpReceiver);
-@class RTC_OBJC_TYPE(RTCFrameCryptorKeyManager);
+@class RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider);
 @class RTC_OBJC_TYPE(RTCFrameCryptor);
 
 typedef NS_ENUM(NSUInteger, RTCCyrptorAlgorithm) {
@@ -63,12 +63,12 @@ RTC_OBJC_EXPORT
 - (instancetype)initWithRtpSender:(RTC_OBJC_TYPE(RTCRtpSender) *)sender
                     participantId:(NSString *)participantId
                         algorithm:(RTCCyrptorAlgorithm)algorithm
-                       keyManager:(RTC_OBJC_TYPE(RTCFrameCryptorKeyManager) *)keyManager;
+                       keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider;
 
 - (instancetype)initWithRtpReceiver:(RTC_OBJC_TYPE(RTCRtpReceiver) *)receiver
                       participantId:(NSString *)participantId
                           algorithm:(RTCCyrptorAlgorithm)algorithm
-                         keyManager:(RTC_OBJC_TYPE(RTCFrameCryptorKeyManager) *)keyManager;
+                         keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider;
 
 @end
 

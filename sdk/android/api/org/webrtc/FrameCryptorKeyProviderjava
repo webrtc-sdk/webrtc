@@ -18,49 +18,49 @@ package org.webrtc;
 
 import java.util.ArrayList;
 
-public class FrameCryptorKeyManager {
-  private long nativeKeyManager;
+public class FrameCryptorKeyProvider {
+  private long nativeKeyProvider;
 
   @CalledByNative
-  public FrameCryptorKeyManager(long nativeKeyManager) {
-    this.nativeKeyManager = nativeKeyManager;
+  public FrameCryptorKeyProvider(long nativeKeyProvider) {
+    this.nativeKeyProvider = nativeKeyProvider;
   }
 
-  public long getNativeKeyManager() {
-    return nativeKeyManager;
+  public long getNativeKeyProvider() {
+    return nativeKeyProvider;
   }
 
   public boolean setKey(String participantId, int index, byte[] key) {
-    checkKeyManagerExists();
-    return nativeSetKey(nativeKeyManager, participantId, index, key);
+    checkKeyProviderExists();
+    return nativeSetKey(nativeKeyProvider, participantId, index, key);
   }
 
   public byte[] ratchetKey(String participantId, int index) {
-    checkKeyManagerExists();
-    return nativeRatchetKey(nativeKeyManager, participantId, index);
+    checkKeyProviderExists();
+    return nativeRatchetKey(nativeKeyProvider, participantId, index);
   }
 
   public byte[] exportKey(String participantId, int index) {
-    checkKeyManagerExists();
-    return nativeExportKey(nativeKeyManager, participantId, index);
+    checkKeyProviderExists();
+    return nativeExportKey(nativeKeyProvider, participantId, index);
   }
 
   public void dispose() {
-    checkKeyManagerExists();
-    JniCommon.nativeReleaseRef(nativeKeyManager);
-    nativeKeyManager = 0;
+    checkKeyProviderExists();
+    JniCommon.nativeReleaseRef(nativeKeyProvider);
+    nativeKeyProvider = 0;
   }
 
-  private void checkKeyManagerExists() {
-    if (nativeKeyManager == 0) {
-      throw new IllegalStateException("FrameCryptorKeyManager has been disposed.");
+  private void checkKeyProviderExists() {
+    if (nativeKeyProvider == 0) {
+      throw new IllegalStateException("FrameCryptorKeyProvider has been disposed.");
     }
   }
 
   private static native boolean nativeSetKey(
-      long keyManagerPointer, String participantId, int index, byte[] key);
+      long keyProviderPointer, String participantId, int index, byte[] key);
   private static native byte[] nativeRatchetKey(
-      long keyManagerPointer, String participantId, int index);
+      long keyProviderPointer, String participantId, int index);
   private static native byte[] nativeExportKey(
-      long keyManagerPointer, String participantId, int index);
+      long keyProviderPointer, String participantId, int index);
 }

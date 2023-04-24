@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#import "RTCFrameCryptorKeyManager+Private.h"
+#import "RTCFrameCryptorKeyProvider+Private.h"
 
 #include <memory>
 #include "api/crypto/frame_crypto_transformer.h"
@@ -22,12 +22,12 @@
 #import "base/RTCLogging.h"
 #import "helpers/NSString+StdString.h"
 
-@implementation RTC_OBJC_TYPE (RTCFrameCryptorKeyManager) {
-  rtc::scoped_refptr<webrtc::DefaultKeyManagerImpl> _nativeKeyManager;
+@implementation RTC_OBJC_TYPE (RTCFrameCryptorKeyProvider) {
+  rtc::scoped_refptr<webrtc::DefaultKeyProviderImpl> _nativeKeyProvider;
 }
 
-- (rtc::scoped_refptr<webrtc::KeyManager>)nativeKeyManager {
-  return _nativeKeyManager;
+- (rtc::scoped_refptr<webrtc::KeyProvider>)nativeKeyProvider {
+  return _nativeKeyProvider;
 }
 
 - (instancetype)initWithRatchetSalt:(NSData *)salt
@@ -44,25 +44,25 @@
       options.uncrypted_magic_bytes = std::vector<uint8_t>((const uint8_t *)uncryptedMagicBytes.bytes,
                                                           ((const uint8_t *)uncryptedMagicBytes.bytes) + uncryptedMagicBytes.length);
     }
-    _nativeKeyManager = rtc::make_ref_counted<webrtc::DefaultKeyManagerImpl>(options);
+    _nativeKeyProvider = rtc::make_ref_counted<webrtc::DefaultKeyProviderImpl>(options);
   }
   return self;
 }
 
 - (void)setKey:(NSData *)key withIndex:(int)index forParticipant:(NSString *)participantId {
-  _nativeKeyManager->SetKey(
+  _nativeKeyProvider->SetKey(
       [participantId stdString],
       index,
       std::vector<uint8_t>((const uint8_t *)key.bytes, ((const uint8_t *)key.bytes) + key.length));
 }
 
 - (NSData *)ratchetKey:(NSString *)participantId withIndex:(int)index {
-  std::vector<uint8_t> nativeKey = _nativeKeyManager->RatchetKey([participantId stdString], index);
+  std::vector<uint8_t> nativeKey = _nativeKeyProvider->RatchetKey([participantId stdString], index);
   return [NSData dataWithBytes:nativeKey.data() length:nativeKey.size()];
 }
 
 - (NSData *)exportKey:(NSString *)participantId withIndex:(int)index {
-  std::vector<uint8_t> nativeKey = _nativeKeyManager->ExportKey([participantId stdString], index);
+  std::vector<uint8_t> nativeKey = _nativeKeyProvider->ExportKey([participantId stdString], index);
   return [NSData dataWithBytes:nativeKey.data() length:nativeKey.size()];
 }
 

@@ -13,64 +13,64 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "sdk/android/src/jni/pc/frame_cryptor_key_manager.h"
+#include "sdk/android/src/jni/pc/frame_cryptor_key_provider.h"
 
-#include "sdk/android/generated_peerconnection_jni/FrameCryptorKeyManager_jni.h"
+#include "sdk/android/generated_peerconnection_jni/FrameCryptorKeyProvider_jni.h"
 #include "sdk/android/native_api/jni/java_types.h"
 #include "sdk/android/src/jni/jni_helpers.h"
 
 namespace webrtc {
 namespace jni {
 
-ScopedJavaLocalRef<jobject> NativeToJavaFrameCryptorKeyManager(
+ScopedJavaLocalRef<jobject> NativeToJavaFrameCryptorKeyProvider(
     JNIEnv* env,
-    rtc::scoped_refptr<webrtc::DefaultKeyManagerImpl> key_manager) {
-  if (!key_manager)
+    rtc::scoped_refptr<webrtc::DefaultKeyProviderImpl> key_provider) {
+  if (!key_provider)
     return nullptr;
   // Sender is now owned by the Java object, and will be freed from
-  // FrameCryptorKeyManager.dispose().
-  return Java_FrameCryptorKeyManager_Constructor(
-      env, jlongFromPointer(key_manager.release()));
+  // FrameCryptorKeyProvider.dispose().
+  return Java_FrameCryptorKeyProvider_Constructor(
+      env, jlongFromPointer(key_provider.release()));
 }
 
-static jboolean JNI_FrameCryptorKeyManager_SetKey(
+static jboolean JNI_FrameCryptorKeyProvider_SetKey(
     JNIEnv* jni,
-    jlong j_key_manager,
+    jlong j_key_provider,
     const base::android::JavaParamRef<jstring>& participantId,
     jint j_index,
     const base::android::JavaParamRef<jbyteArray>& j_key) {
   auto key = JavaToNativeByteArray(jni, j_key);
   auto participant_id = JavaToStdString(jni, participantId);
-  return reinterpret_cast<webrtc::DefaultKeyManagerImpl*>(j_key_manager)
+  return reinterpret_cast<webrtc::DefaultKeyProviderImpl*>(j_key_provider)
       ->SetKey(participant_id, j_index,
                std::vector<uint8_t>(key.begin(), key.end()));
 }
 
 static base::android::ScopedJavaLocalRef<jbyteArray>
-JNI_FrameCryptorKeyManager_RatchetKey(
+JNI_FrameCryptorKeyProvider_RatchetKey(
     JNIEnv* env,
-    jlong keyManagerPointer,
+    jlong keyProviderPointer,
     const base::android::JavaParamRef<jstring>& participantId,
     jint j_index) {
   auto participant_id = JavaToStdString(env, participantId);
-  auto key_manager =
-      reinterpret_cast<webrtc::DefaultKeyManagerImpl*>(keyManagerPointer);
-  auto newKey = key_manager->RatchetKey(participant_id, j_index);
+  auto key_provider =
+      reinterpret_cast<webrtc::DefaultKeyProviderImpl*>(keyProviderPointer);
+  auto newKey = key_provider->RatchetKey(participant_id, j_index);
   std::vector<int8_t> int8tKey =
       std::vector<int8_t>(newKey.begin(), newKey.end());
   return NativeToJavaByteArray(env, rtc::ArrayView<int8_t>(int8tKey));
 }
 
 static base::android::ScopedJavaLocalRef<jbyteArray>
-JNI_FrameCryptorKeyManager_ExportKey(
+JNI_FrameCryptorKeyProvider_ExportKey(
     JNIEnv* env,
-    jlong keyManagerPointer,
+    jlong keyProviderPointer,
     const base::android::JavaParamRef<jstring>& participantId,
     jint j_index) {
   auto participant_id = JavaToStdString(env, participantId);
-  auto key_manager =
-      reinterpret_cast<webrtc::DefaultKeyManagerImpl*>(keyManagerPointer);
-  auto key = key_manager->ExportKey(participant_id, j_index);
+  auto key_provider =
+      reinterpret_cast<webrtc::DefaultKeyProviderImpl*>(keyProviderPointer);
+  auto key = key_provider->ExportKey(participant_id, j_index);
   std::vector<int8_t> int8tKey = std::vector<int8_t>(key.begin(), key.end());
   return NativeToJavaByteArray(env, rtc::ArrayView<int8_t>(int8tKey));
 }

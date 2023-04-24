@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-#import "RTCFrameCryptorKeyManager.h"
+#import "RTCFrameCryptorKeyProvider.h"
 
 #include "api/crypto/frame_crypto_transformer.h"
 #include "rtc_base/ref_count.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface RTC_OBJC_TYPE (RTCFrameCryptorKeyManager)
+@interface RTC_OBJC_TYPE (RTCFrameCryptorKeyProvider)
 ()
 
-    @property(nonatomic, readonly) rtc::scoped_refptr<webrtc::KeyManager> nativeKeyManager;
+    @property(nonatomic, readonly) rtc::scoped_refptr<webrtc::KeyProvider> nativeKeyProvider;
 
 @end
 

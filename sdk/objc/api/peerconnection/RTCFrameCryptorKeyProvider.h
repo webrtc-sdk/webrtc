@@ -21,7 +21,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 RTC_OBJC_EXPORT
-@interface RTC_OBJC_TYPE (RTCFrameCryptorKeyManager) : NSObject
+@interface RTC_OBJC_TYPE (RTCFrameCryptorKeyProvider) : NSObject
 
 - (void)setKey:(NSData *)key withIndex:(int)index forParticipant:(NSString *)participantId;
 

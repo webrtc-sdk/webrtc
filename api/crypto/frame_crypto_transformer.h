@@ -116,7 +116,7 @@ class ParticipantKeyHandler {
   std::vector<std::shared_ptr<KeySet>> cryptoKeyRing_;
 };
 
-class KeyManager : public rtc::RefCountInterface {
+class KeyProvider : public rtc::RefCountInterface {
  public:
   enum { kRawKeySize = 32 };
 
@@ -138,13 +138,13 @@ class KeyManager : public rtc::RefCountInterface {
   virtual KeyProviderOptions& options() = 0;
 
  protected:
-  virtual ~KeyManager() {}
+  virtual ~KeyProvider() {}
 };
 
-class DefaultKeyManagerImpl : public KeyManager {
+class DefaultKeyProviderImpl : public KeyProvider {
  public:
-  DefaultKeyManagerImpl(KeyProviderOptions options) : options_(options) {}
-  ~DefaultKeyManagerImpl() override = default;
+  DefaultKeyProviderImpl(KeyProviderOptions options) : options_(options) {}
+  ~DefaultKeyProviderImpl() override = default;
 
   /// Set the key at the given index.
   bool SetKey(const std::string participant_id,
@@ -241,7 +241,7 @@ class RTC_EXPORT FrameCryptorTransformer
   explicit FrameCryptorTransformer(const std::string participant_id,
                                    MediaType type,
                                    Algorithm algorithm,
-                                   rtc::scoped_refptr<KeyManager> key_manager);
+                                   rtc::scoped_refptr<KeyProvider> key_provider);
 
   virtual void SetFrameCryptorTransformerObserver(
       FrameCryptorTransformerObserver* observer) {
@@ -311,7 +311,7 @@ class RTC_EXPORT FrameCryptorTransformer
       sink_callbacks_;
   int key_index_ = 0;
   std::map<uint32_t, uint32_t> sendCounts_;
-  rtc::scoped_refptr<KeyManager> key_manager_;
+  rtc::scoped_refptr<KeyProvider> key_provider_;
   FrameCryptorTransformerObserver* observer_ = nullptr;
   std::unique_ptr<rtc::Thread> thread_;
   FrameCryptionState last_enc_error_ = FrameCryptionState::kNew;

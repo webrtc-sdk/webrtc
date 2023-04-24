@@ -15,7 +15,7 @@
  */
 
 #import "RTCFrameCryptor+Private.h"
-#import "RTCFrameCryptorKeyManager+Private.h"
+#import "RTCFrameCryptorKeyProvider+Private.h"
 #import "RTCRtpReceiver+Private.h"
 #import "RTCRtpSender+Private.h"
 
@@ -114,7 +114,7 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
 - (instancetype)initWithRtpSender:(RTC_OBJC_TYPE(RTCRtpSender) *)sender
                     participantId:(NSString *)participantId
                         algorithm:(RTCCyrptorAlgorithm)algorithm
-                       keyManager:(RTC_OBJC_TYPE(RTCFrameCryptorKeyManager) *)keyManager {
+                       keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider {
   if (self = [super init]) {
     _observer.reset(new webrtc::RTCFrameCryptorDelegateAdapter(self));
     _participantId = participantId;
@@ -126,7 +126,7 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
         new webrtc::FrameCryptorTransformer([participantId stdString],
                                             mediaType,
                                             [self algorithmFromEnum:algorithm],
-                                            keyManager.nativeKeyManager));
+                                            keyProvider.nativeKeyProvider));
 
     rtpSender->SetEncoderToPacketizerFrameTransformer(frame_crypto_transformer_);
     frame_crypto_transformer_->SetEnabled(false);
@@ -138,7 +138,7 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
 - (instancetype)initWithRtpReceiver:(RTC_OBJC_TYPE(RTCRtpReceiver) *)receiver
                       participantId:(NSString *)participantId
                           algorithm:(RTCCyrptorAlgorithm)algorithm
-                         keyManager:(RTC_OBJC_TYPE(RTCFrameCryptorKeyManager) *)keyManager {
+                         keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider {
   if (self = [super init]) {
     _observer.reset(new webrtc::RTCFrameCryptorDelegateAdapter(self));
     _participantId = participantId;
@@ -150,7 +150,7 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
         new webrtc::FrameCryptorTransformer([participantId stdString],
                                             mediaType,
                                             [self algorithmFromEnum:algorithm],
-                                            keyManager.nativeKeyManager));
+                                            keyProvider.nativeKeyProvider));
 
     rtpReceiver->SetDepacketizerToDecoderFrameTransformer(frame_crypto_transformer_);
     frame_crypto_transformer_->SetEnabled(false);
