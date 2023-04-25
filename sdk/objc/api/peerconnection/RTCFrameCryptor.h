@@ -22,7 +22,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @class RTC_OBJC_TYPE(RTCRtpSender);
 @class RTC_OBJC_TYPE(RTCRtpReceiver);
-@class RTC_OBJC_TYPE(RTCFrameCryptorKeyManager);
+@class RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider);
 @class RTC_OBJC_TYPE(RTCFrameCryptor);
 
 typedef NS_ENUM(NSUInteger, RTCCyrptorAlgorithm) {
@@ -30,13 +30,14 @@ typedef NS_ENUM(NSUInteger, RTCCyrptorAlgorithm) {
   RTCCyrptorAlgorithmAesCbc,
 };
 
-typedef NS_ENUM(NSInteger, RTCFrameCryptorErrorState) {
-  RTCFrameCryptorErrorStateNew = 0,
-  RTCFrameCryptorErrorStateOk,
-  RTCFrameCryptorErrorStateEncryptionFailed,
-  RTCFrameCryptorErrorStateDecryptionFailed,
-  RTCFrameCryptorErrorStateMissingKey,
-  RTCFrameCryptorErrorStateInternalError,
+typedef NS_ENUM(NSInteger, FrameCryptionState) {
+  FrameCryptionStateNew = 0,
+  FrameCryptionStateOk,
+  FrameCryptionStateEncryptionFailed,
+  FrameCryptionStateDecryptionFailed,
+  FrameCryptionStateMissingKey,
+  FrameCryptionStateKeyRatcheted,
+  FrameCryptionStateInternalError,
 };
 
 RTC_OBJC_EXPORT
@@ -45,7 +46,7 @@ RTC_OBJC_EXPORT
     /** Called when the RTCFrameCryptor got errors. */
     - (void)frameCryptor
     : (RTC_OBJC_TYPE(RTCFrameCryptor) *)frameCryptor didStateChangeWithParticipantId
-    : (NSString *)participantId withState : (RTCFrameCryptorErrorState)stateChanged;
+    : (NSString *)participantId withState : (FrameCryptionState)stateChanged;
 @end
 
 RTC_OBJC_EXPORT
@@ -62,12 +63,12 @@ RTC_OBJC_EXPORT
 - (instancetype)initWithRtpSender:(RTC_OBJC_TYPE(RTCRtpSender) *)sender
                     participantId:(NSString *)participantId
                         algorithm:(RTCCyrptorAlgorithm)algorithm
-                       keyManager:(RTC_OBJC_TYPE(RTCFrameCryptorKeyManager) *)keyManager;
+                       keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider;
 
 - (instancetype)initWithRtpReceiver:(RTC_OBJC_TYPE(RTCRtpReceiver) *)receiver
                       participantId:(NSString *)participantId
                           algorithm:(RTCCyrptorAlgorithm)algorithm
-                         keyManager:(RTC_OBJC_TYPE(RTCFrameCryptorKeyManager) *)keyManager;
+                         keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider;
 
 @end
 

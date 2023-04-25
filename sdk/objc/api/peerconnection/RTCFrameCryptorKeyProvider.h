@@ -14,17 +14,25 @@
  * limitations under the License.
  */
 
-#import "RTCFrameCryptorKeyManager.h"
+#import <Foundation/Foundation.h>
 
-#include "rtc_base/ref_count.h"
-#include "api/crypto/frame_crypto_transformer.h"
+#import "RTCMacros.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface RTC_OBJC_TYPE (RTCFrameCryptorKeyManager)
-()
+RTC_OBJC_EXPORT
+@interface RTC_OBJC_TYPE (RTCFrameCryptorKeyProvider) : NSObject
 
-    @property(nonatomic, readonly) rtc::scoped_refptr<webrtc::KeyManager> nativeKeyManager;
+- (void)setKey:(NSData *)key withIndex:(int)index forParticipant:(NSString *)participantId;
+
+- (NSData *)ratchetKey:(NSString *)participantId withIndex:(int)index;
+
+- (NSData *)exportKey:(NSString *)participantId withIndex:(int)index;
+
+- (instancetype)initWithRatchetSalt:(NSData *)salt
+                  ratchetWindowSize:(int)windowSize
+                      sharedKeyMode:(BOOL)sharedKey
+                uncryptedMagicBytes:(nullable NSData *)uncryptedMagicBytes;
 
 @end
 

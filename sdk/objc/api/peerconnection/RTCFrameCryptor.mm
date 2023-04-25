@@ -15,7 +15,7 @@
  */
 
 #import "RTCFrameCryptor+Private.h"
-#import "RTCFrameCryptorKeyManager+Private.h"
+#import "RTCFrameCryptorKeyProvider+Private.h"
 #import "RTCRtpReceiver+Private.h"
 #import "RTCRtpSender+Private.h"
 
@@ -44,40 +44,45 @@ RTCFrameCryptorDelegateAdapter::~RTCFrameCryptorDelegateAdapter() {}
   kMissingKey,
   kInternalError,
 */
-void RTCFrameCryptorDelegateAdapter::OnFrameCryptionError(const std::string participant_id,
-                                                          FrameCryptionError error) {
+void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::string participant_id,
+                                                                 FrameCryptionState state) {
   RTC_OBJC_TYPE(RTCFrameCryptor) *frameCryptor = frame_cryptor_;
   if (frameCryptor.delegate) {
-    switch (error) {
-      case FrameCryptionError::kNew:
+    switch (state) {
+      case FrameCryptionState::kNew:
         [frameCryptor.delegate frameCryptor:frameCryptor
             didStateChangeWithParticipantId:[NSString stringForStdString:participant_id]
-                                  withState:RTCFrameCryptorErrorStateNew];
+                                  withState:FrameCryptionStateNew];
         break;
-      case FrameCryptionError::kOk:
+      case FrameCryptionState::kOk:
         [frameCryptor.delegate frameCryptor:frameCryptor
             didStateChangeWithParticipantId:[NSString stringForStdString:participant_id]
-                                  withState:RTCFrameCryptorErrorStateOk];
+                                  withState:FrameCryptionStateOk];
         break;
-      case FrameCryptionError::kEncryptionFailed:
+      case FrameCryptionState::kEncryptionFailed:
         [frameCryptor.delegate frameCryptor:frameCryptor
             didStateChangeWithParticipantId:[NSString stringForStdString:participant_id]
-                                  withState:RTCFrameCryptorErrorStateEncryptionFailed];
+                                  withState:FrameCryptionStateEncryptionFailed];
         break;
-      case FrameCryptionError::kDecryptionFailed:
+      case FrameCryptionState::kDecryptionFailed:
         [frameCryptor.delegate frameCryptor:frameCryptor
             didStateChangeWithParticipantId:[NSString stringForStdString:participant_id]
-                                  withState:RTCFrameCryptorErrorStateDecryptionFailed];
+                                  withState:FrameCryptionStateDecryptionFailed];
         break;
-      case FrameCryptionError::kMissingKey:
+      case FrameCryptionState::kMissingKey:
         [frameCryptor.delegate frameCryptor:frameCryptor
             didStateChangeWithParticipantId:[NSString stringForStdString:participant_id]
-                                  withState:RTCFrameCryptorErrorStateMissingKey];
+                                  withState:FrameCryptionStateMissingKey];
         break;
-      case FrameCryptionError::kInternalError:
+      case FrameCryptionState::kKeyRatcheted:
         [frameCryptor.delegate frameCryptor:frameCryptor
             didStateChangeWithParticipantId:[NSString stringForStdString:participant_id]
-                                  withState:RTCFrameCryptorErrorStateInternalError];
+                                  withState:FrameCryptionStateKeyRatcheted];
+        break;
+      case FrameCryptionState::kInternalError:
+        [frameCryptor.delegate frameCryptor:frameCryptor
+            didStateChangeWithParticipantId:[NSString stringForStdString:participant_id]
+                                  withState:FrameCryptionStateInternalError];
         break;
     }
   }
@@ -109,7 +114,7 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionError(const std::string part
 - (instancetype)initWithRtpSender:(RTC_OBJC_TYPE(RTCRtpSender) *)sender
                     participantId:(NSString *)participantId
                         algorithm:(RTCCyrptorAlgorithm)algorithm
-                       keyManager:(RTC_OBJC_TYPE(RTCFrameCryptorKeyManager) *)keyManager {
+                       keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider {
   if (self = [super init]) {
     _observer.reset(new webrtc::RTCFrameCryptorDelegateAdapter(self));
     _participantId = participantId;
@@ -121,7 +126,7 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionError(const std::string part
         new webrtc::FrameCryptorTransformer([participantId stdString],
                                             mediaType,
                                             [self algorithmFromEnum:algorithm],
-                                            keyManager.nativeKeyManager));
+                                            keyProvider.nativeKeyProvider));
 
     rtpSender->SetEncoderToPacketizerFrameTransformer(frame_crypto_transformer_);
     frame_crypto_transformer_->SetEnabled(false);
@@ -133,7 +138,7 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionError(const std::string part
 - (instancetype)initWithRtpReceiver:(RTC_OBJC_TYPE(RTCRtpReceiver) *)receiver
                       participantId:(NSString *)participantId
                           algorithm:(RTCCyrptorAlgorithm)algorithm
-                         keyManager:(RTC_OBJC_TYPE(RTCFrameCryptorKeyManager) *)keyManager {
+                         keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider {
   if (self = [super init]) {
     _observer.reset(new webrtc::RTCFrameCryptorDelegateAdapter(self));
     _participantId = participantId;
@@ -145,7 +150,7 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionError(const std::string part
         new webrtc::FrameCryptorTransformer([participantId stdString],
                                             mediaType,
                                             [self algorithmFromEnum:algorithm],
-                                            keyManager.nativeKeyManager));
+                                            keyProvider.nativeKeyProvider));
 
     rtpReceiver->SetDepacketizerToDecoderFrameTransformer(frame_crypto_transformer_);
     frame_crypto_transformer_->SetEnabled(false);

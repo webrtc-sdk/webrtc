@@ -14,32 +14,18 @@
  * limitations under the License.
  */
 
-#import "RTCFrameCryptor.h"
+#import "RTCFrameCryptorKeyProvider.h"
 
-#include <string>
 #include "api/crypto/frame_crypto_transformer.h"
+#include "rtc_base/ref_count.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface RTC_OBJC_TYPE (RTCFrameCryptor)
+@interface RTC_OBJC_TYPE (RTCFrameCryptorKeyProvider)
 ()
 
-    @end
+    @property(nonatomic, readonly) rtc::scoped_refptr<webrtc::KeyProvider> nativeKeyProvider;
 
-namespace webrtc {
-
-class RTCFrameCryptorDelegateAdapter : public FrameCryptorTransformerObserver {
- public:
-  RTCFrameCryptorDelegateAdapter(RTC_OBJC_TYPE(RTCFrameCryptor) * frameCryptor);
-  ~RTCFrameCryptorDelegateAdapter() override;
-
-  void OnFrameCryptionStateChanged(const std::string participant_id,
-                                   FrameCryptionState state) override;
-
- private:
-  __weak RTC_OBJC_TYPE(RTCFrameCryptor) * frame_cryptor_;
-};
-
-}  // namespace webrtc
+@end
 
 NS_ASSUME_NONNULL_END
