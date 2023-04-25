@@ -14,23 +14,22 @@
  * limitations under the License.
  */
 
-#import <Foundation/Foundation.h>
+#ifndef SDK_ANDROID_SRC_JNI_PC_FRAME_CRYPTOR_KEY_PROVIDER_H_
+#define SDK_ANDROID_SRC_JNI_PC_FRAME_CRYPTOR_KEY_PROVIDER_H_
 
-#import "RTCMacros.h"
+#include <jni.h>
 
-NS_ASSUME_NONNULL_BEGIN
+#include "api/crypto/frame_crypto_transformer.h"
+#include "sdk/android/native_api/jni/scoped_java_ref.h"
 
-RTC_OBJC_EXPORT
-@interface RTC_OBJC_TYPE (RTCFrameCryptorKeyManager) : NSObject
+namespace webrtc {
+namespace jni {
 
-- (void)setKey:(NSData *)key withIndex:(int)index forParticipant:(NSString *)participantId;
+ScopedJavaLocalRef<jobject> NativeToJavaFrameCryptorKeyProvider(
+    JNIEnv* env,
+    rtc::scoped_refptr<webrtc::DefaultKeyProviderImpl> cryptor);
 
-- (void)setKeys:(NSArray<NSData *> *)keys forParticipant:(NSString *)participantId;
+}  // namespace jni
+}  // namespace webrtc
 
-- (NSArray<NSData*> *) getKeys:(NSString *)participantId;
-
-- (instancetype)init;
-
-@end
-
-NS_ASSUME_NONNULL_END
+#endif  // SDK_ANDROID_SRC_JNI_PC_FRAME_CRYPTOR_KEY_PROVIDER_H_
