@@ -572,13 +572,6 @@ void FrameCryptorTransformer::decryptFrame(
         auto newMaterial = key_handler->RatchetKeyMaterial(currentKeyMaterial);
         ratchetedKeySet = key_handler->DeriveKeys(newMaterial, key_handler->options().ratchet_salt, 128);
 
-        if (last_dec_error_ != FrameCryptionState::kKeyRatcheted) {
-          last_dec_error_ = FrameCryptionState::kKeyRatcheted;
-          if (observer_)
-            observer_->OnFrameCryptionStateChanged(participant_id_,
-                                                   last_dec_error_);
-        }
-
         if (AesEncryptDecrypt(EncryptOrDecrypt::kDecrypt, algorithm_,
                               ratchetedKeySet->encryption_key, iv, frameHeader,
                               encrypted_payload, &buffer) == Success) {
@@ -588,6 +581,12 @@ void FrameCryptorTransformer::decryptFrame(
           decryption_success = true;
           // success, so we set the new key
           key_handler->SetKeyFromMaterial(newMaterial, key_index);
+          if (last_dec_error_ != FrameCryptionState::kKeyRatcheted) {
+            last_dec_error_ = FrameCryptionState::kKeyRatcheted;
+            if (observer_)
+              observer_->OnFrameCryptionStateChanged(participant_id_,
+                                                     last_dec_error_);
+          }
           break;
         }
         // for the next ratchet attempt
