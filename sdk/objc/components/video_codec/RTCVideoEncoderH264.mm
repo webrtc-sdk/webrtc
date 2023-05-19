@@ -648,9 +648,9 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
 #if defined(WEBRTC_MAC) && !defined(WEBRTC_IOS)
   // Currently hw accl is supported above 360p on mac, below 360p
   // the compression session will be created with hw accl disabled.
-  encoder_specs = @{
+  encoder_specs = [@{
     (NSString *)kVTVideoEncoderSpecification_EnableHardwareAcceleratedVideoEncoder : @(YES),
-  };
+  } mutableCopy];
   // Enable low-latency video encoding
   if (@available(iOS 14.5, macOS 11.3, *)) {
     [encoder_specs addEntriesFromDictionary:@{
