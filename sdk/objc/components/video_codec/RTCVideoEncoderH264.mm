@@ -697,6 +697,11 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
 - (void)configureCompressionSession {
   RTC_DCHECK(_compressionSession);
   SetVTSessionProperty(_compressionSession, kVTCompressionPropertyKey_RealTime, true);
+  // Sacrifice encoding speed over quality when required
+  if (@available(iOS 14.5, macOS 11.3, *)) {
+    SetVTSessionProperty(
+        _compressionSession, kVTCompressionPropertyKey_PrioritizeEncodingSpeedOverQuality, true);
+  }
   SetVTSessionProperty(_compressionSession,
                        kVTCompressionPropertyKey_ProfileLevel,
                        ExtractProfile(*_profile_level_id, _mode == RTCVideoCodecModeScreensharing));
