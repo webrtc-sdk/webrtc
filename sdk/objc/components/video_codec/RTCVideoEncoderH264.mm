@@ -329,6 +329,7 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
   VTCompressionSessionRef _compressionSession;
   CVPixelBufferPoolRef _pixelBufferPool;
   RTCVideoCodecMode _mode;
+  unsigned int _maxQP;
 
   webrtc::H264BitstreamParser _h264BitstreamParser;
   std::vector<uint8_t> _frameScaleBuffer;
@@ -370,6 +371,7 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
   _width = settings.width;
   _height = settings.height;
   _mode = settings.mode;
+  _maxQP = settings.qpMax;
 
   uint32_t aligned_width = (((_width + 15) >> 4) << 4);
   uint32_t aligned_height = (((_height + 15) >> 4) << 4);
@@ -697,10 +699,21 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
 - (void)configureCompressionSession {
   RTC_DCHECK(_compressionSession);
   SetVTSessionProperty(_compressionSession, kVTCompressionPropertyKey_RealTime, true);
-  // Sacrifice encoding speed over quality when required
+  // Sacrifice encoding speed over quality when necessary
   if (@available(iOS 14.0, macOS 11.0, *)) {
     SetVTSessionProperty(
         _compressionSession, kVTCompressionPropertyKey_PrioritizeEncodingSpeedOverQuality, true);
+  }
+  // Set maximum QP for screen sharing mode, range must be within 1 to 51
+  // https://developer.apple.com/documentation/videotoolbox/kvtcompressionpropertykey_maxallowedframeqp
+  if (@available(iOS 15.0, macOS 12.0, *)) {
+    // Only enable for screen sharing and let VideoToolbox do the optimizing as much as possible.
+    if (_mode == RTCVideoCodecModeScreensharing) {
+      RTC_LOG(LS_INFO) << "Configuring VideoToolbox to use maxQP: " << kHighH264QpThreshold
+                       << " mode: " << _mode;
+      SetVTSessionProperty(
+          _compressionSession, kVTCompressionPropertyKey_MaxAllowedFrameQP, kHighH264QpThreshold);
+    }
   }
   SetVTSessionProperty(_compressionSession,
                        kVTCompressionPropertyKey_ProfileLevel,
