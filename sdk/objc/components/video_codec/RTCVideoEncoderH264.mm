@@ -64,8 +64,8 @@ const int kBitsPerByte = 8;
 const OSType kNV12PixelFormat = kCVPixelFormatType_420YpCbCr8BiPlanarFullRange;
 
 typedef NS_ENUM(NSInteger, RTCVideoEncodeMode) {
-    Variable = 0,
-    Constant = 1,
+  Variable = 0,
+  Constant = 1,
 };
 
 NSArray *CreateRateLimitArray(uint32_t computedBitrateBps, RTCVideoEncodeMode mode) {
@@ -205,9 +205,9 @@ CFStringRef ExtractProfile(const webrtc::H264ProfileLevelId &profile_level_id, b
   switch (profile_level_id.profile) {
     case webrtc::H264Profile::kProfileConstrainedBaseline:
     case webrtc::H264Profile::kProfileBaseline:
-          if(screenSharing) {
-              return kVTProfileLevel_H264_Baseline_AutoLevel;
-          }
+      if (screenSharing) {
+        return kVTProfileLevel_H264_Baseline_AutoLevel;
+      }
       switch (profile_level_id.level) {
         case webrtc::H264Level::kLevel3:
           return kVTProfileLevel_H264_Baseline_3_0;
@@ -384,7 +384,9 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
         webrtc::ParseSdpForH264ProfileLevelId([codecInfo nativeSdpVideoFormat].parameters);
     _previousPresentationTimeStamp = kCMTimeZero;
     RTC_DCHECK(_profile_level_id);
-    RTC_LOG(LS_INFO) << "Using profile " << CFStringToString(ExtractProfile(*_profile_level_id, _codecMode == RTCVideoCodecModeScreensharing));
+    RTC_LOG(LS_INFO) << "Using profile "
+                     << CFStringToString(ExtractProfile(
+                            *_profile_level_id, _codecMode == RTCVideoCodecModeScreensharing));
     RTC_CHECK([codecInfo.name isEqualToString:kRTCVideoCodecH264Name]);
   }
   return self;
@@ -404,8 +406,8 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
   _codecMode = settings.mode;
   _maxQP = settings.qpMax;
 
-  _minBitrate = settings.minBitrate * 1000; // minBitrate is in kbps.
-  _maxBitrate = settings.maxBitrate * 1000; // maxBitrate is in kbps.
+  _minBitrate = settings.minBitrate * 1000;  // minBitrate is in kbps.
+  _maxBitrate = settings.maxBitrate * 1000;  // maxBitrate is in kbps.
   _encodeMode = _minBitrate == _maxBitrate ? Constant : Variable;
 
   uint32_t aligned_width = (((_width + 15) >> 4) << 4);
@@ -479,8 +481,8 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
       int dstWidth = CVPixelBufferGetWidth(pixelBuffer);
       int dstHeight = CVPixelBufferGetHeight(pixelBuffer);
       if ([rtcPixelBuffer requiresScalingToWidth:dstWidth height:dstHeight]) {
-        int size =
-            [rtcPixelBuffer bufferSizeForCroppingAndScalingToWidth:dstWidth height:dstHeight];
+        int size = [rtcPixelBuffer bufferSizeForCroppingAndScalingToWidth:dstWidth
+                                                                   height:dstHeight];
         _frameScaleBuffer.resize(size);
       } else {
         _frameScaleBuffer.clear();
@@ -751,9 +753,10 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
           _compressionSession, kVTCompressionPropertyKey_MaxAllowedFrameQP, kHighH264QpThreshold);
     }
   }
-  SetVTSessionProperty(_compressionSession,
-                       kVTCompressionPropertyKey_ProfileLevel,
-                       ExtractProfile(*_profile_level_id, _codecMode == RTCVideoCodecModeScreensharing));
+  SetVTSessionProperty(
+      _compressionSession,
+      kVTCompressionPropertyKey_ProfileLevel,
+      ExtractProfile(*_profile_level_id, _codecMode == RTCVideoCodecModeScreensharing));
   SetVTSessionProperty(_compressionSession, kVTCompressionPropertyKey_AllowFrameReordering, false);
 
   // [self updateEncoderBitrateAndFrameRate];
@@ -794,7 +797,7 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
   OSStatus status = noErr;
 
   // (_encodeMode == Variable) ? _targetBitrateBps : _bitrateAdjuster->GetAdjustedBitrateBps();
-  uint32_t computedBitrateBps = _targetBitrateBps; 
+  uint32_t computedBitrateBps = _targetBitrateBps;
 
   // With zero `_maxAllowedFrameRate`, we fall back to automatic frame rate detection.
   uint32_t computedFrameRate = _maxAllowedFrameRate > 0 ? _targetFrameRate : 0;
@@ -806,7 +809,8 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
                                   (__bridge CFTypeRef) @(computedFrameRate));
     // Ensure the bitrate was set successfully
     if (status != noErr) {
-      RTC_LOG(LS_ERROR) << "Failed to set frame rate: " << computedFrameRate << " error: " << status;
+      RTC_LOG(LS_ERROR) << "Failed to set frame rate: " << computedFrameRate
+                        << " error: " << status;
     } else {
       RTC_LOG(LS_INFO) << "Did update encoder frame rate: " << computedFrameRate;
     }
@@ -827,9 +831,10 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
       RTC_LOG(LS_INFO) << "Did update encoder bitrate: " << computedBitrateBps;
     }
 
-    status = VTSessionSetProperty(_compressionSession,
-                                  kVTCompressionPropertyKey_DataRateLimits,
-                                  (__bridge CFArrayRef)CreateRateLimitArray(computedBitrateBps, _encodeMode));
+    status = VTSessionSetProperty(
+        _compressionSession,
+        kVTCompressionPropertyKey_DataRateLimits,
+        (__bridge CFArrayRef)CreateRateLimitArray(computedBitrateBps, _encodeMode));
     if (status != noErr) {
       RTC_LOG(LS_ERROR) << "Failed to update encoder data rate limits";
     } else {
@@ -892,8 +897,9 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
   frame.captureTimeMs = renderTimeMs;
   frame.timeStamp = timestamp;
   frame.rotation = rotation;
-  frame.contentType = (_codecMode == RTCVideoCodecModeScreensharing) ? RTCVideoContentTypeScreenshare :
-                                                                  RTCVideoContentTypeUnspecified;
+  frame.contentType = (_codecMode == RTCVideoCodecModeScreensharing) ?
+      RTCVideoContentTypeScreenshare :
+      RTCVideoContentTypeUnspecified;
   frame.flags = webrtc::VideoSendTiming::kInvalid;
 
   _h264BitstreamParser.ParseBitstream(*buffer);
@@ -906,9 +912,9 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
   }
 
   // if (_encodeMode == Constant) {
-    // In CBR mode, we adjust bitrate before every encode based on past history
-    // of bitrate adherence.
-    // _bitrateAdjuster->Update(frame.buffer.length);
+  // In CBR mode, we adjust bitrate before every encode based on past history
+  // of bitrate adherence.
+  // _bitrateAdjuster->Update(frame.buffer.length);
   // }
 }
 
