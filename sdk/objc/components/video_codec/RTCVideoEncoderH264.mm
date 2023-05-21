@@ -343,7 +343,7 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
 
 @implementation RTC_OBJC_TYPE (RTCVideoEncoderH264) {
   RTC_OBJC_TYPE(RTCVideoCodecInfo) * _codecInfo;
-  std::unique_ptr<webrtc::BitrateAdjuster> _bitrateAdjuster;
+  // std::unique_ptr<webrtc::BitrateAdjuster> _bitrateAdjuster;
   uint32_t _targetBitrateBps;
   uint32_t _targetFrameRate;
   uint32_t _encoderBitrateBps;
@@ -378,7 +378,7 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
 - (instancetype)initWithCodecInfo:(RTC_OBJC_TYPE(RTCVideoCodecInfo) *)codecInfo {
   if (self = [super init]) {
     _codecInfo = codecInfo;
-    _bitrateAdjuster.reset(new webrtc::BitrateAdjuster(.5, .95));
+    // _bitrateAdjuster.reset(new webrtc::BitrateAdjuster(.5, .95));
     _packetizationMode = RTCH264PacketizationModeNonInterleaved;
     _profile_level_id =
         webrtc::ParseSdpForH264ProfileLevelId([codecInfo nativeSdpVideoFormat].parameters);
@@ -404,8 +404,8 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
   _codecMode = settings.mode;
   _maxQP = settings.qpMax;
 
-  _minBitrate = settings.minBitrate * 1000; 
-  _maxBitrate = settings.maxBitrate * 1000;
+  _minBitrate = settings.minBitrate * 1000; // minBitrate is in kbps.
+  _maxBitrate = settings.maxBitrate * 1000; // maxBitrate is in kbps.
   _encodeMode = _minBitrate == _maxBitrate ? Constant : Variable;
 
   uint32_t aligned_width = (((_width + 15) >> 4) << 4);
@@ -416,7 +416,7 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
   // We can only set average bitrate on the HW encoder.
   if (_encodeMode == Constant) {
     _targetBitrateBps = _maxBitrate;
-    _bitrateAdjuster->SetTargetBitrateBps(_targetBitrateBps);
+    // _bitrateAdjuster->SetTargetBitrateBps(_targetBitrateBps);
   } else {
     _targetBitrateBps = settings.startBitrate * 1000;  // startBitrate is in kbps.
   }
@@ -793,7 +793,8 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
   // Initial status
   OSStatus status = noErr;
 
-  uint32_t computedBitrateBps = _targetBitrateBps; // (_encodeMode == Variable) ? _targetBitrateBps : _bitrateAdjuster->GetAdjustedBitrateBps();
+  // (_encodeMode == Variable) ? _targetBitrateBps : _bitrateAdjuster->GetAdjustedBitrateBps();
+  uint32_t computedBitrateBps = _targetBitrateBps; 
 
   // With zero `_maxAllowedFrameRate`, we fall back to automatic frame rate detection.
   uint32_t computedFrameRate = _maxAllowedFrameRate > 0 ? _targetFrameRate : 0;
@@ -904,11 +905,11 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
     return;
   }
 
-  if (_encodeMode == Constant) {
+  // if (_encodeMode == Constant) {
     // In CBR mode, we adjust bitrate before every encode based on past history
     // of bitrate adherence.
-    _bitrateAdjuster->Update(frame.buffer.length);
-  }
+    // _bitrateAdjuster->Update(frame.buffer.length);
+  // }
 }
 
 - (nullable RTC_OBJC_TYPE(RTCVideoEncoderQpThresholds) *)scalingSettings {
