@@ -77,7 +77,8 @@ NSArray *CreateRateLimitArray(uint32_t computedBitrateBps, RTCVideoEncodeMode mo
       uint32_t avgBytesPerSecond = computedBitrateBps / kBitsPerByte * avgInterval;
       // And the peak bitrate is measured per-second in a way similar to CBR.
       float peakInterval = 1.0;
-      uint32_t peakBytesPerSecond = computedBitrateBps * kLimitToAverageBitRateFactor / kBitsPerByte;
+      uint32_t peakBytesPerSecond =
+          computedBitrateBps * kLimitToAverageBitRateFactor / kBitsPerByte;
       return @[ @(peakBytesPerSecond), @(peakInterval), @(avgBytesPerSecond), @(avgInterval) ];
     }
     case Constant: {
@@ -575,11 +576,10 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
 }
 
 - (int)setBitrate:(uint32_t)bitrateKbit framerate:(uint32_t)framerate {
-  //
   _targetBitrateBps = bitrateKbit * 1000;
-  if (_encodeMode == Constant) {
-    _bitrateAdjuster->SetTargetBitrateBps(_targetBitrateBps);
-  }
+  // if (_encodeMode == Constant) {
+  //   _bitrateAdjuster->SetTargetBitrateBps(_targetBitrateBps);
+  // }
 
   RTC_LOG(LS_INFO) << "setBitrateKBit: " << bitrateKbit << " targetBps: " << _targetBitrateBps
                    << " frameRate: " << framerate;
@@ -756,7 +756,7 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
                        ExtractProfile(*_profile_level_id, _codecMode == RTCVideoCodecModeScreensharing));
   SetVTSessionProperty(_compressionSession, kVTCompressionPropertyKey_AllowFrameReordering, false);
 
-  [self updateEncoderBitrateAndFrameRate];
+  // [self updateEncoderBitrateAndFrameRate];
 
   // TODO(tkchin): Look at entropy mode and colorspace matrices.
   // TODO(tkchin): Investigate to see if there's any way to make this work.
@@ -793,7 +793,7 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
   // Initial status
   OSStatus status = noErr;
 
-  uint32_t computedBitrateBps = (_encodeMode == Variable) ? _targetBitrateBps : _bitrateAdjuster->GetAdjustedBitrateBps();
+  uint32_t computedBitrateBps = _targetBitrateBps; // (_encodeMode == Variable) ? _targetBitrateBps : _bitrateAdjuster->GetAdjustedBitrateBps();
 
   // With zero `_maxAllowedFrameRate`, we fall back to automatic frame rate detection.
   uint32_t computedFrameRate = _maxAllowedFrameRate > 0 ? _targetFrameRate : 0;
@@ -826,10 +826,9 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
       RTC_LOG(LS_INFO) << "Did update encoder bitrate: " << computedBitrateBps;
     }
 
-    NSArray *rateLimitArray = CreateRateLimitArray(computedBitrateBps, _encodeMode);
     status = VTSessionSetProperty(_compressionSession,
                                   kVTCompressionPropertyKey_DataRateLimits,
-                                  (__bridge CFArrayRef)rateLimitArray);
+                                  (__bridge CFArrayRef)CreateRateLimitArray(computedBitrateBps, _encodeMode));
     if (status != noErr) {
       RTC_LOG(LS_ERROR) << "Failed to update encoder data rate limits";
     } else {
