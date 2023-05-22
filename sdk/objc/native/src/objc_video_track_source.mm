@@ -36,8 +36,14 @@ namespace webrtc {
 
 ObjCVideoTrackSource::ObjCVideoTrackSource() : ObjCVideoTrackSource(false) {}
 
+#if defined(WEBRTC_ANDROID)
+constexpr int kResolutionAlignment = 16;
+#else
+constexpr int kResolutionAlignment = 2;
+#endif
+
 ObjCVideoTrackSource::ObjCVideoTrackSource(bool is_screencast)
-    : AdaptedVideoTrackSource(/* required resolution alignment */ is_screencast? 16 : 2),
+    : AdaptedVideoTrackSource(/* required resolution alignment */ kResolutionAlignment),
       is_screencast_(is_screencast) {}
 
 ObjCVideoTrackSource::ObjCVideoTrackSource(RTCObjCVideoSourceAdapter *adapter) : adapter_(adapter) {
