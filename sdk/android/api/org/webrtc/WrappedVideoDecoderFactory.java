@@ -34,7 +34,7 @@ public class WrappedVideoDecoderFactory implements VideoDecoderFactory {
     @Nullable
     private final VideoDecoderFactory platformSoftwareVideoDecoderFactory;
 
-    @Nullable
+    @Override
     public VideoDecoder createDecoder(VideoCodecInfo codecType) {
         VideoDecoder softwareDecoder = this.softwareVideoDecoderFactory.createDecoder(codecType);
         VideoDecoder hardwareDecoder = this.hardwareVideoDecoderFactory.createDecoder(codecType);
@@ -61,6 +61,7 @@ public class WrappedVideoDecoderFactory implements VideoDecoderFactory {
         return false;
     }
 
+    @Override
     public VideoCodecInfo[] getSupportedCodecs() {
         LinkedHashSet<VideoCodecInfo> supportedCodecInfos = new LinkedHashSet();
         supportedCodecInfos.addAll(Arrays.asList(this.softwareVideoDecoderFactory.getSupportedCodecs()));

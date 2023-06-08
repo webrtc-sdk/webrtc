@@ -364,6 +364,7 @@ if (is_android) {
     sources = [
       "api/org/webrtc/DefaultVideoDecoderFactory.java",
       "api/org/webrtc/DefaultVideoEncoderFactory.java",
+      "api/org/webrtc/WrappedVideoDecoderFactory.java",
     ]
 
     deps = [
@@ -396,7 +397,6 @@ if (is_android) {
       "api/org/webrtc/HardwareVideoDecoderFactory.java",
       "api/org/webrtc/HardwareVideoEncoderFactory.java",
       "api/org/webrtc/PlatformSoftwareVideoDecoderFactory.java",
-      "api/org/webrtc/WrappedVideoDecoderFactory.java",
       "src/java/org/webrtc/AndroidVideoDecoder.java",
       "src/java/org/webrtc/BaseBitrateAdjuster.java",
       "src/java/org/webrtc/BitrateAdjuster.java",
