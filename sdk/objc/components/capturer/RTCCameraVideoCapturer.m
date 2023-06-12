@@ -495,7 +495,9 @@ const int64_t kNanosecondsPerSecond = 1000000000;
            @"updateDeviceCaptureFormat must be called on the capture queue.");
   @try {
     _currentDevice.activeFormat = format;
-    _currentDevice.activeVideoMinFrameDuration = CMTimeMake(1, fps);
+    if(![NSStringFromClass([_currentDevice class]) isEqualToString:@"AVCaptureDALDevice"]) {
+        _currentDevice.activeVideoMinFrameDuration = CMTimeMake(1, fps);
+    }
   } @catch (NSException *exception) {
     RTCLogError(@"Failed to set active format!\n User info:%@", exception.userInfo);
     return;
