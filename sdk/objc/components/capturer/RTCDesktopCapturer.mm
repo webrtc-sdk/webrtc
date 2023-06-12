@@ -32,7 +32,7 @@
 @synthesize nativeCapturer = _nativeCapturer;
 @synthesize source = _source;
 
-- (instancetype)initWithSource:(RTC_OBJC_TYPE(RTCDesktopSource) *)source delegate:(__weak id<RTC_OBJC_TYPE(RTCDesktopCapturerDelegate)>)delegate captureDelegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)captureDelegate {
+- (instancetype)initWithSource:(RTCDesktopSource*)source delegate:(__weak id<RTC_OBJC_TYPE(RTCDesktopCapturerDelegate)>)delegate captureDelegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)captureDelegate {
     if (self = [super initWithDelegate:captureDelegate]) {
       webrtc::DesktopType captureType = webrtc::kScreen;
       if(source.sourceType == RTCDesktopSourceTypeWindow) {

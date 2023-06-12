@@ -235,7 +235,7 @@ void MediaSource::SaveCaptureResult(webrtc::DesktopCapturer::Result result,
   NSData *imageData;
   NSBitmapImageRep *newRep = [[NSBitmapImageRep alloc] initWithCGImage:cgImage];
   [newRep setSize:NSSizeToCGSize(outputSize.size)];
-  imageData = [newRep representationUsingType:NSBitmapImageFileTypeJPEG
+  imageData = [newRep representationUsingType:NSJPEGFileType
                                    properties:@{
                                      NSImageCompressionFactor : @1.0f
                                    }];

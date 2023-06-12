@@ -19,7 +19,7 @@
 #import "RTCDesktopSource.h"
 #import "RTCDesktopSource+Private.h"
 
-@implementation RTC_OBJC_TYPE(RTCDesktopSource) {
+@implementation RTCDesktopSource {
     NSString *_sourceId;
     NSString *_name;
     NSImage *_thumbnail;

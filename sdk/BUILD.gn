@@ -700,6 +700,43 @@ if (is_ios || is_mac) {
         "../rtc_base/system:gcd_helpers",
       ]
     }
+    
+    rtc_library("desktopcapture_objc") {
+      visibility = [ "*" ]
+      sources = [
+        "objc/components/capturer/RTCDesktopCapturer+Private.h",
+        "objc/components/capturer/RTCDesktopCapturer.h",
+        "objc/components/capturer/RTCDesktopCapturer.mm",
+        "objc/components/capturer/RTCDesktopSource+Private.h",
+        "objc/components/capturer/RTCDesktopSource.h",
+        "objc/components/capturer/RTCDesktopSource.mm",
+        "objc/components/capturer/RTCDesktopMediaList+Private.h",
+        "objc/components/capturer/RTCDesktopMediaList.h",
+        "objc/components/capturer/RTCDesktopMediaList.mm",
+        "objc/native/src/objc_desktop_capture.h",
+        "objc/native/src/objc_desktop_capture.mm",
+        "objc/native/src/objc_desktop_media_list.h",
+        "objc/native/src/objc_desktop_media_list.mm",
+      ]
+      frameworks = [ 
+        "AppKit.framework",
+      ]
+
+      configs += [ "..:common_objc" ]
+
+      public_configs = [ ":common_config_objc" ]
+
+      deps = [
+        ":base_objc",
+        ":helpers_objc",
+        ":videoframebuffer_objc",
+        "../rtc_base/system:gcd_helpers",
+        "../modules/desktop_capture",
+      ]
+      if(is_mac) {
+        deps += [ "//third_party:jpeg", ]
+      }
+    }
 
     rtc_library("videocodec_objc") {
       visibility = [ "*" ]
@@ -1527,6 +1564,9 @@ if (is_ios || is_mac) {
           "objc/base/RTCYUVPlanarBuffer.h",
           "objc/components/capturer/RTCCameraVideoCapturer.h",
           "objc/components/capturer/RTCFileVideoCapturer.h",
+          "objc/components/capturer/RTCDesktopCapturer.h",
+          "objc/components/capturer/RTCDesktopSource.h",
+          "objc/components/capturer/RTCDesktopMediaList.h",
           "objc/components/renderer/metal/RTCMTLVideoView.h",
           "objc/components/renderer/metal/RTCMTLNSVideoView.h",
           "objc/components/renderer/opengl/RTCNSGLVideoView.h",
@@ -1561,6 +1601,7 @@ if (is_ios || is_mac) {
           ":opengl_ui_objc",
           ":peerconnectionfactory_base_objc",
           ":videocapture_objc",
+          ":desktopcapture_objc",
           ":videocodec_objc",
           ":videotoolbox_objc",
         ]
