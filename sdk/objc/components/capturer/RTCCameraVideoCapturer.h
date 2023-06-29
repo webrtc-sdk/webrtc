@@ -40,6 +40,8 @@ NS_EXTENSION_UNAVAILABLE_IOS("Camera not available in app extensions.")
 
 // A Boolean value that indicates whether the capture session enables access to the camera while
 // multitasking.
+// You can enable multitasking camera access by setting this value to true prior to starting the
+// capture session.
 // https://developer.apple.com/documentation/avfoundation/avcapturesession/4013227-ismultitaskingcameraaccessenable
 @property(assign, nonatomic) BOOL isMultitaskingAccessEnabled;
 
