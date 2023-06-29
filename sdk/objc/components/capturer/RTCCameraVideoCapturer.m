@@ -140,6 +140,35 @@ const int64_t kNanosecondsPerSecond = 1000000000;
   return _preferredOutputPixelFormat;
 }
 
+- (BOOL)isMultitaskingAccessSupported {
+// Only iOS 16+
+#if defined(WEBRTC_IOS)
+  if (@available(iOS 16.0, *)) {
+    return [_captureSession isMultitaskingCameraAccessSupported];
+  }
+#endif
+  return NO;
+}
+
+- (BOOL)isMultitaskingAccessEnabled {
+  // Only iOS 16+
+#if defined(WEBRTC_IOS)
+  if (@available(iOS 16.0, *)) {
+    return [_captureSession isMultitaskingCameraAccessEnabled];
+  }
+#endif
+  return NO;
+}
+
+- (void)setIsMultitaskingAccessEnabled:(BOOL)value {
+// Only iOS 16+
+#if defined(WEBRTC_IOS)
+  if (@available(iOS 16.0, *)) {
+    [_captureSession setMultitaskingCameraAccessEnabled:value];
+  }
+#endif
+}
+
 - (void)startCaptureWithDevice:(AVCaptureDevice *)device
                         format:(AVCaptureDeviceFormat *)format
                            fps:(NSInteger)fps {

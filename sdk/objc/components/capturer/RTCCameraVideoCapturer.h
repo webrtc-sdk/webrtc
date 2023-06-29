@@ -33,6 +33,16 @@ NS_EXTENSION_UNAVAILABLE_IOS("Camera not available in app extensions.")
 // Returns the most efficient supported output pixel format for this capturer.
 - (FourCharCode)preferredOutputPixelFormat;
 
+// A Boolean value that indicates whether the capture session supports using the camera while
+// multitasking.
+// https://developer.apple.com/documentation/avfoundation/avcapturesession/4013228-ismultitaskingcameraaccesssuppor
+@property(readonly, nonatomic) BOOL isMultitaskingAccessSupported;
+
+// A Boolean value that indicates whether the capture session enables access to the camera while
+// multitasking.
+// https://developer.apple.com/documentation/avfoundation/avcapturesession/4013227-ismultitaskingcameraaccessenable
+@property(assign, nonatomic) BOOL isMultitaskingAccessEnabled;
+
 // Starts the capture session asynchronously and notifies callback on completion.
 // The device will capture video in the format given in the `format` parameter. If the pixel format
 // in `format` is supported by the WebRTC pipeline, the same pixel format will be used for the
