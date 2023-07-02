@@ -124,10 +124,9 @@ class AudioDeviceSink : public webrtc::AudioDeviceSink {
         && _native->InitPlayout() == 0
         && _native->StartPlayout() == 0) {
 
-        // Success
         return YES;
     }
-  
+
     return NO;
   });
 }
@@ -178,7 +177,6 @@ class AudioDeviceSink : public webrtc::AudioDeviceSink {
         && _native->InitRecording() == 0
         && _native->StartRecording() == 0) {
 
-        // Success
         return YES;
     }
 
