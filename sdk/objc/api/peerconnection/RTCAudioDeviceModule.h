@@ -37,8 +37,10 @@ RTC_OBJC_EXPORT
 @property(nonatomic, assign) RTC_OBJC_TYPE(RTCAudioDevice) *inputDevice;
 
 // Executes low-level API's in sequence to switch the device
-// - (BOOL)setOutputDevice: (nullable RTCAudioDevice *)device;
-// - (BOOL)setInputDevice: (nullable RTCAudioDevice *)device;
+// Use outputDevice / inputDevice property unless you need to know if setting the device is
+// successful.
+- (BOOL)trySetOutputDevice:(nullable RTCAudioDevice *)device;
+- (BOOL)trySetInputDevice:(nullable RTCAudioDevice *)device;
 
 - (BOOL)setDevicesUpdatedHandler: (nullable RTCOnAudioDevicesDidUpdate) handler;
 

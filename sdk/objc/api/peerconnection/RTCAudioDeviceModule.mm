@@ -95,14 +95,18 @@ class AudioDeviceSink : public webrtc::AudioDeviceSink {
 }
 
 - (void)setOutputDevice: (RTCAudioDevice *)device {
+  [self trySetOutputDevice: device];
+}
 
-  return _workerThread->Invoke<void>(RTC_FROM_HERE, [self, device] {
+- (BOOL)trySetOutputDevice: (RTCAudioDevice *)device {
+
+  return _workerThread->Invoke<BOOL>(RTC_FROM_HERE, [self, device] {
 
     NSUInteger index = 0;
     NSArray *devices = [self _outputDevices];
 
     if ([devices count] == 0) {
-      return;
+      return NO;
     }
 
     if (device != nil) {
@@ -110,7 +114,7 @@ class AudioDeviceSink : public webrtc::AudioDeviceSink {
         return (*stop = [e.deviceId isEqualToString:device.deviceId]);
       }];
       if (index == NSNotFound) {
-        return;
+        return NO;
       }
     }
 
@@ -121,8 +125,10 @@ class AudioDeviceSink : public webrtc::AudioDeviceSink {
         && _native->StartPlayout() == 0) {
 
         // Success
-        return;
+        return YES;
     }
+  
+    return NO;
   });
 }
 
@@ -143,14 +149,18 @@ class AudioDeviceSink : public webrtc::AudioDeviceSink {
 }
 
 - (void)setInputDevice: (RTCAudioDevice *)device {
+  [self trySetInputDevice: device];
+}
 
-  return _workerThread->Invoke<void>(RTC_FROM_HERE, [self, device] {
+- (BOOL)trySetInputDevice: (RTCAudioDevice *)device {
+
+  return _workerThread->Invoke<BOOL>(RTC_FROM_HERE, [self, device] {
 
     NSUInteger index = 0;
     NSArray *devices = [self _inputDevices];
 
     if ([devices count] == 0) {
-      return;
+      return NO;
     }
 
     if (device != nil) {
@@ -158,7 +168,7 @@ class AudioDeviceSink : public webrtc::AudioDeviceSink {
         return (*stop = [e.deviceId isEqualToString:device.deviceId]);
       }];
       if (index == NSNotFound) {
-        return;
+        return NO;
       }
     }
 
@@ -169,8 +179,10 @@ class AudioDeviceSink : public webrtc::AudioDeviceSink {
         && _native->StartRecording() == 0) {
 
         // Success
-        return;
+        return YES;
     }
+
+    return NO;
   });
 }
 
