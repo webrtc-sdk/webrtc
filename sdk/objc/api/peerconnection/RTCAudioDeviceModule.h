@@ -33,9 +33,12 @@ RTC_OBJC_EXPORT
 @property(nonatomic, readonly) BOOL playing;
 @property(nonatomic, readonly) BOOL recording;
 
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCAudioDevice) *outputDevice;
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCAudioDevice) *inputDevice;
+
 // Executes low-level API's in sequence to switch the device
-- (BOOL)setOutputDevice: (nullable RTCAudioDevice *)device;
-- (BOOL)setInputDevice: (nullable RTCAudioDevice *)device;
+// - (BOOL)setOutputDevice: (nullable RTCAudioDevice *)device;
+// - (BOOL)setInputDevice: (nullable RTCAudioDevice *)device;
 
 - (BOOL)setDevicesUpdatedHandler: (nullable RTCOnAudioDevicesDidUpdate) handler;
 

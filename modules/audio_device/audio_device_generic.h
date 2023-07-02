@@ -136,6 +136,8 @@ class AudioDeviceGeneric {
 #endif  // WEBRTC_IOS
 
   virtual int32_t SetAudioDeviceSink(AudioDeviceSink* sink) = 0;
+  virtual int32_t GetPlayoutDevice() const { return -1; }
+  virtual int32_t GetRecordingDevice() const { return -1; }
 
   virtual void AttachAudioBuffer(AudioDeviceBuffer* audioBuffer) = 0;
 
