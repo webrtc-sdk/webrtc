@@ -951,6 +951,20 @@ int32_t AudioDeviceModuleImpl::SetAudioDeviceSink(AudioDeviceSink* sink) const {
   return ok;
 }
 
+int32_t AudioDeviceModuleImpl::GetPlayoutDevice() const {
+  RTC_LOG(LS_INFO) << __FUNCTION__;
+  int32_t r = audio_device_->GetPlayoutDevice();
+  RTC_LOG(LS_INFO) << "output: " << r;
+  return r;
+}
+
+int32_t AudioDeviceModuleImpl::GetRecordingDevice() const {
+  RTC_LOG(LS_INFO) << __FUNCTION__;
+  int32_t r = audio_device_->GetRecordingDevice();
+  RTC_LOG(LS_INFO) << "output: " << r;
+  return r;
+}
+
 AudioDeviceModuleImpl::PlatformType AudioDeviceModuleImpl::Platform() const {
   RTC_LOG(LS_INFO) << __FUNCTION__;
   return platform_type_;

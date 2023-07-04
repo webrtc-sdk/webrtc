@@ -158,6 +158,8 @@ class AudioDeviceMac : public AudioDeviceGeneric {
     audio_device_module_sink_ = sink;
     return 0;
   }
+  virtual int32_t GetPlayoutDevice() const;
+  virtual int32_t GetRecordingDevice() const;
 
  private:
   int32_t InitSpeakerLocked() RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_);

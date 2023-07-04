@@ -795,6 +795,14 @@ int16_t AudioDeviceMac::PlayoutDevices() {
                           MaxNumberDevices);
 }
 
+int32_t AudioDeviceMac::GetPlayoutDevice() const {  
+  if (_outputDeviceIsSpecified) {
+    return _outputDeviceIndex;
+  }
+
+  return 0;
+}
+
 int32_t AudioDeviceMac::SetPlayoutDevice(uint16_t index) {
   MutexLock lock(&mutex_);
 
@@ -867,6 +875,14 @@ int16_t AudioDeviceMac::RecordingDevices() {
   AudioDeviceID recDevices[MaxNumberDevices];
   return GetNumberDevices(kAudioDevicePropertyScopeInput, recDevices,
                           MaxNumberDevices);
+}
+
+int32_t AudioDeviceMac::GetRecordingDevice() const {
+  if (_inputDeviceIsSpecified) {
+    return _inputDeviceIndex;
+  }
+
+  return 0;
 }
 
 int32_t AudioDeviceMac::SetRecordingDevice(uint16_t index) {

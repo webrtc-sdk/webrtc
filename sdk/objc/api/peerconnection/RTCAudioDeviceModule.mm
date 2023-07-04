@@ -78,7 +78,27 @@ class AudioDeviceSink : public webrtc::AudioDeviceSink {
   });
 }
 
-- (BOOL)setOutputDevice: (nullable RTCAudioDevice *)device {
+- (RTCAudioDevice *)outputDevice {
+
+  return _workerThread->Invoke<RTC_OBJC_TYPE(RTCAudioDevice) *>(RTC_FROM_HERE, [self] {
+  
+    NSArray<RTC_OBJC_TYPE(RTCAudioDevice) *> *devices = [self _outputDevices];
+    int16_t devicesCount = (int16_t)([devices count]);
+    int16_t index = _native->GetPlayoutDevice();
+
+    if (devicesCount == 0 || index <= -1 || index > (devicesCount - 1)) {
+      return (RTC_OBJC_TYPE(RTCAudioDevice) *)nil;
+    }
+
+    return (RTC_OBJC_TYPE(RTCAudioDevice) *)[devices objectAtIndex:index];
+  });
+}
+
+- (void)setOutputDevice: (RTCAudioDevice *)device {
+  [self trySetOutputDevice: device];
+}
+
+- (BOOL)trySetOutputDevice: (RTCAudioDevice *)device {
 
   return _workerThread->Invoke<BOOL>(RTC_FROM_HERE, [self, device] {
 
@@ -111,7 +131,27 @@ class AudioDeviceSink : public webrtc::AudioDeviceSink {
   });
 }
 
-- (BOOL)setInputDevice: (nullable RTCAudioDevice *)device {
+- (RTCAudioDevice *)inputDevice {
+
+  return _workerThread->Invoke<RTC_OBJC_TYPE(RTCAudioDevice) *>(RTC_FROM_HERE, [self] {
+  
+    NSArray<RTC_OBJC_TYPE(RTCAudioDevice) *> *devices = [self _inputDevices];
+    int16_t devicesCount = (int16_t)([devices count]);
+    int16_t index = _native->GetRecordingDevice();
+
+    if (devicesCount == 0 || index <= -1 || index > (devicesCount - 1)) {
+      return (RTC_OBJC_TYPE(RTCAudioDevice) *)nil;
+    }
+
+    return (RTC_OBJC_TYPE(RTCAudioDevice) *)[devices objectAtIndex:index];
+  });
+}
+
+- (void)setInputDevice: (RTCAudioDevice *)device {
+  [self trySetInputDevice: device];
+}
+
+- (BOOL)trySetInputDevice: (RTCAudioDevice *)device {
 
   return _workerThread->Invoke<BOOL>(RTC_FROM_HERE, [self, device] {
 

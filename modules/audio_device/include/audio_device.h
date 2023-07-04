@@ -168,6 +168,8 @@ class AudioDeviceModule : public rtc::RefCountInterface {
 #endif  // WEBRTC_IOS
 
   virtual int32_t SetAudioDeviceSink(AudioDeviceSink* sink) const = 0;
+  virtual int32_t GetPlayoutDevice() const { return -1; }
+  virtual int32_t GetRecordingDevice() const { return -1; }
 
  protected:
   ~AudioDeviceModule() override {}
