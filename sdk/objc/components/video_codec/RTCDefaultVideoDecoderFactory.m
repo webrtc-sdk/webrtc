@@ -17,6 +17,10 @@
 #import "api/video_codec/RTCVideoDecoderVP8.h"
 #import "api/video_codec/RTCVideoDecoderVP9.h"
 #import "base/RTCVideoCodecInfo.h"
+#ifdef WEBRTC_USE_H265
+#import "RTCH265ProfileLevelId.h"
+#import "RTCVideoDecoderH265.h"
+#endif
 
 @implementation RTC_OBJC_TYPE (RTCDefaultVideoDecoderFactory)
 
@@ -42,10 +46,18 @@
   RTC_OBJC_TYPE(RTCVideoCodecInfo) *vp8Info =
       [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:kRTCVideoCodecVp8Name];
 
+#ifdef WEBRTC_USE_H265
+  RTC_OBJC_TYPE(RTCVideoCodecInfo) *h265Info =
+      [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:kRTCVideoCodecH265Name];
+#endif
+
   NSMutableArray<RTC_OBJC_TYPE(RTCVideoCodecInfo) *> *result = [@[
     constrainedHighInfo,
     constrainedBaselineInfo,
     vp8Info,
+#ifdef WEBRTC_USE_H265
+    h265Info,
+#endif
   ] mutableCopy];
 
   if ([RTC_OBJC_TYPE(RTCVideoDecoderVP9) isSupported]) {
@@ -74,6 +86,13 @@
     return [RTC_OBJC_TYPE(RTCVideoDecoderAV1) av1Decoder];
   }
 
+#ifdef WEBRTC_USE_H265
+  if (@available(iOS 11, *)) {
+    if ([info.name isEqualToString:kRTCVideoCodecH265Name]) {
+      return [[RTC_OBJC_TYPE(RTCVideoDecoderH265) alloc] init];
+    }
+  }
+#endif
   return nil;
 }
 

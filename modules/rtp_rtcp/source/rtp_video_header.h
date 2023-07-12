@@ -25,6 +25,7 @@
 #include "api/video/video_rotation.h"
 #include "api/video/video_timing.h"
 #include "modules/video_coding/codecs/h264/include/h264_globals.h"
+#include "modules/video_coding/codecs/h265/include/h265_globals.h"
 #include "modules/video_coding/codecs/vp8/include/vp8_globals.h"
 #include "modules/video_coding/codecs/vp9/include/vp9_globals.h"
 
@@ -40,6 +41,7 @@ using RTPVideoTypeHeader = absl::variant<absl::monostate,
                                          RTPVideoHeaderVP8,
                                          RTPVideoHeaderVP9,
                                          RTPVideoHeaderH264,
+                                         RTPVideoHeaderH265,
                                          RTPVideoHeaderLegacyGeneric>;
 
 struct RTPVideoHeader {
