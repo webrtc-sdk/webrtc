@@ -469,8 +469,6 @@ void FrameCryptorTransformer::decryptFrame(
     auto tmp = date_in.subview(date_in.size() - (uncrypted_magic_bytes.size() + 1),
                                uncrypted_magic_bytes.size());
 
-
-
     if (uncrypted_magic_bytes == std::vector<uint8_t>(tmp.begin(), tmp.end())) {
 
       RTC_CHECK_EQ(tmp.size(), uncrypted_magic_bytes.size());
@@ -493,7 +491,6 @@ void FrameCryptorTransformer::decryptFrame(
       return;
     }
   }
-
 
   uint8_t unencrypted_bytes = get_unencrypted_bytes(frame.get(), type_);
 
@@ -535,6 +532,12 @@ void FrameCryptorTransformer::decryptFrame(
                                                last_dec_error_);
     }
     return;
+  }
+
+  if(last_dec_error_ == kDecryptionFailed && !key_handler->have_valid_key) {
+      // if decryption failed and we have an invalid key,
+      // please try to decrypt with the next new key
+      return;
   }
 
   auto key_set = key_handler->GetKeySet(key_index);
@@ -609,6 +612,7 @@ void FrameCryptorTransformer::decryptFrame(
   if (!decryption_success) {
     if (last_dec_error_ != FrameCryptionState::kDecryptionFailed) {
       last_dec_error_ = FrameCryptionState::kDecryptionFailed;
+      key_handler->have_valid_key = false;
       if (observer_)
         observer_->OnFrameCryptionStateChanged(participant_id_,
                                                last_dec_error_);

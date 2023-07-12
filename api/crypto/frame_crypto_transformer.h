@@ -48,6 +48,7 @@ struct KeyProviderOptions {
 };
 
 class ParticipantKeyHandler {
+ friend class FrameCryptorTransformer;
  public:
   struct KeySet {
     std::vector<uint8_t> material;
@@ -77,6 +78,11 @@ class ParticipantKeyHandler {
 
   virtual std::shared_ptr<KeySet> GetKeySet(int keyIndex) {
     return cryptoKeyRing_[keyIndex != -1 ? keyIndex : currentKeyIndex];
+  }
+
+  virtual void SetKey(std::vector<uint8_t> password, int keyIndex) {
+    SetKeyFromMaterial(password, keyIndex);
+    have_valid_key = true;
   }
 
   virtual void SetKeyFromMaterial(std::vector<uint8_t> password, int keyIndex) {
@@ -109,7 +115,8 @@ class ParticipantKeyHandler {
     }
     return newMaterial;
   }
-
+ protected:
+  bool have_valid_key = false;
  private:
   int currentKeyIndex = 0;
   KeyProviderOptions options_;
@@ -157,8 +164,7 @@ class DefaultKeyProviderImpl : public KeyProvider {
     }
 
     auto keyHandler = keys_[participant_id];
-    keyHandler->SetKeyFromMaterial(key, index);
-
+    keyHandler->SetKey(key, index);
     return true;
   }
 
