@@ -17,9 +17,40 @@
 
 #include "rtc_base/checks.h"
 
-@implementation RTC_OBJC_TYPE (RTCAudioTrack)
+namespace webrtc {
+/**
+ * Captures audio data and converts to CMSampleBuffers
+ */
+class AudioSinkConverter : public webrtc::AudioTrackSinkInterface {
+ private:
+  __weak RTCAudioTrack *audioTrack_;
+
+ public:
+  AudioSinkConverter(RTCAudioTrack *audioTrack) {
+    NSLog(@"AudioHook: init Hook in RTCAudioTrack");
+    audioTrack_ = audioTrack;
+  }
+
+  void OnData(const void *audio_data,
+              int bits_per_sample,
+              int sample_rate,
+              size_t number_of_channels,
+              size_t number_of_frames,
+              absl::optional<int64_t> absolute_capture_timestamp_ms) override {
+    // TODO: Convert to CMSampleBuffer...
+    // audioTrack_.renderers;
+  }
+};
+}  // namespace webrtc
+
+@implementation RTC_OBJC_TYPE (RTCAudioTrack) {
+  rtc::Thread *_workerThread;
+  BOOL _IsAudioConverterActive;
+  std::unique_ptr<webrtc::AudioSinkConverter> _audioConverter;
+}
 
 @synthesize source = _source;
+@synthesize renderers = _renderers;
 
 - (instancetype)initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
                          source:(RTC_OBJC_TYPE(RTCAudioSource) *)source
@@ -43,7 +74,16 @@
   NSParameterAssert(factory);
   NSParameterAssert(nativeTrack);
   NSParameterAssert(type == RTCMediaStreamTrackTypeAudio);
-  return [super initWithFactory:factory nativeTrack:nativeTrack type:type];
+  if (self = [super initWithFactory:factory nativeTrack:nativeTrack type:type]) {
+    _renderers = [NSMutableArray<RTCAudioRenderer> array];
+    _audioConverter.reset(new webrtc::AudioSinkConverter(self));
+  }
+
+  return self;
+}
+
+- (void)dealloc {
+  // TODO: Clean up...
 }
 
 - (RTC_OBJC_TYPE(RTCAudioSource) *)source {
@@ -55,6 +95,26 @@
     }
   }
   return _source;
+}
+
+- (void)addRenderer:(id<RTC_OBJC_TYPE(RTCAudioRenderer)>)renderer {
+  [_renderers addObject:renderer];
+
+  if ([_renderers count] != 0 && !_IsAudioConverterActive) {
+    self.nativeAudioTrack->AddSink(_audioConverter.get());
+    _IsAudioConverterActive
+ = YES;
+  }
+}
+
+- (void)removeRenderer:(id<RTC_OBJC_TYPE(RTCAudioRenderer)>)renderer {
+  [_renderers removeObject:renderer];
+
+  if ([_renderers count] == 0 && _IsAudioConverterActive) {
+    self.nativeAudioTrack->RemoveSink(_audioConverter.get());
+    _IsAudioConverterActive
+ = NO;
+  }
 }
 
 #pragma mark - Private
