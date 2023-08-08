@@ -24,13 +24,13 @@ namespace webrtc {
 /**
  * Captures audio data and converts to CMSampleBuffers
  */
-class AudioSinkConverter : public webrtc::AudioTrackSinkInterface {
+class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTrackSinkInterface {
  private:
   __weak RTCAudioTrack *audioTrack_;
 
  public:
   AudioSinkConverter(RTCAudioTrack *audioTrack) {
-    NSLog(@"AudioHook: init Hook in RTCAudioTrack");
+    // Keep weak reference to RTCAudioTrack...
     audioTrack_ = audioTrack;
   }
 
@@ -40,12 +40,12 @@ class AudioSinkConverter : public webrtc::AudioTrackSinkInterface {
               size_t number_of_channels,
               size_t number_of_frames,
               absl::optional<int64_t> absolute_capture_timestamp_ms) override {
-    NSLog(@"OnData...");
-    // Convert to CMSampleBuffer...
-
+    /*
+     * Convert to CMSampleBuffer
+     * TODO: Handle case which number_of_channels could be 2 or more.
+     */
     int64_t elapsed_time_ms =
         absolute_capture_timestamp_ms ? absolute_capture_timestamp_ms.value() : rtc::TimeMillis();
-    NSLog(@"elapsed_time_ms: %lld", elapsed_time_ms);
 
     OSStatus status;
 
@@ -65,13 +65,17 @@ class AudioSinkConverter : public webrtc::AudioTrackSinkInterface {
     audioFormat.mBytesPerFrame = audioFormat.mBytesPerPacket / audioFormat.mFramesPerPacket;
 
     CMSampleTimingInfo timing = {
-        CMTimeMake(1, sample_rate), CMTimeMake(elapsed_time_ms, 1000), kCMTimeInvalid};
+        CMTimeMake(1, sample_rate),
+        CMTimeMake(elapsed_time_ms, 1000),
+        kCMTimeInvalid,
+    };
 
     CMFormatDescriptionRef format = NULL;
     status = CMAudioFormatDescriptionCreate(
         kCFAllocatorDefault, &audioFormat, sizeof(acl), &acl, 0, NULL, NULL, &format);
+
     if (status != 0) {
-      NSLog(@"Failed to create audio format description");
+      NSLog(@"RTCAudioTrack: Failed to create audio format description");
       return;
     }
 
@@ -89,7 +93,7 @@ class AudioSinkConverter : public webrtc::AudioTrackSinkInterface {
                                   NULL,
                                   &buffer);
     if (status != 0) {
-      NSLog(@"Failed to allocate sample buffer");
+      NSLog(@"RTCAudioTrack: Failed to allocate sample buffer");
       return;
     }
 
@@ -101,12 +105,9 @@ class AudioSinkConverter : public webrtc::AudioTrackSinkInterface {
     status = CMSampleBufferSetDataBufferFromAudioBufferList(
         buffer, kCFAllocatorDefault, kCFAllocatorDefault, 0, &bufferList);
     if (status != 0) {
-      NSLog(@"Failed to convert audio buffer list into sample buffer");
+      NSLog(@"RTCAudioTrack: Failed to convert audio buffer list into sample buffer");
       return;
     }
-
-    // if (!CMSampleBufferIsValid(buffer)) {
-    NSLog(@"CMSampleBufferIsValid: %d", CMSampleBufferIsValid(buffer));
 
     // Report back to RTCAudioTrack
     [audioTrack_ didCaptureSampleBuffer:buffer];
@@ -118,9 +119,8 @@ class AudioSinkConverter : public webrtc::AudioTrackSinkInterface {
 
 @implementation RTC_OBJC_TYPE (RTCAudioTrack) {
   rtc::Thread *_workerThread;
-  BOOL _IsAudioConverterActive;
-  // std::unique_ptr<webrtc::AudioSinkConverter> _audioConverter;
-  webrtc::AudioSinkConverter *_audioConverter;
+  BOOL _audioSinkAdded;
+  rtc::scoped_refptr<webrtc::AudioSinkConverter> _audioConverter;
 }
 
 @synthesize source = _source;
@@ -149,24 +149,27 @@ class AudioSinkConverter : public webrtc::AudioTrackSinkInterface {
   NSParameterAssert(nativeTrack);
   NSParameterAssert(type == RTCMediaStreamTrackTypeAudio);
   if (self = [super initWithFactory:factory nativeTrack:nativeTrack type:type]) {
+    NSLog(@"RTCAudioTrack: init...");
+    _workerThread = factory.workerThread;
     _renderers = [NSMutableArray<RTCAudioRenderer> array];
-    // Testing
-    //_workerThread->BlockingCall([self] {
-    // _audioConverter.reset(new webrtc::AudioSinkConverter(self));
-    // self.nativeAudioTrack->AddSink(_audioConverter.get());
-
-    _audioConverter = new webrtc::AudioSinkConverter(self);
-    self.nativeAudioTrack->AddSink(_audioConverter);
-    _IsAudioConverterActive = YES;
-    //});
+    _audioSinkAdded = NO;
+    _audioConverter = new rtc::RefCountedObject<webrtc::AudioSinkConverter>(self);
   }
 
   return self;
 }
 
 - (void)dealloc {
-  // TODO: Clean up...
-  NSLog(@"RTCAudioTrack dealloc...");
+  // Clean up...
+  _workerThread->BlockingCall([self] {
+    // Remove all renderers...
+    [_renderers removeAllObjects];
+  });
+  // Remove sink if added...
+  if (_audioSinkAdded) {
+    self.nativeAudioTrack->RemoveSink(_audioConverter.get());
+    _audioSinkAdded = NO;
+  }
 }
 
 - (RTC_OBJC_TYPE(RTCAudioSource) *)source {
@@ -181,23 +184,25 @@ class AudioSinkConverter : public webrtc::AudioTrackSinkInterface {
 }
 
 - (void)addRenderer:(id<RTC_OBJC_TYPE(RTCAudioRenderer)>)renderer {
-    _workerThread->BlockingCall([self, renderer] {
-      [_renderers addObject:renderer];
-
-      if ([_renderers count] != 0 && !_IsAudioConverterActive) {
-        self.nativeAudioTrack->AddSink(_audioConverter.get());
-        _IsAudioConverterActive = YES;
-      }
+  _workerThread->BlockingCall([self, renderer] {
+    [_renderers addObject:renderer];
+    // Add audio sink if not already added
+    if ([_renderers count] != 0 && !_audioSinkAdded) {
+      self.nativeAudioTrack->AddSink(_audioConverter.get());
+      _audioSinkAdded = YES;
     }
+  });
 }
 
 - (void)removeRenderer:(id<RTC_OBJC_TYPE(RTCAudioRenderer)>)renderer {
-  [_renderers removeObject:renderer];
-
-  if ([_renderers count] == 0 && _IsAudioConverterActive) {
-    self.nativeAudioTrack->RemoveSink(_audioConverter.get());
-    _IsAudioConverterActive = NO;
-  }
+  _workerThread->BlockingCall([self, renderer] {
+    [_renderers removeObject:renderer];
+    // Remove audio sink if no more renderers
+    if ([_renderers count] == 0 && _audioSinkAdded) {
+      self.nativeAudioTrack->RemoveSink(_audioConverter.get());
+      _audioSinkAdded = NO;
+    }
+  });
 }
 
 #pragma mark - Private
@@ -208,12 +213,14 @@ class AudioSinkConverter : public webrtc::AudioTrackSinkInterface {
 }
 
 - (void)didCaptureSampleBuffer:(CMSampleBufferRef)sampleBuffer {
-  // ...
-  _workerThread->BlockingCall([self, sampleBuffer] {
-    for (id<RTCAudioRenderer> renderer in self.renderers) {
-      // NSLog(@"%@", renderer);
+  // Retain reference...
+  CFRetain(sampleBuffer);
+  _workerThread->PostTask([self, sampleBuffer] {
+    for (id<RTCAudioRenderer> renderer in _renderers) {
       [renderer renderSampleBuffer:sampleBuffer];
     }
+    // Release reference...
+    CFRelease(sampleBuffer);
   });
 }
 
