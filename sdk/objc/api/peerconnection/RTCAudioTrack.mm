@@ -42,23 +42,26 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
               absl::optional<int64_t> absolute_capture_timestamp_ms) override {
     /*
      * Convert to CMSampleBuffer
-     * TODO: Handle case which number_of_channels could be 2 or more.
      */
     int64_t elapsed_time_ms =
         absolute_capture_timestamp_ms ? absolute_capture_timestamp_ms.value() : rtc::TimeMillis();
 
     OSStatus status;
 
+    // Only mono or stereo is supported currently.
+    assert(number_of_channels == 1 || number_of_channels == 2);
+
     AudioChannelLayout acl;
     bzero(&acl, sizeof(acl));
-    acl.mChannelLayoutTag = kAudioChannelLayoutTag_Mono;
+    acl.mChannelLayoutTag =
+        number_of_channels == 2 ? kAudioChannelLayoutTag_Stereo : kAudioChannelLayoutTag_Mono;
 
     AudioStreamBasicDescription audioFormat;
     audioFormat.mSampleRate = sample_rate;
     audioFormat.mFormatID = kAudioFormatLinearPCM;
     audioFormat.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger | kLinearPCMFormatFlagIsPacked;
-    audioFormat.mFramesPerPacket = 1;
-    audioFormat.mChannelsPerFrame = 1;
+    audioFormat.mFramesPerPacket = number_of_frames;
+    audioFormat.mChannelsPerFrame = number_of_channels;
     audioFormat.mBitsPerChannel = 16;
     audioFormat.mBytesPerPacket = audioFormat.mFramesPerPacket * audioFormat.mChannelsPerFrame *
         audioFormat.mBitsPerChannel / 8;
