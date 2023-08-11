@@ -43,13 +43,17 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
     /*
      * Convert to CMSampleBuffer
      */
+
+    if (number_of_channels != 1 && number_of_channels != 2) {
+      NSLog(@"RTCAudioTrack: Only mono or stereo is supported currently. numberOfChannels: %zu",
+            number_of_channels);
+      return;
+    }
+
     int64_t elapsed_time_ms =
         absolute_capture_timestamp_ms ? absolute_capture_timestamp_ms.value() : rtc::TimeMillis();
 
     OSStatus status;
-
-    // Only mono or stereo is supported currently.
-    assert(number_of_channels == 1 || number_of_channels == 2);
 
     AudioChannelLayout acl;
     bzero(&acl, sizeof(acl));
