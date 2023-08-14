@@ -23,16 +23,24 @@
   webrtc::AudioBuffer *_audioBuffer;
 }
 
-- (size_t)numChannels {
+- (size_t)channels {
   return _audioBuffer->num_channels();
 }
 
-- (size_t)numFrames {
+- (size_t)frames {
   return _audioBuffer->num_frames();
 }
 
 - (size_t)framesPerBand {
   return _audioBuffer->num_frames_per_band();
+}
+
+- (size_t)bands {
+  return _audioBuffer->num_bands();
+}
+
+- (float *)rawBufferForChannel:(size_t)channel {
+  return _audioBuffer->channels()[channel];
 }
 
 #pragma mark - Private

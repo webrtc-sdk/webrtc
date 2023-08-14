@@ -23,8 +23,15 @@ NS_ASSUME_NONNULL_BEGIN
 RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCAudioBuffer) : NSObject
 
-@property(nonatomic, readonly) size_t numChannels;
-@property(nonatomic, readonly) size_t numFrames;
+@property(nonatomic, readonly) size_t channels;
+@property(nonatomic, readonly) size_t frames;
+@property(nonatomic, readonly) size_t framesPerBand;
+@property(nonatomic, readonly) size_t bands;
+
+// Returns pointer arrays. Index range from 0 to `frames`.
+- (float* _Nonnull)rawBufferForChannel:(size_t)channel;
+
+// TODO: More convenience methods...
 
 @end
 
