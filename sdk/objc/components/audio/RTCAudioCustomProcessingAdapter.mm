@@ -14,24 +14,28 @@
  * limitations under the License.
  */
 
-#import "RTCAudioCustomProcessingAdapter+Private.h"
 #import "RTCAudioBuffer+Private.h"
+#import "RTCAudioCustomProcessingAdapter+Private.h"
 
 namespace webrtc {
 
 class AudioCustomProcessingAdapter : public webrtc::CustomProcessing {
  public:
   AudioCustomProcessingAdapter(RTCAudioCustomProcessingAdapter *adapter) { adapter_ = adapter; }
-  ~AudioCustomProcessingAdapter() { [adapter_.audioCustomProcessing destroy]; }
+  ~AudioCustomProcessingAdapter() { [adapter_.audioCustomProcessingDelegate destroy]; }
 
   void Initialize(int sample_rate_hz, int num_channels) override {
-    [adapter_.audioCustomProcessing initializeWithSampleRateHz:sample_rate_hz
-                                                   numChannels:num_channels];
+    if (adapter_.audioCustomProcessingDelegate != nil) {
+      [adapter_.audioCustomProcessingDelegate initializeWithSampleRateHz:sample_rate_hz
+                                                             numChannels:num_channels];
+    }
   }
 
   void Process(AudioBuffer *audio_buffer) override {
-    RTCAudioBuffer *audioBuffer = [[RTCAudioBuffer alloc] initWithNativeType: audio_buffer];
-    [adapter_.audioCustomProcessing processAudioBuffer: audioBuffer];
+    if (adapter_.audioCustomProcessingDelegate != nil) {
+      RTCAudioBuffer *audioBuffer = [[RTCAudioBuffer alloc] initWithNativeType:audio_buffer];
+      [adapter_.audioCustomProcessingDelegate processAudioBuffer:audioBuffer];
+    }
   }
 
   std::string ToString() const override { return "AudioCustomProcessingAdapter"; }
@@ -45,13 +49,13 @@ class AudioCustomProcessingAdapter : public webrtc::CustomProcessing {
   std::unique_ptr<webrtc::AudioCustomProcessingAdapter> _adapter;
 }
 
-@synthesize audioCustomProcessing = _audioCustomProcessing;
+@synthesize audioCustomProcessingDelegate = _audioCustomProcessingDelegate;
 
 - (instancetype)initWithDelegate:
-    (id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)audioCustomProcessing {
-  NSParameterAssert(audioCustomProcessing);
+    (id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)audioCustomProcessingDelegate {
+  NSParameterAssert(audioCustomProcessingDelegate);
   if (self = [super init]) {
-    _audioCustomProcessing = audioCustomProcessing;
+    _audioCustomProcessingDelegate = audioCustomProcessingDelegate;
     _adapter.reset(new webrtc::AudioCustomProcessingAdapter(self));
   }
 

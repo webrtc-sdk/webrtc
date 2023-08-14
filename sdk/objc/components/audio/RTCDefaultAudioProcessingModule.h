@@ -35,6 +35,11 @@ RTC_OBJC_EXPORT
 
 - (void)applyConfig:(RTCAudioProcessingConfig *)config;
 
+// Dynamically update delegates at runtime
+
+@property(nonatomic, nullable) id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)> capturePostProcessingDelegate;
+@property(nonatomic, nullable) id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)> renderPreProcessingDelegate;
+
 @end
 
 NS_ASSUME_NONNULL_END

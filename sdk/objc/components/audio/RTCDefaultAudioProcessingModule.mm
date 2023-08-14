@@ -66,6 +66,26 @@
   return self;
 }
 
+//
+
+- (nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)capturePostProcessingDelegate {
+  return _capturePostProcessingAdapter.audioCustomProcessingDelegate;
+}
+
+- (void)setCapturePostProcessingDelegate:
+    (nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)delegate {
+  _capturePostProcessingAdapter.audioCustomProcessingDelegate = delegate;
+}
+
+- (nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)renderPreProcessingDelegate {
+  return _renderPreProcessingAdapter.audioCustomProcessingDelegate;
+}
+
+- (void)setRenderPreProcessingDelegate:
+    (nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)delegate {
+  _renderPreProcessingAdapter.audioCustomProcessingDelegate = delegate;
+}
+
 #pragma mark - RTCAudioProcessingModule protocol
 
 - (void)applyConfig:(RTCAudioProcessingConfig *)config {

@@ -24,12 +24,12 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface RTCAudioCustomProcessingAdapter ()
 
-@property(nonatomic, readonly) id<RTCAudioCustomProcessingDelegate> audioCustomProcessing;
+@property(nonatomic, nullable) id<RTCAudioCustomProcessingDelegate> audioCustomProcessingDelegate;
 
 @property(nonatomic, readonly) std::unique_ptr<webrtc::CustomProcessing>
     nativeAudioCustomProcessingModule;
 
-- (instancetype)initWithDelegate:(id<RTCAudioCustomProcessingDelegate>)audioCustomProcessing
+- (instancetype)initWithDelegate:(nullable id<RTCAudioCustomProcessingDelegate>)audioCustomProcessingDelegate
     NS_DESIGNATED_INITIALIZER;
 
 @end
