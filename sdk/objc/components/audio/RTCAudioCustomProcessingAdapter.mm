@@ -52,7 +52,7 @@ class AudioCustomProcessingAdapter : public webrtc::CustomProcessing {
 @synthesize audioCustomProcessingDelegate = _audioCustomProcessingDelegate;
 
 - (instancetype)initWithDelegate:
-    (id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)audioCustomProcessingDelegate {
+    (nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)audioCustomProcessingDelegate {
   NSParameterAssert(audioCustomProcessingDelegate);
   if (self = [super init]) {
     _audioCustomProcessingDelegate = audioCustomProcessingDelegate;
