@@ -31,7 +31,7 @@ RTC_OBJC_EXPORT
 - (instancetype)initWithConfig: (nullable RTCAudioProcessingConfig *)config
  capturePostProcessingDelegate: (nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)capturePostProcessingDelegate
    renderPreProcessingDelegate: (nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)renderPreProcessingDelegate
-   NS_SWIFT_NAME(init(config:capturePostProcessingDelegate:renderPreProcessingDelegate:));
+   NS_SWIFT_NAME(init(config:capturePostProcessingDelegate:renderPreProcessingDelegate:)) NS_DESIGNATED_INITIALIZER;
 
 - (void)applyConfig:(RTCAudioProcessingConfig *)config;
 

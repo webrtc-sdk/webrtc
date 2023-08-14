@@ -28,10 +28,9 @@
 }
 
 - (instancetype)init {
-  if (self = [super init]) {
-    _nativeAudioProcessingModule = webrtc::AudioProcessingBuilder().Create();
-  }
-  return self;
+  return [self initWithConfig:nil
+      capturePostProcessingDelegate:nil
+        renderPreProcessingDelegate:nil];
 }
 
 - (instancetype)initWithConfig:(nullable RTCAudioProcessingConfig *)config
@@ -48,18 +47,14 @@
       builder.SetConfig(config.nativeAudioProcessingConfig);
     }
 
-    if (capturePostProcessingDelegate != nil) {
-      _capturePostProcessingAdapter =
-          [[RTCAudioCustomProcessingAdapter alloc] initWithDelegate:capturePostProcessingDelegate];
-      builder.SetCapturePostProcessing(
-          _capturePostProcessingAdapter.nativeAudioCustomProcessingModule);
-    }
+    _capturePostProcessingAdapter =
+        [[RTCAudioCustomProcessingAdapter alloc] initWithDelegate:capturePostProcessingDelegate];
+    builder.SetCapturePostProcessing(
+        _capturePostProcessingAdapter.nativeAudioCustomProcessingModule);
 
-    if (renderPreProcessingDelegate != nil) {
-      _renderPreProcessingAdapter =
-          [[RTCAudioCustomProcessingAdapter alloc] initWithDelegate:renderPreProcessingDelegate];
-      builder.SetRenderPreProcessing(_renderPreProcessingAdapter.nativeAudioCustomProcessingModule);
-    }
+    _renderPreProcessingAdapter =
+        [[RTCAudioCustomProcessingAdapter alloc] initWithDelegate:renderPreProcessingDelegate];
+    builder.SetRenderPreProcessing(_renderPreProcessingAdapter.nativeAudioCustomProcessingModule);
 
     _nativeAudioProcessingModule = builder.Create();
   }
