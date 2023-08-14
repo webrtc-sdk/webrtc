@@ -20,9 +20,11 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE (RTCAudioProcessingModule)<NSObject>
+RTC_OBJC_EXPORT
+@interface RTC_OBJC_TYPE (RTCAudioBuffer) : NSObject
 
-// TODO: Implement...
+@property(nonatomic, readonly) size_t numChannels;
+@property(nonatomic, readonly) size_t numFrames;
 
 @end
 

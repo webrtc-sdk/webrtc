@@ -14,22 +14,20 @@
  * limitations under the License.
  */
 
-#include "RTCAudioProcessingModule.h"
-#include "RTCAudioProcessingModule+Private.h"
+#import <Foundation/Foundation.h>
 
-@implementation RTC_OBJC_TYPE (RTCAudioProcessingModule) {
-  rtc::scoped_refptr<webrtc::AudioProcessing> _nativeAudioProcessingModule;
-}
+#import "RTCAudioCustomProcessingDelegate.h"
+#import "RTCAudioProcessingModule.h"
+#import "RTCMacros.h"
 
-#pragma mark - Private
+NS_ASSUME_NONNULL_BEGIN
 
-- (instancetype)initWithNativeAudioProcessingModule:
-    (rtc::scoped_refptr<webrtc::AudioProcessing>)nativeAudioProcessingModule {
-  NSParameterAssert(nativeAudioProcessingModule);
-  if (self = [super init]) {
-    _nativeAudioProcessingModule = nativeAudioProcessingModule;
-  }
-  return self;
-}
+RTC_OBJC_EXPORT
+@interface RTC_OBJC_TYPE (RTCDefaultAudioProcessingModule) : NSObject <RTC_OBJC_TYPE(RTCAudioProcessingModule)>
+
+- (instancetype)initWithCapturePostProcessing: (nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)capturePostProcessingDelegate
+              renderPreProcessing:(nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>) renderPreProcessingDelegate;
 
 @end
+
+NS_ASSUME_NONNULL_END

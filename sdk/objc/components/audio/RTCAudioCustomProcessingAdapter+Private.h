@@ -14,16 +14,23 @@
  * limitations under the License.
  */
 
-#import "RTCAudioProcessingModule.h"
+#import "RTCAudioCustomProcessingAdapter.h"
+#import "RTCAudioCustomProcessingDelegate.h"
+#import "RTCMacros.h"
 
 #include "modules/audio_processing/include/audio_processing.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface RTC_OBJC_TYPE (RTCAudioProcessingModule) ()
+@interface RTCAudioCustomProcessingAdapter ()
 
-- (instancetype)initWithNativeAudioProcessingModule:
-    (rtc::scoped_refptr<webrtc::AudioProcessing>)nativeAudioProcessingModule;
+@property(nonatomic, readonly) id<RTCAudioCustomProcessingDelegate> audioCustomProcessing;
+
+@property(nonatomic, readonly) std::unique_ptr<webrtc::CustomProcessing>
+    nativeAudioCustomProcessingModule;
+
+- (instancetype)initWithDelegate:(id<RTCAudioCustomProcessingDelegate>)audioCustomProcessing
+    NS_DESIGNATED_INITIALIZER;
 
 @end
 

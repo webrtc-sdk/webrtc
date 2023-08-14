@@ -14,16 +14,34 @@
  * limitations under the License.
  */
 
-#import <Foundation/Foundation.h>
+#import "RTCAudioBuffer.h"
 
-#import "RTCMacros.h"
+#include "modules/audio_processing/audio_buffer.h"
 
-NS_ASSUME_NONNULL_BEGIN
+@implementation RTC_OBJC_TYPE (RTCAudioBuffer) {
+  // Raw
+  webrtc::AudioBuffer *_audioBuffer;
+}
 
-RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE (RTCAudioProcessingModule)<NSObject>
+- (size_t)numChannels {
+  return _audioBuffer->num_channels();
+}
 
-// TODO: Implement...
+- (size_t)numFrames {
+  return _audioBuffer->num_frames();
+}
+
+- (size_t)framesPerBand {
+  return _audioBuffer->num_frames_per_band();
+}
+
+#pragma mark - Private
+
+- (instancetype)initWithNativeType:(webrtc::AudioBuffer *)audioBuffer {
+  if (self = [super init]) {
+    _audioBuffer = audioBuffer;
+  }
+  return self;
+}
 
 @end
-
-NS_ASSUME_NONNULL_END

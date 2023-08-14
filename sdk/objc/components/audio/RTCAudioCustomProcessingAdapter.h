@@ -16,13 +16,11 @@
 
 #import <Foundation/Foundation.h>
 
-#import "RTCMacros.h"
-
 NS_ASSUME_NONNULL_BEGIN
 
-RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE (RTCAudioProcessingModule)<NSObject>
+@interface RTCAudioCustomProcessingAdapter : NSObject
 
-// TODO: Implement...
+- (instancetype)init NS_UNAVAILABLE;
 
 @end
 

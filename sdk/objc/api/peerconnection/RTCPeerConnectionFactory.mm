@@ -53,6 +53,9 @@
 #include "sdk/objc/native/src/objc_video_decoder_factory.h"
 #include "sdk/objc/native/src/objc_video_encoder_factory.h"
 
+#import "components/audio/RTCAudioProcessingModule.h"
+#import "components/audio/RTCDefaultAudioProcessingModule+Private.h"
+
 #if defined(WEBRTC_IOS)
 #import "sdk/objc/native/api/audio_device_module.h"
 #endif
@@ -62,6 +65,7 @@
   std::unique_ptr<rtc::Thread> _workerThread;
   std::unique_ptr<rtc::Thread> _signalingThread;
   rtc::scoped_refptr<webrtc::AudioDeviceModule> _nativeAudioDeviceModule;
+  RTCDefaultAudioProcessingModule *_defaultAudioProcessingModule;
 
   BOOL _hasStartedAecDump;
 }
@@ -144,8 +148,9 @@
 - (instancetype)
     initWithBypassVoiceProcessing:(BOOL)bypassVoiceProcessing
                    encoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoEncoderFactory)>)encoderFactory
-                   decoderFactory:
-                       (nullable id<RTC_OBJC_TYPE(RTCVideoDecoderFactory)>)decoderFactory {
+                   decoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoDecoderFactory)>)decoderFactory
+            audioProcessingModule:
+                (nullable id<RTC_OBJC_TYPE(RTCAudioProcessingModule)>)audioProcessingModule {
 #ifdef HAVE_NO_MEDIA
   return [self initWithNoMedia];
 #else
@@ -158,12 +163,21 @@
     native_decoder_factory = webrtc::ObjCToNativeVideoDecoderFactory(decoderFactory);
   }
   rtc::scoped_refptr<webrtc::AudioDeviceModule> audio_device_module = [self createAudioDeviceModule:bypassVoiceProcessing];
+
+  if ([audioProcessingModule isKindOfClass:[RTCDefaultAudioProcessingModule class]]) {
+    _defaultAudioProcessingModule = (RTCDefaultAudioProcessingModule *)audioProcessingModule;
+  } else {
+    _defaultAudioProcessingModule = [[RTCDefaultAudioProcessingModule alloc] init];
+  }
+
+  NSLog(@"AudioProcessingModule: %@", _defaultAudioProcessingModule);
+  
   return [self initWithNativeAudioEncoderFactory:webrtc::CreateBuiltinAudioEncoderFactory()
                        nativeAudioDecoderFactory:webrtc::CreateBuiltinAudioDecoderFactory()
                        nativeVideoEncoderFactory:std::move(native_encoder_factory)
                        nativeVideoDecoderFactory:std::move(native_decoder_factory)
                                audioDeviceModule:audio_device_module.get()
-                           audioProcessingModule:nullptr
+                           audioProcessingModule:_defaultAudioProcessingModule.nativeAudioProcessingModule
                            bypassVoiceProcessing:bypassVoiceProcessing];
 #endif
 }
@@ -268,11 +282,11 @@
     media_deps.audio_decoder_factory = std::move(audioDecoderFactory);
     media_deps.video_encoder_factory = std::move(videoEncoderFactory);
     media_deps.video_decoder_factory = std::move(videoDecoderFactory);
-    if (audioProcessingModule) {
-      media_deps.audio_processing = std::move(audioProcessingModule);
-    } else {
-      media_deps.audio_processing = webrtc::AudioProcessingBuilder().Create();
-    }
+    // if (audioProcessingModule) {
+    media_deps.audio_processing = std::move(audioProcessingModule);
+    // } else {
+    //   media_deps.audio_processing = webrtc::AudioProcessingBuilder().Create();
+    // }
     media_deps.trials = dependencies.trials.get();
     dependencies.media_engine = cricket::CreateMediaEngine(std::move(media_deps));
     dependencies.call_factory = webrtc::CreateCallFactory();
