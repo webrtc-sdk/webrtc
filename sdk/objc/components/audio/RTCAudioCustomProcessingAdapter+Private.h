@@ -24,12 +24,18 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface RTCAudioCustomProcessingAdapter ()
 
+// Thread safe set/get with os_unfair_lock.
 @property(nonatomic, nullable) id<RTCAudioCustomProcessingDelegate> audioCustomProcessingDelegate;
+
+// Direct read access without lock.
+@property(nonatomic, readonly, nullable) id<RTCAudioCustomProcessingDelegate>
+    rawAudioCustomProcessingDelegate;
 
 @property(nonatomic, readonly) std::unique_ptr<webrtc::CustomProcessing>
     nativeAudioCustomProcessingModule;
 
-- (instancetype)initWithDelegate:(nullable id<RTCAudioCustomProcessingDelegate>)audioCustomProcessingDelegate;
+- (instancetype)initWithDelegate:
+    (nullable id<RTCAudioCustomProcessingDelegate>)audioCustomProcessingDelegate;
 
 @end
 
