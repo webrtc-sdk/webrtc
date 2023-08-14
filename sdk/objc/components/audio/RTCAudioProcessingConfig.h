@@ -15,18 +15,16 @@
  */
 
 #import <Foundation/Foundation.h>
-
 #import "RTCMacros.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
-@class RTC_OBJC_TYPE(RTCAudioProcessingConfig);
+RTC_OBJC_EXPORT
+@interface RTC_OBJC_TYPE (RTCAudioProcessingConfig) : NSObject 
 
-RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE (RTCAudioProcessingModule)<NSObject>
+@property(nonatomic, assign) BOOL echoCancellerEnabled;
+@property(nonatomic, assign) BOOL echoCancellerMobileMode;
 
-- (void)applyConfig: (RTCAudioProcessingConfig *)config;
-
-// TODO: Implement...
 
 @end
 

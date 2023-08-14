@@ -14,19 +14,15 @@
  * limitations under the License.
  */
 
-#import <Foundation/Foundation.h>
+#import "RTCAudioProcessingConfig.h"
 
-#import "RTCMacros.h"
+#include "modules/audio_processing/include/audio_processing.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
-@class RTC_OBJC_TYPE(RTCAudioProcessingConfig);
+@interface RTC_OBJC_TYPE (RTCAudioProcessingConfig)()
 
-RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE (RTCAudioProcessingModule)<NSObject>
-
-- (void)applyConfig: (RTCAudioProcessingConfig *)config;
-
-// TODO: Implement...
+@property(nonatomic, readonly) webrtc::AudioProcessing::Config nativeAudioProcessingConfig;
 
 @end
 

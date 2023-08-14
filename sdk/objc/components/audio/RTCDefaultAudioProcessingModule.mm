@@ -16,6 +16,7 @@
 
 #import "RTCDefaultAudioProcessingModule.h"
 #import "RTCAudioCustomProcessingAdapter+Private.h"
+#import "RTCAudioProcessingConfig+Private.h"
 
 #include "modules/audio_processing/include/audio_processing.h"
 
@@ -33,15 +34,19 @@
   return self;
 }
 
-- (instancetype)
-    initWithCapturePostProcessing:
+- (instancetype)initWithConfig:(nullable RTCAudioProcessingConfig *)config
+    capturePostProcessingDelegate:
         (nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)capturePostProcessingDelegate
-              renderPreProcessing:(nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)
+      renderPreProcessingDelegate:(nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)
                                       renderPreProcessingDelegate {
   if (self = [super init]) {
     webrtc::AudioProcessingBuilder builder = webrtc::AudioProcessingBuilder();
 
     // TODO: Custom Config...
+
+    if (config != nil) {
+      builder.SetConfig(config.nativeAudioProcessingConfig);
+    }
 
     if (capturePostProcessingDelegate != nil) {
       _capturePostProcessingAdapter =
@@ -59,6 +64,12 @@
     _nativeAudioProcessingModule = builder.Create();
   }
   return self;
+}
+
+#pragma mark - RTCAudioProcessingModule protocol
+
+- (void)applyConfig:(RTCAudioProcessingConfig *)config {
+  _nativeAudioProcessingModule->ApplyConfig(config.nativeAudioProcessingConfig);
 }
 
 #pragma mark - Private

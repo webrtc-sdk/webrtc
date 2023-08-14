@@ -16,17 +16,24 @@
 
 #import <Foundation/Foundation.h>
 
-#import "RTCAudioCustomProcessingDelegate.h"
 #import "RTCAudioProcessingModule.h"
 #import "RTCMacros.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
+@class RTC_OBJC_TYPE(RTCAudioProcessingConfig);
+@protocol RTC_OBJC_TYPE
+(RTCAudioCustomProcessingDelegate);
+
 RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCDefaultAudioProcessingModule) : NSObject <RTC_OBJC_TYPE(RTCAudioProcessingModule)>
 
-- (instancetype)initWithCapturePostProcessing: (nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)capturePostProcessingDelegate
-              renderPreProcessing:(nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>) renderPreProcessingDelegate;
+- (instancetype)initWithConfig: (nullable RTCAudioProcessingConfig *)config
+ capturePostProcessingDelegate: (nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)capturePostProcessingDelegate
+   renderPreProcessingDelegate: (nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)renderPreProcessingDelegate
+   NS_SWIFT_NAME(init(config:capturePostProcessingDelegate:renderPreProcessingDelegate:));
+
+- (void)applyConfig:(RTCAudioProcessingConfig *)config;
 
 @end
 
