@@ -23,9 +23,16 @@ namespace webrtc {
 
 class AudioCustomProcessingAdapter : public webrtc::CustomProcessing {
  public:
+  bool isInitialized_;
+  int sample_rate_hz_;
+  int num_channels_;
+
   AudioCustomProcessingAdapter(RTCAudioCustomProcessingAdapter *adapter, os_unfair_lock *lock) {
     adapter_ = adapter;
     lock_ = lock;
+    isInitialized_ = false;
+    sample_rate_hz_ = 0;
+    num_channels_ = 0;
   }
   ~AudioCustomProcessingAdapter() {
     os_unfair_lock_lock(lock_);
@@ -37,7 +44,10 @@ class AudioCustomProcessingAdapter : public webrtc::CustomProcessing {
   void Initialize(int sample_rate_hz, int num_channels) override {
     os_unfair_lock_lock(lock_);
     id<RTCAudioCustomProcessingDelegate> delegate = adapter_.rawAudioCustomProcessingDelegate;
-    [delegate initializeWithSampleRateHz:sample_rate_hz numChannels:num_channels];
+    [delegate initializeWithSampleRateHz:sample_rate_hz channels:num_channels];
+    isInitialized_ = true;
+    sample_rate_hz_ = sample_rate_hz;
+    num_channels_ = num_channels;
     os_unfair_lock_unlock(lock_);
   }
 
@@ -85,7 +95,14 @@ class AudioCustomProcessingAdapter : public webrtc::CustomProcessing {
 
 - (void)setAudioCustomProcessingDelegate:(nullable id<RTCAudioCustomProcessingDelegate>)delegate {
   os_unfair_lock_lock(&_lock);
+  if (_audioCustomProcessingDelegate != nil && _adapter->isInitialized_) {
+    [_audioCustomProcessingDelegate destroy];
+  }
   _audioCustomProcessingDelegate = delegate;
+  if (_adapter->isInitialized_) {
+    [_audioCustomProcessingDelegate initializeWithSampleRateHz:_adapter->sample_rate_hz_
+                                                      channels:_adapter->num_channels_];
+  }
   os_unfair_lock_unlock(&_lock);
 }
 

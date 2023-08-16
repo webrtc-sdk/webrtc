@@ -37,11 +37,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 @class RTC_OBJC_TYPE(RTCAudioBuffer);
 
-RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
-(RTCAudioCustomProcessingDelegate)<NSObject>
-
-    - (void)initializeWithSampleRateHz : (size_t)sampleRateHz numChannels
-    : (size_t)numChannels NS_SWIFT_NAME(initialize(sampleRateHz:numChannels:));
+RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE (RTCAudioCustomProcessingDelegate)<NSObject>
+- (void)initializeWithSampleRateHz:(size_t)sampleRateHz
+                          channels:(size_t)channels NS_SWIFT_NAME(initialize(sampleRateHz:channels:));
 - (void)processAudioBuffer:(RTCAudioBuffer *)audioBuffer NS_SWIFT_NAME(process(audioBuffer:));
 - (void)destroy;
 
