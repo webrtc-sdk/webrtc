@@ -37,14 +37,14 @@ class AudioCustomProcessingAdapter : public webrtc::CustomProcessing {
   ~AudioCustomProcessingAdapter() {
     os_unfair_lock_lock(lock_);
     id<RTCAudioCustomProcessingDelegate> delegate = adapter_.rawAudioCustomProcessingDelegate;
-    [delegate destroy];
+    [delegate audioProcessingRelease];
     os_unfair_lock_unlock(lock_);
   }
 
   void Initialize(int sample_rate_hz, int num_channels) override {
     os_unfair_lock_lock(lock_);
     id<RTCAudioCustomProcessingDelegate> delegate = adapter_.rawAudioCustomProcessingDelegate;
-    [delegate initializeWithSampleRateHz:sample_rate_hz channels:num_channels];
+    [delegate audioProcessingInitializeWithSampleRate:sample_rate_hz channels:num_channels];
     isInitialized_ = true;
     sample_rate_hz_ = sample_rate_hz;
     num_channels_ = num_channels;
@@ -56,7 +56,7 @@ class AudioCustomProcessingAdapter : public webrtc::CustomProcessing {
     id<RTCAudioCustomProcessingDelegate> delegate = adapter_.rawAudioCustomProcessingDelegate;
     if (delegate != nil) {
       RTCAudioBuffer *audioBuffer = [[RTCAudioBuffer alloc] initWithNativeType:audio_buffer];
-      [delegate processAudioBuffer:audioBuffer];
+      [delegate audioProcessingProcess:audioBuffer];
     }
     os_unfair_lock_unlock(lock_);
   }
@@ -96,12 +96,13 @@ class AudioCustomProcessingAdapter : public webrtc::CustomProcessing {
 - (void)setAudioCustomProcessingDelegate:(nullable id<RTCAudioCustomProcessingDelegate>)delegate {
   os_unfair_lock_lock(&_lock);
   if (_audioCustomProcessingDelegate != nil && _adapter->isInitialized_) {
-    [_audioCustomProcessingDelegate destroy];
+    [_audioCustomProcessingDelegate audioProcessingRelease];
   }
   _audioCustomProcessingDelegate = delegate;
   if (_adapter->isInitialized_) {
-    [_audioCustomProcessingDelegate initializeWithSampleRateHz:_adapter->sample_rate_hz_
-                                                      channels:_adapter->num_channels_];
+    [_audioCustomProcessingDelegate
+        audioProcessingInitializeWithSampleRate:_adapter->sample_rate_hz_
+                                       channels:_adapter->num_channels_];
   }
   os_unfair_lock_unlock(&_lock);
 }

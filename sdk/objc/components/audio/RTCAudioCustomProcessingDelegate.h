@@ -20,28 +20,23 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-// // Interface for a custom processing submodule.
-// class CustomProcessing {
-//  public:
-//   // (Re-)Initializes the submodule.
-//   virtual void Initialize(int sample_rate_hz, int num_channels) = 0;
-//   // Processes the given capture or render signal.
-//   virtual void Process(AudioBuffer* audio) = 0;
-//   // Returns a string representation of the module state.
-//   virtual std::string ToString() const = 0;
-//   // Handles RuntimeSettings. TODO(webrtc:9262): make pure virtual
-//   // after updating dependencies.
-//   virtual void SetRuntimeSetting(AudioProcessing::RuntimeSetting setting);
-//   virtual ~CustomProcessing() {}
-// };
-
 @class RTC_OBJC_TYPE(RTCAudioBuffer);
 
 RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE (RTCAudioCustomProcessingDelegate)<NSObject>
-- (void)initializeWithSampleRateHz:(size_t)sampleRateHz
-                          channels:(size_t)channels NS_SWIFT_NAME(initialize(sampleRateHz:channels:));
-- (void)processAudioBuffer:(RTCAudioBuffer *)audioBuffer NS_SWIFT_NAME(process(audioBuffer:));
-- (void)destroy;
+
+// (Re-)Initializes the submodule.
+- (void)audioProcessingInitializeWithSampleRate:(size_t)sampleRateHz
+                                       channels:(size_t)channels
+                                       NS_SWIFT_NAME(audioProcessingInitialize(sampleRate:channels:));
+
+// Processes the given capture or render signal.
+- (void)audioProcessingProcess:(RTCAudioBuffer *)audioBuffer NS_SWIFT_NAME(audioProcessingProcess(audioBuffer:));
+
+// TOOD:
+// virtual void SetRuntimeSetting(AudioProcessing::RuntimeSetting setting);
+
+// Release unused resources.
+- (void)audioProcessingRelease;
 
 @end
 
