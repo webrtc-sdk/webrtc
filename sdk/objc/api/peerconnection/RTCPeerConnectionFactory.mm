@@ -282,11 +282,11 @@
     media_deps.audio_decoder_factory = std::move(audioDecoderFactory);
     media_deps.video_encoder_factory = std::move(videoEncoderFactory);
     media_deps.video_decoder_factory = std::move(videoDecoderFactory);
-    // if (audioProcessingModule) {
+    if (audioProcessingModule) {
     media_deps.audio_processing = std::move(audioProcessingModule);
-    // } else {
-    //   media_deps.audio_processing = webrtc::AudioProcessingBuilder().Create();
-    // }
+    } else {
+      media_deps.audio_processing = webrtc::AudioProcessingBuilder().Create();
+    }
     media_deps.trials = dependencies.trials.get();
     dependencies.media_engine = cricket::CreateMediaEngine(std::move(media_deps));
     dependencies.call_factory = webrtc::CreateCallFactory();
