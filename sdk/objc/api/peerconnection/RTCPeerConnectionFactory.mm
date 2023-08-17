@@ -283,7 +283,7 @@
     media_deps.video_encoder_factory = std::move(videoEncoderFactory);
     media_deps.video_decoder_factory = std::move(videoDecoderFactory);
     if (audioProcessingModule) {
-    media_deps.audio_processing = std::move(audioProcessingModule);
+      media_deps.audio_processing = std::move(audioProcessingModule);
     } else {
       media_deps.audio_processing = webrtc::AudioProcessingBuilder().Create();
     }
