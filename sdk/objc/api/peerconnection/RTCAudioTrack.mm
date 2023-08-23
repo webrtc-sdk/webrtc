@@ -27,6 +27,7 @@ namespace webrtc {
 class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTrackSinkInterface {
  private:
   __weak RTCAudioTrack *audioTrack_;
+  int64_t total_frames_ = 0;
 
  public:
   AudioSinkConverter(RTCAudioTrack *audioTrack) {
@@ -40,12 +41,24 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
     RTC_LOG(LS_INFO) << "RTCAudioTrack.AudioSinkConverter dealloc";
   }
 
+  void Reset() {
+    // Reset for creating CMSampleTimingInfo correctly
+    total_frames_ = 0;
+  }
+
   void OnData(const void *audio_data,
               int bits_per_sample,
               int sample_rate,
               size_t number_of_channels,
               size_t number_of_frames,
               absl::optional<int64_t> absolute_capture_timestamp_ms) override {
+    RTC_LOG(LS_INFO) << "RTCAudioTrack.AudioSinkConverter OnData bits_per_sample: "
+                     << bits_per_sample << " sample_rate: " << sample_rate
+                     << " number_of_channels: " << number_of_channels
+                     << " number_of_frames: " << number_of_frames
+                     << " absolute_capture_timestamp_ms: "
+                     << (absolute_capture_timestamp_ms ? absolute_capture_timestamp_ms.value() : 0);
+
     /*
      * Convert to CMSampleBuffer
      */
@@ -55,9 +68,6 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
             number_of_channels);
       return;
     }
-
-    int64_t elapsed_time_ms =
-        absolute_capture_timestamp_ms ? absolute_capture_timestamp_ms.value() : rtc::TimeMillis();
 
     OSStatus status;
 
@@ -70,7 +80,7 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
     sd.mSampleRate = sample_rate;
     sd.mFormatID = kAudioFormatLinearPCM;
     sd.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger | kLinearPCMFormatFlagIsPacked;
-    sd.mFramesPerPacket = number_of_frames; /* 1 */
+    sd.mFramesPerPacket = 1;
     sd.mChannelsPerFrame = number_of_channels;
     sd.mBitsPerChannel = bits_per_sample; /* 16 */
     sd.mBytesPerFrame = sd.mChannelsPerFrame * (sd.mBitsPerChannel / 8);
@@ -78,9 +88,11 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
 
     CMSampleTimingInfo timing = {
         CMTimeMake(1, sample_rate),
-        CMTimeMake(elapsed_time_ms, 1000),
+        CMTimeMake(total_frames_, sample_rate),
         kCMTimeInvalid,
     };
+
+    total_frames_ += number_of_frames;  // update the total
 
     CMFormatDescriptionRef format = NULL;
     status = CMAudioFormatDescriptionCreate(
@@ -203,6 +215,7 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
     // Add audio sink if not already added
     if ([_renderers count] != 0 && !_IsAudioConverterSinkAttached) {
       RTC_LOG(LS_INFO) << "RTCAudioTrack attaching sink...";
+      _audioConverter->Reset();
       self.nativeAudioTrack->AddSink(_audioConverter.get());
       _IsAudioConverterSinkAttached = YES;
     }
