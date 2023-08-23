@@ -60,16 +60,15 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
     acl.mChannelLayoutTag =
         number_of_channels == 2 ? kAudioChannelLayoutTag_Stereo : kAudioChannelLayoutTag_Mono;
 
-    AudioStreamBasicDescription audioFormat;
-    audioFormat.mSampleRate = sample_rate;
-    audioFormat.mFormatID = kAudioFormatLinearPCM;
-    audioFormat.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger | kLinearPCMFormatFlagIsPacked;
-    audioFormat.mFramesPerPacket = number_of_frames;
-    audioFormat.mChannelsPerFrame = number_of_channels;
-    audioFormat.mBitsPerChannel = 16;
-    audioFormat.mBytesPerPacket = audioFormat.mFramesPerPacket * audioFormat.mChannelsPerFrame *
-        audioFormat.mBitsPerChannel / 8;
-    audioFormat.mBytesPerFrame = audioFormat.mBytesPerPacket / audioFormat.mFramesPerPacket;
+    AudioStreamBasicDescription sd;
+    sd.mSampleRate = sample_rate;
+    sd.mFormatID = kAudioFormatLinearPCM;
+    sd.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger | kLinearPCMFormatFlagIsPacked;
+    sd.mFramesPerPacket = number_of_frames; /* 1 */
+    sd.mChannelsPerFrame = number_of_channels;
+    sd.mBitsPerChannel = bits_per_sample; /* 16 */
+    sd.mBytesPerFrame = sd.mChannelsPerFrame * (sd.mBitsPerChannel / 8);
+    sd.mBytesPerPacket = sd.mBytesPerFrame;
 
     CMSampleTimingInfo timing = {
         CMTimeMake(1, sample_rate),
@@ -79,7 +78,7 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
 
     CMFormatDescriptionRef format = NULL;
     status = CMAudioFormatDescriptionCreate(
-        kCFAllocatorDefault, &audioFormat, sizeof(acl), &acl, 0, NULL, NULL, &format);
+        kCFAllocatorDefault, &sd, sizeof(acl), &acl, 0, NULL, NULL, &format);
 
     if (status != 0) {
       NSLog(@"RTCAudioTrack: Failed to create audio format description");
@@ -106,8 +105,8 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
 
     AudioBufferList bufferList;
     bufferList.mNumberBuffers = 1;
-    bufferList.mBuffers[0].mNumberChannels = audioFormat.mChannelsPerFrame;
-    bufferList.mBuffers[0].mDataByteSize = (UInt32)(number_of_frames * audioFormat.mBytesPerFrame);
+    bufferList.mBuffers[0].mNumberChannels = sd.mChannelsPerFrame;
+    bufferList.mBuffers[0].mDataByteSize = (UInt32)(number_of_frames * sd.mBytesPerFrame);
     bufferList.mBuffers[0].mData = (void *)audio_data;
     status = CMSampleBufferSetDataBufferFromAudioBufferList(
         buffer, kCFAllocatorDefault, kCFAllocatorDefault, 0, &bufferList);
