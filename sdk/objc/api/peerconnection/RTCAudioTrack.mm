@@ -133,10 +133,11 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
   rtc::Thread *_workerThread;
   BOOL _IsAudioConverterSinkAttached;
   rtc::scoped_refptr<webrtc::AudioSinkConverter> _audioConverter;
+  // Stores weak references to renderers, accessed on _workerThread only.
+  NSHashTable *_renderers;
 }
 
 @synthesize source = _source;
-@synthesize renderers = _renderers;
 
 - (instancetype)initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
                          source:(RTC_OBJC_TYPE(RTCAudioSource) *)source
@@ -163,7 +164,7 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
   if (self = [super initWithFactory:factory nativeTrack:nativeTrack type:type]) {
     RTC_LOG(LS_INFO) << "RTCAudioTrack init";
     _workerThread = factory.workerThread;
-    _renderers = [NSMutableArray<RTCAudioRenderer> array];
+    _renderers = [NSHashTable weakObjectsHashTable];
     _IsAudioConverterSinkAttached = NO;
     _audioConverter = new rtc::RefCountedObject<webrtc::AudioSinkConverter>(self);
   }
@@ -231,7 +232,7 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
   // Retain reference...
   CFRetain(sampleBuffer);
   _workerThread->PostTask([self, sampleBuffer] {
-    for (id<RTCAudioRenderer> renderer in _renderers) {
+    for (id<RTCAudioRenderer> renderer in [_renderers allObjects]) {
       [renderer renderSampleBuffer:sampleBuffer];
     }
     // Release reference...
