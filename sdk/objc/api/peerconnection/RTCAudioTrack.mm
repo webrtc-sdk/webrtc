@@ -30,8 +30,14 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
 
  public:
   AudioSinkConverter(RTCAudioTrack *audioTrack) {
+    RTC_LOG(LS_INFO) << "RTCAudioTrack.AudioSinkConverter init";
     // Keep weak reference to RTCAudioTrack...
     audioTrack_ = audioTrack;
+  }
+
+  ~AudioSinkConverter() {
+    //
+    RTC_LOG(LS_INFO) << "RTCAudioTrack.AudioSinkConverter dealloc";
   }
 
   void OnData(const void *audio_data,
@@ -155,7 +161,7 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
   NSParameterAssert(nativeTrack);
   NSParameterAssert(type == RTCMediaStreamTrackTypeAudio);
   if (self = [super initWithFactory:factory nativeTrack:nativeTrack type:type]) {
-    NSLog(@"RTCAudioTrack: init...");
+    RTC_LOG(LS_INFO) << "RTCAudioTrack init";
     _workerThread = factory.workerThread;
     _renderers = [NSMutableArray<RTCAudioRenderer> array];
     _audioSinkAdded = NO;
@@ -176,6 +182,7 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
     self.nativeAudioTrack->RemoveSink(_audioConverter.get());
     _audioSinkAdded = NO;
   }
+  RTC_LOG(LS_INFO) << "RTCAudioTrack dealloc";
 }
 
 - (RTC_OBJC_TYPE(RTCAudioSource) *)source {
