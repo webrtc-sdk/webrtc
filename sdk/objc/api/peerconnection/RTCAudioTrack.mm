@@ -131,7 +131,7 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
 
 @implementation RTC_OBJC_TYPE (RTCAudioTrack) {
   rtc::Thread *_workerThread;
-  BOOL _audioSinkAdded;
+  BOOL _IsAudioConverterSinkAttached;
   rtc::scoped_refptr<webrtc::AudioSinkConverter> _audioConverter;
 }
 
@@ -164,7 +164,7 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
     RTC_LOG(LS_INFO) << "RTCAudioTrack init";
     _workerThread = factory.workerThread;
     _renderers = [NSMutableArray<RTCAudioRenderer> array];
-    _audioSinkAdded = NO;
+    _IsAudioConverterSinkAttached = NO;
     _audioConverter = new rtc::RefCountedObject<webrtc::AudioSinkConverter>(self);
   }
 
@@ -178,9 +178,9 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
     [_renderers removeAllObjects];
   });
   // Remove sink if added...
-  if (_audioSinkAdded) {
+  if (_IsAudioConverterSinkAttached) {
     self.nativeAudioTrack->RemoveSink(_audioConverter.get());
-    _audioSinkAdded = NO;
+    _IsAudioConverterSinkAttached = NO;
   }
   RTC_LOG(LS_INFO) << "RTCAudioTrack dealloc";
 }
@@ -200,9 +200,10 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
   _workerThread->BlockingCall([self, renderer] {
     [_renderers addObject:renderer];
     // Add audio sink if not already added
-    if ([_renderers count] != 0 && !_audioSinkAdded) {
+    if ([_renderers count] != 0 && !_IsAudioConverterSinkAttached) {
+      RTC_LOG(LS_INFO) << "RTCAudioTrack attaching sink...";
       self.nativeAudioTrack->AddSink(_audioConverter.get());
-      _audioSinkAdded = YES;
+      _IsAudioConverterSinkAttached = YES;
     }
   });
 }
@@ -211,9 +212,10 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
   _workerThread->BlockingCall([self, renderer] {
     [_renderers removeObject:renderer];
     // Remove audio sink if no more renderers
-    if ([_renderers count] == 0 && _audioSinkAdded) {
+    if ([_renderers count] == 0 && _IsAudioConverterSinkAttached) {
+      RTC_LOG(LS_INFO) << "RTCAudioTrack removing sink...";
       self.nativeAudioTrack->RemoveSink(_audioConverter.get());
-      _audioSinkAdded = NO;
+      _IsAudioConverterSinkAttached = NO;
     }
   });
 }
