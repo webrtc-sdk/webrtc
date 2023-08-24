@@ -27,14 +27,16 @@ namespace webrtc {
  */
 class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTrackSinkInterface {
  private:
-  __weak RTCAudioTrack *audioTrack_;
+  os_unfair_lock *lock_;
+  __weak RTCAudioTrack *audio_track_;
   int64_t total_frames_ = 0;
+  bool attached_ = false;
 
  public:
-  AudioSinkConverter(RTCAudioTrack *audioTrack) {
+  AudioSinkConverter(RTCAudioTrack *audioTrack, os_unfair_lock *lock) {
     RTC_LOG(LS_INFO) << "RTCAudioTrack.AudioSinkConverter init";
-    // Keep weak reference to RTCAudioTrack...
-    audioTrack_ = audioTrack;
+    audio_track_ = audioTrack;
+    lock_ = lock;
   }
 
   ~AudioSinkConverter() {
@@ -42,9 +44,28 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
     RTC_LOG(LS_INFO) << "RTCAudioTrack.AudioSinkConverter dealloc";
   }
 
-  void Reset() {
+  // Must be called while locked
+  void TryAttach() {
+    if (attached_) {
+      // Already attached
+      return;
+    }
+    RTC_LOG(LS_INFO) << "RTCAudioTrack attaching sink...";
     // Reset for creating CMSampleTimingInfo correctly
+    audio_track_.nativeAudioTrack->AddSink(this);
     total_frames_ = 0;
+    attached_ = true;
+  }
+
+  // Must be called while locked
+  void TryDetach() {
+    if (!attached_) {
+      // Already detached
+      return;
+    }
+    RTC_LOG(LS_INFO) << "RTCAudioTrack detaching sink...";
+    audio_track_.nativeAudioTrack->RemoveSink(this);
+    attached_ = false;
   }
 
   void OnData(const void *audio_data,
@@ -59,6 +80,19 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
                      << " number_of_frames: " << number_of_frames
                      << " absolute_capture_timestamp_ms: "
                      << (absolute_capture_timestamp_ms ? absolute_capture_timestamp_ms.value() : 0);
+
+    bool is_locked = os_unfair_lock_trylock(lock_);
+    if (!is_locked) {
+      RTC_LOG(LS_INFO) << "RTCAudioTrack.AudioSinkConverter OnData already locked, skipping...";
+      return;
+    }
+    bool is_attached = attached_;
+    os_unfair_lock_unlock(lock_);
+
+    if (!is_attached) {
+      RTC_LOG(LS_INFO) << "RTCAudioTrack.AudioSinkConverter OnData already detached, skipping...";
+      return;
+    }
 
     /*
      * Convert to CMSampleBuffer
@@ -135,7 +169,7 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
     }
 
     // Report back to RTCAudioTrack
-    [audioTrack_ didCaptureSampleBuffer:buffer];
+    [audio_track_ didCaptureSampleBuffer:buffer];
 
     CFRelease(buffer);
   }
@@ -143,7 +177,6 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
 }  // namespace webrtc
 
 @implementation RTC_OBJC_TYPE (RTCAudioTrack) {
-  BOOL _IsAudioConverterSinkAttached;
   rtc::scoped_refptr<webrtc::AudioSinkConverter> _audioConverter;
   // Stores weak references to renderers
   NSHashTable *_renderers;
@@ -177,19 +210,15 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
   if (self = [super initWithFactory:factory nativeTrack:nativeTrack type:type]) {
     RTC_LOG(LS_INFO) << "RTCAudioTrack init";
     _renderers = [NSHashTable weakObjectsHashTable];
-    _IsAudioConverterSinkAttached = NO;
-    _audioConverter = new rtc::RefCountedObject<webrtc::AudioSinkConverter>(self);
+    _audioConverter = new rtc::RefCountedObject<webrtc::AudioSinkConverter>(self, &_lock);
   }
 
   return self;
 }
 
 - (void)dealloc {
-  // Remove sink if added...
   os_unfair_lock_lock(&_lock);
-  if (_IsAudioConverterSinkAttached) {
-    self.nativeAudioTrack->RemoveSink(_audioConverter.get());
-  }
+  _audioConverter->TryDetach();
   os_unfair_lock_unlock(&_lock);
 
   RTC_LOG(LS_INFO) << "RTCAudioTrack dealloc";
@@ -209,15 +238,7 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
 - (void)addRenderer:(id<RTC_OBJC_TYPE(RTCAudioRenderer)>)renderer {
   os_unfair_lock_lock(&_lock);
   [_renderers addObject:renderer];
-  NSUInteger renderersCount = _renderers.allObjects.count;
-
-  // Add audio sink if not already added
-  if (renderersCount != 0 && !_IsAudioConverterSinkAttached) {
-    RTC_LOG(LS_INFO) << "RTCAudioTrack attaching sink...";
-    _audioConverter->Reset();
-    self.nativeAudioTrack->AddSink(_audioConverter.get());
-    _IsAudioConverterSinkAttached = YES;
-  }
+  _audioConverter->TryAttach();
   os_unfair_lock_unlock(&_lock);
 }
 
@@ -226,11 +247,9 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
   [_renderers removeObject:renderer];
   NSUInteger renderersCount = _renderers.allObjects.count;
 
-  // Remove audio sink if no more renderers
-  if (renderersCount == 0 && _IsAudioConverterSinkAttached) {
-    RTC_LOG(LS_INFO) << "RTCAudioTrack removing sink...";
-    self.nativeAudioTrack->RemoveSink(_audioConverter.get());
-    _IsAudioConverterSinkAttached = NO;
+  if (renderersCount == 0) {
+    // Detach if no more renderers...
+    _audioConverter->TryDetach();
   }
   os_unfair_lock_unlock(&_lock);
 }
@@ -243,13 +262,17 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
 }
 
 - (void)didCaptureSampleBuffer:(CMSampleBufferRef)sampleBuffer {
-  os_unfair_lock_lock(&_lock);
+  bool is_locked = os_unfair_lock_trylock(&_lock);
+  if (!is_locked) {
+    RTC_LOG(LS_INFO) << "RTCAudioTrack didCaptureSampleBuffer already locked, skipping...";
+    return;
+  }
   NSArray *renderers = [_renderers allObjects];
+  os_unfair_lock_unlock(&_lock);
 
   for (id<RTCAudioRenderer> renderer in renderers) {
     [renderer renderSampleBuffer:sampleBuffer];
   }
-  os_unfair_lock_unlock(&_lock);
 }
 
 @end
