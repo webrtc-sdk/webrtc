@@ -61,7 +61,7 @@
   return self;
 }
 
-//
+#pragma mark - Getter & Setters for delegates
 
 - (nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)capturePostProcessingDelegate {
   return _capturePostProcessingAdapter.audioCustomProcessingDelegate;

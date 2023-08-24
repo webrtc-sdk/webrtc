@@ -209,6 +209,7 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
   NSParameterAssert(type == RTCMediaStreamTrackTypeAudio);
   if (self = [super initWithFactory:factory nativeTrack:nativeTrack type:type]) {
     RTC_LOG(LS_INFO) << "RTCAudioTrack init";
+    _lock = OS_UNFAIR_LOCK_INIT;
     _renderers = [NSHashTable weakObjectsHashTable];
     _audioConverter = new rtc::RefCountedObject<webrtc::AudioSinkConverter>(self, &_lock);
   }

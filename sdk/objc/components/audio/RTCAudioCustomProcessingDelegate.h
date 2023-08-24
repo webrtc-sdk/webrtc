@@ -24,18 +24,27 @@ NS_ASSUME_NONNULL_BEGIN
 
 RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE (RTCAudioCustomProcessingDelegate)<NSObject>
 
-// (Re-)Initializes the submodule.
-- (void)audioProcessingInitializeWithSampleRate:(size_t)sampleRateHz
-                                       channels:(size_t)channels
-                                       NS_SWIFT_NAME(audioProcessingInitialize(sampleRate:channels:));
+/**
+* (Re-)initialize the audio processor.
+* This method can be invoked multiple times.
+*/
+- (void)audioProcessingInitializeWithSampleRate : (size_t)sampleRateHz channels
+: (size_t)channels NS_SWIFT_NAME(audioProcessingInitialize(sampleRate:channels:));
 
-// Processes the given capture or render signal.
-- (void)audioProcessingProcess:(RTCAudioBuffer *)audioBuffer NS_SWIFT_NAME(audioProcessingProcess(audioBuffer:));
+/**
+ * Process (read or write) the audio buffer.
+ * RTCAudioBuffer is a simple wrapper for webrtc::AudioBuffer and the valid scope is only inside
+ * this method. Do not retain it.
+ */
+- (void)audioProcessingProcess:(RTCAudioBuffer *)audioBuffer
+    NS_SWIFT_NAME(audioProcessingProcess(audioBuffer:));
 
 // TOOD:
 // virtual void SetRuntimeSetting(AudioProcessing::RuntimeSetting setting);
 
-// Release unused resources.
+/**
+ * Suggests releasing resources allocated by the audio processor.
+ */
 - (void)audioProcessingRelease;
 
 @end

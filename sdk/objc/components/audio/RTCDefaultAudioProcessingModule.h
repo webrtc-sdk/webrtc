@@ -37,8 +37,10 @@ RTC_OBJC_EXPORT
 
 // Dynamically update delegates at runtime
 
-@property(nonatomic, nullable) id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)> capturePostProcessingDelegate;
-@property(nonatomic, nullable) id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)> renderPreProcessingDelegate;
+@property(nonatomic, weak, nullable) id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>
+    capturePostProcessingDelegate;
+@property(nonatomic, weak, nullable) id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>
+    renderPreProcessingDelegate;
 
 @end
 

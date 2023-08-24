@@ -15,6 +15,7 @@
  */
 
 #import <Foundation/Foundation.h>
+#import "RTCMacros.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
