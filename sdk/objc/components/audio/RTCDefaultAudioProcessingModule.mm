@@ -23,8 +23,8 @@
 @implementation RTC_OBJC_TYPE (RTCDefaultAudioProcessingModule) {
   rtc::scoped_refptr<webrtc::AudioProcessing> _nativeAudioProcessingModule;
   // Custom processing adapters...
-  RTC_OBJC_TYPE(RTCAudioCustomProcessingAdapter) *_capturePostProcessingAdapter;
-  RTC_OBJC_TYPE(RTCAudioCustomProcessingAdapter) *_renderPreProcessingAdapter;
+  RTCAudioCustomProcessingAdapter *_capturePostProcessingAdapter;
+  RTCAudioCustomProcessingAdapter *_renderPreProcessingAdapter;
 }
 
 - (instancetype)init {
@@ -33,7 +33,7 @@
         renderPreProcessingDelegate:nil];
 }
 
-- (instancetype)initWithConfig:(nullable RTC_OBJC_TYPE(RTCAudioProcessingConfig) *)config
+- (instancetype)initWithConfig:(nullable RTCAudioProcessingConfig *)config
     capturePostProcessingDelegate:
         (nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)capturePostProcessingDelegate
       renderPreProcessingDelegate:(nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)
@@ -48,12 +48,12 @@
     }
 
     _capturePostProcessingAdapter =
-        [[RTC_OBJC_TYPE(RTCAudioCustomProcessingAdapter) alloc] initWithDelegate:capturePostProcessingDelegate];
+        [[RTCAudioCustomProcessingAdapter alloc] initWithDelegate:capturePostProcessingDelegate];
     builder.SetCapturePostProcessing(
         _capturePostProcessingAdapter.nativeAudioCustomProcessingModule);
 
     _renderPreProcessingAdapter =
-        [[RTC_OBJC_TYPE(RTCAudioCustomProcessingAdapter) alloc] initWithDelegate:renderPreProcessingDelegate];
+        [[RTCAudioCustomProcessingAdapter alloc] initWithDelegate:renderPreProcessingDelegate];
     builder.SetRenderPreProcessing(_renderPreProcessingAdapter.nativeAudioCustomProcessingModule);
 
     _nativeAudioProcessingModule = builder.Create();
@@ -83,7 +83,7 @@
 
 #pragma mark - RTCAudioProcessingModule protocol
 
-- (void)applyConfig:(RTC_OBJC_TYPE(RTCAudioProcessingConfig) *)config {
+- (void)applyConfig:(RTCAudioProcessingConfig *)config {
   _nativeAudioProcessingModule->ApplyConfig(config.nativeAudioProcessingConfig);
 }
 

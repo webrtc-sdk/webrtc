@@ -36,7 +36,7 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE (RTCAudioCustomProcessingDelegate)<NSObj
  * RTCAudioBuffer is a simple wrapper for webrtc::AudioBuffer and the valid scope is only inside
  * this method. Do not retain it.
  */
-- (void)audioProcessingProcess:(RTC_OBJC_TYPE(RTCAudioBuffer) *)audioBuffer
+- (void)audioProcessingProcess:(RTCAudioBuffer *)audioBuffer
     NS_SWIFT_NAME(audioProcessingProcess(audioBuffer:));
 
 // TOOD:

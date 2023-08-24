@@ -19,7 +19,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface RTC_OBJC_TYPE(RTCAudioCustomProcessingAdapter) : NSObject
+@interface RTCAudioCustomProcessingAdapter : NSObject
 
 - (instancetype)init NS_UNAVAILABLE;
 

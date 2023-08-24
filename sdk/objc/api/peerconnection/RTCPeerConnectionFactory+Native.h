@@ -73,12 +73,6 @@ NS_ASSUME_NONNULL_BEGIN
     initWithEncoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoEncoderFactory)>)encoderFactory
             decoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoDecoderFactory)>)decoderFactory;
 
-- (instancetype)
-    initWithBypassVoiceProcessing:(BOOL)bypassVoiceProcessing
-                   encoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoEncoderFactory)>)encoderFactory
-                   decoderFactory:
-                       (nullable id<RTC_OBJC_TYPE(RTCVideoDecoderFactory)>)decoderFactory;
-
 /** Initialize an RTCPeerConnection with a configuration, constraints, and
  *  dependencies.
  */
