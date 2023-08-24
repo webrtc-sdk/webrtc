@@ -85,7 +85,7 @@ class AudioCustomProcessingAdapter : public webrtc::CustomProcessing {
 }  // namespace webrtc
 
 @implementation RTCAudioCustomProcessingAdapter {
-  std::unique_ptr<webrtc::AudioCustomProcessingAdapter> _adapter;
+  webrtc::AudioCustomProcessingAdapter *_adapter;
   os_unfair_lock _lock;
 }
 
@@ -96,7 +96,7 @@ class AudioCustomProcessingAdapter : public webrtc::CustomProcessing {
   if (self = [super init]) {
     _lock = OS_UNFAIR_LOCK_INIT;
     _rawAudioCustomProcessingDelegate = audioCustomProcessingDelegate;
-    _adapter = std::make_unique<webrtc::AudioCustomProcessingAdapter>(self, &_lock);
+    _adapter = new webrtc::AudioCustomProcessingAdapter(self, &_lock);
     RTC_LOG(LS_INFO) << "RTCAudioCustomProcessingAdapter init";
   }
 
@@ -133,7 +133,7 @@ class AudioCustomProcessingAdapter : public webrtc::CustomProcessing {
 #pragma mark - Private
 
 - (std::unique_ptr<webrtc::CustomProcessing>)nativeAudioCustomProcessingModule {
-  return std::unique_ptr<webrtc::CustomProcessing>(_adapter.get());
+  return std::unique_ptr<webrtc::CustomProcessing>(_adapter);
 }
 
 @end
