@@ -9,6 +9,7 @@
  */
 
 #import <AVFoundation/AVFoundation.h>
+#import <os/lock.h>
 
 #import "RTCAudioTrack+Private.h"
 
@@ -142,11 +143,11 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
 }  // namespace webrtc
 
 @implementation RTC_OBJC_TYPE (RTCAudioTrack) {
-  rtc::Thread *_workerThread;
   BOOL _IsAudioConverterSinkAttached;
   rtc::scoped_refptr<webrtc::AudioSinkConverter> _audioConverter;
-  // Stores weak references to renderers, accessed on _workerThread only.
+  // Stores weak references to renderers
   NSHashTable *_renderers;
+  os_unfair_lock _lock;
 }
 
 @synthesize source = _source;
@@ -175,7 +176,6 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
   NSParameterAssert(type == RTCMediaStreamTrackTypeAudio);
   if (self = [super initWithFactory:factory nativeTrack:nativeTrack type:type]) {
     RTC_LOG(LS_INFO) << "RTCAudioTrack init";
-    _workerThread = factory.workerThread;
     _renderers = [NSHashTable weakObjectsHashTable];
     _IsAudioConverterSinkAttached = NO;
     _audioConverter = new rtc::RefCountedObject<webrtc::AudioSinkConverter>(self);
@@ -185,16 +185,13 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
 }
 
 - (void)dealloc {
-  // Clean up...
-  _workerThread->BlockingCall([self] {
-    // Remove all renderers...
-    [_renderers removeAllObjects];
-  });
   // Remove sink if added...
+  os_unfair_lock_lock(&_lock);
   if (_IsAudioConverterSinkAttached) {
     self.nativeAudioTrack->RemoveSink(_audioConverter.get());
-    _IsAudioConverterSinkAttached = NO;
   }
+  os_unfair_lock_unlock(&_lock);
+
   RTC_LOG(LS_INFO) << "RTCAudioTrack dealloc";
 }
 
@@ -210,28 +207,32 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
 }
 
 - (void)addRenderer:(id<RTC_OBJC_TYPE(RTCAudioRenderer)>)renderer {
-  _workerThread->BlockingCall([self, renderer] {
-    [_renderers addObject:renderer];
-    // Add audio sink if not already added
-    if ([_renderers count] != 0 && !_IsAudioConverterSinkAttached) {
-      RTC_LOG(LS_INFO) << "RTCAudioTrack attaching sink...";
-      _audioConverter->Reset();
-      self.nativeAudioTrack->AddSink(_audioConverter.get());
-      _IsAudioConverterSinkAttached = YES;
-    }
-  });
+  os_unfair_lock_lock(&_lock);
+  [_renderers addObject:renderer];
+  NSUInteger renderersCount = _renderers.allObjects.count;
+
+  // Add audio sink if not already added
+  if (renderersCount != 0 && !_IsAudioConverterSinkAttached) {
+    RTC_LOG(LS_INFO) << "RTCAudioTrack attaching sink...";
+    _audioConverter->Reset();
+    self.nativeAudioTrack->AddSink(_audioConverter.get());
+    _IsAudioConverterSinkAttached = YES;
+  }
+  os_unfair_lock_unlock(&_lock);
 }
 
 - (void)removeRenderer:(id<RTC_OBJC_TYPE(RTCAudioRenderer)>)renderer {
-  _workerThread->BlockingCall([self, renderer] {
-    [_renderers removeObject:renderer];
-    // Remove audio sink if no more renderers
-    if ([_renderers count] == 0 && _IsAudioConverterSinkAttached) {
-      RTC_LOG(LS_INFO) << "RTCAudioTrack removing sink...";
-      self.nativeAudioTrack->RemoveSink(_audioConverter.get());
-      _IsAudioConverterSinkAttached = NO;
-    }
-  });
+  os_unfair_lock_lock(&_lock);
+  [_renderers removeObject:renderer];
+  NSUInteger renderersCount = _renderers.allObjects.count;
+
+  // Remove audio sink if no more renderers
+  if (renderersCount == 0 && _IsAudioConverterSinkAttached) {
+    RTC_LOG(LS_INFO) << "RTCAudioTrack removing sink...";
+    self.nativeAudioTrack->RemoveSink(_audioConverter.get());
+    _IsAudioConverterSinkAttached = NO;
+  }
+  os_unfair_lock_unlock(&_lock);
 }
 
 #pragma mark - Private
@@ -242,15 +243,13 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
 }
 
 - (void)didCaptureSampleBuffer:(CMSampleBufferRef)sampleBuffer {
-  // Retain reference...
-  CFRetain(sampleBuffer);
-  _workerThread->PostTask([self, sampleBuffer] {
-    for (id<RTCAudioRenderer> renderer in [_renderers allObjects]) {
-      [renderer renderSampleBuffer:sampleBuffer];
-    }
-    // Release reference...
-    CFRelease(sampleBuffer);
-  });
+  os_unfair_lock_lock(&_lock);
+  NSArray *renderers = [_renderers allObjects];
+
+  for (id<RTCAudioRenderer> renderer in renderers) {
+    [renderer renderSampleBuffer:sampleBuffer];
+  }
+  os_unfair_lock_unlock(&_lock);
 }
 
 @end
