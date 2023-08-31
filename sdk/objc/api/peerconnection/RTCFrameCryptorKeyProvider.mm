@@ -56,6 +56,22 @@
       std::vector<uint8_t>((const uint8_t *)key.bytes, ((const uint8_t *)key.bytes) + key.length));
 }
 
+- (void)setSharedKey:(NSData *)key withIndex:(int)index {
+  _nativeKeyProvider->SetSharedKey(
+      index,
+      std::vector<uint8_t>((const uint8_t *)key.bytes, ((const uint8_t *)key.bytes) + key.length));
+}
+
+- (NSData *)ratchetSharedKey:(int)index {
+  std::vector<uint8_t> nativeKey = _nativeKeyProvider->RatchetSharedKey(index);
+  return [NSData dataWithBytes:nativeKey.data() length:nativeKey.size()];
+}
+
+- (NSData *)exportSharedKey:(int)index {
+  std::vector<uint8_t> nativeKey = _nativeKeyProvider->ExportSharedKey(index);
+  return [NSData dataWithBytes:nativeKey.data() length:nativeKey.size()];
+}
+
 - (NSData *)ratchetKey:(NSString *)participantId withIndex:(int)index {
   std::vector<uint8_t> nativeKey = _nativeKeyProvider->RatchetKey([participantId stdString], index);
   return [NSData dataWithBytes:nativeKey.data() length:nativeKey.size()];
