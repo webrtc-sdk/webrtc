@@ -102,6 +102,7 @@ class ParticipantKeyHandler {
     }
     SetKeyFromMaterial(new_material,
                        key_index != -1 ? key_index : current_key_index_);
+    has_valid_key = true;
     return new_material;
   }
 
@@ -113,7 +114,7 @@ class ParticipantKeyHandler {
   virtual void SetKey(std::vector<uint8_t> password, int key_index) {
     webrtc::MutexLock lock(&mutex_);
     SetKeyFromMaterial(password, key_index);
-    have_valid_key = true;
+    has_valid_key = true;
   }
 
   std::vector<uint8_t> RatchetKeyMaterial(
@@ -145,8 +146,8 @@ private:
     crypto_key_ring_[current_key_index_] =
         DeriveKeys(password, key_provider_->options().ratchet_salt, 128);
   }
- protected:
-  bool have_valid_key = false;
+protected:
+  bool has_valid_key = false;
  private:
   mutable webrtc::Mutex mutex_;
   int current_key_index_ = 0;
