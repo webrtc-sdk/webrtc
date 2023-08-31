@@ -54,14 +54,17 @@ class KeyProvider : public rtc::RefCountInterface {
   enum { kRawKeySize = 32 };
 
  public:
-  virtual const std::shared_ptr<ParticipantKeyHandler> GetKey(
-      const std::string participant_id) const = 0;
 
   virtual bool SetSharedKey(int key_index, std::vector<uint8_t> key) = 0;
+
+  virtual const std::shared_ptr<ParticipantKeyHandler> GetSharedKey(const std::string participant_id) = 0;
 
   virtual bool SetKey(const std::string participant_id,
                       int key_index,
                       std::vector<uint8_t> key) = 0;
+
+  virtual const std::shared_ptr<ParticipantKeyHandler> GetKey(
+      const std::string participant_id) const = 0;
 
   virtual const std::vector<uint8_t> RatchetKey(
       const std::string participant_id,
@@ -90,6 +93,14 @@ class ParticipantKeyHandler {
   }
 
   virtual ~ParticipantKeyHandler() = default;
+
+  std::shared_ptr<ParticipantKeyHandler> Clone() {
+    auto clone = std::make_shared<ParticipantKeyHandler>(key_provider_);
+    clone->crypto_key_ring_ = crypto_key_ring_;
+    clone->current_key_index_ = current_key_index_;
+    clone->has_valid_key_ = has_valid_key_;
+    return clone;
+  }
 
   virtual std::vector<uint8_t> RatchetKey(int key_index) {
     auto key_set = GetKeySet(key_index);
@@ -180,7 +191,30 @@ class DefaultKeyProviderImpl : public KeyProvider {
 
     auto key_handler = keys_["shared"];
     key_handler->SetKey(key, key_index);
+
+    if(options_.shared_key) {
+      for(auto& key_pair : keys_) {
+        if(key_pair.first != "shared") {
+          key_pair.second->SetKey(key, key_index);
+        }
+      }
+    }
     return true;
+  }
+
+  const std::shared_ptr<ParticipantKeyHandler> GetSharedKey(const std::string participant_id) override {
+    webrtc::MutexLock lock(&mutex_);
+    if(options_.shared_key && keys_.find("shared") != keys_.end()) {
+      auto shared_key_handler = keys_["shared"];
+      if (keys_.find(participant_id) != keys_.end()) {
+        return keys_[participant_id];
+      } else {
+        auto key_handler_clone = shared_key_handler->Clone();
+        keys_[participant_id] = key_handler_clone;
+        return key_handler_clone;
+      }
+    }
+    return nullptr;
   }
 
   /// Set the key at the given index.
@@ -201,10 +235,6 @@ class DefaultKeyProviderImpl : public KeyProvider {
   const std::shared_ptr<ParticipantKeyHandler> GetKey(
       const std::string participant_id) const override {
     webrtc::MutexLock lock(&mutex_);
-
-    if(options_.shared_key && keys_.find("shared") != keys_.end()) {
-      return keys_.find("shared")->second;
-    }
 
     if (keys_.find(participant_id) == keys_.end()) {
       return nullptr;
