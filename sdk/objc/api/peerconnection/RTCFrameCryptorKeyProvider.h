@@ -25,6 +25,8 @@ RTC_OBJC_EXPORT
 
 - (void)setKey:(NSData *)key withIndex:(int)index forParticipant:(NSString *)participantId;
 
+- (void)setSharedKey:(NSData *)key withIndex:(int)index;
+
 - (NSData *)ratchetKey:(NSString *)participantId withIndex:(int)index;
 
 - (NSData *)exportKey:(NSString *)participantId withIndex:(int)index;

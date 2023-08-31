@@ -33,6 +33,16 @@ ScopedJavaLocalRef<jobject> NativeToJavaFrameCryptorKeyProvider(
       env, jlongFromPointer(key_provider.release()));
 }
 
+static jboolean JNI_FrameCryptorKeyProvider_SetSharedKey(
+    JNIEnv* jni,
+    jlong j_key_provider,
+    jint j_index,
+    const base::android::JavaParamRef<jbyteArray>& j_key) {
+  auto key = JavaToNativeByteArray(jni, j_key);
+  return reinterpret_cast<webrtc::DefaultKeyProviderImpl*>(j_key_provider)
+      ->SetSharedKey(j_index,std::vector<uint8_t>(key.begin(), key.end()));
+}
+
 static jboolean JNI_FrameCryptorKeyProvider_SetKey(
     JNIEnv* jni,
     jlong j_key_provider,

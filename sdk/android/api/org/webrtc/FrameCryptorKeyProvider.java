@@ -30,6 +30,11 @@ public class FrameCryptorKeyProvider {
     return nativeKeyProvider;
   }
 
+  public boolean setSharedKey(int index, byte[] key) {
+    checkKeyProviderExists();
+    return nativeSetSharedKey(nativeKeyProvider,index, key);
+  }
+
   public boolean setKey(String participantId, int index, byte[] key) {
     checkKeyProviderExists();
     return nativeSetKey(nativeKeyProvider, participantId, index, key);
@@ -56,7 +61,8 @@ public class FrameCryptorKeyProvider {
       throw new IllegalStateException("FrameCryptorKeyProvider has been disposed.");
     }
   }
-
+  private static native boolean nativeSetSharedKey(
+      long keyProviderPointer, int index, byte[] key);
   private static native boolean nativeSetKey(
       long keyProviderPointer, String participantId, int index, byte[] key);
   private static native byte[] nativeRatchetKey(

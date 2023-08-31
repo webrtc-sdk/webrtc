@@ -565,15 +565,15 @@ void FrameCryptorTransformer::decryptFrame(
     RTC_LOG(LS_ERROR) << "FrameCryptorTransformer::decryptFrame() failed";
     std::shared_ptr<ParticipantKeyHandler::KeySet> ratcheted_key_set;
     auto currentKeyMaterial = key_set->material;
-    if (key_handler->options().ratchet_window_size > 0) {
-      while (ratchet_count < key_handler->options().ratchet_window_size) {
+    if (key_provider_->options().ratchet_window_size > 0) {
+      while (ratchet_count < key_provider_->options().ratchet_window_size) {
         ratchet_count++;
 
         RTC_LOG(LS_INFO) << "ratcheting key attempt " << ratchet_count << " of "
-                         << key_handler->options().ratchet_window_size;
+                         << key_provider_->options().ratchet_window_size;
 
         auto new_material = key_handler->RatchetKeyMaterial(currentKeyMaterial);
-        ratcheted_key_set = key_handler->DeriveKeys(new_material, key_handler->options().ratchet_salt, 128);
+        ratcheted_key_set = key_handler->DeriveKeys(new_material, key_provider_->options().ratchet_salt, 128);
 
         if (AesEncryptDecrypt(EncryptOrDecrypt::kDecrypt, algorithm_,
                               ratcheted_key_set->encryption_key, iv, frame_header,
@@ -603,7 +603,7 @@ void FrameCryptorTransformer::decryptFrame(
         times, we come back to the initial key.
        */
       if (!decryption_success ||
-          ratchet_count >= key_handler->options().ratchet_window_size) {
+          ratchet_count >= key_provider_->options().ratchet_window_size) {
         key_handler->SetKeyFromMaterial(initialKeyMaterial, key_index);
       }
     }
