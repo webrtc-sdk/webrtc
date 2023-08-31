@@ -23,6 +23,12 @@ NS_ASSUME_NONNULL_BEGIN
 RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCFrameCryptorKeyProvider) : NSObject
 
+- (void)setSharedKey:(NSData *)key withIndex:(int)index;
+
+- (NSData *)ratchetSharedKey:(int)index;
+
+- (NSData *)exportSharedKey:(int)index;
+
 - (void)setKey:(NSData *)key withIndex:(int)index forParticipant:(NSString *)participantId;
 
 - (NSData *)ratchetKey:(NSString *)participantId withIndex:(int)index;
