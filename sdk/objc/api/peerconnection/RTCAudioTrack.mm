@@ -151,6 +151,9 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
                                   0,
                                   NULL,
                                   &buffer);
+    // format is no longer required
+    CFRelease(format);
+
     if (status != 0) {
       NSLog(@"RTCAudioTrack: Failed to allocate sample buffer");
       return;
