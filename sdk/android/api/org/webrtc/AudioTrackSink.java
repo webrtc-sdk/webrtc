@@ -17,7 +17,8 @@ import java.nio.ByteBuffer;
  */
 public interface AudioTrackSink {
   /**
-   * 
+   * Implementations should copy the audio data into a local copy if they wish
+   * to use the data after this function returns.
    */
   @CalledByNative 
   void onData(ByteBuffer audioData, int bitsPerSample, int sampleRate,

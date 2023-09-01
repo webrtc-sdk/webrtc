@@ -142,7 +142,7 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
     }
 
     /**
-     * Set a callback to listen to the audio output from the AudioTrack.
+     * Set a callback to listen to the audio output passed to the AudioTrack.
      */
     public Builder setPlaybackSamplesReadyCallback(PlaybackSamplesReadyCallback playbackSamplesReadyCallback) {
       this.playbackSamplesReadyCallback = playbackSamplesReadyCallback;

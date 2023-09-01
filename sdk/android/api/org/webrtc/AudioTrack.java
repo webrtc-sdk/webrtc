@@ -36,7 +36,6 @@ public class AudioTrack extends MediaStreamTrack {
     if (sink == null) {
       throw new IllegalArgumentException("The AudioTrackSink is not allowed to be null");
     }
-    // We allow calling addSink() with the same sink multiple times.
     if (!sinks.containsKey(sink)) {
       final long nativeSink = nativeWrapSink(sink);
       sinks.put(sink, nativeSink);
