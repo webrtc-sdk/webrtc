@@ -189,15 +189,14 @@ class DefaultKeyProviderImpl : public KeyProvider {
   /// Set the shared key.
   bool SetSharedKey(int key_index, std::vector<uint8_t> key) override {
     webrtc::MutexLock lock(&mutex_);
-    
-    if (keys_.find("shared") == keys_.end()) {
-      keys_["shared"] = std::make_shared<ParticipantKeyHandler>(this);
-    }
-
-    auto key_handler = keys_["shared"];
-    key_handler->SetKey(key, key_index);
-
     if(options_.shared_key) {
+      if (keys_.find("shared") == keys_.end()) {
+        keys_["shared"] = std::make_shared<ParticipantKeyHandler>(this);
+      }
+
+      auto key_handler = keys_["shared"];
+      key_handler->SetKey(key, key_index);
+
       for(auto& key_pair : keys_) {
         if(key_pair.first != "shared") {
           key_pair.second->SetKey(key, key_index);
