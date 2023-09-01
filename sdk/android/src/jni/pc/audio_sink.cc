@@ -26,10 +26,13 @@ void AudioTrackSinkWrapper::OnData(
     int sample_rate,
     size_t number_of_channels,
     size_t number_of_frames,
-    absl::optional<int64_t> absolute_capture_timestamp_ms) override {
+    absl::optional<int64_t> absolute_capture_timestamp_ms) {
   JNIEnv* jni = AttachCurrentThreadIfNeeded();
-  Java_AudioTrackSink_OnData(
-      audio_data, bits_per_sample, sample_rate, number_of_channels, number_of_frames, absolute_capture_timestamp_ms);
+  int length = (bits_per_sample / 8) * number_of_channels * number_of_frames;
+  ScopedJavaLocalRef<jobject> audio_buffer =
+      NewDirectByteBuffer(jni, (void *) audio_data, length);
+  Java_AudioTrackSink_onData(jni, j_sink_,
+      audio_buffer, bits_per_sample, sample_rate, (int) number_of_channels, (int) number_of_frames, (absolute_capture_timestamp_ms ? absolute_capture_timestamp_ms.value() : 0));
 }
 
 }  // namespace jni

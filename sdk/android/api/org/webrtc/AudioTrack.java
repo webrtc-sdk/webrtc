@@ -10,6 +10,8 @@
 
 package org.webrtc;
 
+import java.util.IdentityHashMap;
+
 /** Java wrapper for a C++ AudioTrackInterface */
 public class AudioTrack extends MediaStreamTrack {
   private final IdentityHashMap<AudioTrackSink, Long> sinks = new IdentityHashMap<AudioTrackSink, Long>();
@@ -73,6 +75,6 @@ public class AudioTrack extends MediaStreamTrack {
   private static native void nativeSetVolume(long track, double volume);
   private static native void nativeAddSink(long track, long nativeSink);
   private static native void nativeRemoveSink(long track, long nativeSink);
-  private static native long nativeWrapSink(VideoSink sink);
+  private static native long nativeWrapSink(AudioTrackSink sink);
   private static native void nativeFreeSink(long sink);
 }

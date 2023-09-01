@@ -26,23 +26,23 @@ static void JNI_AudioTrack_AddSink(JNIEnv* jni,
                                    jlong j_native_track,
                                    jlong j_native_sink) {
   reinterpret_cast<AudioTrackInterface*>(j_native_track)
-      ->AddSink(reinterpret_cast<rtc::AudioSinkInterface*>(j_native_sink));
+      ->AddSink(reinterpret_cast<webrtc::AudioTrackSinkInterface*>(j_native_sink));
 }
 
 static void JNI_AudioTrack_RemoveSink(JNIEnv* jni,
                                       jlong j_native_track,
                                       jlong j_native_sink) {
   reinterpret_cast<AudioTrackInterface*>(j_native_track)
-      ->RemoveSink(reinterpret_cast<rtc::AudioSinkInterface*>(j_native_sink));
+      ->RemoveSink(reinterpret_cast<webrtc::AudioTrackSinkInterface*>(j_native_sink));
 }
 
 static jlong JNI_AudioTrack_WrapSink(JNIEnv* jni,
                                      const JavaParamRef<jobject>& sink) {
-  return jlongFromPointer(new VideoSinkWrapper(jni, sink));
+  return jlongFromPointer(new AudioTrackSinkWrapper(jni, sink));
 }
 
 static void JNI_AudioTrack_FreeSink(JNIEnv* jni, jlong j_native_sink) {
-  delete reinterpret_cast<rtc::VideoSinkInterface<VideoFrame>*>(j_native_sink);
+  delete reinterpret_cast<jni::AudioTrackSinkWrapper*>(j_native_sink);
 }
 
 

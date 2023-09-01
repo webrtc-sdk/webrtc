@@ -10,6 +10,8 @@
 
 package org.webrtc;
 
+import java.nio.ByteBuffer;
+
 /**
  * Java version of rtc::AudioTrackSinkInterface.
  */
@@ -18,7 +20,7 @@ public interface AudioTrackSink {
    * 
    */
   @CalledByNative 
-  void onData(const void* audioData, int bitsPerSample, int sampleRate,
+  void onData(ByteBuffer audioData, int bitsPerSample, int sampleRate,
       int numberOfChannels, int numberOfFrames, 
-      absl::optional<int64_t> absoluteCaptureTimestampMs);
+      long absoluteCaptureTimestampMs);
 }
