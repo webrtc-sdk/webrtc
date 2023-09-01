@@ -28,7 +28,8 @@ public class AudioTrack extends MediaStreamTrack {
   }
 
   /**
-   * Adds an AudioTrackSink to the track.
+   * Adds an AudioTrackSink to the track. This callback is only
+   * called for remote audio tracks.
    * 
    * Repeated addSink calls will not add the sink multiple times.
    */
