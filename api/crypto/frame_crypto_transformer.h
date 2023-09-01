@@ -51,9 +51,6 @@ struct KeyProviderOptions {
 
 class KeyProvider : public rtc::RefCountInterface {
  public:
-  enum { kRawKeySize = 32 };
-
- public:
 
   virtual bool SetSharedKey(int key_index, std::vector<uint8_t> key) = 0;
 
