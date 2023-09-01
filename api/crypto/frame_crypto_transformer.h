@@ -59,6 +59,10 @@ class KeyProvider : public rtc::RefCountInterface {
 
   virtual const std::shared_ptr<ParticipantKeyHandler> GetSharedKey(const std::string participant_id) = 0;
 
+  virtual const std::vector<uint8_t> RatchetSharedKey(int key_index) = 0;
+
+  virtual const std::vector<uint8_t> ExportSharedKey(int key_index) const = 0;
+
   virtual bool SetKey(const std::string participant_id,
                       int key_index,
                       std::vector<uint8_t> key) = 0;
@@ -185,6 +189,7 @@ class DefaultKeyProviderImpl : public KeyProvider {
   /// Set the shared key.
   bool SetSharedKey(int key_index, std::vector<uint8_t> key) override {
     webrtc::MutexLock lock(&mutex_);
+    
     if (keys_.find("shared") == keys_.end()) {
       keys_["shared"] = std::make_shared<ParticipantKeyHandler>(this);
     }
@@ -198,8 +203,39 @@ class DefaultKeyProviderImpl : public KeyProvider {
           key_pair.second->SetKey(key, key_index);
         }
       }
+      return true;
     }
-    return true;
+    return false;
+  }
+
+  const std::vector<uint8_t> RatchetSharedKey(int key_index) override {
+    webrtc::MutexLock lock(&mutex_);
+    auto it = keys_.find("shared");
+    if(it == keys_.end()) {
+      return std::vector<uint8_t>();
+    }
+    auto new_key = it->second->RatchetKey(key_index);
+    if(options_.shared_key) {
+      for(auto& key_pair : keys_) {
+        if(key_pair.first != "shared") {
+          key_pair.second->SetKey(new_key, key_index);
+        }
+      }
+    }
+    return new_key;
+  }
+
+  const std::vector<uint8_t> ExportSharedKey(int key_index) const override {
+    webrtc::MutexLock lock(&mutex_);
+    auto it = keys_.find("shared");
+    if(it == keys_.end()) {
+      return std::vector<uint8_t>();
+    }
+    auto key_set = it->second->GetKeySet(key_index);
+    if(key_set) {
+      return key_set->material;
+    }
+    return std::vector<uint8_t>();
   }
 
   const std::shared_ptr<ParticipantKeyHandler> GetSharedKey(const std::string participant_id) override {
