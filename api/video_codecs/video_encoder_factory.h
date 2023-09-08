@@ -89,7 +89,7 @@ class VideoEncoderFactory {
     // specified format is supported. Returns false if scalability_mode is
     // specified.
     CodecSupport codec_support;
-    if (!scalability_mode) {
+    if (scalability_mode) {
       codec_support.is_supported = format.IsCodecInList(GetSupportedFormats());
     }
     return codec_support;
