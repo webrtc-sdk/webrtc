@@ -10,7 +10,6 @@
 
 #include <jni.h>
 
-#include "api/environment/environment.h"
 #include "absl/container/inlined_vector.h"
 #include "api/video_codecs/sdp_video_format.h"
 #include "modules/video_coding/codecs/vp9/include/vp9.h"
@@ -26,10 +25,8 @@
 namespace webrtc {
 namespace jni {
 
-jlong JNI_LibvpxVp9Encoder_Create(JNIEnv* jni, jlong j_webrtc_env_ref) {
-  return NativeToJavaPointer(
-      CreateVp9Encoder(*reinterpret_cast<const Environment*>(j_webrtc_env_ref))
-          .release());
+static jlong JNI_LibvpxVp9Encoder_CreateEncoder(JNIEnv* jni) {
+  return jlongFromPointer(VP9Encoder::Create().release());
 }
 
 static jboolean JNI_LibvpxVp9Encoder_IsSupported(JNIEnv* jni) {

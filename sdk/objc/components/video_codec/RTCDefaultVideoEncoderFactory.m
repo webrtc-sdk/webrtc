@@ -55,12 +55,12 @@
 
   if ([RTC_OBJC_TYPE(RTCVideoEncoderVP9) isSupported]) {
     [result
-        addObject:[[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:kRTCVideoCodecVp9Name parameters:nil scalabilityModes:[RTC_OBJC_TYPE(RTCVideoEncoderVP9) scalabilityModes]]];
+        addObject:[[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:kRTCVideoCodecVp9Name parameters:nil scalabilityModes:[RTCVideoEncoderVP9 scalabilityModes]]];
   }
 
 #if defined(RTC_USE_LIBAOM_AV1_ENCODER)
   RTC_OBJC_TYPE(RTCVideoCodecInfo) *av1Info =
-    [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:kRTCVideoCodecAv1Name parameters:nil scalabilityModes:[RTC_OBJC_TYPE(RTCVideoEncoderAV1) scalabilityModes]];
+    [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:kRTCVideoCodecAv1Name parameters:nil scalabilityModes:[RTCVideoEncoderAV1 scalabilityModes]];
   [result addObject:av1Info];
 #endif
 
