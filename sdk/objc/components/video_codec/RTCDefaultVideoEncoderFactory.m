@@ -55,7 +55,7 @@
 
   if ([RTC_OBJC_TYPE(RTCVideoEncoderVP9) isSupported]) {
     [result
-        addObject:[[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:kRTCVideoCodecVp9Name]];
+        addObject:[[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:kRTCVideoCodecVp9Name parameters:nil scalabilityModes:[RTCVideoEncoderVP9 scalabilityModes]]];
   }
 
 #if defined(RTC_USE_LIBAOM_AV1_ENCODER)
