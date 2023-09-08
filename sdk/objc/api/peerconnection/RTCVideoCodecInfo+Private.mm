@@ -12,6 +12,11 @@
 
 #import "helpers/NSString+StdString.h"
 
+#include "absl/container/inlined_vector.h"
+#include "api/video_codecs/sdp_video_format.h"
+#include "modules/video_coding/svc/scalability_mode_util.h"
+#include "modules/video_coding/svc/create_scalability_structure.h"
+
 @implementation RTC_OBJC_TYPE (RTCVideoCodecInfo)
 (Private)
 
@@ -31,8 +36,16 @@
     std::string value = [NSString stdStringForString:self.parameters[paramKey]];
     parameters[key] = value;
   }
-
-  return webrtc::SdpVideoFormat([NSString stdStringForString:self.name], parameters);
+    
+ absl::InlinedVector<webrtc::ScalabilityMode, webrtc::kScalabilityModeCount>
+    scalability_modes;
+  for (NSString *scalabilityMode in self.scalabilityModes) {
+    auto scalability_mode = webrtc::ScalabilityModeFromString([NSString stdStringForString:scalabilityMode]);
+    if (scalability_mode != absl::nullopt) {
+      scalability_modes.push_back(*scalability_mode);
+    }
+  }
+  return webrtc::SdpVideoFormat([NSString stdStringForString:self.name], parameters, scalability_modes);
 }
 
 @end
