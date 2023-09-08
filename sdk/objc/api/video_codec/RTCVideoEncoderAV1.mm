@@ -14,6 +14,12 @@
 #import "RTCMacros.h"
 #import "RTCVideoEncoderAV1.h"
 #import "RTCWrappedNativeVideoEncoder.h"
+
+#import "helpers/NSString+StdString.h"
+
+#include "absl/container/inlined_vector.h"
+#include "api/video_codecs/sdp_video_format.h"
+#include "modules/video_coding/codecs/av1/av1_svc_config.h"
 #include "modules/video_coding/codecs/av1/libaom_av1_encoder.h"
 
 @implementation RTC_OBJC_TYPE (RTCVideoEncoderAV1)
@@ -26,6 +32,16 @@
 
 + (bool)isSupported {
   return true;
+}
+
++ (NSArray<NSString *> *)scalabilityModes {
+    absl::InlinedVector<webrtc::ScalabilityMode, webrtc::kScalabilityModeCount>
+        scalability_modes = webrtc::LibaomAv1EncoderSupportedScalabilityModes();
+    NSMutableArray<NSString *> *scalabilityModes = [NSMutableArray array];
+    for (const webrtc::ScalabilityMode &scalability_mode : scalability_modes) {
+      [scalabilityModes addObject:[NSString stringForAbslStringView:webrtc::ScalabilityModeToString(scalability_mode)]];
+    }
+    return scalabilityModes;
 }
 
 @end

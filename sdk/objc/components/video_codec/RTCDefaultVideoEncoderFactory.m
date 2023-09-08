@@ -59,7 +59,9 @@
   }
 
 #if defined(RTC_USE_LIBAOM_AV1_ENCODER)
-  [result addObject:[[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:kRTCVideoCodecAv1Name]];
+  RTC_OBJC_TYPE(RTCVideoCodecInfo) *av1Info =
+    [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:kRTCVideoCodecAv1Name parameters:nil scalabilityModes:[RTCVideoEncoderAV1 scalabilityModes]];
+  [result addObject:av1Info];
 #endif
 
   return result;
