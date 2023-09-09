@@ -136,7 +136,7 @@ uint8_t get_unencrypted_bytes(webrtc::TransformableFrameInterface* frame,
                   << "NonParameterSetNalu::payload_size: " << index.payload_size
                   << ", nalu_type " << nalu_type << ", NaluIndex [" << idx++
                   << "] offset: " << index.payload_start_offset;
-              break;
+              return unencrypted_bytes;
             default:
               break;
           }
@@ -219,7 +219,7 @@ int AesGcmEncryptDecrypt(EncryptOrDecrypt mode,
   }
 
   if (!ok) {
-    RTC_LOG(LS_ERROR) << "Failed to perform AES-GCM operation.";
+    RTC_LOG(LS_WARNING) << "Failed to perform AES-GCM operation.";
     return OperationError;
   }
 
@@ -510,7 +510,7 @@ void FrameCryptorTransformer::decryptFrame(
   uint8_t key_index = frame_trailer[1];
 
   if (ivLength != getIvSize()) {
-    RTC_LOG(LS_ERROR) << "FrameCryptorTransformer::decryptFrame() ivLength["
+    RTC_LOG(LS_WARNING) << "FrameCryptorTransformer::decryptFrame() ivLength["
                       << static_cast<int>(ivLength) << "] != getIvSize()["
                       << static_cast<int>(getIvSize()) << "]";
     if (last_dec_error_ != FrameCryptionState::kDecryptionFailed) {
@@ -569,7 +569,7 @@ void FrameCryptorTransformer::decryptFrame(
                         encrypted_payload, &buffer) == Success) {
     decryption_success = true;
   } else {
-    RTC_LOG(LS_ERROR) << "FrameCryptorTransformer::decryptFrame() failed";
+    RTC_LOG(LS_WARNING) << "FrameCryptorTransformer::decryptFrame() failed";
     std::shared_ptr<ParticipantKeyHandler::KeySet> ratcheted_key_set;
     auto currentKeyMaterial = key_set->material;
     if (key_provider_->options().ratchet_window_size > 0) {
@@ -593,7 +593,7 @@ void FrameCryptorTransformer::decryptFrame(
           decryption_success = true;
           // success, so we set the new key
           key_handler->SetKeyFromMaterial(new_material, key_index);
-          key_handler->SetHasValidKey(true);
+          key_handler->SetHasValidKey();
           if (last_dec_error_ != FrameCryptionState::kKeyRatcheted) {
             last_dec_error_ = FrameCryptionState::kKeyRatcheted;
             if (observer_)
@@ -622,7 +622,7 @@ void FrameCryptorTransformer::decryptFrame(
   if (!decryption_success) {
     if (last_dec_error_ != FrameCryptionState::kDecryptionFailed) {
       last_dec_error_ = FrameCryptionState::kDecryptionFailed;
-      key_handler->SetHasValidKey(false);
+      key_handler->DecryptionFailure();
       if (observer_)
         observer_->OnFrameCryptionStateChanged(participant_id_,
                                                last_dec_error_);
