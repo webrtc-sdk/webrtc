@@ -40,6 +40,12 @@ RTC_OBJC_EXPORT
                       sharedKeyMode:(BOOL)sharedKey
                 uncryptedMagicBytes:(nullable NSData *)uncryptedMagicBytes;
 
+- (instancetype)initWithRatchetSalt:(NSData *)salt
+                  ratchetWindowSize:(int)windowSize
+                      sharedKeyMode:(BOOL)sharedKey
+                uncryptedMagicBytes:(nullable NSData *)uncryptedMagicBytes
+                   failureTolerance:(int)failureTolerance;
+
 @end
 
 NS_ASSUME_NONNULL_END
