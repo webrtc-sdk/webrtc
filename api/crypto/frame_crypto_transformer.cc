@@ -219,7 +219,7 @@ int AesGcmEncryptDecrypt(EncryptOrDecrypt mode,
   }
 
   if (!ok) {
-    RTC_LOG(LS_ERROR) << "Failed to perform AES-GCM operation.";
+    RTC_LOG(LS_WARNING) << "Failed to perform AES-GCM operation.";
     return OperationError;
   }
 
@@ -593,7 +593,7 @@ void FrameCryptorTransformer::decryptFrame(
           decryption_success = true;
           // success, so we set the new key
           key_handler->SetKeyFromMaterial(new_material, key_index);
-          key_handler->SetHasValidKey(true);
+          key_handler->SetHasValidKey();
           if (last_dec_error_ != FrameCryptionState::kKeyRatcheted) {
             last_dec_error_ = FrameCryptionState::kKeyRatcheted;
             if (observer_)
@@ -622,7 +622,7 @@ void FrameCryptorTransformer::decryptFrame(
   if (!decryption_success) {
     if (last_dec_error_ != FrameCryptionState::kDecryptionFailed) {
       last_dec_error_ = FrameCryptionState::kDecryptionFailed;
-      key_handler->SetHasValidKey(false);
+      key_handler->DecryptionFailure();
       if (observer_)
         observer_->OnFrameCryptionStateChanged(participant_id_,
                                                last_dec_error_);

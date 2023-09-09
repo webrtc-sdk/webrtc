@@ -41,12 +41,14 @@ struct KeyProviderOptions {
   std::vector<uint8_t> ratchet_salt;
   std::vector<uint8_t> uncrypted_magic_bytes;
   int ratchet_window_size;
-  KeyProviderOptions() : shared_key(false), ratchet_window_size(0) {}
+  int failure_tolerance;
+  KeyProviderOptions() : shared_key(false), ratchet_window_size(0), failure_tolerance(-1) {}
   KeyProviderOptions(KeyProviderOptions& copy)
       : shared_key(copy.shared_key),
         ratchet_salt(copy.ratchet_salt),
         uncrypted_magic_bytes(copy.uncrypted_magic_bytes),
-        ratchet_window_size(copy.ratchet_window_size) {}
+        ratchet_window_size(copy.ratchet_window_size),
+        failure_tolerance(copy.failure_tolerance) {}
 };
 
 class KeyProvider : public rtc::RefCountInterface {
@@ -116,7 +118,7 @@ class ParticipantKeyHandler {
     }
     SetKeyFromMaterial(new_material,
                        key_index != -1 ? key_index : current_key_index_);
-    SetHasValidKey(true);
+    SetHasValidKey();
     return new_material;
   }
 
@@ -127,7 +129,7 @@ class ParticipantKeyHandler {
 
   virtual void SetKey(std::vector<uint8_t> password, int key_index) {
     SetKeyFromMaterial(password, key_index);
-    SetHasValidKey(true);
+    SetHasValidKey();
   }
 
   std::vector<uint8_t> RatchetKeyMaterial(
@@ -156,9 +158,10 @@ class ParticipantKeyHandler {
     return has_valid_key_;
   }
 
-  void SetHasValidKey(bool has_valid_key) {
+  void SetHasValidKey() {
     webrtc::MutexLock lock(&mutex_);
-    has_valid_key_ = has_valid_key;
+    decryption_failure_count_ = 0;
+    has_valid_key_ = true;
   }
 
   void SetKeyFromMaterial(std::vector<uint8_t> password, int key_index) {
@@ -170,8 +173,21 @@ class ParticipantKeyHandler {
         DeriveKeys(password, key_provider_->options().ratchet_salt, 128);
   }
 
+  void DecryptionFailure() {
+    webrtc::MutexLock lock(&mutex_);
+    if (key_provider_->options().failure_tolerance < 0) {
+      return;
+    }
+    decryption_failure_count_ += 1;
+
+    if (decryption_failure_count_ > key_provider_->options().failure_tolerance) {
+      has_valid_key_ = false;
+    }
+  }
+
  private:
   bool has_valid_key_ = false;
+  int decryption_failure_count_ = 0;
   mutable webrtc::Mutex mutex_;
   int current_key_index_ = 0;
   KeyProvider* key_provider_;
