@@ -34,12 +34,25 @@
                   ratchetWindowSize:(int)windowSize
                       sharedKeyMode:(BOOL)sharedKey
                 uncryptedMagicBytes:(NSData *)uncryptedMagicBytes {
+  return [self initWithRatchetSalt:salt
+                  ratchetWindowSize:windowSize
+                      sharedKeyMode:sharedKey
+                uncryptedMagicBytes:uncryptedMagicBytes
+                   failureTolerance:-1];
+}
+
+- (instancetype)initWithRatchetSalt:(NSData *)salt
+                  ratchetWindowSize:(int)windowSize
+                      sharedKeyMode:(BOOL)sharedKey
+                uncryptedMagicBytes:(nullable NSData *)uncryptedMagicBytes
+                   failureTolerance:(int)failureTolerance {
   if (self = [super init]) {
     webrtc::KeyProviderOptions options;
     options.ratchet_salt = std::vector<uint8_t>((const uint8_t *)salt.bytes,
                                                 ((const uint8_t *)salt.bytes) + salt.length);
     options.ratchet_window_size = windowSize;
     options.shared_key = sharedKey;
+    options.failure_tolerance = failureTolerance;
     if(uncryptedMagicBytes != nil) {
       options.uncrypted_magic_bytes = std::vector<uint8_t>((const uint8_t *)uncryptedMagicBytes.bytes,
                                                           ((const uint8_t *)uncryptedMagicBytes.bytes) + uncryptedMagicBytes.length);
@@ -80,6 +93,12 @@
 - (NSData *)exportKey:(NSString *)participantId withIndex:(int)index {
   std::vector<uint8_t> nativeKey = _nativeKeyProvider->ExportKey([participantId stdString], index);
   return [NSData dataWithBytes:nativeKey.data() length:nativeKey.size()];
+}
+
+- (void)setSifTrailer:(NSData *)trailer {
+  _nativeKeyProvider->SetSifTrailer(
+      std::vector<uint8_t>((const uint8_t *)trailer.bytes,
+                           ((const uint8_t *)trailer.bytes) + trailer.length));
 }
 
 @end

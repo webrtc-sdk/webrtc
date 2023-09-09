@@ -35,10 +35,18 @@ RTC_OBJC_EXPORT
 
 - (NSData *)exportKey:(NSString *)participantId withIndex:(int)index;
 
+- (void)setSifTrailer:(NSData *)trailer;
+
 - (instancetype)initWithRatchetSalt:(NSData *)salt
                   ratchetWindowSize:(int)windowSize
                       sharedKeyMode:(BOOL)sharedKey
                 uncryptedMagicBytes:(nullable NSData *)uncryptedMagicBytes;
+
+- (instancetype)initWithRatchetSalt:(NSData *)salt
+                  ratchetWindowSize:(int)windowSize
+                      sharedKeyMode:(BOOL)sharedKey
+                uncryptedMagicBytes:(nullable NSData *)uncryptedMagicBytes
+                   failureTolerance:(int)failureTolerance;
 
 @end
 
