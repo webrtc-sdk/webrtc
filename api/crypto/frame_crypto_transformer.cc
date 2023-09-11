@@ -136,7 +136,7 @@ uint8_t get_unencrypted_bytes(webrtc::TransformableFrameInterface* frame,
                   << "NonParameterSetNalu::payload_size: " << index.payload_size
                   << ", nalu_type " << nalu_type << ", NaluIndex [" << idx++
                   << "] offset: " << index.payload_start_offset;
-              break;
+              return unencrypted_bytes;
             default:
               break;
           }
@@ -510,7 +510,7 @@ void FrameCryptorTransformer::decryptFrame(
   uint8_t key_index = frame_trailer[1];
 
   if (ivLength != getIvSize()) {
-    RTC_LOG(LS_ERROR) << "FrameCryptorTransformer::decryptFrame() ivLength["
+    RTC_LOG(LS_WARNING) << "FrameCryptorTransformer::decryptFrame() ivLength["
                       << static_cast<int>(ivLength) << "] != getIvSize()["
                       << static_cast<int>(getIvSize()) << "]";
     if (last_dec_error_ != FrameCryptionState::kDecryptionFailed) {
@@ -569,7 +569,7 @@ void FrameCryptorTransformer::decryptFrame(
                         encrypted_payload, &buffer) == Success) {
     decryption_success = true;
   } else {
-    RTC_LOG(LS_ERROR) << "FrameCryptorTransformer::decryptFrame() failed";
+    RTC_LOG(LS_WARNING) << "FrameCryptorTransformer::decryptFrame() failed";
     std::shared_ptr<ParticipantKeyHandler::KeySet> ratcheted_key_set;
     auto currentKeyMaterial = key_set->material;
     if (key_provider_->options().ratchet_window_size > 0) {
