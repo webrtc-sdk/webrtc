@@ -19,9 +19,20 @@ namespace jni {
 
 SdpVideoFormat VideoCodecInfoToSdpVideoFormat(JNIEnv* jni,
                                               const JavaRef<jobject>& j_info) {
+  std::vector<std::string> params =
+      JavaToStdVectorStrings(jni, Java_VideoCodecInfo_getScalabilityModes(jni, j_info));
+  absl::InlinedVector<webrtc::ScalabilityMode, webrtc::kScalabilityModeCount>
+    scalability_modes;
+  for (auto mode : params) {
+    auto scalability_mode = webrtc::ScalabilityModeFromString(mode);
+    if (scalability_mode != absl::nullopt) {
+      scalability_modes.push_back(*scalability_mode);
+    }
+  }
   return SdpVideoFormat(
       JavaToNativeString(jni, Java_VideoCodecInfo_getName(jni, j_info)),
-      JavaToNativeStringMap(jni, Java_VideoCodecInfo_getParams(jni, j_info)));
+      JavaToNativeStringMap(jni, Java_VideoCodecInfo_getParams(jni, j_info)),
+      scalability_modes);
 }
 
 ScopedJavaLocalRef<jobject> SdpVideoFormatToVideoCodecInfo(

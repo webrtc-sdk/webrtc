@@ -10,7 +10,11 @@
 
 #include <jni.h>
 
+#include "absl/container/inlined_vector.h"
+#include "api/video_codecs/sdp_video_format.h"
 #include "modules/video_coding/codecs/vp9/include/vp9.h"
+#include "modules/video_coding/svc/create_scalability_structure.h"
+
 #include "sdk/android/generated_libvpx_vp9_jni/LibvpxVp9Decoder_jni.h"
 #include "sdk/android/generated_libvpx_vp9_jni/LibvpxVp9Encoder_jni.h"
 #include "sdk/android/src/jni/jni_helpers.h"
@@ -34,5 +38,14 @@ static jboolean JNI_LibvpxVp9Decoder_IsSupported(JNIEnv* jni) {
   return !SupportedVP9Codecs().empty();
 }
 
+static  webrtc::ScopedJavaLocalRef<jobject> JNI_LibvpxVp9Decoder_SGetSupportedScalabilityModes(JNIEnv* jni) {
+  std::vector<std::string> modes;
+   for (const auto scalability_mode : webrtc::kAllScalabilityModes) {
+      if (webrtc::ScalabilityStructureConfig(scalability_mode).has_value()) {
+       modes.push_back(webrtc::ScalabilityModeToString(scalability_mode));
+      }
+    }
+  return NativeToJavaList(jni, modes, &JavaStringFromStdString);
+}
 }  // namespace jni
 }  // namespace webrtc

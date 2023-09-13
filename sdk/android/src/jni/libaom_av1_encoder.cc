@@ -22,5 +22,15 @@ static jlong JNI_LibaomAv1Encoder_CreateEncoder(JNIEnv* jni) {
   return jlongFromPointer(webrtc::CreateLibaomAv1Encoder().release());
 }
 
+static  webrtc::ScopedJavaLocalRef<jobject> JNI_LibaomAv1Encoder_SGetSupportedScalabilityModes(JNIEnv* jni) {
+  std::vector<std::string> modes;
+   for (const auto scalability_mode : webrtc::kAllScalabilityModes) {
+      if (webrtc::ScalabilityStructureConfig(scalability_mode).has_value()) {
+       modes.push_back(webrtc::ScalabilityModeToString(scalability_mode));
+      }
+    }
+  return NativeToJavaList(jni, modes, &JavaStringFromStdString);
+}
+
 }  // namespace jni
 }  // namespace webrtc
