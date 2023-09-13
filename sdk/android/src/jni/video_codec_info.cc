@@ -42,12 +42,17 @@ ScopedJavaLocalRef<jobject> SdpVideoFormatToVideoCodecInfo(
     const SdpVideoFormat& format) {
   ScopedJavaLocalRef<jobject> j_params =
       NativeToJavaStringMap(jni, format.parameters);
-    std::vector<std::string> scalability_modes;
+  webrtc::ScopedJavaLocalRef<jobject> j_scalability_modes;
+  if (!format.scalability_modes.empty()) {
+    JavaListBuilder builder(jni);
     for (auto mode : format.scalability_modes) {
-      scalability_modes.push_back(std::string(ScalabilityModeToString(mode)));
+      std::string scalability_mode(ScalabilityModeToString(mode));
+      builder.add(NativeToJavaString(jni, scalability_mode));
     }
+    j_scalability_modes = builder.java_list();
+  }
   return Java_VideoCodecInfo_Constructor(
-      jni, NativeToJavaString(jni, format.name), j_params, NativeToJavaStringArray(jni, scalability_modes));
+      jni, NativeToJavaString(jni, format.name), j_params, j_scalability_modes);
 }
 
 }  // namespace jni
