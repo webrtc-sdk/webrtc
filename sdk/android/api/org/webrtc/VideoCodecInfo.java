@@ -41,11 +41,11 @@ public class VideoCodecInfo {
   @Deprecated public final int payload;
 
   @CalledByNative
-  public VideoCodecInfo(String name, Map<String, String> params) {
+  public VideoCodecInfo(String name, Map<String, String> params, List<String> scalabilityModes) {
     this.payload = 0;
     this.name = name;
     this.params = params;
-    this.scalabilityModes = new ArrayList<>();
+    this.scalabilityModes = scalabilityModes;
   }
 
   @Deprecated
@@ -54,13 +54,6 @@ public class VideoCodecInfo {
     this.name = name;
     this.params = params;
     this.scalabilityModes = new ArrayList<>();
-  }
-
-  public VideoCodecInfo(String name, Map<String, String> params, List<String> scalabilityModes) {
-    this.payload = 0;
-    this.name = name;
-    this.params = params;
-    this.scalabilityModes = scalabilityModes;
   }
 
   @Override

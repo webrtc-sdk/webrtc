@@ -47,7 +47,7 @@ public class DefaultVideoEncoderFactoryTest {
   @SmallTest
   @Test
   public void getSupportedCodecs_hwVp8SameParamsAsSwVp8_oneVp8() {
-    VideoCodecInfo hwVp8Encoder = new VideoCodecInfo("VP8", new HashMap<>());
+    VideoCodecInfo hwVp8Encoder = new VideoCodecInfo("VP8", new HashMap<>(), new ArrayList<>(), new ArrayList<>());
     VideoEncoderFactory hwFactory = new CustomHardwareVideoEncoderFactory(hwVp8Encoder);
     DefaultVideoEncoderFactory defFactory = new DefaultVideoEncoderFactory(hwFactory);
     VideoCodecInfo[] supportedCodecs = defFactory.getSupportedCodecs();
@@ -62,7 +62,7 @@ public class DefaultVideoEncoderFactoryTest {
   public void getSupportedCodecs_hwVp8WithDifferentParams_twoVp8() {
     VideoCodecInfo hwVp8Encoder = new VideoCodecInfo("VP8", new HashMap<String, String>() {
       { put("param", "value"); }
-    });
+    }, new ArrayList<>());
     VideoEncoderFactory hwFactory = new CustomHardwareVideoEncoderFactory(hwVp8Encoder);
     DefaultVideoEncoderFactory defFactory = new DefaultVideoEncoderFactory(hwFactory);
     VideoCodecInfo[] supportedCodecs = defFactory.getSupportedCodecs();
