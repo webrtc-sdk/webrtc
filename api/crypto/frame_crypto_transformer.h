@@ -76,6 +76,8 @@ class KeyProvider : public rtc::RefCountInterface {
   virtual const std::vector<uint8_t> ExportKey(const std::string participant_id,
                                                int key_index) const = 0;
 
+  virtual void SetSifTrailer(const std::vector<uint8_t> trailer) = 0;
+
   virtual KeyProviderOptions& options() = 0;
 
  protected:
@@ -310,6 +312,11 @@ class DefaultKeyProviderImpl : public KeyProvider {
       }
     }
     return std::vector<uint8_t>();
+  }
+
+  void SetSifTrailer(const std::vector<uint8_t> trailer) override {
+    webrtc::MutexLock lock(&mutex_);
+    options_.uncrypted_magic_bytes = trailer;
   }
 
   KeyProviderOptions& options() override { return options_; }

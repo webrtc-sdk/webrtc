@@ -95,4 +95,10 @@
   return [NSData dataWithBytes:nativeKey.data() length:nativeKey.size()];
 }
 
+- (void)setSifTrailer:(NSData *)trailer {
+  _nativeKeyProvider->SetSifTrailer(
+      std::vector<uint8_t>((const uint8_t *)trailer.bytes,
+                           ((const uint8_t *)trailer.bytes) + trailer.length));
+}
+
 @end
