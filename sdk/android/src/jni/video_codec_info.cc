@@ -13,6 +13,8 @@
 #include "sdk/android/generated_video_jni/VideoCodecInfo_jni.h"
 #include "sdk/android/native_api/jni/java_types.h"
 #include "sdk/android/src/jni/jni_helpers.h"
+#include "api/video_codecs/scalability_mode.h"
+#include "modules/video_coding/svc/scalability_mode_util.h"
 
 namespace webrtc {
 namespace jni {
@@ -21,10 +23,10 @@ SdpVideoFormat VideoCodecInfoToSdpVideoFormat(JNIEnv* jni,
                                               const JavaRef<jobject>& j_info) {
   std::vector<std::string> params =
       JavaToStdVectorStrings(jni, Java_VideoCodecInfo_getScalabilityModes(jni, j_info));
-  absl::InlinedVector<webrtc::ScalabilityMode, webrtc::kScalabilityModeCount>
+  absl::InlinedVector<ScalabilityMode, kScalabilityModeCount>
     scalability_modes;
   for (auto mode : params) {
-    auto scalability_mode = webrtc::ScalabilityModeFromString(mode);
+    auto scalability_mode = ScalabilityModeFromString(mode);
     if (scalability_mode != absl::nullopt) {
       scalability_modes.push_back(*scalability_mode);
     }

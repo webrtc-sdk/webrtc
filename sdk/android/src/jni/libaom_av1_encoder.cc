@@ -29,11 +29,10 @@ static  webrtc::ScopedJavaLocalRef<jobject> JNI_LibaomAv1Encoder_SGetSupportedSc
   std::vector<std::string> modes;
    for (const auto scalability_mode : webrtc::kAllScalabilityModes) {
       if (webrtc::ScalabilityStructureConfig(scalability_mode).has_value()) {
-       modes.push_back(webrtc::ScalabilityModeToString(scalability_mode));
+       modes.push_back(std::string(webrtc::ScalabilityModeToString(scalability_mode)));
       }
     }
-  return NativeToJavaList(jni, modes, &JavaStringFromStdString);
+  return NativeToJavaStringArray(jni, modes);
 }
-
 }  // namespace jni
 }  // namespace webrtc
