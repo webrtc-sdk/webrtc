@@ -9,6 +9,7 @@
  */
 
 package org.webrtc;
+import java.util.List;
 
 public class LibvpxVp9Encoder extends WrappedNativeVideoEncoder {
   @Override

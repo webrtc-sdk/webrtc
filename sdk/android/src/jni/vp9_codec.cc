@@ -19,6 +19,9 @@
 #include "sdk/android/generated_libvpx_vp9_jni/LibvpxVp9Encoder_jni.h"
 #include "sdk/android/src/jni/jni_helpers.h"
 
+#include<vector>
+#include<string>
+
 namespace webrtc {
 namespace jni {
 
