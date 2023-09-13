@@ -26,7 +26,7 @@ public class LibvpxVp9Encoder extends WrappedNativeVideoEncoder {
 
   static native boolean nativeIsSupported();
 
-  List<String> scalabilityModes() {
+  static List<String> scalabilityModes() {
     return nativeGetSupportedScalabilityModes();
   }
 

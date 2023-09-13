@@ -24,7 +24,7 @@ public class LibaomAv1Encoder extends WrappedNativeVideoEncoder {
     return false;
   }
 
-  List<String> scalabilityModes() {
+  static List<String> scalabilityModes() {
     return nativeGetSupportedScalabilityModes();
   }
 

@@ -42,8 +42,12 @@ ScopedJavaLocalRef<jobject> SdpVideoFormatToVideoCodecInfo(
     const SdpVideoFormat& format) {
   ScopedJavaLocalRef<jobject> j_params =
       NativeToJavaStringMap(jni, format.parameters);
+    std::vector<std::string> scalability_modes;
+    for (auto mode : format.scalability_modes) {
+      scalability_modes.push_back(std::string(ScalabilityModeToString(mode)));
+    }
   return Java_VideoCodecInfo_Constructor(
-      jni, NativeToJavaString(jni, format.name), j_params);
+      jni, NativeToJavaString(jni, format.name), j_params, NativeToJavaStringArray(jni, scalability_modes));
 }
 
 }  // namespace jni
