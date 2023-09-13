@@ -42,7 +42,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
   FourCharCode _outputPixelFormat;
   RTCVideoRotation _rotation;
 #if TARGET_OS_IPHONE
-  UIDeviceOrientation _orientation;
+  UIInterfaceOrientation _orientation;
   BOOL _generatingOrientationNotifications;
 #endif
 }
@@ -75,7 +75,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
     }
     NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
 #if TARGET_OS_IPHONE
-    _orientation = UIDeviceOrientationPortrait;
+    _orientation = UIInterfaceOrientationPortrait;
     _rotation = RTCVideoRotation_90;
     [center addObserver:self
                selector:@selector(deviceOrientationDidChange:)
@@ -166,6 +166,8 @@ const int64_t kNanosecondsPerSecond = 1000000000;
                           [[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
                           self->_generatingOrientationNotifications = YES;
                         }
+                        // Must be called on main
+                        [self updateOrientation];
                       });
 #endif
 
@@ -183,7 +185,6 @@ const int64_t kNanosecondsPerSecond = 1000000000;
                         return;
                       }
                       [self reconfigureCaptureSessionInput];
-                      [self updateOrientation];
                       [self updateDeviceCaptureFormat:format fps:fps];
                       [self updateVideoDataOutputPixelFormat:format];
                       [self.captureSession startRunning];
@@ -226,10 +227,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
 
 #if TARGET_OS_IPHONE
 - (void)deviceOrientationDidChange:(NSNotification *)notification {
-  [RTC_OBJC_TYPE(RTCDispatcher) dispatchAsyncOnType:RTCDispatcherTypeCaptureSession
-                                              block:^{
-                                                [self updateOrientation];
-                                              }];
+  [self updateOrientation];
 }
 #endif
 
@@ -265,22 +263,20 @@ const int64_t kNanosecondsPerSecond = 1000000000;
     usingFrontCamera = AVCaptureDevicePositionFront == deviceInput.device.position;
   }
   switch (_orientation) {
-    case UIDeviceOrientationPortrait:
+    case UIInterfaceOrientationPortrait:
       _rotation = RTCVideoRotation_90;
       break;
-    case UIDeviceOrientationPortraitUpsideDown:
+    case UIInterfaceOrientationPortraitUpsideDown:
       _rotation = RTCVideoRotation_270;
       break;
-    case UIDeviceOrientationLandscapeLeft:
-      _rotation = usingFrontCamera ? RTCVideoRotation_180 : RTCVideoRotation_0;
-      break;
-    case UIDeviceOrientationLandscapeRight:
+    case UIInterfaceOrientationLandscapeLeft:
       _rotation = usingFrontCamera ? RTCVideoRotation_0 : RTCVideoRotation_180;
       break;
-    case UIDeviceOrientationFaceUp:
-    case UIDeviceOrientationFaceDown:
-    case UIDeviceOrientationUnknown:
-      // Ignore.
+    case UIInterfaceOrientationLandscapeRight:
+      _rotation = usingFrontCamera ? RTCVideoRotation_180 : RTCVideoRotation_0;
+      break;
+    case UIInterfaceOrientationUnknown:
+      _rotation = RTCVideoRotation_0;
       break;
   }
 #else
@@ -495,8 +491,8 @@ const int64_t kNanosecondsPerSecond = 1000000000;
            @"updateDeviceCaptureFormat must be called on the capture queue.");
   @try {
     _currentDevice.activeFormat = format;
-    if(![NSStringFromClass([_currentDevice class]) isEqualToString:@"AVCaptureDALDevice"]) {
-        _currentDevice.activeVideoMinFrameDuration = CMTimeMake(1, fps);
+    if (![NSStringFromClass([_currentDevice class]) isEqualToString:@"AVCaptureDALDevice"]) {
+      _currentDevice.activeVideoMinFrameDuration = CMTimeMake(1, fps);
     }
   } @catch (NSException *exception) {
     RTCLogError(@"Failed to set active format!\n User info:%@", exception.userInfo);
@@ -508,8 +504,8 @@ const int64_t kNanosecondsPerSecond = 1000000000;
   NSAssert([RTC_OBJC_TYPE(RTCDispatcher) isOnQueueForType:RTCDispatcherTypeCaptureSession],
            @"reconfigureCaptureSessionInput must be called on the capture queue.");
   NSError *error = nil;
-  AVCaptureDeviceInput *input =
-      [AVCaptureDeviceInput deviceInputWithDevice:_currentDevice error:&error];
+  AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:_currentDevice
+                                                                      error:&error];
   if (!input) {
     RTCLogError(@"Failed to create front camera input: %@", error.localizedDescription);
     return;
@@ -526,12 +522,19 @@ const int64_t kNanosecondsPerSecond = 1000000000;
   [_captureSession commitConfiguration];
 }
 
-- (void)updateOrientation {
-  NSAssert([RTC_OBJC_TYPE(RTCDispatcher) isOnQueueForType:RTCDispatcherTypeCaptureSession],
-           @"updateOrientation must be called on the capture queue.");
 #if TARGET_OS_IPHONE
-  _orientation = [UIDevice currentDevice].orientation;
-#endif
+- (void)updateOrientation {
+  NSAssert([RTC_OBJC_TYPE(RTCDispatcher) isOnQueueForType:RTCDispatcherTypeMain],
+           @"statusBarOrientation must be called on the main queue.");
+  // statusBarOrientation must be called on the main queue
+  UIInterfaceOrientation newOrientation = [UIApplication sharedApplication].statusBarOrientation;
+
+  [RTC_OBJC_TYPE(RTCDispatcher) dispatchAsyncOnType:RTCDispatcherTypeCaptureSession
+                                              block:^{
+                                                // Must be called on the capture queue
+                                                self->_orientation = newOrientation;
+                                              }];
 }
+#endif
 
 @end
