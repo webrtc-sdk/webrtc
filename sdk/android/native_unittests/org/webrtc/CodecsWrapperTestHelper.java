@@ -12,6 +12,7 @@ package org.webrtc;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.ArrayList;
 
 public class CodecsWrapperTestHelper {
   @CalledByNative
@@ -20,7 +21,7 @@ public class CodecsWrapperTestHelper {
     params.put(
         VideoCodecInfo.H264_FMTP_PROFILE_LEVEL_ID, VideoCodecInfo.H264_CONSTRAINED_BASELINE_3_1);
 
-    VideoCodecInfo codec_info = new VideoCodecInfo("H264", params);
+    VideoCodecInfo codec_info = new VideoCodecInfo("H264", params, new ArrayList<>());
     return codec_info;
   }
 

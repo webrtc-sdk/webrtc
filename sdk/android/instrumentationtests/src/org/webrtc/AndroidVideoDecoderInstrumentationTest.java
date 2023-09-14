@@ -48,7 +48,7 @@ public final class AndroidVideoDecoderInstrumentationTest {
     if (codecName.equals("H264")) {
       this.codecType = H264Utils.DEFAULT_H264_BASELINE_PROFILE_CODEC;
     } else {
-      this.codecType = new VideoCodecInfo(codecName, new HashMap<>());
+      this.codecType = new VideoCodecInfo(codecName, new HashMap<>(), new ArrayList<>());
     }
     this.useEglContext = useEglContext;
   }
