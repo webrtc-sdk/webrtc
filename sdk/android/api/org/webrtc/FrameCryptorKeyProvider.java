@@ -60,6 +60,11 @@ public class FrameCryptorKeyProvider {
     return nativeExportKey(nativeKeyProvider, participantId, index);
   }
 
+  public void setSifTrailer(byte[] sifTrailer) {
+    checkKeyProviderExists();
+    nativeSetSifTrailer(nativeKeyProvider, sifTrailer);
+  }
+
   public void dispose() {
     checkKeyProviderExists();
     JniCommon.nativeReleaseRef(nativeKeyProvider);
@@ -83,4 +88,6 @@ public class FrameCryptorKeyProvider {
       long keyProviderPointer, String participantId, int index);
   private static native byte[] nativeExportKey(
       long keyProviderPointer, String participantId, int index);
+  private static native void nativeSetSifTrailer(
+      long keyProviderPointer, byte[] sifTrailer);
 }

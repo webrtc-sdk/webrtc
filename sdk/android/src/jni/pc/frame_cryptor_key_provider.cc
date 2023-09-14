@@ -110,5 +110,14 @@ JNI_FrameCryptorKeyProvider_ExportKey(
   return NativeToJavaByteArray(env, rtc::ArrayView<int8_t>(int8tKey));
 }
 
+static void JNI_FrameCryptorKeyProvider_SetSifTrailer(
+    JNIEnv* jni,
+    jlong j_key_provider,
+    const base::android::JavaParamRef<jbyteArray>& j_trailer) {
+  auto trailer = JavaToNativeByteArray(jni, j_trailer);
+  reinterpret_cast<webrtc::DefaultKeyProviderImpl*>(j_key_provider)
+      ->SetSifTrailer(std::vector<uint8_t>(trailer.begin(), trailer.end()));
+}
+
 }  // namespace jni
 }  // namespace webrtc
