@@ -342,7 +342,7 @@ void FrameCryptorTransformer::encryptFrame(
         << "FrameCryptorTransformer::encryptFrame() sink_callback is NULL";
     if (last_enc_error_ != FrameCryptionState::kInternalError) {
       last_enc_error_ = FrameCryptionState::kInternalError;
-      onFrameCryptionStateChanged(last_dec_error_);
+      onFrameCryptionStateChanged(last_enc_error_);
     }
     return;
   }
@@ -364,7 +364,7 @@ void FrameCryptorTransformer::encryptFrame(
                      << participant_id_;
     if (last_enc_error_ != FrameCryptionState::kMissingKey) {
       last_enc_error_ = FrameCryptionState::kMissingKey;
-      onFrameCryptionStateChanged(last_dec_error_);
+      onFrameCryptionStateChanged(last_enc_error_);
     }
     return;
   }
@@ -414,13 +414,13 @@ void FrameCryptorTransformer::encryptFrame(
                      << " iv=" << to_hex(iv.data(), iv.size());
     if (last_enc_error_ != FrameCryptionState::kOk) {
       last_enc_error_ = FrameCryptionState::kOk;
-      onFrameCryptionStateChanged(last_dec_error_);
+      onFrameCryptionStateChanged(last_enc_error_);
     }
     sink_callback->OnTransformedFrame(std::move(frame));
   } else {
     if (last_enc_error_ != FrameCryptionState::kEncryptionFailed) {
       last_enc_error_ = FrameCryptionState::kEncryptionFailed;
-      onFrameCryptionStateChanged(last_dec_error_);
+      onFrameCryptionStateChanged(last_enc_error_);
     }
     RTC_LOG(LS_ERROR) << "FrameCryptorTransformer::encryptFrame() failed";
   }
