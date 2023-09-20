@@ -636,10 +636,12 @@ void FrameCryptorTransformer::decryptFrame(
 }
 
 void FrameCryptorTransformer::onFrameCryptionStateChanged(FrameCryptionState state) {
-  if(signaling_thread_) {
+  webrtc::MutexLock lock(&mutex_);
+  if(observer_) {
+    RTC_DCHECK(signaling_thread_ != nullptr);
     signaling_thread_->PostTask(
-        [observer = observer_, state = state, participant_id = participant_id_]() mutable {
-          observer->OnFrameCryptionStateChanged(participant_id, state);
+          [observer = observer_, state = state, participant_id = participant_id_]() mutable {
+            observer->OnFrameCryptionStateChanged(participant_id, state);
           }
     );
   }
