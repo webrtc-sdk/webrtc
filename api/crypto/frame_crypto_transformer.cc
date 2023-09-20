@@ -82,6 +82,28 @@ const EVP_CIPHER* GetAesCbcAlgorithmFromKeySize(size_t key_size_bytes) {
   }
 }
 
+inline bool FrameIsH264(webrtc::TransformableFrameInterface* frame,
+                 webrtc::FrameCryptorTransformer::MediaType type) {
+  switch (type) {
+    case webrtc::FrameCryptorTransformer::MediaType::kVideoFrame: {
+      auto videoFrame =
+          static_cast<webrtc::TransformableVideoFrameInterface*>(frame);
+      return videoFrame->header().codec ==
+             webrtc::VideoCodecType::kVideoCodecH264;
+    }
+    default:
+      return false;
+  }
+}
+
+inline bool NeedsRbspUnescaping(const uint8_t* frameData, size_t frameSize) {
+  for (size_t i = 0; i < frameSize - 3; ++i) {
+    if (frameData[i] == 0 && frameData[i + 1] == 0 && frameData[i + 2] == 3)
+      return true;
+  }
+  return false;
+}
+
 std::string to_uint8_list(const uint8_t* data, int len) {
   std::stringstream ss;
   ss << "[";
@@ -395,26 +417,41 @@ void FrameCryptorTransformer::encryptFrame(
                         key_set->encryption_key, iv, frame_header, payload,
                         &buffer) == Success) {
     rtc::Buffer encrypted_payload(buffer.data(), buffer.size());
+    rtc::Buffer tag(encrypted_payload.data() + encrypted_payload.size() - 16,
+                    16);
+    rtc::Buffer data_without_header;
+    data_without_header.AppendData(encrypted_payload);
+    data_without_header.AppendData(iv);
+    data_without_header.AppendData(frame_trailer);
+
     rtc::Buffer data_out;
     data_out.AppendData(frame_header);
-    data_out.AppendData(encrypted_payload);
-    data_out.AppendData(iv);
-    data_out.AppendData(frame_trailer);
 
-    RTC_CHECK_EQ(data_out.size(), frame_header.size() +
-                                      encrypted_payload.size() + iv.size() +
-                                      frame_trailer.size());
+    if (FrameIsH264(frame.get(), type_)) {
+      H264::WriteRbsp(data_without_header.data(),data_without_header.size(), &data_out);
+    } else {
+      data_out.AppendData(data_without_header);
+      RTC_CHECK_EQ(data_out.size(), frame_header.size() +
+                                        encrypted_payload.size() + iv.size() +
+                                        frame_trailer.size());
+    }
 
     frame->SetData(data_out);
 
-    RTC_LOG(LS_INFO) << "FrameCryptorTransformer::encryptFrame() ivLength="
-                     << static_cast<int>(iv.size()) << " unencrypted_bytes="
+    RTC_LOG(LS_INFO) << "FrameCryptorTransformer::encryptFrame() "
+                     << "frame length = " << static_cast<int>(date_in.size())
+                     << " encrypted_length = "
+                     << static_cast<int>(data_out.size())
+                     << " ivLength=" << static_cast<int>(iv.size())
+                     << " unencrypted_bytes="
                      << static_cast<int>(unencrypted_bytes)
+                     << " tag=" << to_hex(tag.data(), tag.size())
                      << " key_index=" << static_cast<int>(key_index_)
                      << " aesKey="
                      << to_hex(key_set->encryption_key.data(),
                                key_set->encryption_key.size())
                      << " iv=" << to_hex(iv.data(), iv.size());
+
     if (last_enc_error_ != FrameCryptionState::kOk) {
       last_enc_error_ = FrameCryptionState::kOk;
       if (observer_)
@@ -554,11 +591,34 @@ void FrameCryptorTransformer::decryptFrame(
     iv[i] = date_in[date_in.size() - 2 - ivLength + i];
   }
 
-  rtc::Buffer encrypted_payload(date_in.size() - unencrypted_bytes - ivLength -
-                                2);
-  for (size_t i = unencrypted_bytes; i < date_in.size() - ivLength - 2; i++) {
-    encrypted_payload[i - unencrypted_bytes] = date_in[i];
+  rtc::Buffer encrypted_buffer(date_in.size() - unencrypted_bytes);
+  for (size_t i = unencrypted_bytes; i < date_in.size(); i++) {
+    encrypted_buffer[i - unencrypted_bytes] = date_in[i];
   }
+
+  if (FrameIsH264(frame.get(), type_) &&
+      NeedsRbspUnescaping(encrypted_buffer.data(), encrypted_buffer.size())) {
+    encrypted_buffer.SetData(H264::ParseRbsp(encrypted_buffer.data(), encrypted_buffer.size()));
+  }
+
+  rtc::Buffer encrypted_payload(encrypted_buffer.size() - ivLength - 2);
+  for (size_t i = 0; i < encrypted_payload.size(); i++) {
+    encrypted_payload[i] = encrypted_buffer[i];
+  }
+
+  rtc::Buffer tag(encrypted_payload.data() + encrypted_payload.size() - 16, 16);
+  RTC_LOG(LS_INFO) << "FrameCryptorTransformer::decryptFrame() "
+                   << " frame length = " << static_cast<int>(date_in.size())
+                   << " ivLength=" << static_cast<int>(iv.size())
+                   << " unencrypted_bytes="
+                   << static_cast<int>(unencrypted_bytes)
+                   << " tag=" << to_hex(tag.data(), tag.size())
+                   << " key_index=" << static_cast<int>(key_index_)
+                   << " aesKey="
+                   << to_hex(key_set->encryption_key.data(),
+                             key_set->encryption_key.size())
+                   << " iv=" << to_hex(iv.data(), iv.size());
+
   std::vector<uint8_t> buffer;
 
   int ratchet_count = 0;
@@ -635,15 +695,6 @@ void FrameCryptorTransformer::decryptFrame(
   data_out.AppendData(frame_header);
   data_out.AppendData(payload);
   frame->SetData(data_out);
-
-  RTC_LOG(LS_INFO) << "FrameCryptorTransformer::decryptFrame() ivLength="
-                   << static_cast<int>(ivLength) << " unencrypted_bytes="
-                   << static_cast<int>(unencrypted_bytes)
-                   << " key_index=" << static_cast<int>(key_index_)
-                   << " aesKey="
-                   << to_hex(key_set->encryption_key.data(),
-                             key_set->encryption_key.size())
-                   << " iv=" << to_hex(iv.data(), iv.size());
 
   if (last_dec_error_ != FrameCryptionState::kOk) {
     last_dec_error_ = FrameCryptionState::kOk;
