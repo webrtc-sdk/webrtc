@@ -56,7 +56,7 @@ class KeyProvider : public rtc::RefCountInterface {
 
   virtual bool SetSharedKey(int key_index, std::vector<uint8_t> key) = 0;
 
-  virtual const std::shared_ptr<ParticipantKeyHandler> GetSharedKey(const std::string participant_id) = 0;
+  virtual const rtc::scoped_refptr<ParticipantKeyHandler> GetSharedKey(const std::string participant_id) = 0;
 
   virtual const std::vector<uint8_t> RatchetSharedKey(int key_index) = 0;
 
@@ -66,7 +66,7 @@ class KeyProvider : public rtc::RefCountInterface {
                       int key_index,
                       std::vector<uint8_t> key) = 0;
 
-  virtual const std::shared_ptr<ParticipantKeyHandler> GetKey(
+  virtual const rtc::scoped_refptr<ParticipantKeyHandler> GetKey(
       const std::string participant_id) const = 0;
 
   virtual const std::vector<uint8_t> RatchetKey(
@@ -84,9 +84,9 @@ class KeyProvider : public rtc::RefCountInterface {
   virtual ~KeyProvider() {}
 };
 
-class ParticipantKeyHandler {
+class ParticipantKeyHandler : public rtc::RefCountInterface {
  public:
-  struct KeySet {
+  struct KeySet : public rtc::RefCountInterface {
     std::vector<uint8_t> material;
     std::vector<uint8_t> encryption_key;
     KeySet(std::vector<uint8_t> material, std::vector<uint8_t> encryptionKey)
@@ -99,8 +99,8 @@ class ParticipantKeyHandler {
 
   virtual ~ParticipantKeyHandler() = default;
 
-  std::shared_ptr<ParticipantKeyHandler> Clone() {
-    auto clone = std::make_shared<ParticipantKeyHandler>(key_provider_);
+  rtc::scoped_refptr<ParticipantKeyHandler> Clone() {
+    auto clone = rtc::make_ref_counted<ParticipantKeyHandler>(key_provider_);
     clone->crypto_key_ring_ = crypto_key_ring_;
     clone->current_key_index_ = current_key_index_;
     clone->has_valid_key_ = has_valid_key_;
@@ -124,7 +124,7 @@ class ParticipantKeyHandler {
     return new_material;
   }
 
-  virtual std::shared_ptr<KeySet> GetKeySet(int key_index) {
+  virtual rtc::scoped_refptr<KeySet> GetKeySet(int key_index) {
     webrtc::MutexLock lock(&mutex_);
     return crypto_key_ring_[key_index != -1 ? key_index : current_key_index_];
   }
@@ -144,13 +144,13 @@ class ParticipantKeyHandler {
     return new_material;
   }
 
-  std::shared_ptr<KeySet> DeriveKeys(std::vector<uint8_t> password,
+  rtc::scoped_refptr<KeySet> DeriveKeys(std::vector<uint8_t> password,
                                      std::vector<uint8_t> ratchet_salt,
                                      unsigned int optional_length_bits) {
     std::vector<uint8_t> derived_key;
     if (DerivePBKDF2KeyFromRawKey(password, ratchet_salt, optional_length_bits,
                                   &derived_key) == 0) {
-      return std::make_shared<KeySet>(password, derived_key);
+      return rtc::make_ref_counted<KeySet>(password, derived_key);
     }
     return nullptr;
   }
@@ -193,7 +193,7 @@ class ParticipantKeyHandler {
   mutable webrtc::Mutex mutex_;
   int current_key_index_ = 0;
   KeyProvider* key_provider_;
-  std::vector<std::shared_ptr<KeySet>> crypto_key_ring_;
+  std::vector<rtc::scoped_refptr<KeySet>> crypto_key_ring_;
 };
 
 class DefaultKeyProviderImpl : public KeyProvider {
@@ -206,7 +206,7 @@ class DefaultKeyProviderImpl : public KeyProvider {
     webrtc::MutexLock lock(&mutex_);
     if(options_.shared_key) {
       if (keys_.find("shared") == keys_.end()) {
-        keys_["shared"] = std::make_shared<ParticipantKeyHandler>(this);
+        keys_["shared"] = rtc::make_ref_counted<ParticipantKeyHandler>(this);
       }
 
       auto key_handler = keys_["shared"];
@@ -252,7 +252,7 @@ class DefaultKeyProviderImpl : public KeyProvider {
     return std::vector<uint8_t>();
   }
 
-  const std::shared_ptr<ParticipantKeyHandler> GetSharedKey(const std::string participant_id) override {
+  const rtc::scoped_refptr<ParticipantKeyHandler> GetSharedKey(const std::string participant_id) override {
     webrtc::MutexLock lock(&mutex_);
     if(options_.shared_key && keys_.find("shared") != keys_.end()) {
       auto shared_key_handler = keys_["shared"];
@@ -274,7 +274,7 @@ class DefaultKeyProviderImpl : public KeyProvider {
     webrtc::MutexLock lock(&mutex_);
 
     if (keys_.find(participant_id) == keys_.end()) {
-      keys_[participant_id] = std::make_shared<ParticipantKeyHandler>(this);
+      keys_[participant_id] = rtc::make_ref_counted<ParticipantKeyHandler>(this);
     }
 
     auto key_handler = keys_[participant_id];
@@ -282,7 +282,7 @@ class DefaultKeyProviderImpl : public KeyProvider {
     return true;
   }
 
-  const std::shared_ptr<ParticipantKeyHandler> GetKey(
+  const rtc::scoped_refptr<ParticipantKeyHandler> GetKey(
       const std::string participant_id) const override {
     webrtc::MutexLock lock(&mutex_);
 
@@ -324,7 +324,7 @@ class DefaultKeyProviderImpl : public KeyProvider {
  private:
   mutable webrtc::Mutex mutex_;
   KeyProviderOptions options_;
-  std::unordered_map<std::string, std::shared_ptr<ParticipantKeyHandler>> keys_;
+  std::unordered_map<std::string, rtc::scoped_refptr<ParticipantKeyHandler>> keys_;
 };
 
 enum FrameCryptionState {

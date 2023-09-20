@@ -570,7 +570,7 @@ void FrameCryptorTransformer::decryptFrame(
     decryption_success = true;
   } else {
     RTC_LOG(LS_WARNING) << "FrameCryptorTransformer::decryptFrame() failed";
-    std::shared_ptr<ParticipantKeyHandler::KeySet> ratcheted_key_set;
+    rtc::scoped_refptr<ParticipantKeyHandler::KeySet> ratcheted_key_set;
     auto currentKeyMaterial = key_set->material;
     if (key_provider_->options().ratchet_window_size > 0) {
       while (ratchet_count < key_provider_->options().ratchet_window_size) {
