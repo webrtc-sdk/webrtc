@@ -88,14 +88,14 @@ static jlong JNI_FrameCryptor_SetObserver(
       rtc::make_ref_counted<FrameCryptorObserverJni>(jni, j_observer);
   observer->AddRef();
   reinterpret_cast<FrameCryptorTransformer*>(j_frame_cryptor_pointer)
-      ->SetFrameCryptorTransformerObserver(observer.get());
+      ->RegisterFrameCryptorTransformerObserver(observer);
   return jlongFromPointer(observer.get());
 }
 
 static void JNI_FrameCryptor_UnSetObserver(JNIEnv* jni,
                                            jlong j_frame_cryptor_pointer) {
   reinterpret_cast<FrameCryptorTransformer*>(j_frame_cryptor_pointer)
-      ->SetFrameCryptorTransformerObserver(nullptr);
+      ->UnRegisterFrameCryptorTransformerObserver();
 }
 
 webrtc::FrameCryptorTransformer::Algorithm AlgorithmFromIndex(int index) {

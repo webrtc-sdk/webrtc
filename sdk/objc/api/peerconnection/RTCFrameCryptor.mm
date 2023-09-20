@@ -94,7 +94,7 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
   const webrtc::RtpReceiverInterface *_receiver;
   NSString *_participantId;
   rtc::scoped_refptr<webrtc::FrameCryptorTransformer> frame_crypto_transformer_;
-  std::unique_ptr<webrtc::RTCFrameCryptorDelegateAdapter> _observer;
+  rtc::scoped_refptr<webrtc::RTCFrameCryptorDelegateAdapter> _observer;
 }
 
 @synthesize participantId = _participantId;
@@ -115,8 +115,8 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
                     participantId:(NSString *)participantId
                         algorithm:(RTCCyrptorAlgorithm)algorithm
                        keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider {
-  if (self = [super init]) {
-    _observer.reset(new webrtc::RTCFrameCryptorDelegateAdapter(self));
+  if (self = [super init]) { 
+    _observer = rtc::make_ref_counted<webrtc::RTCFrameCryptorDelegateAdapter>(self);
     _participantId = participantId;
     auto rtpSender = sender.nativeRtpSender;
     auto mediaType = rtpSender->track()->kind() == "audio" ?
@@ -130,7 +130,7 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
 
     rtpSender->SetEncoderToPacketizerFrameTransformer(frame_crypto_transformer_);
     frame_crypto_transformer_->SetEnabled(false);
-    frame_crypto_transformer_->SetFrameCryptorTransformerObserver(_observer.get());
+    frame_crypto_transformer_->RegisterFrameCryptorTransformerObserver(_observer);
   }
   return self;
 }
@@ -140,7 +140,7 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
                           algorithm:(RTCCyrptorAlgorithm)algorithm
                          keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider {
   if (self = [super init]) {
-    _observer.reset(new webrtc::RTCFrameCryptorDelegateAdapter(self));
+    _observer = rtc::make_ref_counted<webrtc::RTCFrameCryptorDelegateAdapter>(self);
     _participantId = participantId;
     auto rtpReceiver = receiver.nativeRtpReceiver;
     auto mediaType = rtpReceiver->track()->kind() == "audio" ?
@@ -154,7 +154,7 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
 
     rtpReceiver->SetDepacketizerToDecoderFrameTransformer(frame_crypto_transformer_);
     frame_crypto_transformer_->SetEnabled(false);
-    frame_crypto_transformer_->SetFrameCryptorTransformerObserver(_observer.get());
+    frame_crypto_transformer_->RegisterFrameCryptorTransformerObserver(_observer);
   }
   return self;
 }
@@ -176,7 +176,7 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
 }
 
 - (void)dealloc {
-  frame_crypto_transformer_->SetFrameCryptorTransformerObserver(nullptr);
+  frame_crypto_transformer_->UnRegisterFrameCryptorTransformerObserver();
 }
 
 @end

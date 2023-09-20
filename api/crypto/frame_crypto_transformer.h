@@ -337,7 +337,7 @@ enum FrameCryptionState {
   kInternalError,
 };
 
-class FrameCryptorTransformerObserver {
+class FrameCryptorTransformerObserver : public rtc::RefCountInterface {
  public:
   virtual void OnFrameCryptionStateChanged(const std::string participant_id,
                                            FrameCryptionState error) = 0;
@@ -364,10 +364,15 @@ class RTC_EXPORT FrameCryptorTransformer
                                    Algorithm algorithm,
                                    rtc::scoped_refptr<KeyProvider> key_provider);
 
-  virtual void SetFrameCryptorTransformerObserver(
-      FrameCryptorTransformerObserver* observer) {
+  virtual void RegisterFrameCryptorTransformerObserver(
+       rtc::scoped_refptr<FrameCryptorTransformerObserver> observer) {
     webrtc::MutexLock lock(&mutex_);
     observer_ = observer;
+  }
+
+    virtual void UnRegisterFrameCryptorTransformerObserver() {
+    webrtc::MutexLock lock(&mutex_);
+    observer_ = nullptr;
   }
 
   virtual void SetKeyIndex(int index) {
@@ -433,10 +438,11 @@ class RTC_EXPORT FrameCryptorTransformer
   int key_index_ = 0;
   std::map<uint32_t, uint32_t> send_counts_;
   rtc::scoped_refptr<KeyProvider> key_provider_;
-  FrameCryptorTransformerObserver* observer_ = nullptr;
+  rtc::scoped_refptr<FrameCryptorTransformerObserver> observer_;
   std::unique_ptr<rtc::Thread> thread_;
   FrameCryptionState last_enc_error_ = FrameCryptionState::kNew;
   FrameCryptionState last_dec_error_ = FrameCryptionState::kNew;
+  
 };
 
 }  // namespace webrtc

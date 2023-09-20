@@ -29,8 +29,7 @@ ScopedJavaLocalRef<jobject> NativeToJavaFrameCryptor(
     JNIEnv* env,
     rtc::scoped_refptr<FrameCryptorTransformer> cryptor);
 
-class FrameCryptorObserverJni : public FrameCryptorTransformerObserver,
-                                public rtc::RefCountInterface {
+class FrameCryptorObserverJni : public FrameCryptorTransformerObserver {
  public:
   FrameCryptorObserverJni(JNIEnv* jni, const JavaRef<jobject>& j_observer);
   ~FrameCryptorObserverJni() override;
