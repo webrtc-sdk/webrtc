@@ -18,6 +18,7 @@
 #import "RTCFrameCryptorKeyProvider+Private.h"
 #import "RTCRtpReceiver+Private.h"
 #import "RTCRtpSender+Private.h"
+#import "RTCPeerConnectionFactory+Private.h"
 
 #include <memory>
 
@@ -111,11 +112,12 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
   }
 }
 
-- (instancetype)initWithRtpSender:(RTC_OBJC_TYPE(RTCRtpSender) *)sender
-                    participantId:(NSString *)participantId
-                        algorithm:(RTCCyrptorAlgorithm)algorithm
-                       keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider {
-  if (self = [super init]) { 
+- (instancetype)initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
+                      rtpSender:(RTC_OBJC_TYPE(RTCRtpSender) *)sender
+                  participantId:(NSString *)participantId
+                      algorithm:(RTCCyrptorAlgorithm)algorithm
+                    keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider {
+  if (self = [super init]) {
     _observer = rtc::make_ref_counted<webrtc::RTCFrameCryptorDelegateAdapter>(self);
     _participantId = participantId;
     auto rtpSender = sender.nativeRtpSender;
@@ -123,7 +125,8 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
         webrtc::FrameCryptorTransformer::MediaType::kAudioFrame :
         webrtc::FrameCryptorTransformer::MediaType::kVideoFrame;
     frame_crypto_transformer_ = rtc::scoped_refptr<webrtc::FrameCryptorTransformer>(
-        new webrtc::FrameCryptorTransformer([participantId stdString],
+        new webrtc::FrameCryptorTransformer(factory.signalingThread,
+                                            [participantId stdString],
                                             mediaType,
                                             [self algorithmFromEnum:algorithm],
                                             keyProvider.nativeKeyProvider));
@@ -135,10 +138,11 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
   return self;
 }
 
-- (instancetype)initWithRtpReceiver:(RTC_OBJC_TYPE(RTCRtpReceiver) *)receiver
-                      participantId:(NSString *)participantId
-                          algorithm:(RTCCyrptorAlgorithm)algorithm
-                         keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider {
+- (instancetype)initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
+                    rtpReceiver:(RTC_OBJC_TYPE(RTCRtpReceiver) *)receiver
+                  participantId:(NSString *)participantId
+                      algorithm:(RTCCyrptorAlgorithm)algorithm
+                    keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider {
   if (self = [super init]) {
     _observer = rtc::make_ref_counted<webrtc::RTCFrameCryptorDelegateAdapter>(self);
     _participantId = participantId;
@@ -147,7 +151,8 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
         webrtc::FrameCryptorTransformer::MediaType::kAudioFrame :
         webrtc::FrameCryptorTransformer::MediaType::kVideoFrame;
     frame_crypto_transformer_ = rtc::scoped_refptr<webrtc::FrameCryptorTransformer>(
-        new webrtc::FrameCryptorTransformer([participantId stdString],
+        new webrtc::FrameCryptorTransformer(factory.signalingThread,
+                                            [participantId stdString],
                                             mediaType,
                                             [self algorithmFromEnum:algorithm],
                                             keyProvider.nativeKeyProvider));

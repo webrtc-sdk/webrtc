@@ -20,6 +20,8 @@
 #include <unordered_map>
 
 #include "api/frame_transformer_interface.h"
+#include "api/task_queue/pending_task_safety_flag.h"
+#include "api/task_queue/task_queue_base.h"
 #include "rtc_base/buffer.h"
 #include "rtc_base/synchronization/mutex.h"
 #include "rtc_base/system/rtc_export.h"
@@ -359,7 +361,8 @@ class RTC_EXPORT FrameCryptorTransformer
     kAesCbc,
   };
 
-  explicit FrameCryptorTransformer(const std::string participant_id,
+  explicit FrameCryptorTransformer(rtc::Thread* signaling_thread,
+                                   const std::string participant_id,
                                    MediaType type,
                                    Algorithm algorithm,
                                    rtc::scoped_refptr<KeyProvider> key_provider);
@@ -422,10 +425,12 @@ class RTC_EXPORT FrameCryptorTransformer
  private:
   void encryptFrame(std::unique_ptr<webrtc::TransformableFrameInterface> frame);
   void decryptFrame(std::unique_ptr<webrtc::TransformableFrameInterface> frame);
+  void onFrameCryptionStateChanged(FrameCryptionState error);
   rtc::Buffer makeIv(uint32_t ssrc, uint32_t timestamp);
   uint8_t getIvSize();
 
  private:
+  TaskQueueBase* const signaling_thread_;
   std::string participant_id_;
   mutable webrtc::Mutex mutex_;
   mutable webrtc::Mutex sink_mutex_;
@@ -439,10 +444,8 @@ class RTC_EXPORT FrameCryptorTransformer
   std::map<uint32_t, uint32_t> send_counts_;
   rtc::scoped_refptr<KeyProvider> key_provider_;
   rtc::scoped_refptr<FrameCryptorTransformerObserver> observer_;
-  std::unique_ptr<rtc::Thread> thread_;
   FrameCryptionState last_enc_error_ = FrameCryptionState::kNew;
-  FrameCryptionState last_dec_error_ = FrameCryptionState::kNew;
-  
+  FrameCryptionState last_dec_error_ = FrameCryptionState::kNew;  
 };
 
 }  // namespace webrtc

@@ -283,15 +283,16 @@ int AesEncryptDecrypt(EncryptOrDecrypt mode,
       return AesCbcEncryptDecrypt(mode, raw_key, iv, data, buffer);
   }
 }
-
 namespace webrtc {
 
 FrameCryptorTransformer::FrameCryptorTransformer(
+    rtc::Thread* signaling_thread,
     const std::string participant_id,
     MediaType type,
     Algorithm algorithm,
     rtc::scoped_refptr<KeyProvider> key_provider)
-    : participant_id_(participant_id),
+    : signaling_thread_(signaling_thread),
+      participant_id_(participant_id),
       type_(type),
       algorithm_(algorithm),
       key_provider_(key_provider) {
@@ -341,9 +342,7 @@ void FrameCryptorTransformer::encryptFrame(
         << "FrameCryptorTransformer::encryptFrame() sink_callback is NULL";
     if (last_enc_error_ != FrameCryptionState::kInternalError) {
       last_enc_error_ = FrameCryptionState::kInternalError;
-      if (observer_)
-        observer_->OnFrameCryptionStateChanged(participant_id_,
-                                               last_enc_error_);
+      onFrameCryptionStateChanged(last_dec_error_);
     }
     return;
   }
@@ -365,9 +364,7 @@ void FrameCryptorTransformer::encryptFrame(
                      << participant_id_;
     if (last_enc_error_ != FrameCryptionState::kMissingKey) {
       last_enc_error_ = FrameCryptionState::kMissingKey;
-      if (observer_)
-        observer_->OnFrameCryptionStateChanged(participant_id_,
-                                               last_enc_error_);
+      onFrameCryptionStateChanged(last_dec_error_);
     }
     return;
   }
@@ -417,17 +414,13 @@ void FrameCryptorTransformer::encryptFrame(
                      << " iv=" << to_hex(iv.data(), iv.size());
     if (last_enc_error_ != FrameCryptionState::kOk) {
       last_enc_error_ = FrameCryptionState::kOk;
-      if (observer_)
-        observer_->OnFrameCryptionStateChanged(participant_id_,
-                                               last_enc_error_);
+      onFrameCryptionStateChanged(last_dec_error_);
     }
     sink_callback->OnTransformedFrame(std::move(frame));
   } else {
     if (last_enc_error_ != FrameCryptionState::kEncryptionFailed) {
       last_enc_error_ = FrameCryptionState::kEncryptionFailed;
-      if (observer_)
-        observer_->OnFrameCryptionStateChanged(participant_id_,
-                                               last_enc_error_);
+      onFrameCryptionStateChanged(last_dec_error_);
     }
     RTC_LOG(LS_ERROR) << "FrameCryptorTransformer::encryptFrame() failed";
   }
@@ -452,9 +445,7 @@ void FrameCryptorTransformer::decryptFrame(
         << "FrameCryptorTransformer::decryptFrame() sink_callback is NULL";
     if (last_dec_error_ != FrameCryptionState::kInternalError) {
       last_dec_error_ = FrameCryptionState::kInternalError;
-      if (observer_)
-        observer_->OnFrameCryptionStateChanged(participant_id_,
-                                               last_dec_error_);
+      onFrameCryptionStateChanged(last_dec_error_);
     }
     return;
   }
@@ -515,9 +506,7 @@ void FrameCryptorTransformer::decryptFrame(
                       << static_cast<int>(getIvSize()) << "]";
     if (last_dec_error_ != FrameCryptionState::kDecryptionFailed) {
       last_dec_error_ = FrameCryptionState::kDecryptionFailed;
-      if (observer_)
-        observer_->OnFrameCryptionStateChanged(participant_id_,
-                                               last_dec_error_);
+      onFrameCryptionStateChanged(last_dec_error_);
     }
     return;
   }
@@ -534,9 +523,7 @@ void FrameCryptorTransformer::decryptFrame(
                      << participant_id_;
     if (last_dec_error_ != FrameCryptionState::kMissingKey) {
       last_dec_error_ = FrameCryptionState::kMissingKey;
-      if (observer_)
-        observer_->OnFrameCryptionStateChanged(participant_id_,
-                                               last_dec_error_);
+      onFrameCryptionStateChanged(last_dec_error_);
     }
     return;
   }
@@ -596,9 +583,7 @@ void FrameCryptorTransformer::decryptFrame(
           key_handler->SetHasValidKey();
           if (last_dec_error_ != FrameCryptionState::kKeyRatcheted) {
             last_dec_error_ = FrameCryptionState::kKeyRatcheted;
-            if (observer_)
-              observer_->OnFrameCryptionStateChanged(participant_id_,
-                                                     last_dec_error_);
+            onFrameCryptionStateChanged(last_dec_error_);
           }
           break;
         }
@@ -623,9 +608,7 @@ void FrameCryptorTransformer::decryptFrame(
     if (last_dec_error_ != FrameCryptionState::kDecryptionFailed) {
       last_dec_error_ = FrameCryptionState::kDecryptionFailed;
       key_handler->DecryptionFailure();
-      if (observer_)
-        observer_->OnFrameCryptionStateChanged(participant_id_,
-                                               last_dec_error_);
+      onFrameCryptionStateChanged(last_dec_error_);
     }
     return;
   }
@@ -647,10 +630,19 @@ void FrameCryptorTransformer::decryptFrame(
 
   if (last_dec_error_ != FrameCryptionState::kOk) {
     last_dec_error_ = FrameCryptionState::kOk;
-    if (observer_)
-      observer_->OnFrameCryptionStateChanged(participant_id_, last_dec_error_);
+    onFrameCryptionStateChanged(last_dec_error_);
   }
   sink_callback->OnTransformedFrame(std::move(frame));
+}
+
+void FrameCryptorTransformer::onFrameCryptionStateChanged(FrameCryptionState state) {
+  if(signaling_thread_) {
+    signaling_thread_->PostTask(
+        [observer = observer_, state = state, participant_id = participant_id_]() mutable {
+          observer->OnFrameCryptionStateChanged(participant_id, state);
+          }
+    );
+  }
 }
 
 rtc::Buffer FrameCryptorTransformer::makeIv(uint32_t ssrc, uint32_t timestamp) {
