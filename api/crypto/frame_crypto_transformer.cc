@@ -83,7 +83,7 @@ const EVP_CIPHER* GetAesCbcAlgorithmFromKeySize(size_t key_size_bytes) {
 }
 
 inline bool FrameIsH264(webrtc::TransformableFrameInterface* frame,
-                 webrtc::FrameCryptorTransformer::MediaType type) {
+                        webrtc::FrameCryptorTransformer::MediaType type) {
   switch (type) {
     case webrtc::FrameCryptorTransformer::MediaType::kVideoFrame: {
       auto videoFrame =
@@ -341,19 +341,15 @@ void FrameCryptorTransformer::Transform(
   switch (frame->GetDirection()) {
     case webrtc::TransformableFrameInterface::Direction::kSender:
       RTC_DCHECK(thread_ != nullptr);
-      thread_->PostTask(
-            [frame = std::move(frame), this]() mutable {
-              encryptFrame(std::move(frame));
-            }
-      );
+      thread_->PostTask([frame = std::move(frame), this]() mutable {
+        encryptFrame(std::move(frame));
+      });
       break;
     case webrtc::TransformableFrameInterface::Direction::kReceiver:
       RTC_DCHECK(thread_ != nullptr);
-      thread_->PostTask(
-            [frame = std::move(frame), this]() mutable {
-              decryptFrame(std::move(frame));
-            }
-      );
+      thread_->PostTask([frame = std::move(frame), this]() mutable {
+        decryptFrame(std::move(frame));
+      });
       break;
     case webrtc::TransformableFrameInterface::Direction::kUnknown:
       // do nothing
@@ -388,8 +384,8 @@ void FrameCryptorTransformer::encryptFrame(
 
   rtc::ArrayView<const uint8_t> date_in = frame->GetData();
   if (date_in.size() == 0 || !enabled_cryption) {
-    RTC_LOG(LS_WARNING)
-      << "FrameCryptorTransformer::encryptFrame() date_in.size() == 0 || enabled_cryption == false";
+    RTC_LOG(LS_WARNING) << "FrameCryptorTransformer::encryptFrame() "
+                           "date_in.size() == 0 || enabled_cryption == false";
     sink_callback->OnTransformedFrame(std::move(frame));
     return;
   }
@@ -444,7 +440,8 @@ void FrameCryptorTransformer::encryptFrame(
     data_out.AppendData(frame_header);
 
     if (FrameIsH264(frame.get(), type_)) {
-      H264::WriteRbsp(data_without_header.data(),data_without_header.size(), &data_out);
+      H264::WriteRbsp(data_without_header.data(), data_without_header.size(),
+                      &data_out);
     } else {
       data_out.AppendData(data_without_header);
       RTC_CHECK_EQ(data_out.size(), frame_header.size() +
@@ -509,8 +506,8 @@ void FrameCryptorTransformer::decryptFrame(
   rtc::ArrayView<const uint8_t> date_in = frame->GetData();
 
   if (date_in.size() == 0 || !enabled_cryption) {
-    RTC_LOG(LS_WARNING)
-      << "FrameCryptorTransformer::decryptFrame() date_in.size() == 0 || enabled_cryption == false";
+    RTC_LOG(LS_WARNING) << "FrameCryptorTransformer::decryptFrame() "
+                           "date_in.size() == 0 || enabled_cryption == false";
     sink_callback->OnTransformedFrame(std::move(frame));
     return;
   }
@@ -518,23 +515,22 @@ void FrameCryptorTransformer::decryptFrame(
   auto uncrypted_magic_bytes = key_provider_->options().uncrypted_magic_bytes;
   if (uncrypted_magic_bytes.size() > 0 &&
       date_in.size() >= uncrypted_magic_bytes.size()) {
-    auto tmp =
-        date_in.subview(date_in.size() - (uncrypted_magic_bytes.size()),
-                        uncrypted_magic_bytes.size());
+    auto tmp = date_in.subview(date_in.size() - (uncrypted_magic_bytes.size()),
+                               uncrypted_magic_bytes.size());
     auto data = std::vector<uint8_t>(tmp.begin(), tmp.end());
     if (uncrypted_magic_bytes == data) {
       RTC_CHECK_EQ(tmp.size(), uncrypted_magic_bytes.size());
-      RTC_LOG(LS_INFO)
-          << "FrameCryptorTransformer::uncrypted_magic_bytes( tmp " << to_hex(tmp.data(), tmp.size())
-          << ", magic bytes "
-          << to_hex(uncrypted_magic_bytes.data(), uncrypted_magic_bytes.size())
-          << ")";
+      RTC_LOG(LS_INFO) << "FrameCryptorTransformer::uncrypted_magic_bytes( tmp "
+                       << to_hex(tmp.data(), tmp.size()) << ", magic bytes "
+                       << to_hex(uncrypted_magic_bytes.data(),
+                                 uncrypted_magic_bytes.size())
+                       << ")";
 
       // magic bytes detected, this is a non-encrypted frame, skip frame
       // decryption.
       rtc::Buffer data_out;
-      data_out.AppendData(date_in.subview(
-          0, date_in.size() - uncrypted_magic_bytes.size()));
+      data_out.AppendData(
+          date_in.subview(0, date_in.size() - uncrypted_magic_bytes.size()));
       frame->SetData(data_out);
       sink_callback->OnTransformedFrame(std::move(frame));
       return;
@@ -556,8 +552,8 @@ void FrameCryptorTransformer::decryptFrame(
 
   if (ivLength != getIvSize()) {
     RTC_LOG(LS_WARNING) << "FrameCryptorTransformer::decryptFrame() ivLength["
-                      << static_cast<int>(ivLength) << "] != getIvSize()["
-                      << static_cast<int>(getIvSize()) << "]";
+                        << static_cast<int>(ivLength) << "] != getIvSize()["
+                        << static_cast<int>(getIvSize()) << "]";
     if (last_dec_error_ != FrameCryptionState::kDecryptionFailed) {
       last_dec_error_ = FrameCryptionState::kDecryptionFailed;
       onFrameCryptionStateChanged(last_dec_error_);
@@ -602,7 +598,8 @@ void FrameCryptorTransformer::decryptFrame(
 
   if (FrameIsH264(frame.get(), type_) &&
       NeedsRbspUnescaping(encrypted_buffer.data(), encrypted_buffer.size())) {
-    encrypted_buffer.SetData(H264::ParseRbsp(encrypted_buffer.data(), encrypted_buffer.size()));
+    encrypted_buffer.SetData(
+        H264::ParseRbsp(encrypted_buffer.data(), encrypted_buffer.size()));
   }
 
   rtc::Buffer encrypted_payload(encrypted_buffer.size() - ivLength - 2);
@@ -682,12 +679,12 @@ void FrameCryptorTransformer::decryptFrame(
   }
 
   if (!decryption_success) {
-      if(key_handler->DecryptionFailure()) {
-        if (last_dec_error_ != FrameCryptionState::kDecryptionFailed) {
-          last_dec_error_ = FrameCryptionState::kDecryptionFailed;
-          onFrameCryptionStateChanged(last_dec_error_);
-        }
+    if (key_handler->DecryptionFailure()) {
+      if (last_dec_error_ != FrameCryptionState::kDecryptionFailed) {
+        last_dec_error_ = FrameCryptionState::kDecryptionFailed;
+        onFrameCryptionStateChanged(last_dec_error_);
       }
+    }
     return;
   }
 
@@ -704,15 +701,15 @@ void FrameCryptorTransformer::decryptFrame(
   sink_callback->OnTransformedFrame(std::move(frame));
 }
 
-void FrameCryptorTransformer::onFrameCryptionStateChanged(FrameCryptionState state) {
+void FrameCryptorTransformer::onFrameCryptionStateChanged(
+    FrameCryptionState state) {
   webrtc::MutexLock lock(&mutex_);
-  if(observer_) {
+  if (observer_) {
     RTC_DCHECK(signaling_thread_ != nullptr);
-    signaling_thread_->PostTask(
-          [observer = observer_, state = state, participant_id = participant_id_]() mutable {
-            observer->OnFrameCryptionStateChanged(participant_id, state);
-          }
-    );
+    signaling_thread_->PostTask([observer = observer_, state = state,
+                                 participant_id = participant_id_]() mutable {
+      observer->OnFrameCryptionStateChanged(participant_id, state);
+    });
   }
 }
 
