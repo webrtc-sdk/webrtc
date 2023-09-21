@@ -389,7 +389,7 @@ void FrameCryptorTransformer::encryptFrame(
   rtc::ArrayView<const uint8_t> date_in = frame->GetData();
   if (date_in.size() == 0 || !enabled_cryption) {
       RTC_LOG(LS_WARNING)
-        << "FrameCryptorTransformer::encryptFrame() date_in.size() == 0 || !enabled_cryption == false";
+        << "FrameCryptorTransformer::encryptFrame() date_in.size() == 0 || enabled_cryption == false";
       return;
   }
 
@@ -509,7 +509,7 @@ void FrameCryptorTransformer::decryptFrame(
 
   if (date_in.size() == 0 || !enabled_cryption) {
     RTC_LOG(LS_WARNING)
-      << "FrameCryptorTransformer::decryptFrame() date_in.size() == 0 || !enabled_cryption == false";
+      << "FrameCryptorTransformer::decryptFrame() date_in.size() == 0 || enabled_cryption == false";
     return;
   }
 
