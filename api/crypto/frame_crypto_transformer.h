@@ -177,16 +177,18 @@ class ParticipantKeyHandler : public rtc::RefCountInterface {
         DeriveKeys(password, key_provider_->options().ratchet_salt, 128);
   }
 
-  void DecryptionFailure() {
+  bool DecryptionFailure() {
     webrtc::MutexLock lock(&mutex_);
     if (key_provider_->options().failure_tolerance < 0) {
-      return;
+      return false;
     }
     decryption_failure_count_ += 1;
 
     if (decryption_failure_count_ > key_provider_->options().failure_tolerance) {
       has_valid_key_ = false;
+      return true;
     }
+    return false;
   }
 
  private:
@@ -366,7 +368,7 @@ class RTC_EXPORT FrameCryptorTransformer
                                    MediaType type,
                                    Algorithm algorithm,
                                    rtc::scoped_refptr<KeyProvider> key_provider);
-
+  ~FrameCryptorTransformer();
   virtual void RegisterFrameCryptorTransformerObserver(
        rtc::scoped_refptr<FrameCryptorTransformerObserver> observer) {
     webrtc::MutexLock lock(&mutex_);
@@ -431,6 +433,7 @@ class RTC_EXPORT FrameCryptorTransformer
 
  private:
   TaskQueueBase* const signaling_thread_;
+  std::unique_ptr<rtc::Thread> thread_;
   std::string participant_id_;
   mutable webrtc::Mutex mutex_;
   mutable webrtc::Mutex sink_mutex_;

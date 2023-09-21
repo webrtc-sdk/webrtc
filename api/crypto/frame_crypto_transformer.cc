@@ -314,11 +314,18 @@ FrameCryptorTransformer::FrameCryptorTransformer(
     Algorithm algorithm,
     rtc::scoped_refptr<KeyProvider> key_provider)
     : signaling_thread_(signaling_thread),
+      thread_(rtc::Thread::Create()),
       participant_id_(participant_id),
       type_(type),
       algorithm_(algorithm),
       key_provider_(key_provider) {
   RTC_DCHECK(key_provider_ != nullptr);
+  thread_->SetName("FrameCryptorTransformer", nullptr);
+  thread_->Start();
+}
+
+FrameCryptorTransformer::~FrameCryptorTransformer() {
+  thread_->Stop();
 }
 
 void FrameCryptorTransformer::Transform(
@@ -333,10 +340,20 @@ void FrameCryptorTransformer::Transform(
   // do encrypt or decrypt here...
   switch (frame->GetDirection()) {
     case webrtc::TransformableFrameInterface::Direction::kSender:
-      encryptFrame(std::move(frame));
+      RTC_DCHECK(thread_ != nullptr);
+      thread_->PostTask(
+            [frame = std::move(frame), this]() mutable {
+              encryptFrame(std::move(frame));
+            }
+      );
       break;
     case webrtc::TransformableFrameInterface::Direction::kReceiver:
-      decryptFrame(std::move(frame));
+      RTC_DCHECK(thread_ != nullptr);
+      thread_->PostTask(
+            [frame = std::move(frame), this]() mutable {
+              decryptFrame(std::move(frame));
+            }
+      );
       break;
     case webrtc::TransformableFrameInterface::Direction::kUnknown:
       // do nothing
@@ -371,8 +388,9 @@ void FrameCryptorTransformer::encryptFrame(
 
   rtc::ArrayView<const uint8_t> date_in = frame->GetData();
   if (date_in.size() == 0 || !enabled_cryption) {
-    sink_callback->OnTransformedFrame(std::move(frame));
-    return;
+      RTC_LOG(LS_WARNING)
+        << "FrameCryptorTransformer::encryptFrame() date_in.size() == 0 || !enabled_cryption == false";
+      return;
   }
 
   auto key_handler = key_provider_->options().shared_key
@@ -490,25 +508,22 @@ void FrameCryptorTransformer::decryptFrame(
   rtc::ArrayView<const uint8_t> date_in = frame->GetData();
 
   if (date_in.size() == 0 || !enabled_cryption) {
-    sink_callback->OnTransformedFrame(std::move(frame));
+    RTC_LOG(LS_WARNING)
+      << "FrameCryptorTransformer::decryptFrame() date_in.size() == 0 || !enabled_cryption == false";
     return;
   }
 
   auto uncrypted_magic_bytes = key_provider_->options().uncrypted_magic_bytes;
   if (uncrypted_magic_bytes.size() > 0 &&
-      date_in.size() >= uncrypted_magic_bytes.size() + 1) {
+      date_in.size() >= uncrypted_magic_bytes.size()) {
     auto tmp =
-        date_in.subview(date_in.size() - (uncrypted_magic_bytes.size() + 1),
+        date_in.subview(date_in.size() - (uncrypted_magic_bytes.size()),
                         uncrypted_magic_bytes.size());
-
-    if (uncrypted_magic_bytes == std::vector<uint8_t>(tmp.begin(), tmp.end())) {
+    auto data = std::vector<uint8_t>(tmp.begin(), tmp.end());
+    if (uncrypted_magic_bytes == data) {
       RTC_CHECK_EQ(tmp.size(), uncrypted_magic_bytes.size());
-      auto frame_type = date_in.subview(date_in.size() - 1, 1);
-      RTC_CHECK_EQ(frame_type.size(), 1);
-
       RTC_LOG(LS_INFO)
-          << "FrameCryptorTransformer::uncrypted_magic_bytes( type "
-          << frame_type[0] << ", tmp " << to_hex(tmp.data(), tmp.size())
+          << "FrameCryptorTransformer::uncrypted_magic_bytes( tmp " << to_hex(tmp.data(), tmp.size())
           << ", magic bytes "
           << to_hex(uncrypted_magic_bytes.data(), uncrypted_magic_bytes.size())
           << ")";
@@ -517,7 +532,7 @@ void FrameCryptorTransformer::decryptFrame(
       // decryption.
       rtc::Buffer data_out;
       data_out.AppendData(date_in.subview(
-          0, date_in.size() - uncrypted_magic_bytes.size() - 1));
+          0, date_in.size() - uncrypted_magic_bytes.size()));
       frame->SetData(data_out);
       sink_callback->OnTransformedFrame(std::move(frame));
       return;
@@ -665,10 +680,11 @@ void FrameCryptorTransformer::decryptFrame(
   }
 
   if (!decryption_success) {
-    if (last_dec_error_ != FrameCryptionState::kDecryptionFailed) {
+    if (last_dec_error_ != FrameCryptionState::kDecryptionFailed || ratchet_count >= key_provider_->options().ratchet_window_size) {
       last_dec_error_ = FrameCryptionState::kDecryptionFailed;
-      key_handler->DecryptionFailure();
-      onFrameCryptionStateChanged(last_dec_error_);
+      if(key_handler->DecryptionFailure()) {
+        onFrameCryptionStateChanged(last_dec_error_);
+      }
     }
     return;
   }
