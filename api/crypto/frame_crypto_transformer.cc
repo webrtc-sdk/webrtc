@@ -680,12 +680,12 @@ void FrameCryptorTransformer::decryptFrame(
   }
 
   if (!decryption_success) {
-    if (last_dec_error_ != FrameCryptionState::kDecryptionFailed || ratchet_count >= key_provider_->options().ratchet_window_size) {
-      last_dec_error_ = FrameCryptionState::kDecryptionFailed;
       if(key_handler->DecryptionFailure()) {
-        onFrameCryptionStateChanged(last_dec_error_);
+        if (last_dec_error_ != FrameCryptionState::kDecryptionFailed) {
+          last_dec_error_ = FrameCryptionState::kDecryptionFailed;
+          onFrameCryptionStateChanged(last_dec_error_);
+        }
       }
-    }
     return;
   }
 
