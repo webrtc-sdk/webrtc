@@ -320,7 +320,7 @@ FrameCryptorTransformer::FrameCryptorTransformer(
       algorithm_(algorithm),
       key_provider_(key_provider) {
   RTC_DCHECK(key_provider_ != nullptr);
-  thread_->SetName("FrameCryptorTransformer", nullptr);
+  thread_->SetName("FrameCryptorTransformer", this);
   thread_->Start();
 }
 
