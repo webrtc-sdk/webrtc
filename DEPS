@@ -289,7 +289,7 @@ deps = {
   'src/third_party/perfetto':
     'https://android.googlesource.com/platform/external/perfetto.git@20b114cd063623e63ef1b0a31167d60081567e51',
   'src/third_party/libvpx/source/libvpx':
-    'https://chromium.googlesource.com/webm/libvpx.git@27171320f5e36f7b18071bfa1d9616863ca1b4e8',
+    'https://chromium.googlesource.com/webm/libvpx.git@7aaffe2df4c9426ab204a272ca5ca52286ca86d4',
   'src/third_party/libyuv':
     'https://chromium.googlesource.com/libyuv/libyuv.git@77c2121f7e6b8e694d6e908bbbe9be24214097da',
   'src/third_party/lss': {
