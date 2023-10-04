@@ -42,7 +42,7 @@
 @end
 
 @implementation RTC_OBJC_TYPE (RTCEAGLVideoView) {
-  RTCDisplayLinkTimer *_timer;
+  RTC_OBJC_TYPE(RTCDisplayLinkTimer) * _timer;
   EAGLContext *_glContext;
   // This flag should only be set and read on the main thread (e.g. by
   // setNeedsDisplay)
@@ -90,8 +90,7 @@
 }
 
 - (BOOL)configure {
-  EAGLContext *glContext =
-    [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES3];
+  EAGLContext *glContext = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES3];
   if (!glContext) {
     glContext = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2];
   }
@@ -102,8 +101,7 @@
   _glContext = glContext;
 
   // GLKView manages a framebuffer for us.
-  _glkView = [[GLKView alloc] initWithFrame:CGRectZero
-                                    context:_glContext];
+  _glkView = [[GLKView alloc] initWithFrame:CGRectZero context:_glContext];
   _glkView.drawableColorFormat = GLKViewDrawableColorFormatRGBA8888;
   _glkView.drawableDepthFormat = GLKViewDrawableDepthFormatNone;
   _glkView.drawableStencilFormat = GLKViewDrawableStencilFormatNone;
@@ -115,8 +113,7 @@
 
   // Listen to application state in order to clean up OpenGL before app goes
   // away.
-  NSNotificationCenter *notificationCenter =
-    [NSNotificationCenter defaultCenter];
+  NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
   [notificationCenter addObserver:self
                          selector:@selector(willResignActive)
                              name:UIApplicationWillResignActiveNotification
@@ -130,7 +127,7 @@
   // using a refresh rate proportional to screen refresh frequency. This
   // occurs on the main thread.
   __weak RTC_OBJC_TYPE(RTCEAGLVideoView) *weakSelf = self;
-  _timer = [[RTCDisplayLinkTimer alloc] initWithTimerHandler:^{
+  _timer = [[RTC_OBJC_TYPE(RTCDisplayLinkTimer) alloc] initWithTimerHandler:^{
     RTC_OBJC_TYPE(RTCEAGLVideoView) *strongSelf = weakSelf;
     [strongSelf displayLinkTimerDidFire];
   }];
@@ -141,14 +138,13 @@
 }
 
 - (void)setMultipleTouchEnabled:(BOOL)multipleTouchEnabled {
-    [super setMultipleTouchEnabled:multipleTouchEnabled];
-    _glkView.multipleTouchEnabled = multipleTouchEnabled;
+  [super setMultipleTouchEnabled:multipleTouchEnabled];
+  _glkView.multipleTouchEnabled = multipleTouchEnabled;
 }
 
 - (void)dealloc {
   [[NSNotificationCenter defaultCenter] removeObserver:self];
-  UIApplicationState appState =
-      [UIApplication sharedApplication].applicationState;
+  UIApplicationState appState = [UIApplication sharedApplication].applicationState;
   if (appState == UIApplicationStateActive) {
     [self teardownGL];
   }
@@ -189,8 +185,8 @@
     return;
   }
   RTCVideoRotation rotation = frame.rotation;
-  if(_rotationOverride != nil) {
-    [_rotationOverride getValue: &rotation];
+  if (_rotationOverride != nil) {
+    [_rotationOverride getValue:&rotation];
   }
   [self ensureGLContext];
   glClear(GL_COLOR_BUFFER_BIT);
