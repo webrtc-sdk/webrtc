@@ -45,14 +45,14 @@ class AudioCustomProcessingAdapter : public webrtc::CustomProcessing {
     RTC_LOG(LS_INFO) << "RTCAudioCustomProcessingAdapter.AudioCustomProcessingAdapter dealloc";
 
     os_unfair_lock_lock(lock_);
-    id<RTCAudioCustomProcessingDelegate> delegate = adapter_.rawAudioCustomProcessingDelegate;
+    id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)> delegate = adapter_.rawAudioCustomProcessingDelegate;
     [delegate audioProcessingRelease];
     os_unfair_lock_unlock(lock_);
   }
 
   void Initialize(int sample_rate_hz, int num_channels) override {
     os_unfair_lock_lock(lock_);
-    id<RTCAudioCustomProcessingDelegate> delegate = adapter_.rawAudioCustomProcessingDelegate;
+    id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)> delegate = adapter_.rawAudioCustomProcessingDelegate;
     [delegate audioProcessingInitializeWithSampleRate:sample_rate_hz channels:num_channels];
     is_initialized_ = true;
     sample_rate_hz_ = sample_rate_hz;
@@ -68,9 +68,9 @@ class AudioCustomProcessingAdapter : public webrtc::CustomProcessing {
 
       return;
     }
-    id<RTCAudioCustomProcessingDelegate> delegate = adapter_.rawAudioCustomProcessingDelegate;
+    id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)> delegate = adapter_.rawAudioCustomProcessingDelegate;
     if (delegate != nil) {
-      RTCAudioBuffer *audioBuffer = [[RTCAudioBuffer alloc] initWithNativeType:audio_buffer];
+      RTC_OBJC_TYPE(RTCAudioBuffer) *audioBuffer = [[RTC_OBJC_TYPE(RTCAudioBuffer) alloc] initWithNativeType:audio_buffer];
       [delegate audioProcessingProcess:audioBuffer];
     }
     os_unfair_lock_unlock(lock_);
@@ -109,14 +109,14 @@ class AudioCustomProcessingAdapter : public webrtc::CustomProcessing {
 
 #pragma mark - Getter & Setter for audioCustomProcessingDelegate
 
-- (nullable id<RTCAudioCustomProcessingDelegate>)audioCustomProcessingDelegate {
+- (nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)audioCustomProcessingDelegate {
   os_unfair_lock_lock(&_lock);
-  id<RTCAudioCustomProcessingDelegate> delegate = _rawAudioCustomProcessingDelegate;
+  id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)> delegate = _rawAudioCustomProcessingDelegate;
   os_unfair_lock_unlock(&_lock);
   return delegate;
 }
 
-- (void)setAudioCustomProcessingDelegate:(nullable id<RTCAudioCustomProcessingDelegate>)delegate {
+- (void)setAudioCustomProcessingDelegate:(nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)delegate {
   os_unfair_lock_lock(&_lock);
   if (_rawAudioCustomProcessingDelegate != nil && _adapter->is_initialized_) {
     [_rawAudioCustomProcessingDelegate audioProcessingRelease];

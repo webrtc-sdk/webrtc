@@ -71,7 +71,7 @@ NSString *const kRTCRtpTransceiverErrorDomain = @"org.webrtc.RTCRtpTranceiver";
 
   std::vector<webrtc::RtpCodecCapability> objects;
 
-  for (RTCRtpCodecCapability *object in codecPreferences) {
+  for (RTC_OBJC_TYPE(RTCRtpCodecCapability) *object in codecPreferences) {
     objects.push_back(object.nativeCodecCapability);
   }
 
@@ -90,7 +90,7 @@ NSString *const kRTCRtpTransceiverErrorDomain = @"org.webrtc.RTCRtpTranceiver";
   std::vector<webrtc::RtpCodecCapability> capabilities = _nativeRtpTransceiver->codec_preferences();
 
   for (auto & element : capabilities) {
-    RTCRtpCodecCapability *object = [[RTCRtpCodecCapability alloc] initWithNativeCodecCapability: element];
+    RTC_OBJC_TYPE(RTCRtpCodecCapability) *object = [[RTC_OBJC_TYPE(RTCRtpCodecCapability) alloc] initWithNativeCodecCapability: element];
     [result addObject: object];
   }
 

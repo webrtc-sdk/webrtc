@@ -25,7 +25,7 @@
 #include "sdk/objc/base/RTCMacros.h"
 #include "voice_processing_audio_unit.h"
 
-RTC_FWD_DECL_OBJC_CLASS(RTCNativeAudioSessionDelegateAdapter);
+RTC_FWD_DECL_OBJC_CLASS(RTC_OBJC_TYPE(RTCNativeAudioSessionDelegateAdapter));
 
 namespace webrtc {
 

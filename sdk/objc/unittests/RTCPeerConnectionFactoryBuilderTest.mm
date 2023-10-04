@@ -46,7 +46,7 @@ extern "C" {
               nativeVideoDecoderFactory:nullptr
                       audioDeviceModule:nullptr
                   audioProcessingModule:nullptr]);
-  RTCPeerConnectionFactoryBuilder* builder = [[RTCPeerConnectionFactoryBuilder alloc] init];
+  RTC_OBJC_TYPE(RTCPeerConnectionFactoryBuilder)* builder = [[RTC_OBJC_TYPE(RTCPeerConnectionFactoryBuilder) alloc] init];
   RTC_OBJC_TYPE(RTCPeerConnectionFactory)* peerConnectionFactory =
       [builder createPeerConnectionFactory];
   EXPECT_TRUE(peerConnectionFactory != nil);
@@ -63,7 +63,7 @@ extern "C" {
               nativeVideoDecoderFactory:nullptr
                       audioDeviceModule:nullptr
                   audioProcessingModule:nullptr]);
-  RTCPeerConnectionFactoryBuilder* builder = [RTCPeerConnectionFactoryBuilder defaultBuilder];
+  RTC_OBJC_TYPE(RTCPeerConnectionFactoryBuilder)* builder = [RTC_OBJC_TYPE(RTCPeerConnectionFactoryBuilder) defaultBuilder];
   RTC_OBJC_TYPE(RTCPeerConnectionFactory)* peerConnectionFactory =
       [builder createPeerConnectionFactory];
   EXPECT_TRUE(peerConnectionFactory != nil);

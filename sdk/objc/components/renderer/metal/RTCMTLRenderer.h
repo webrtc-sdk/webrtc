@@ -49,7 +49,7 @@ NS_ASSUME_NONNULL_BEGIN
  * Implementation of RTCMTLRenderer protocol.
  */
 NS_AVAILABLE(10_11, 9_0)
-@interface RTC_OBJC_TYPE(RTCMTLRenderer) : NSObject <RTCMTLRenderer>
+@interface RTC_OBJC_TYPE(RTCMTLRenderer) : NSObject <RTC_OBJC_TYPE(RTCMTLRenderer)>
 
 /** @abstract   A wrapped RTCVideoRotation, or nil.
     @discussion When not nil, the rotation of the actual frame is ignored when rendering.

@@ -23,11 +23,9 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
-(RTCAudioRenderer)<NSObject>
+RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE(RTCAudioRenderer)<NSObject>
 
-    - (void)renderSampleBuffer : (CMSampleBufferRef)sampleBuffer
-                                 NS_SWIFT_NAME(render(sampleBuffer:));
+- (void)renderSampleBuffer: (CMSampleBufferRef)sampleBuffer NS_SWIFT_NAME(render(sampleBuffer:));
 
 @end
 

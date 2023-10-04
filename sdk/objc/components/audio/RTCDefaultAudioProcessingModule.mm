@@ -33,7 +33,7 @@
         renderPreProcessingDelegate:nil];
 }
 
-- (instancetype)initWithConfig:(nullable RTCAudioProcessingConfig *)config
+- (instancetype)initWithConfig:(nullable RTC_OBJC_TYPE(RTCAudioProcessingConfig) *)config
     capturePostProcessingDelegate:
         (nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)capturePostProcessingDelegate
       renderPreProcessingDelegate:(nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)
@@ -83,7 +83,7 @@
 
 #pragma mark - RTCAudioProcessingModule protocol
 
-- (void)applyConfig:(RTCAudioProcessingConfig *)config {
+- (void)applyConfig:(RTC_OBJC_TYPE(RTCAudioProcessingConfig) *)config {
   _nativeAudioProcessingModule->ApplyConfig(config.nativeAudioProcessingConfig);
 }
 

@@ -12,9 +12,9 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface RTCPeerConnectionFactoryBuilder (DefaultComponents)
+@interface RTC_OBJC_TYPE(RTCPeerConnectionFactoryBuilder) (DefaultComponents)
 
-+ (RTCPeerConnectionFactoryBuilder *)defaultBuilder;
++ (RTC_OBJC_TYPE(RTCPeerConnectionFactoryBuilder) *)defaultBuilder;
 
 @end
 

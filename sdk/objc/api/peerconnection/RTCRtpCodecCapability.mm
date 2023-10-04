@@ -54,11 +54,11 @@
 }
 
 - (RTCRtpMediaType)kind {
-  return [RTCRtpReceiver mediaTypeForNativeMediaType:_nativeCodecCapability.kind];
+  return [RTC_OBJC_TYPE(RTCRtpReceiver) mediaTypeForNativeMediaType:_nativeCodecCapability.kind];
 }
 
 - (void)setKind:(RTCRtpMediaType)kind {
-  _nativeCodecCapability.kind = [RTCRtpReceiver nativeMediaTypeForMediaType:kind];
+  _nativeCodecCapability.kind = [RTC_OBJC_TYPE(RTCRtpReceiver) nativeMediaTypeForMediaType:kind];
 }
 
 - (NSNumber *)clockRate {
