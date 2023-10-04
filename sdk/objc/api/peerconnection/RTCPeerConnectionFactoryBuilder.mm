@@ -18,7 +18,7 @@
 #include "modules/audio_device/include/audio_device.h"
 #include "modules/audio_processing/include/audio_processing.h"
 
-@implementation RTCPeerConnectionFactoryBuilder {
+@implementation RTC_OBJC_TYPE(RTCPeerConnectionFactoryBuilder) {
   std::unique_ptr<webrtc::VideoEncoderFactory> _videoEncoderFactory;
   std::unique_ptr<webrtc::VideoDecoderFactory> _videoDecoderFactory;
   rtc::scoped_refptr<webrtc::AudioEncoderFactory> _audioEncoderFactory;

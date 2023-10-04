@@ -29,9 +29,9 @@
 #define RTCMTLI420RendererClass NSClassFromString(@"RTCMTLI420Renderer")
 #define RTCMTLRGBRendererClass NSClassFromString(@"RTCMTLRGBRenderer")
 
-@interface RTC_OBJC_TYPE (RTCMTLVideoView)
-()<MTKViewDelegate> @property(nonatomic) RTCMTLI420Renderer *rendererI420;
-@property(nonatomic) RTCMTLNV12Renderer *rendererNV12;
+@interface RTC_OBJC_TYPE (RTCMTLVideoView) ()<MTKViewDelegate> 
+@property(nonatomic) RTC_OBJC_TYPE(RTCMTLI420Renderer) *rendererI420;
+@property(nonatomic) RTC_OBJC_TYPE(RTCMTLNV12Renderer) * rendererNV12;
 @property(nonatomic) RTC_OBJC_TYPE(RTCMTLRGBRenderer) * rendererRGB;
 @property(nonatomic) MTKView *metalView;
 @property(atomic) RTC_OBJC_TYPE(RTCVideoFrame) * videoFrame;
@@ -99,11 +99,11 @@
   return [[MTKViewClass alloc] initWithFrame:frame];
 }
 
-+ (RTCMTLNV12Renderer *)createNV12Renderer {
++ (RTC_OBJC_TYPE(RTCMTLNV12Renderer) *)createNV12Renderer {
   return [[RTCMTLNV12RendererClass alloc] init];
 }
 
-+ (RTCMTLI420Renderer *)createI420Renderer {
++ (RTC_OBJC_TYPE(RTCMTLI420Renderer) *)createI420Renderer {
   return [[RTCMTLI420RendererClass alloc] init];
 }
 
@@ -159,7 +159,7 @@
     return;
   }
 
-  RTCMTLRenderer *renderer;
+  RTC_OBJC_TYPE(RTCMTLRenderer) * renderer;
   if ([videoFrame.buffer isKindOfClass:[RTC_OBJC_TYPE(RTCCVPixelBuffer) class]]) {
     RTC_OBJC_TYPE(RTCCVPixelBuffer) *buffer = (RTC_OBJC_TYPE(RTCCVPixelBuffer) *)videoFrame.buffer;
     const OSType pixelFormat = CVPixelBufferGetPixelFormatType(buffer.pixelBuffer);

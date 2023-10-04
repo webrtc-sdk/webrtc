@@ -25,7 +25,7 @@ class AudioProcessing;
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface RTCPeerConnectionFactoryBuilder : NSObject
+@interface RTC_OBJC_TYPE(RTCPeerConnectionFactoryBuilder) : NSObject
 
 + (RTCPeerConnectionFactoryBuilder *)builder;
 

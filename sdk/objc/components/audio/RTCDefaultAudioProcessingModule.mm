@@ -23,8 +23,8 @@
 @implementation RTC_OBJC_TYPE (RTCDefaultAudioProcessingModule) {
   rtc::scoped_refptr<webrtc::AudioProcessing> _nativeAudioProcessingModule;
   // Custom processing adapters...
-  RTCAudioCustomProcessingAdapter *_capturePostProcessingAdapter;
-  RTCAudioCustomProcessingAdapter *_renderPreProcessingAdapter;
+  RTC_OBJC_TYPE(RTCAudioCustomProcessingAdapter) *_capturePostProcessingAdapter;
+  RTC_OBJC_TYPE(RTCAudioCustomProcessingAdapter) *_renderPreProcessingAdapter;
 }
 
 - (instancetype)init {
@@ -48,12 +48,12 @@
     }
 
     _capturePostProcessingAdapter =
-        [[RTCAudioCustomProcessingAdapter alloc] initWithDelegate:capturePostProcessingDelegate];
+        [[RTC_OBJC_TYPE(RTCAudioCustomProcessingAdapter) alloc] initWithDelegate:capturePostProcessingDelegate];
     builder.SetCapturePostProcessing(
         _capturePostProcessingAdapter.nativeAudioCustomProcessingModule);
 
     _renderPreProcessingAdapter =
-        [[RTCAudioCustomProcessingAdapter alloc] initWithDelegate:renderPreProcessingDelegate];
+        [[RTC_OBJC_TYPE(RTCAudioCustomProcessingAdapter) alloc] initWithDelegate:renderPreProcessingDelegate];
     builder.SetRenderPreProcessing(_renderPreProcessingAdapter.nativeAudioCustomProcessingModule);
 
     _nativeAudioProcessingModule = builder.Create();

@@ -31,7 +31,7 @@ class AudioCustomProcessingAdapter : public webrtc::CustomProcessing {
   int sample_rate_hz_;
   int num_channels_;
 
-  AudioCustomProcessingAdapter(RTCAudioCustomProcessingAdapter *adapter, os_unfair_lock *lock) {
+  AudioCustomProcessingAdapter(RTC_OBJC_TYPE(RTCAudioCustomProcessingAdapter) *adapter, os_unfair_lock *lock) {
     RTC_LOG(LS_INFO) << "RTCAudioCustomProcessingAdapter.AudioCustomProcessingAdapter init";
 
     adapter_ = adapter;
@@ -79,12 +79,12 @@ class AudioCustomProcessingAdapter : public webrtc::CustomProcessing {
   std::string ToString() const override { return "AudioCustomProcessingAdapter"; }
 
  private:
-  __weak RTCAudioCustomProcessingAdapter *adapter_;
+  __weak RTC_OBJC_TYPE(RTCAudioCustomProcessingAdapter) *adapter_;
   os_unfair_lock *lock_;
 };
 }  // namespace webrtc
 
-@implementation RTCAudioCustomProcessingAdapter {
+@implementation RTC_OBJC_TYPE(RTCAudioCustomProcessingAdapter) {
   webrtc::AudioCustomProcessingAdapter *_adapter;
   os_unfair_lock _lock;
 }

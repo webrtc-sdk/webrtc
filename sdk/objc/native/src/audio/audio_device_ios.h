@@ -279,7 +279,7 @@ class AudioDeviceIOS : public AudioDeviceGeneric,
   bool is_interrupted_;
 
   // Audio interruption observer instance.
-  RTCNativeAudioSessionDelegateAdapter* audio_session_observer_
+  RTC_OBJC_TYPE(RTCNativeAudioSessionDelegateAdapter)* audio_session_observer_
       RTC_GUARDED_BY(thread_);
 
   // Set to true if we've activated the audio session.

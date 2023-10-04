@@ -22,7 +22,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface RTCAudioCustomProcessingAdapter ()
+@interface RTC_OBJC_TYPE(RTCAudioCustomProcessingAdapter) ()
 
 // Thread safe set/get with os_unfair_lock.
 @property(nonatomic, weak, nullable) id<RTCAudioCustomProcessingDelegate>
