@@ -32,7 +32,7 @@
 @interface RTC_OBJC_TYPE (RTCMTLVideoView)
 ()<MTKViewDelegate> @property(nonatomic) RTCMTLI420Renderer *rendererI420;
 @property(nonatomic) RTCMTLNV12Renderer *rendererNV12;
-@property(nonatomic) RTCMTLRGBRenderer *rendererRGB;
+@property(nonatomic) RTC_OBJC_TYPE(RTCMTLRGBRenderer) * rendererRGB;
 @property(nonatomic) MTKView *metalView;
 @property(atomic) RTC_OBJC_TYPE(RTCVideoFrame) * videoFrame;
 @property(nonatomic) CGSize videoFrameSize;
@@ -107,7 +107,7 @@
   return [[RTCMTLI420RendererClass alloc] init];
 }
 
-+ (RTCMTLRGBRenderer *)createRGBRenderer {
++ (RTC_OBJC_TYPE(RTCMTLRGBRenderer) *)createRGBRenderer {
   return [[RTCMTLRGBRendererClass alloc] init];
 }
 

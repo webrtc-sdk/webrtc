@@ -11,12 +11,13 @@
 #import <Foundation/Foundation.h>
 
 #import "RTCMTLRenderer.h"
+#import "RTCMacros.h"
 
 /** @abstract RGB/BGR renderer.
  *  @discussion This renderer handles both kCVPixelFormatType_32BGRA and
  * kCVPixelFormatType_32ARGB.
  */
 NS_AVAILABLE(10_11, 9_0)
-@interface RTCMTLRGBRenderer : RTCMTLRenderer
+@interface RTC_OBJC_TYPE (RTCMTLRGBRenderer): RTCMTLRenderer
 
 @end
