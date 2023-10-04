@@ -8,5 +8,7 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#import "RTCMacros.h"
+
 // Deprecated: Use RTCMTLVideoView instead
-@compatibility_alias RTCMTLNSVideoView RTCMTLVideoView;
+@compatibility_alias RTC_OBJC_TYPE(RTCMTLNSVideoView) RTC_OBJC_TYPE(RTCMTLVideoView);
