@@ -46,7 +46,7 @@ rtc::AdapterType AdapterTypeFromInterfaceType(nw_interface_type_t interfaceType)
 
 }  // namespace
 
-@implementation RTCNetworkMonitor {
+@implementation RTC_OBJC_TYPE (RTCNetworkMonitor) {
   webrtc::NetworkMonitorObserver *_observer;
   nw_path_monitor_t _pathMonitor;
   dispatch_queue_t _monitorQueue;
@@ -63,12 +63,12 @@ rtc::AdapterType AdapterTypeFromInterfaceType(nw_interface_type_t interfaceType)
         return nil;
       }
       RTCLog(@"NW path monitor created.");
-      __weak RTCNetworkMonitor *weakSelf = self;
+      __weak RTC_OBJC_TYPE(RTCNetworkMonitor) *weakSelf = self;
       nw_path_monitor_set_update_handler(_pathMonitor, ^(nw_path_t path) {
         if (weakSelf == nil) {
           return;
         }
-        RTCNetworkMonitor *strongSelf = weakSelf;
+        RTC_OBJC_TYPE(RTCNetworkMonitor) *strongSelf = weakSelf;
         RTCLog(@"NW path monitor: updated.");
         nw_path_status_t status = nw_path_get_status(path);
         if (status == nw_path_status_invalid) {

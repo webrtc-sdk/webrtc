@@ -9,16 +9,18 @@
  */
 
 #import "RTCNetworkMonitor.h"
+#import "RTCMacros.h"
 
 #include "sdk/objc/native/src/network_monitor_observer.h"
 
-@interface RTCNetworkMonitor ()
+@interface RTC_OBJC_TYPE (RTCNetworkMonitor)
+()
 
-/** `observer` is a raw pointer and should be kept alive
- *  for this object's lifetime.
- */
-- (instancetype)initWithObserver:(webrtc::NetworkMonitorObserver *)observer
-    NS_DESIGNATED_INITIALIZER;
+    /** `observer` is a raw pointer and should be kept alive
+     *  for this object's lifetime.
+     */
+    - (instancetype)initWithObserver
+    : (webrtc::NetworkMonitorObserver *)observer NS_DESIGNATED_INITIALIZER;
 
 /** Stops the receiver from posting updates to `observer`. */
 - (void)stop;
