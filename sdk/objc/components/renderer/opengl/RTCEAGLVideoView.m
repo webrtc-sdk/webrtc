@@ -48,8 +48,8 @@
   // setNeedsDisplay)
   BOOL _isDirty;
   id<RTC_OBJC_TYPE(RTCVideoViewShading)> _shader;
-  RTCNV12TextureCache *_nv12TextureCache;
-  RTCI420TextureCache *_i420TextureCache;
+  RTC_OBJC_TYPE(RTCNV12TextureCache) *_nv12TextureCache;
+  RTC_OBJC_TYPE(RTCI420TextureCache) *_i420TextureCache;
   // As timestamps should be unique between frames, will store last
   // drawn frame timestamp instead of the whole frame to reduce memory usage.
   int64_t _lastDrawnFrameTimeStampNs;
@@ -61,11 +61,11 @@
 @synthesize rotationOverride = _rotationOverride;
 
 - (instancetype)initWithFrame:(CGRect)frame {
-  return [self initWithFrame:frame shader:[[RTCDefaultShader alloc] init]];
+  return [self initWithFrame:frame shader:[[RTC_OBJC_TYPE(RTCDefaultShader) alloc] init]];
 }
 
 - (instancetype)initWithCoder:(NSCoder *)aDecoder {
-  return [self initWithCoder:aDecoder shader:[[RTCDefaultShader alloc] init]];
+  return [self initWithCoder:aDecoder shader:[[RTC_OBJC_TYPE(RTCDefaultShader) alloc] init]];
 }
 
 - (instancetype)initWithFrame:(CGRect)frame shader:(id<RTC_OBJC_TYPE(RTCVideoViewShading)>)shader {
@@ -192,7 +192,7 @@
   glClear(GL_COLOR_BUFFER_BIT);
   if ([frame.buffer isKindOfClass:[RTC_OBJC_TYPE(RTCCVPixelBuffer) class]]) {
     if (!_nv12TextureCache) {
-      _nv12TextureCache = [[RTCNV12TextureCache alloc] initWithContext:_glContext];
+      _nv12TextureCache = [[RTC_OBJC_TYPE(RTCNV12TextureCache) alloc] initWithContext:_glContext];
     }
     if (_nv12TextureCache) {
       [_nv12TextureCache uploadFrameToTextures:frame];
@@ -207,7 +207,7 @@
     }
   } else {
     if (!_i420TextureCache) {
-      _i420TextureCache = [[RTCI420TextureCache alloc] initWithContext:_glContext];
+      _i420TextureCache = [[RTC_OBJC_TYPE(RTCI420TextureCache) alloc] initWithContext:_glContext];
     }
     [_i420TextureCache uploadFrameToTextures:frame];
     [_shader applyShadingForFrameWithWidth:frame.width

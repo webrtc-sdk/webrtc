@@ -28,7 +28,7 @@ static const GLsizei kNumTextureSets = 2;
 static const GLsizei kNumTexturesPerSet = 3;
 static const GLsizei kNumTextures = kNumTexturesPerSet * kNumTextureSets;
 
-@implementation RTCI420TextureCache {
+@implementation RTC_OBJC_TYPE(RTCI420TextureCache) {
   BOOL _hasUnpackRowLength;
   GLint _currentTextureSet;
   // Handles for OpenGL constructs.
