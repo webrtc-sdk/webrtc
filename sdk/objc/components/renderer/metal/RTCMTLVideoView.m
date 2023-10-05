@@ -22,12 +22,14 @@
 #import "RTCMTLNV12Renderer.h"
 #import "RTCMTLRGBRenderer.h"
 
+#import "RTCMTLRenderer+Private.h"
+
 // To avoid unreconized symbol linker errors, we're taking advantage of the objc runtime.
 // Linking errors occur when compiling for architectures that don't support Metal.
 #define MTKViewClass NSClassFromString(@"MTKView")
-#define RTCMTLNV12RendererClass NSClassFromString(@"RTCMTLNV12Renderer")
-#define RTCMTLI420RendererClass NSClassFromString(@"RTCMTLI420Renderer")
-#define RTCMTLRGBRendererClass NSClassFromString(@"RTCMTLRGBRenderer")
+#define RTCMTLNV12RendererClass NSClassFromString(MTL_STRINGIFY(RTC_OBJC_TYPE(RTCMTLNV12Renderer)))
+#define RTCMTLI420RendererClass NSClassFromString(MTL_STRINGIFY(RTC_OBJC_TYPE(RTCMTLI420Renderer)))
+#define RTCMTLRGBRendererClass NSClassFromString(MTL_STRINGIFY(RTC_OBJC_TYPE(RTCMTLRGBRenderer)))
 
 @interface RTC_OBJC_TYPE (RTCMTLVideoView) ()<MTKViewDelegate> 
 @property(nonatomic) RTC_OBJC_TYPE(RTCMTLI420Renderer) *rendererI420;
