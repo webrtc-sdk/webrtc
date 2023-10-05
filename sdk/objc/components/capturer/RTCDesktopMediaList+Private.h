@@ -23,7 +23,7 @@ namespace webrtc {
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface RTCDesktopMediaList ()
+@interface RTC_OBJC_TYPE(RTCDesktopMediaList) ()
 
 @property(nonatomic, readonly)std::shared_ptr<webrtc::ObjCDesktopMediaList> nativeMediaList;
 

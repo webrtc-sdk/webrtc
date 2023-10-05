@@ -30,7 +30,7 @@ RTC_OBJC_EXPORT
 -(void)didSourceCaptureError;
 @end
 
-@interface RTCDesktopCapturer ()
+@interface RTC_OBJC_TYPE(RTCDesktopCapturer) ()
 
 @property(nonatomic, readonly)std::shared_ptr<webrtc::ObjCDesktopCapturer> nativeCapturer;
 
