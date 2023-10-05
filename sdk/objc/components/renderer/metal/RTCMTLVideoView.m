@@ -24,13 +24,6 @@
 
 #import "RTCMTLRenderer+Private.h"
 
-// To avoid unreconized symbol linker errors, we're taking advantage of the objc runtime.
-// Linking errors occur when compiling for architectures that don't support Metal.
-#define MTKViewClass NSClassFromString(@"MTKView")
-#define RTCMTLNV12RendererClass NSClassFromString(MTL_STRINGIFY(RTC_OBJC_TYPE(RTCMTLNV12Renderer)))
-#define RTCMTLI420RendererClass NSClassFromString(MTL_STRINGIFY(RTC_OBJC_TYPE(RTCMTLI420Renderer)))
-#define RTCMTLRGBRendererClass NSClassFromString(MTL_STRINGIFY(RTC_OBJC_TYPE(RTCMTLRGBRenderer)))
-
 @interface RTC_OBJC_TYPE (RTCMTLVideoView) ()<MTKViewDelegate> 
 @property(nonatomic) RTC_OBJC_TYPE(RTCMTLI420Renderer) *rendererI420;
 @property(nonatomic) RTC_OBJC_TYPE(RTCMTLNV12Renderer) * rendererNV12;
@@ -98,19 +91,19 @@
 #pragma mark - Private
 
 + (MTKView *)createMetalView:(CGRect)frame {
-  return [[MTKViewClass alloc] initWithFrame:frame];
+  return [[MTKView alloc] initWithFrame:frame];
 }
 
 + (RTC_OBJC_TYPE(RTCMTLNV12Renderer) *)createNV12Renderer {
-  return [[RTCMTLNV12RendererClass alloc] init];
+  return [[RTC_OBJC_TYPE(RTCMTLNV12Renderer) alloc] init];
 }
 
 + (RTC_OBJC_TYPE(RTCMTLI420Renderer) *)createI420Renderer {
-  return [[RTCMTLI420RendererClass alloc] init];
+  return [[RTC_OBJC_TYPE(RTCMTLI420Renderer) alloc] init];
 }
 
 + (RTC_OBJC_TYPE(RTCMTLRGBRenderer) *)createRGBRenderer {
-  return [[RTCMTLRGBRendererClass alloc] init];
+  return [[RTC_OBJC_TYPE(RTCMTLRGBRenderer) alloc] init];
 }
 
 - (void)configure {
