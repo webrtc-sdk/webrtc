@@ -38,7 +38,7 @@
 //
 // This macro must only be defined here and not on via compiler flag to
 // ensure it has a unique value.
-#define RTC_OBJC_TYPE_PREFIX LK_
+#define RTC_OBJC_TYPE_PREFIX
 
 // RCT_OBJC_TYPE
 //
