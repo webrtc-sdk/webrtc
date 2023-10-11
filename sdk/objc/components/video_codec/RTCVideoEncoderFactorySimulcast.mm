@@ -28,7 +28,7 @@
 }
 
 - (nullable id<RTC_OBJC_TYPE(RTCVideoEncoder)>)createEncoder: (RTC_OBJC_TYPE(RTCVideoCodecInfo) *)info {
-    return [RTCVideoEncoderSimulcast simulcastEncoderWithPrimary: _primary fallback: _fallback videoCodecInfo: info];
+    return [RTC_OBJC_TYPE(RTCVideoEncoderSimulcast) simulcastEncoderWithPrimary: _primary fallback: _fallback videoCodecInfo: info];
 }
 
 - (NSArray<RTC_OBJC_TYPE(RTCVideoCodecInfo) *> *)supportedCodecs {

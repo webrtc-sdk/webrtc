@@ -29,7 +29,7 @@
     // from the display link callback so atomicity is required.
     @property(atomic, strong) RTC_OBJC_TYPE(RTCVideoFrame) *
     videoFrame;
-@property(atomic, strong) RTCI420TextureCache *i420TextureCache;
+@property(atomic, strong) RTC_OBJC_TYPE(RTCI420TextureCache) *i420TextureCache;
 
 - (void)drawFrame;
 @end
@@ -57,7 +57,7 @@ static CVReturn OnDisplayLinkFired(CVDisplayLinkRef displayLink,
 @synthesize i420TextureCache = _i420TextureCache;
 
 - (instancetype)initWithFrame:(NSRect)frame pixelFormat:(NSOpenGLPixelFormat *)format {
-  return [self initWithFrame:frame pixelFormat:format shader:[[RTCDefaultShader alloc] init]];
+  return [self initWithFrame:frame pixelFormat:format shader:[[RTC_OBJC_TYPE(RTCDefaultShader) alloc] init]];
 }
 
 - (instancetype)initWithFrame:(NSRect)frame
@@ -140,9 +140,9 @@ static CVReturn OnDisplayLinkFired(CVDisplayLinkRef displayLink,
   // TODO(magjed): Add support for NV12 texture cache on OS X.
   frame = [frame newI420VideoFrame];
   if (!self.i420TextureCache) {
-    self.i420TextureCache = [[RTCI420TextureCache alloc] initWithContext:context];
+    self.i420TextureCache = [[RTC_OBJC_TYPE(RTCI420TextureCache) alloc] initWithContext:context];
   }
-  RTCI420TextureCache *i420TextureCache = self.i420TextureCache;
+  RTC_OBJC_TYPE(RTCI420TextureCache) *i420TextureCache = self.i420TextureCache;
   if (i420TextureCache) {
     [i420TextureCache uploadFrameToTextures:frame];
     [_shader applyShadingForFrameWithWidth:frame.width

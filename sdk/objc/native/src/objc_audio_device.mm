@@ -77,7 +77,7 @@ int32_t ObjCAudioDeviceModule::Init() {
 
   if (![audio_device_ isInitialized]) {
     if (audio_device_delegate_ == nil) {
-      audio_device_delegate_ = [[ObjCAudioDeviceDelegate alloc]
+      audio_device_delegate_ = [[RTC_OBJC_TYPE(ObjCAudioDeviceDelegate) alloc]
           initWithAudioDeviceModule:rtc::scoped_refptr<ObjCAudioDeviceModule>(this)
                   audioDeviceThread:thread_];
     }

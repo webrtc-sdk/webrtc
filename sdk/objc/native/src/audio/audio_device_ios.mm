@@ -110,7 +110,7 @@ AudioDeviceIOS::AudioDeviceIOS(bool bypass_voice_processing)
   io_thread_checker_.Detach();
   thread_ = rtc::Thread::Current();
 
-  audio_session_observer_ = [[RTCNativeAudioSessionDelegateAdapter alloc] initWithObserver:this];
+  audio_session_observer_ = [[RTC_OBJC_TYPE(RTCNativeAudioSessionDelegateAdapter) alloc] initWithObserver:this];
 }
 
 AudioDeviceIOS::~AudioDeviceIOS() {

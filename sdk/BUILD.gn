@@ -385,7 +385,12 @@ if (is_ios || is_mac) {
           "objc/components/network/RTCNetworkMonitor.mm",
         ]
 
-        configs += [ ":used_from_extension" ]
+        configs += [
+          "..:common_objc",
+          ":used_from_extension",
+        ]
+
+        public_configs = [ ":common_config_objc" ]
 
         frameworks = [ "Network.framework" ]
 

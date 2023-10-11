@@ -17,10 +17,9 @@
 
 namespace webrtc {
 
-class VideoRendererAdapter
-    : public rtc::VideoSinkInterface<webrtc::VideoFrame> {
+class VideoRendererAdapter : public rtc::VideoSinkInterface<webrtc::VideoFrame> {
  public:
-  VideoRendererAdapter(RTCVideoRendererAdapter* adapter) {
+  VideoRendererAdapter(RTC_OBJC_TYPE(RTCVideoRendererAdapter) * adapter) {
     adapter_ = adapter;
     size_ = CGSizeZero;
   }
@@ -28,9 +27,9 @@ class VideoRendererAdapter
   void OnFrame(const webrtc::VideoFrame& nativeVideoFrame) override {
     RTC_OBJC_TYPE(RTCVideoFrame)* videoFrame = NativeToObjCVideoFrame(nativeVideoFrame);
 
-    CGSize current_size = (videoFrame.rotation % 180 == 0)
-                              ? CGSizeMake(videoFrame.width, videoFrame.height)
-                              : CGSizeMake(videoFrame.height, videoFrame.width);
+    CGSize current_size = (videoFrame.rotation % 180 == 0) ?
+        CGSizeMake(videoFrame.width, videoFrame.height) :
+        CGSizeMake(videoFrame.height, videoFrame.width);
 
     if (!CGSizeEqualToSize(size_, current_size)) {
       size_ = current_size;
@@ -40,12 +39,12 @@ class VideoRendererAdapter
   }
 
  private:
-  __weak RTCVideoRendererAdapter *adapter_;
+  __weak RTC_OBJC_TYPE(RTCVideoRendererAdapter) * adapter_;
   CGSize size_;
 };
-}
+}  // namespace webrtc
 
-@implementation RTCVideoRendererAdapter {
+@implementation RTC_OBJC_TYPE (RTCVideoRendererAdapter) {
   std::unique_ptr<webrtc::VideoRendererAdapter> _adapter;
 }
 
@@ -60,7 +59,7 @@ class VideoRendererAdapter
   return self;
 }
 
-- (rtc::VideoSinkInterface<webrtc::VideoFrame> *)nativeVideoRenderer {
+- (rtc::VideoSinkInterface<webrtc::VideoFrame>*)nativeVideoRenderer {
   return _adapter.get();
 }
 

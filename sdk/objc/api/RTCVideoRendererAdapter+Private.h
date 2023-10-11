@@ -16,7 +16,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface RTCVideoRendererAdapter ()
+@interface RTC_OBJC_TYPE(RTCVideoRendererAdapter) ()
 
 /**
  * The Objective-C video renderer passed to this adapter during construction.

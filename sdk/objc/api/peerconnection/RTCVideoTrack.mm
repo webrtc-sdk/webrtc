@@ -53,7 +53,7 @@
 }
 
 - (void)dealloc {
-  for (RTCVideoRendererAdapter *adapter in _adapters) {
+  for (RTC_OBJC_TYPE(RTCVideoRendererAdapter) * adapter in _adapters) {
     self.nativeVideoTrack->RemoveSink(adapter.nativeVideoRenderer);
   }
 }
@@ -85,18 +85,17 @@
   }
 
   // Make sure we don't have this renderer yet.
-  for (RTCVideoRendererAdapter *adapter in _adapters) {
+  for (RTC_OBJC_TYPE(RTCVideoRendererAdapter) * adapter in _adapters) {
     if (adapter.videoRenderer == renderer) {
       RTC_LOG(LS_INFO) << "|renderer| is already attached to this track";
       return;
     }
   }
   // Create a wrapper that provides a native pointer for us.
-  RTCVideoRendererAdapter* adapter =
-      [[RTCVideoRendererAdapter alloc] initWithNativeRenderer:renderer];
+  RTC_OBJC_TYPE(RTCVideoRendererAdapter) *adapter =
+      [[RTC_OBJC_TYPE(RTCVideoRendererAdapter) alloc] initWithNativeRenderer:renderer];
   [_adapters addObject:adapter];
-  self.nativeVideoTrack->AddOrUpdateSink(adapter.nativeVideoRenderer,
-                                         rtc::VideoSinkWants());
+  self.nativeVideoTrack->AddOrUpdateSink(adapter.nativeVideoRenderer, rtc::VideoSinkWants());
 }
 
 - (void)removeRenderer:(id<RTC_OBJC_TYPE(RTCVideoRenderer)>)renderer {
@@ -105,9 +104,8 @@
     return;
   }
   __block NSUInteger indexToRemove = NSNotFound;
-  [_adapters enumerateObjectsUsingBlock:^(RTCVideoRendererAdapter *adapter,
-                                          NSUInteger idx,
-                                          BOOL *stop) {
+  [_adapters enumerateObjectsUsingBlock:^(
+                 RTC_OBJC_TYPE(RTCVideoRendererAdapter) * adapter, NSUInteger idx, BOOL * stop) {
     if (adapter.videoRenderer == renderer) {
       indexToRemove = idx;
       *stop = YES;
@@ -117,8 +115,7 @@
     RTC_LOG(LS_INFO) << "removeRenderer called with a renderer that has not been previously added";
     return;
   }
-  RTCVideoRendererAdapter *adapterToRemove =
-      [_adapters objectAtIndex:indexToRemove];
+  RTC_OBJC_TYPE(RTCVideoRendererAdapter) *adapterToRemove = [_adapters objectAtIndex:indexToRemove];
   self.nativeVideoTrack->RemoveSink(adapterToRemove.nativeVideoRenderer);
   [_adapters removeObjectAtIndex:indexToRemove];
 }

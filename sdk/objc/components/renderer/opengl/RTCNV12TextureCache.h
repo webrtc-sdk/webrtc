@@ -16,7 +16,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface RTCNV12TextureCache : NSObject
+@interface RTC_OBJC_TYPE(RTCNV12TextureCache) : NSObject
 
 @property(nonatomic, readonly) GLuint yTexture;
 @property(nonatomic, readonly) GLuint uvTexture;

@@ -11,7 +11,7 @@
 #import "RTCOpenGLDefines.h"
 #import "base/RTCVideoFrame.h"
 
-@interface RTCI420TextureCache : NSObject
+@interface RTC_OBJC_TYPE(RTCI420TextureCache) : NSObject
 
 @property(nonatomic, readonly) GLuint yTexture;
 @property(nonatomic, readonly) GLuint uTexture;

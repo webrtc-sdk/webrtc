@@ -19,7 +19,7 @@
 #include "modules/audio_device/include/audio_device.h"
 #include "rtc_base/thread.h"
 
-@class ObjCAudioDeviceDelegate;
+@class RTC_OBJC_TYPE(ObjCAudioDeviceDelegate);
 
 namespace webrtc {
 
@@ -267,7 +267,7 @@ class ObjCAudioDeviceModule : public AudioDeviceModule {
   rtc::BufferT<int16_t> record_audio_buffer_;
 
   // Delegate object provided to RTCAudioDevice during initialization
-  ObjCAudioDeviceDelegate* audio_device_delegate_;
+  RTC_OBJC_TYPE(ObjCAudioDeviceDelegate)* audio_device_delegate_;
 };
 
 }  // namespace objc_adm

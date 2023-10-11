@@ -69,7 +69,7 @@ static const char kNV12FragmentShaderSource[] =
   "                                     1.0);\n"
   "  }\n";
 
-@implementation RTCDefaultShader {
+@implementation RTC_OBJC_TYPE(RTCDefaultShader) {
   GLuint _vertexBuffer;
   GLuint _vertexArray;
   // Store current rotation and only upload new vertex data when rotation changes.

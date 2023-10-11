@@ -39,8 +39,8 @@
   NSMutableArray *result = [NSMutableArray array];
 
   for (auto &element : _nativeCapabilities.codecs) {
-    RTCRtpCodecCapability *object =
-        [[RTCRtpCodecCapability alloc] initWithNativeCodecCapability:element];
+    RTC_OBJC_TYPE(RTCRtpCodecCapability) *object =
+        [[RTC_OBJC_TYPE(RTCRtpCodecCapability) alloc] initWithNativeCodecCapability:element];
     [result addObject:object];
   }
 
