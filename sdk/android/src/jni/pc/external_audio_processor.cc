@@ -50,29 +50,16 @@ void ExternalAudioProcessor::Process(webrtc::AudioBuffer* audio) {
   }
 
   size_t num_frames = audio->num_frames();
+  size_t num_bands =audio->num_bands();
+
   int rate = num_frames * 1000;
-  size_t number_of_channels = audio->num_channels();
-  int bits_per_sample = sizeof(float);
 
   if (rate != sample_rate_hz_) {
     external_processor_->Reset(rate);
     sample_rate_hz_ = rate;
   }
 
-  std::vector<float> buffer;
-  auto num_bands_ = audio->num_bands();
-
-  buffer.resize(kNsFrameSize * num_bands_);
-
-  for (size_t jj = 0; jj < kNsFrameSize * num_bands_; ++jj) {
-    buffer[jj] = audio->channels()[0][jj] / 32768.f;
-  }
-
-  external_processor_->Process(kNsFrameSize * num_bands_, buffer.data());
-
-  for (size_t jj = 0; jj < kNsFrameSize * num_bands_; ++jj) {
-    audio->channels()[0][jj] = buffer[jj] * 32768.f;
-  }
+  external_processor_->Process(num_bands, num_frames, kNsFrameSize * num_bands, audio->channels()[0]);
 }
 
 std::string ExternalAudioProcessor::ToString() const {

@@ -48,11 +48,11 @@ void ExternalAudioProcessingJni::Reset(int new_rate) {
   Java_AudioProcessing_Reset(env, j_prosessing_global_, new_rate);
 }
 
-void ExternalAudioProcessingJni::Process(int buffer_size, float* buffer) {
+void ExternalAudioProcessingJni::Process(int num_bans, int num_frames, int buffer_size, float* buffer) {
   JNIEnv* env = AttachCurrentThreadIfNeeded();
   ScopedJavaLocalRef<jobject> audio_buffer =
       NewDirectByteBuffer(env, (void*)buffer, buffer_size * sizeof(float));
-  Java_AudioProcessing_Process(env, j_prosessing_global_, audio_buffer);
+  Java_AudioProcessing_Process(env, j_prosessing_global_, num_bans, num_frames, audio_buffer);
 }
 
 DefaultAudioProcessor::DefaultAudioProcessor() {

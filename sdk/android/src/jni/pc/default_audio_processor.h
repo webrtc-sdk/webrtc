@@ -36,7 +36,7 @@ class ExternalAudioProcessingJni
  protected:
   virtual void Initialize(int sample_rate_hz, int num_channels) override;
   virtual void Reset(int new_rate) override;
-  virtual void Process(int buffer_size, float* buffer) override;
+  virtual void Process(int num_bans, int num_frames, int buffer_size, float* buffer) override;
 
  private:
   const ScopedJavaGlobalRef<jobject> j_prosessing_global_;

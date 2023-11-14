@@ -26,11 +26,11 @@ public class ExternalAudioProcessor implements AudioProcessingFactory {
 
   public static interface AudioProcessing {
     @CalledByNative("AudioProcessing")
-    void Initialize(int sample_rate_hz, int num_channels);
+    void Initialize(int sampleRateHz, int numChannels);
     @CalledByNative("AudioProcessing")
-    void Reset(int new_rate);
+    void Reset(int newRate);
     @CalledByNative("AudioProcessing")
-    void Process(ByteBuffer buffer);
+    void Process(int numBans, int numFrames, ByteBuffer buffer);
   }
 
   private long apmPtr;
