@@ -30,7 +30,7 @@ public class ExternalAudioProcessor implements AudioProcessingFactory {
     @CalledByNative("AudioProcessing")
     void Reset(int new_rate);
     @CalledByNative("AudioProcessing")
-    void Process(int num_bans, ByteBuffer buffer);
+    void Process(ByteBuffer buffer);
   }
 
   private long apmPtr;
@@ -78,8 +78,6 @@ public class ExternalAudioProcessor implements AudioProcessingFactory {
   }
 
   public void Destroy() {
-    nativeDestroy(apmPtr);
-    apmPtr = 0;
     if (renderPreProcessingPtr != 0) {
       JniCommon.nativeReleaseRef(renderPreProcessingPtr);
       renderPreProcessingPtr = 0;
@@ -88,6 +86,8 @@ public class ExternalAudioProcessor implements AudioProcessingFactory {
       JniCommon.nativeReleaseRef(capturePostProcessingPtr);
       capturePostProcessingPtr = 0;
     }
+    nativeDestroy();
+    apmPtr = 0;
   }
 
   private static native long nativeGetDefaultApm();
@@ -95,5 +95,5 @@ public class ExternalAudioProcessor implements AudioProcessingFactory {
   private static native long nativeSetRenderPreProcessing(AudioProcessing processing);
   private static native void nativeSetBypassFlagForCapturePost(boolean bypass);
   private static native void nativeSetBypassFlagForRenderPre(boolean bypass);
-  private static native void nativeDestroy(long ptr);
+  private static native void nativeDestroy();
 }

@@ -68,8 +68,7 @@ void ExternalAudioProcessor::Process(webrtc::AudioBuffer* audio) {
     buffer[jj] = audio->channels()[0][jj] / 32768.f;
   }
 
-  external_processor_->Process(num_bands_, kNsFrameSize * num_bands_,
-                               buffer.data());
+  external_processor_->Process(kNsFrameSize * num_bands_, buffer.data());
 
   for (size_t jj = 0; jj < kNsFrameSize * num_bands_; ++jj) {
     audio->channels()[0][jj] = buffer[jj] * 32768.f;

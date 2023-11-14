@@ -48,14 +48,11 @@ void ExternalAudioProcessingJni::Reset(int new_rate) {
   Java_AudioProcessing_Reset(env, j_prosessing_global_, new_rate);
 }
 
-void ExternalAudioProcessingJni::Process(int num_bans,
-                                         int buffer_size,
-                                         float* buffer) {
+void ExternalAudioProcessingJni::Process(int buffer_size, float* buffer) {
   JNIEnv* env = AttachCurrentThreadIfNeeded();
   ScopedJavaLocalRef<jobject> audio_buffer =
       NewDirectByteBuffer(env, (void*)buffer, buffer_size * sizeof(float));
-  Java_AudioProcessing_Process(env, j_prosessing_global_, num_bans,
-                               audio_buffer);
+  Java_AudioProcessing_Process(env, j_prosessing_global_, audio_buffer);
 }
 
 DefaultAudioProcessor::DefaultAudioProcessor() {
@@ -78,25 +75,26 @@ DefaultAudioProcessor::DefaultAudioProcessor() {
   apm_->ApplyConfig(config);
 }
 
-static rtc::scoped_refptr<DefaultAudioProcessor> default_processor;
+static DefaultAudioProcessor* default_processor_ptr;
 
 static jlong JNI_ExternalAudioProcessor_GetDefaultApm(JNIEnv* env) {
-  if (!default_processor) {
-    default_processor = rtc::make_ref_counted<DefaultAudioProcessor>();
+  if (!default_processor_ptr) {
+    auto default_processor = rtc::make_ref_counted<DefaultAudioProcessor>();
+    default_processor_ptr = default_processor.release();
   }
-  return webrtc::jni::jlongFromPointer(default_processor->apm().get());
+  return webrtc::jni::jlongFromPointer(default_processor_ptr->apm().get());
 }
 
 static jlong JNI_ExternalAudioProcessor_SetCapturePostProcessing(
     JNIEnv* env,
     const JavaParamRef<jobject>& j_processing) {
-  if (!default_processor) {
+  if (!default_processor_ptr) {
     return 0;
   }
   auto processing =
       rtc::make_ref_counted<ExternalAudioProcessingJni>(env, j_processing);
   processing->AddRef();
-  default_processor->capture_post_processor()->SetExternalAudioProcessing(
+  default_processor_ptr->capture_post_processor()->SetExternalAudioProcessing(
       processing.get());
   return jlongFromPointer(processing.get());
 }
@@ -104,13 +102,13 @@ static jlong JNI_ExternalAudioProcessor_SetCapturePostProcessing(
 static jlong JNI_ExternalAudioProcessor_SetRenderPreProcessing(
     JNIEnv* env,
     const JavaParamRef<jobject>& j_processing) {
-  if (!default_processor) {
+  if (!default_processor_ptr) {
     return 0;
   }
   auto processing =
       rtc::make_ref_counted<ExternalAudioProcessingJni>(env, j_processing);
   processing->AddRef();
-  default_processor->render_pre_processor()->SetExternalAudioProcessing(
+  default_processor_ptr->render_pre_processor()->SetExternalAudioProcessing(
       processing.get());
   return jlongFromPointer(processing.get());
 }
@@ -118,29 +116,30 @@ static jlong JNI_ExternalAudioProcessor_SetRenderPreProcessing(
 static void JNI_ExternalAudioProcessor_SetBypassFlagForCapturePost(
     JNIEnv* env,
     jboolean bypass) {
-  if (!default_processor) {
+  if (!default_processor_ptr) {
     return;
   }
-  default_processor->capture_post_processor()->SetBypassFlag(bypass);
+  default_processor_ptr->capture_post_processor()->SetBypassFlag(bypass);
 }
 
 static void JNI_ExternalAudioProcessor_SetBypassFlagForRenderPre(
     JNIEnv* env,
     jboolean bypass) {
-  if (!default_processor) {
+  if (!default_processor_ptr) {
     return;
   }
-  default_processor->render_pre_processor()->SetBypassFlag(bypass);
+  default_processor_ptr->render_pre_processor()->SetBypassFlag(bypass);
 }
 
-static void JNI_ExternalAudioProcessor_Destroy(JNIEnv* env, jlong ptr) {
-  if (!default_processor) {
+static void JNI_ExternalAudioProcessor_Destroy(JNIEnv* env) {
+  if (!default_processor_ptr) {
     return;
   }
-  default_processor->render_pre_processor()->SetExternalAudioProcessing(
+  default_processor_ptr->render_pre_processor()->SetExternalAudioProcessing(
       nullptr);
-  default_processor->capture_post_processor()->SetExternalAudioProcessing(
+  default_processor_ptr->capture_post_processor()->SetExternalAudioProcessing(
       nullptr);
+  delete default_processor_ptr;
 }
 
 }  // namespace jni
