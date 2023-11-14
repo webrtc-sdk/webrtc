@@ -19,7 +19,7 @@
 namespace webrtc {
 
 void ExternalAudioProcessor::SetExternalAudioProcessing(
-    ExternalAudioProcessorInterface* processor) {
+    ExternalAudioProcessingInterface* processor) {
   webrtc::MutexLock lock(&mutex_);
   external_processor_ = processor;
   if (initialized_) {

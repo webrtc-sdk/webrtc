@@ -22,7 +22,7 @@
 #include "modules/audio_processing/audio_buffer.h"
 #include "modules/audio_processing/audio_processing_impl.h"
 #include "modules/audio_processing/include/audio_processing.h"
-#include "sdk/android/src/jni/pc/external_audio_processor_interface.h"
+#include "sdk/android/src/jni/pc/external_audio_processing_interface.h"
 
 namespace webrtc {
 
@@ -32,7 +32,7 @@ class ExternalAudioProcessor : public webrtc::CustomProcessing {
   ~ExternalAudioProcessor() override = default;
 
   void SetExternalAudioProcessing(
-      ExternalAudioProcessorInterface* processor);
+      ExternalAudioProcessingInterface* processor);
 
   void SetBypassFlag(bool bypass);
 
@@ -45,7 +45,7 @@ class ExternalAudioProcessor : public webrtc::CustomProcessing {
 
  private:
   mutable webrtc::Mutex mutex_;
-  ExternalAudioProcessorInterface* external_processor_;
+  ExternalAudioProcessingInterface* external_processor_;
   bool bypass_flag_;
   bool initialized_;
   int sample_rate_hz_;

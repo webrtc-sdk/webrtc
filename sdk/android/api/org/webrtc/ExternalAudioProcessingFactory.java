@@ -22,7 +22,7 @@ import androidx.annotation.Nullable;
 import org.webrtc.AudioProcessingFactory;
 
 
-public class ExternalAudioProcessor implements AudioProcessingFactory {
+public class ExternalAudioProcessingFactory implements AudioProcessingFactory {
 
   public static interface AudioProcessing {
     @CalledByNative("AudioProcessing")
@@ -37,7 +37,7 @@ public class ExternalAudioProcessor implements AudioProcessingFactory {
   private long capturePostProcessingPtr;
   private long renderPreProcessingPtr;
 
-  public ExternalAudioProcessor() {
+  public ExternalAudioProcessingFactory() {
     apmPtr = nativeGetDefaultApm();
     capturePostProcessingPtr = 0;
     renderPreProcessingPtr = 0;

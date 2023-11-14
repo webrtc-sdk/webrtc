@@ -14,19 +14,18 @@
  * limitations under the License.
  */
 
-#include "sdk/android/src/jni/pc/default_audio_processor.h"
+#include "sdk/android/src/jni/pc/external_audio_processing_factory.h"
 
 #include <jni.h>
 #include <syslog.h>
 
 #include "api/make_ref_counted.h"
 #include "rtc_base/ref_counted_object.h"
-#include "sdk/android/generated_peerconnection_jni/ExternalAudioProcessor_jni.h"
+#include "sdk/android/generated_peerconnection_jni/ExternalAudioProcessingFactory_jni.h"
 #include "sdk/android/native_api/jni/java_types.h"
 #include "sdk/android/native_api/jni/scoped_java_ref.h"
 #include "sdk/android/src/jni/jni_helpers.h"
 #include "sdk/android/src/jni/pc/external_audio_processor.h"
-#include "sdk/android/src/jni/pc/external_audio_processor_interface.h"
 
 namespace webrtc {
 namespace jni {
@@ -55,7 +54,7 @@ void ExternalAudioProcessingJni::Process(int num_bans, int num_frames, int buffe
   Java_AudioProcessing_Process(env, j_prosessing_global_, num_bans, num_frames, audio_buffer);
 }
 
-DefaultAudioProcessor::DefaultAudioProcessor() {
+ExternalAudioProcessingFactory::ExternalAudioProcessingFactory() {
   capture_post_processor_ = new ExternalAudioProcessor();
   std::unique_ptr<webrtc::CustomProcessing> capture_post_processor(
       capture_post_processor_);
@@ -75,17 +74,17 @@ DefaultAudioProcessor::DefaultAudioProcessor() {
   apm_->ApplyConfig(config);
 }
 
-static DefaultAudioProcessor* default_processor_ptr;
+static ExternalAudioProcessingFactory* default_processor_ptr;
 
-static jlong JNI_ExternalAudioProcessor_GetDefaultApm(JNIEnv* env) {
+static jlong JNI_ExternalAudioProcessingFactory_GetDefaultApm(JNIEnv* env) {
   if (!default_processor_ptr) {
-    auto default_processor = rtc::make_ref_counted<DefaultAudioProcessor>();
+    auto default_processor = rtc::make_ref_counted<ExternalAudioProcessingFactory>();
     default_processor_ptr = default_processor.release();
   }
   return webrtc::jni::jlongFromPointer(default_processor_ptr->apm().get());
 }
 
-static jlong JNI_ExternalAudioProcessor_SetCapturePostProcessing(
+static jlong JNI_ExternalAudioProcessingFactory_SetCapturePostProcessing(
     JNIEnv* env,
     const JavaParamRef<jobject>& j_processing) {
   if (!default_processor_ptr) {
@@ -99,7 +98,7 @@ static jlong JNI_ExternalAudioProcessor_SetCapturePostProcessing(
   return jlongFromPointer(processing.get());
 }
 
-static jlong JNI_ExternalAudioProcessor_SetRenderPreProcessing(
+static jlong JNI_ExternalAudioProcessingFactory_SetRenderPreProcessing(
     JNIEnv* env,
     const JavaParamRef<jobject>& j_processing) {
   if (!default_processor_ptr) {
@@ -113,7 +112,7 @@ static jlong JNI_ExternalAudioProcessor_SetRenderPreProcessing(
   return jlongFromPointer(processing.get());
 }
 
-static void JNI_ExternalAudioProcessor_SetBypassFlagForCapturePost(
+static void JNI_ExternalAudioProcessingFactory_SetBypassFlagForCapturePost(
     JNIEnv* env,
     jboolean bypass) {
   if (!default_processor_ptr) {
@@ -122,7 +121,7 @@ static void JNI_ExternalAudioProcessor_SetBypassFlagForCapturePost(
   default_processor_ptr->capture_post_processor()->SetBypassFlag(bypass);
 }
 
-static void JNI_ExternalAudioProcessor_SetBypassFlagForRenderPre(
+static void JNI_ExternalAudioProcessingFactory_SetBypassFlagForRenderPre(
     JNIEnv* env,
     jboolean bypass) {
   if (!default_processor_ptr) {
@@ -131,7 +130,7 @@ static void JNI_ExternalAudioProcessor_SetBypassFlagForRenderPre(
   default_processor_ptr->render_pre_processor()->SetBypassFlag(bypass);
 }
 
-static void JNI_ExternalAudioProcessor_Destroy(JNIEnv* env) {
+static void JNI_ExternalAudioProcessingFactory_Destroy(JNIEnv* env) {
   if (!default_processor_ptr) {
     return;
   }
