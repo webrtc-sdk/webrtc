@@ -18,7 +18,7 @@
 
 namespace webrtc {
 
-void ExternalAudioProcessorImpl::SetExternalAudioProcessing(
+void ExternalAudioProcessor::SetExternalAudioProcessing(
     ExternalAudioProcessorInterface* processor) {
   webrtc::MutexLock lock(&mutex_);
   external_processor_ = processor;
@@ -27,13 +27,12 @@ void ExternalAudioProcessorImpl::SetExternalAudioProcessing(
   }
 }
 
-void ExternalAudioProcessorImpl::SetBypassFlag(bool enable) {
+void ExternalAudioProcessor::SetBypassFlag(bool bypass) {
   webrtc::MutexLock lock(&mutex_);
-  bypass_flag = enable;
+  bypass_flag_ = bypass;
 }
 
-void ExternalAudioProcessorImpl::Initialize(int sample_rate_hz,
-                                            int num_channels) {
+void ExternalAudioProcessor::Initialize(int sample_rate_hz, int num_channels) {
   webrtc::MutexLock lock(&mutex_);
   sample_rate_hz_ = sample_rate_hz;
   num_channels_ = num_channels;
@@ -41,31 +40,47 @@ void ExternalAudioProcessorImpl::Initialize(int sample_rate_hz,
     external_processor_->Initialize(sample_rate_hz, num_channels);
   }
   initialized_ = true;
+  bypass_flag_ = false;
 }
 
-void ExternalAudioProcessorImpl::Process(webrtc::AudioBuffer* audio) {
+void ExternalAudioProcessor::Process(webrtc::AudioBuffer* audio) {
   webrtc::MutexLock lock(&mutex_);
-  if (!external_processor_ || bypass_flag) {
+  if (!external_processor_ || bypass_flag_) {
     return;
   }
 
   size_t num_frames = audio->num_frames();
   int rate = num_frames * 1000;
+  size_t number_of_channels = audio->num_channels();
+  int bits_per_sample = sizeof(float);
 
   if (rate != sample_rate_hz_) {
     external_processor_->Reset(rate);
     sample_rate_hz_ = rate;
   }
 
-  external_processor_->Process(audio->num_bands(), audio->num_frames(),
-                               audio->channels()[0]);
+  std::vector<float> buffer;
+  auto num_bands_ = audio->num_bands();
+
+  buffer.resize(kNsFrameSize * num_bands_);
+
+  for (size_t jj = 0; jj < kNsFrameSize * num_bands_; ++jj) {
+    buffer[jj] = audio->channels()[0][jj] / 32768.f;
+  }
+
+  external_processor_->Process(num_bands_, kNsFrameSize * num_bands_,
+                               buffer.data());
+
+  for (size_t jj = 0; jj < kNsFrameSize * num_bands_; ++jj) {
+    audio->channels()[0][jj] = buffer[jj] * 32768.f;
+  }
 }
 
-std::string ExternalAudioProcessorImpl::ToString() const {
-  return "ExternalAudioProcessorImpl";
+std::string ExternalAudioProcessor::ToString() const {
+  return "ExternalAudioProcessor";
 }
 
-void ExternalAudioProcessorImpl::SetRuntimeSetting(
+void ExternalAudioProcessor::SetRuntimeSetting(
     webrtc::AudioProcessing::RuntimeSetting setting) {}
 
 }  // namespace webrtc

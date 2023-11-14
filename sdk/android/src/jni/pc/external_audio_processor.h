@@ -17,31 +17,24 @@
 #ifndef SDK_ANDROID_SRC_JNI_PC_EXTERNAL_AUDIO_PROCESSOR_H_
 #define SDK_ANDROID_SRC_JNI_PC_EXTERNAL_AUDIO_PROCESSOR_H_
 
-
 #define WEBRTC_APM_DEBUG_DUMP 0
-
-#include "sdk/android/src/jni/pc/external_audio_processor_interface.h"
 
 #include "modules/audio_processing/audio_buffer.h"
 #include "modules/audio_processing/audio_processing_impl.h"
 #include "modules/audio_processing/include/audio_processing.h"
+#include "sdk/android/src/jni/pc/external_audio_processor_interface.h"
 
 namespace webrtc {
 
-class ExternalAudioProcessorImpl : public webrtc::CustomProcessing {
+class ExternalAudioProcessor : public webrtc::CustomProcessing {
  public:
-  ExternalAudioProcessorImpl() = default;
-  ~ExternalAudioProcessorImpl() override = default;
+  ExternalAudioProcessor() = default;
+  ~ExternalAudioProcessor() override = default;
 
-  void SetExternalAudioProcessing(ExternalAudioProcessorInterface* processor);
-  void SetBypassFlag(bool enable);
+  void SetExternalAudioProcessing(
+      ExternalAudioProcessorInterface* processor);
 
-  static ExternalAudioProcessorImpl* SharedInstance() {
-    if (shared_instance_ == nullptr) {
-      shared_instance_ = new ExternalAudioProcessorImpl();
-    }
-    return shared_instance_;
-  }
+  void SetBypassFlag(bool bypass);
 
  private:
   void Initialize(int sample_rate_hz, int num_channels) override;
@@ -53,11 +46,10 @@ class ExternalAudioProcessorImpl : public webrtc::CustomProcessing {
  private:
   mutable webrtc::Mutex mutex_;
   ExternalAudioProcessorInterface* external_processor_;
-  bool bypass_flag = false;
-  bool initialized_ = false;
+  bool bypass_flag_;
+  bool initialized_;
   int sample_rate_hz_;
   int num_channels_;
-  static ExternalAudioProcessorImpl* shared_instance_;
 };
 
 }  // namespace webrtc

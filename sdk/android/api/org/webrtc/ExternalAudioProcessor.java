@@ -16,48 +16,84 @@
 
 package org.webrtc;
 
+import java.nio.ByteBuffer;
+
+import androidx.annotation.Nullable;
 import org.webrtc.AudioProcessingFactory;
 
+
 public class ExternalAudioProcessor implements AudioProcessingFactory {
-  private long nativeAudioProcessor;
+
+  public static interface AudioProcessing {
+    @CalledByNative("AudioProcessing")
+    void Initialize(int sample_rate_hz, int num_channels);
+    @CalledByNative("AudioProcessing")
+    void Reset(int new_rate);
+    @CalledByNative("AudioProcessing")
+    void Process(int num_bans, ByteBuffer buffer);
+  }
+
+  private long apmPtr;
+  private long capturePostProcessingPtr;
+  private long renderPreProcessingPtr;
 
   public ExternalAudioProcessor() {
-    nativeAudioProcessor = nativeGetDefaultApm();
+    apmPtr = nativeGetDefaultApm();
+    capturePostProcessingPtr = 0;
+    renderPreProcessingPtr = 0;
   }
 
   @Override
   public long createNative() {
-    if(nativeAudioProcessor == 0) {
-      nativeAudioProcessor = nativeGetDefaultApm();
+    if(apmPtr == 0) {
+      apmPtr = nativeGetDefaultApm();
     }
-    return nativeAudioProcessor;
+    return apmPtr;
   }
 
-  public void SetCapturePostProcessing(long extProcessor) {
-    nativeSetCapturePostProcessing(nativeAudioProcessor, extProcessor);
+  public void SetCapturePostProcessing(@Nullable AudioProcessing processing) {
+    long newPtr = nativeSetCapturePostProcessing(processing);
+    if (capturePostProcessingPtr != 0) {
+      JniCommon.nativeReleaseRef(capturePostProcessingPtr);
+      capturePostProcessingPtr = 0;
+    }
+    capturePostProcessingPtr = newPtr;
   }
 
-  public void SetRenderPreProcessing(long extProcessor) {
-    nativeSetRenderPreProcessing(nativeAudioProcessor, extProcessor);
+  public void SetRenderPreProcessing(@Nullable AudioProcessing processing) {
+    long newPtr = nativeSetRenderPreProcessing(processing);
+    if (renderPreProcessingPtr != 0) {
+      JniCommon.nativeReleaseRef(renderPreProcessingPtr);
+      renderPreProcessingPtr = 0;
+    }
+    renderPreProcessingPtr = newPtr;
+  }
+  
+  public void SetBypassFlagForCapturePost( boolean bypass) {
+    nativeSetBypassFlagForCapturePost(bypass);
   }
 
-  public void SetBypassFlagForCapturePostProcessing(boolean bypass) {
-    nativeSetBypassFlagForCapturePostProcessing(nativeAudioProcessor, bypass);
-  }
-
-  public void SetBypassFlagForRenderPreProcessing(boolean bypass) {
-    nativeSetBypassFlagForRenderPreProcessing(nativeAudioProcessor, bypass);
+  public void SetBypassFlagForRenderPre( boolean bypass) {
+    nativeSetBypassFlagForRenderPre(bypass);
   }
 
   public void Destroy() {
-    nativeDestroy(nativeAudioProcessor);
-    nativeAudioProcessor = 0;
+    nativeDestroy(apmPtr);
+    apmPtr = 0;
+    if (renderPreProcessingPtr != 0) {
+      JniCommon.nativeReleaseRef(renderPreProcessingPtr);
+      renderPreProcessingPtr = 0;
+    }
+    if (capturePostProcessingPtr != 0) {
+      JniCommon.nativeReleaseRef(capturePostProcessingPtr);
+      capturePostProcessingPtr = 0;
+    }
   }
 
   private static native long nativeGetDefaultApm();
-  private static native boolean nativeSetCapturePostProcessing(long nativeAudioProcessor, long nativeProcessor);
-  private static native boolean nativeSetRenderPreProcessing(long nativeAudioProcessor, long nativeProcessor);
-  private static native boolean nativeSetBypassFlagForCapturePostProcessing(long nativeAudioProcessor, boolean bypass);
-  private static native boolean nativeSetBypassFlagForRenderPreProcessing(long nativeAudioProcessor, boolean bypass);
-  private static native void nativeDestroy(long nativeAudioProcessor);
+  private static native long nativeSetCapturePostProcessing(AudioProcessing processing);
+  private static native long nativeSetRenderPreProcessing(AudioProcessing processing);
+  private static native void nativeSetBypassFlagForCapturePost(boolean bypass);
+  private static native void nativeSetBypassFlagForRenderPre(boolean bypass);
+  private static native void nativeDestroy(long ptr);
 }
