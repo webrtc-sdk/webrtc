@@ -52,6 +52,7 @@ public class ExternalAudioProcessor implements AudioProcessingFactory {
   }
 
   public void SetCapturePostProcessing(@Nullable AudioProcessing processing) {
+    checkExternalAudioProcessorExists();
     long newPtr = nativeSetCapturePostProcessing(processing);
     if (capturePostProcessingPtr != 0) {
       JniCommon.nativeReleaseRef(capturePostProcessingPtr);
@@ -61,6 +62,7 @@ public class ExternalAudioProcessor implements AudioProcessingFactory {
   }
 
   public void SetRenderPreProcessing(@Nullable AudioProcessing processing) {
+    checkExternalAudioProcessorExists();
     long newPtr = nativeSetRenderPreProcessing(processing);
     if (renderPreProcessingPtr != 0) {
       JniCommon.nativeReleaseRef(renderPreProcessingPtr);
@@ -70,14 +72,17 @@ public class ExternalAudioProcessor implements AudioProcessingFactory {
   }
   
   public void SetBypassFlagForCapturePost( boolean bypass) {
+    checkExternalAudioProcessorExists();
     nativeSetBypassFlagForCapturePost(bypass);
   }
 
   public void SetBypassFlagForRenderPre( boolean bypass) {
+    checkExternalAudioProcessorExists();
     nativeSetBypassFlagForRenderPre(bypass);
   }
 
   public void Destroy() {
+    checkExternalAudioProcessorExists();
     if (renderPreProcessingPtr != 0) {
       JniCommon.nativeReleaseRef(renderPreProcessingPtr);
       renderPreProcessingPtr = 0;
@@ -88,6 +93,12 @@ public class ExternalAudioProcessor implements AudioProcessingFactory {
     }
     nativeDestroy();
     apmPtr = 0;
+  }
+
+  private void checkExternalAudioProcessorExists() {
+    if (apmPtr == 0) {
+      throw new IllegalStateException("ExternalAudioProcessor has been disposed.");
+    }
   }
 
   private static native long nativeGetDefaultApm();
