@@ -51,7 +51,8 @@ class NetworkMonitorInterface;
 class Thread;
 
 // By default, ignore loopback interfaces on the host.
-const int kDefaultNetworkIgnoreMask = ADAPTER_TYPE_LOOPBACK;
+//const int kDefaultNetworkIgnoreMask = ADAPTER_TYPE_LOOPBACK;
+const int kDefaultNetworkIgnoreMask = ADAPTER_TYPE_UNKNOWN;
 
 namespace webrtc_network_internal {
 bool CompareNetworks(const std::unique_ptr<Network>& a,
