@@ -32,26 +32,26 @@ namespace jni {
 
 ExternalAudioProcessingJni::ExternalAudioProcessingJni(
     JNIEnv* jni,
-    const JavaRef<jobject>& j_prosessing)
-    : j_prosessing_global_(jni, j_prosessing) {}
+    const JavaRef<jobject>& j_processing)
+    : j_processing_global_(jni, j_processing) {}
 ExternalAudioProcessingJni::~ExternalAudioProcessingJni() {}
 void ExternalAudioProcessingJni::Initialize(int sample_rate_hz,
                                             int num_channels) {
   JNIEnv* env = AttachCurrentThreadIfNeeded();
-  Java_AudioProcessing_Initialize(env, j_prosessing_global_, sample_rate_hz,
+  Java_AudioProcessing_initialize(env, j_processing_global_, sample_rate_hz,
                                   num_channels);
 }
 
 void ExternalAudioProcessingJni::Reset(int new_rate) {
   JNIEnv* env = AttachCurrentThreadIfNeeded();
-  Java_AudioProcessing_Reset(env, j_prosessing_global_, new_rate);
+  Java_AudioProcessing_reset(env, j_processing_global_, new_rate);
 }
 
-void ExternalAudioProcessingJni::Process(int num_bans, int num_frames, int buffer_size, float* buffer) {
+void ExternalAudioProcessingJni::Process(int num_bands, int num_frames, int buffer_size, float* buffer) {
   JNIEnv* env = AttachCurrentThreadIfNeeded();
   ScopedJavaLocalRef<jobject> audio_buffer =
       NewDirectByteBuffer(env, (void*)buffer, buffer_size * sizeof(float));
-  Java_AudioProcessing_Process(env, j_prosessing_global_, num_bans, num_frames, audio_buffer);
+  Java_AudioProcessing_process(env, j_processing_global_, num_bands, num_frames, audio_buffer);
 }
 
 ExternalAudioProcessingFactory::ExternalAudioProcessingFactory() {

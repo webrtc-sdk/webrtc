@@ -30,7 +30,7 @@ class ExternalAudioProcessingJni
     : public webrtc::ExternalAudioProcessingInterface,
       public rtc::RefCountInterface {
  public:
-  ExternalAudioProcessingJni(JNIEnv* jni, const JavaRef<jobject>& j_prosessing);
+  ExternalAudioProcessingJni(JNIEnv* jni, const JavaRef<jobject>& j_processing);
   ~ExternalAudioProcessingJni();
 
  protected:
@@ -39,8 +39,8 @@ class ExternalAudioProcessingJni
   virtual void Process(int num_bans, int num_frames, int buffer_size, float* buffer) override;
 
  private:
-  const ScopedJavaGlobalRef<jobject> j_prosessing_global_;
-  const ScopedJavaGlobalRef<jobject> j_prosessing_;
+  const ScopedJavaGlobalRef<jobject> j_processing_global_;
+  const ScopedJavaGlobalRef<jobject> j_processing_;
 };
 
 class ExternalAudioProcessingFactory : public rtc::RefCountInterface {

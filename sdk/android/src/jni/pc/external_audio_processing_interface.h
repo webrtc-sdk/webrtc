@@ -22,7 +22,7 @@ class ExternalAudioProcessingInterface {
  public:
   virtual void Initialize(int sample_rate_hz, int num_channels) = 0;
   virtual void Reset(int new_rate) = 0;
-  virtual void Process(int num_bans, int num_frames, int buffer_size, float* buffer) = 0;
+  virtual void Process(int num_bands, int num_frames, int buffer_size, float* buffer) = 0;
 
  protected:
   virtual ~ExternalAudioProcessingInterface() = default;

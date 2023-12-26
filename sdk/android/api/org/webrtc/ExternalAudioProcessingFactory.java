@@ -26,11 +26,17 @@ public class ExternalAudioProcessingFactory implements AudioProcessingFactory {
 
   public static interface AudioProcessing {
     @CalledByNative("AudioProcessing")
-    void Initialize(int sampleRateHz, int numChannels);
+    void initialize(int sampleRateHz, int numChannels);
+    /** Called when the processor should be reset with a new sample rate. */  
     @CalledByNative("AudioProcessing")
-    void Reset(int newRate);
+    void reset(int newRate);
+    /**  
+     * Processes the given capture or render signal. NOTE: `buffer.data` will be  
+     * freed once this function returns so callers who want to use the data  
+     * asynchronously must make sure to copy it first.  
+     */
     @CalledByNative("AudioProcessing")
-    void Process(int numBans, int numFrames, ByteBuffer buffer);
+    void process(int numBands, int numFrames, ByteBuffer buffer);
   }
 
   private long apmPtr;
@@ -51,7 +57,7 @@ public class ExternalAudioProcessingFactory implements AudioProcessingFactory {
     return apmPtr;
   }
 
-  public void SetCapturePostProcessing(@Nullable AudioProcessing processing) {
+  public void setCapturePostProcessing(@Nullable AudioProcessing processing) {
     checkExternalAudioProcessorExists();
     long newPtr = nativeSetCapturePostProcessing(processing);
     if (capturePostProcessingPtr != 0) {
@@ -61,7 +67,7 @@ public class ExternalAudioProcessingFactory implements AudioProcessingFactory {
     capturePostProcessingPtr = newPtr;
   }
 
-  public void SetRenderPreProcessing(@Nullable AudioProcessing processing) {
+  public void setRenderPreProcessing(@Nullable AudioProcessing processing) {
     checkExternalAudioProcessorExists();
     long newPtr = nativeSetRenderPreProcessing(processing);
     if (renderPreProcessingPtr != 0) {
@@ -71,17 +77,17 @@ public class ExternalAudioProcessingFactory implements AudioProcessingFactory {
     renderPreProcessingPtr = newPtr;
   }
   
-  public void SetBypassFlagForCapturePost( boolean bypass) {
+  public void setBypassFlagForCapturePost( boolean bypass) {
     checkExternalAudioProcessorExists();
     nativeSetBypassFlagForCapturePost(bypass);
   }
 
-  public void SetBypassFlagForRenderPre( boolean bypass) {
+  public void setBypassFlagForRenderPre( boolean bypass) {
     checkExternalAudioProcessorExists();
     nativeSetBypassFlagForRenderPre(bypass);
   }
 
-  public void Destroy() {
+  public void destroy() {
     checkExternalAudioProcessorExists();
     if (renderPreProcessingPtr != 0) {
       JniCommon.nativeReleaseRef(renderPreProcessingPtr);
