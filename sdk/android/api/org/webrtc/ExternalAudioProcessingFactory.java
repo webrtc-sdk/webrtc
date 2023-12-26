@@ -24,7 +24,14 @@ import org.webrtc.AudioProcessingFactory;
 
 public class ExternalAudioProcessingFactory implements AudioProcessingFactory {
 
+  /**
+   * Interface for external audio processing.
+   */
   public static interface AudioProcessing {
+    /**
+     * Called when the processor should be initialized with a new sample rate and
+     * number of channels.
+     */
     @CalledByNative("AudioProcessing")
     void initialize(int sampleRateHz, int numChannels);
     /** Called when the processor should be reset with a new sample rate. */  
@@ -57,6 +64,11 @@ public class ExternalAudioProcessingFactory implements AudioProcessingFactory {
     return apmPtr;
   }
 
+  /**
+   * Sets the capture post processing module. 
+   * This module is applied to the audio signal after capture and before sending 
+   * to the audio encoder.
+   */
   public void setCapturePostProcessing(@Nullable AudioProcessing processing) {
     checkExternalAudioProcessorExists();
     long newPtr = nativeSetCapturePostProcessing(processing);
@@ -67,6 +79,11 @@ public class ExternalAudioProcessingFactory implements AudioProcessingFactory {
     capturePostProcessingPtr = newPtr;
   }
 
+  /**
+   * Sets the render pre processing module.
+   * This module is applied to the audio signal after receiving from the audio
+   * decoder and before rendering.
+   */
   public void setRenderPreProcessing(@Nullable AudioProcessing processing) {
     checkExternalAudioProcessorExists();
     long newPtr = nativeSetRenderPreProcessing(processing);
@@ -77,16 +94,27 @@ public class ExternalAudioProcessingFactory implements AudioProcessingFactory {
     renderPreProcessingPtr = newPtr;
   }
   
+  /**
+   * Sets the bypass flag for the capture post processing module.
+   * If true, the registered audio processing will be bypassed.
+   */
   public void setBypassFlagForCapturePost( boolean bypass) {
     checkExternalAudioProcessorExists();
     nativeSetBypassFlagForCapturePost(bypass);
   }
 
+  /**
+   * Sets the bypass flag for the render pre processing module.
+   * If true, the registered audio processing will be bypassed.
+   */
   public void setBypassFlagForRenderPre( boolean bypass) {
     checkExternalAudioProcessorExists();
     nativeSetBypassFlagForRenderPre(bypass);
   }
 
+  /**
+   * Destroys the ExternalAudioProcessor.
+   */
   public void destroy() {
     checkExternalAudioProcessorExists();
     if (renderPreProcessingPtr != 0) {
