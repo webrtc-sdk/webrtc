@@ -40,12 +40,11 @@ void ExternalAudioProcessor::Initialize(int sample_rate_hz, int num_channels) {
     external_processor_->Initialize(sample_rate_hz, num_channels);
   }
   initialized_ = true;
-  bypass_flag_ = false;
 }
 
 void ExternalAudioProcessor::Process(webrtc::AudioBuffer* audio) {
   webrtc::MutexLock lock(&mutex_);
-  if (!external_processor_ || bypass_flag_) {
+  if (!external_processor_ || bypass_flag_ || !initialized_) {
     return;
   }
 

@@ -69,8 +69,6 @@ ExternalAudioProcessingFactory::ExternalAudioProcessingFactory() {
              .Create();
 
   webrtc::AudioProcessing::Config config;
-  config.echo_canceller.enabled = false;
-  config.echo_canceller.mobile_mode = true;
   apm_->ApplyConfig(config);
 }
 

@@ -46,10 +46,10 @@ class ExternalAudioProcessor : public webrtc::CustomProcessing {
  private:
   mutable webrtc::Mutex mutex_;
   ExternalAudioProcessingInterface* external_processor_;
-  bool bypass_flag_;
-  bool initialized_;
-  int sample_rate_hz_;
-  int num_channels_;
+  bool bypass_flag_ = false;
+  bool initialized_ = false;
+  int sample_rate_hz_ = 0;
+  int num_channels_ = 0;
 };
 
 }  // namespace webrtc
