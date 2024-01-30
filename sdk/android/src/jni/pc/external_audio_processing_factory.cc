@@ -72,71 +72,62 @@ ExternalAudioProcessingFactory::ExternalAudioProcessingFactory() {
   apm_->ApplyConfig(config);
 }
 
-static ExternalAudioProcessingFactory* default_processor_ptr;
-
-static jlong JNI_ExternalAudioProcessingFactory_GetDefaultApm(JNIEnv* env) {
-  if (!default_processor_ptr) {
-    auto default_processor = rtc::make_ref_counted<ExternalAudioProcessingFactory>();
-    default_processor_ptr = default_processor.release();
-  }
-  return webrtc::jni::jlongFromPointer(default_processor_ptr->apm().get());
+static jlong JNI_ExternalAudioProcessingFactory_CreateExternalAudioProcessingFactory(JNIEnv* env) {
+  auto processor = rtc::make_ref_counted<ExternalAudioProcessingFactory>();
+  return webrtc::jni::jlongFromPointer(processor.release());
 }
 
 static jlong JNI_ExternalAudioProcessingFactory_SetCapturePostProcessing(
     JNIEnv* env,
+    jlong j_native_factory,
     const JavaParamRef<jobject>& j_processing) {
-  if (!default_processor_ptr) {
-    return 0;
-  }
   auto processing =
       rtc::make_ref_counted<ExternalAudioProcessingJni>(env, j_processing);
   processing->AddRef();
-  default_processor_ptr->capture_post_processor()->SetExternalAudioProcessing(
-      processing.get());
+
+  reinterpret_cast<ExternalAudioProcessingFactory*>(j_native_factory)
+      ->capture_post_processor()->SetExternalAudioProcessing(processing.get());
   return jlongFromPointer(processing.get());
 }
 
 static jlong JNI_ExternalAudioProcessingFactory_SetRenderPreProcessing(
     JNIEnv* env,
+    jlong j_native_factory,
     const JavaParamRef<jobject>& j_processing) {
-  if (!default_processor_ptr) {
-    return 0;
-  }
   auto processing =
       rtc::make_ref_counted<ExternalAudioProcessingJni>(env, j_processing);
   processing->AddRef();
-  default_processor_ptr->render_pre_processor()->SetExternalAudioProcessing(
-      processing.get());
+
+  reinterpret_cast<ExternalAudioProcessingFactory*>(j_native_factory)
+      ->render_pre_processor()->SetExternalAudioProcessing(processing.get());
   return jlongFromPointer(processing.get());
 }
 
 static void JNI_ExternalAudioProcessingFactory_SetBypassFlagForCapturePost(
     JNIEnv* env,
+    jlong j_native_factory,
     jboolean bypass) {
-  if (!default_processor_ptr) {
-    return;
-  }
-  default_processor_ptr->capture_post_processor()->SetBypassFlag(bypass);
+  reinterpret_cast<ExternalAudioProcessingFactory*>(j_native_factory)
+      ->capture_post_processor()->SetBypassFlag(bypass);
 }
 
 static void JNI_ExternalAudioProcessingFactory_SetBypassFlagForRenderPre(
     JNIEnv* env,
+    jlong j_native_factory,
     jboolean bypass) {
-  if (!default_processor_ptr) {
-    return;
-  }
-  default_processor_ptr->render_pre_processor()->SetBypassFlag(bypass);
+  reinterpret_cast<ExternalAudioProcessingFactory*>(j_native_factory)
+      ->render_pre_processor()->SetBypassFlag(bypass);
 }
 
-static void JNI_ExternalAudioProcessingFactory_Destroy(JNIEnv* env) {
-  if (!default_processor_ptr) {
-    return;
-  }
-  default_processor_ptr->render_pre_processor()->SetExternalAudioProcessing(
+static void JNI_ExternalAudioProcessingFactory_Destroy(
+    JNIEnv* env,
+    jlong j_native_factory) {
+  auto factory = reinterpret_cast<ExternalAudioProcessingFactory*>(j_native_factory)
+  factory->render_pre_processor()->SetExternalAudioProcessing(
       nullptr);
-  default_processor_ptr->capture_post_processor()->SetExternalAudioProcessing(
+  factory->capture_post_processor()->SetExternalAudioProcessing(
       nullptr);
-  delete default_processor_ptr;
+  delete factory;
 }
 
 }  // namespace jni
