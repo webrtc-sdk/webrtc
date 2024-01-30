@@ -46,21 +46,25 @@ public class ExternalAudioProcessingFactory implements AudioProcessingFactory {
     void process(int numBands, int numFrames, ByteBuffer buffer);
   }
 
+  private long factoryPtr;
   private long apmPtr;
   private long capturePostProcessingPtr;
   private long renderPreProcessingPtr;
 
   public ExternalAudioProcessingFactory() {
-    apmPtr = nativeGetDefaultApm();
+    factoryPtr = nativeCreateExternalAudioProcessingFactory();
+    apmPtr = nativeGetAudioProcessing(factoryPtr);
     capturePostProcessingPtr = 0;
     renderPreProcessingPtr = 0;
   }
 
+  /**
+   * Note: This factory does not create new audio processings, and the same one
+   * will be reused for the life of this object.
+   */
   @Override
   public long createNative() {
-    if(apmPtr == 0) {
-      apmPtr = nativeGetDefaultApm();
-    }
+    checkExternalAudioProcessorExists();
     return apmPtr;
   }
 
@@ -71,7 +75,7 @@ public class ExternalAudioProcessingFactory implements AudioProcessingFactory {
    */
   public void setCapturePostProcessing(@Nullable AudioProcessing processing) {
     checkExternalAudioProcessorExists();
-    long newPtr = nativeSetCapturePostProcessing(processing);
+    long newPtr = nativeSetCapturePostProcessing(factoryPtr, processing);
     if (capturePostProcessingPtr != 0) {
       JniCommon.nativeReleaseRef(capturePostProcessingPtr);
       capturePostProcessingPtr = 0;
@@ -86,7 +90,7 @@ public class ExternalAudioProcessingFactory implements AudioProcessingFactory {
    */
   public void setRenderPreProcessing(@Nullable AudioProcessing processing) {
     checkExternalAudioProcessorExists();
-    long newPtr = nativeSetRenderPreProcessing(processing);
+    long newPtr = nativeSetRenderPreProcessing(factoryPtr, processing);
     if (renderPreProcessingPtr != 0) {
       JniCommon.nativeReleaseRef(renderPreProcessingPtr);
       renderPreProcessingPtr = 0;
@@ -100,7 +104,7 @@ public class ExternalAudioProcessingFactory implements AudioProcessingFactory {
    */
   public void setBypassFlagForCapturePost( boolean bypass) {
     checkExternalAudioProcessorExists();
-    nativeSetBypassFlagForCapturePost(bypass);
+    nativeSetBypassFlagForCapturePost(factoryPtr, bypass);
   }
 
   /**
@@ -109,13 +113,13 @@ public class ExternalAudioProcessingFactory implements AudioProcessingFactory {
    */
   public void setBypassFlagForRenderPre( boolean bypass) {
     checkExternalAudioProcessorExists();
-    nativeSetBypassFlagForRenderPre(bypass);
+    nativeSetBypassFlagForRenderPre(factoryPtr, bypass);
   }
 
   /**
-   * Destroys the ExternalAudioProcessor.
+   * Disposes the ExternalAudioProcessorFactory.
    */
-  public void destroy() {
+  public void dispose() {
     checkExternalAudioProcessorExists();
     if (renderPreProcessingPtr != 0) {
       JniCommon.nativeReleaseRef(renderPreProcessingPtr);
@@ -125,20 +129,22 @@ public class ExternalAudioProcessingFactory implements AudioProcessingFactory {
       JniCommon.nativeReleaseRef(capturePostProcessingPtr);
       capturePostProcessingPtr = 0;
     }
-    nativeDestroy();
+    nativeFreeFactory(factoryPtr);
+    factoryPtr = 0;
     apmPtr = 0;
   }
 
   private void checkExternalAudioProcessorExists() {
-    if (apmPtr == 0) {
-      throw new IllegalStateException("ExternalAudioProcessor has been disposed.");
+    if (factoryPtr == 0) {
+      throw new IllegalStateException("ExternalAudioProcessingFactory has been disposed.");
     }
   }
 
-  private static native long nativeGetDefaultApm();
-  private static native long nativeSetCapturePostProcessing(AudioProcessing processing);
-  private static native long nativeSetRenderPreProcessing(AudioProcessing processing);
-  private static native void nativeSetBypassFlagForCapturePost(boolean bypass);
-  private static native void nativeSetBypassFlagForRenderPre(boolean bypass);
-  private static native void nativeDestroy();
+  private static native long nativeCreateExternalAudioProcessingFactory();
+  private static native long nativeGetAudioProcessing(long factory);
+  private static native long nativeSetCapturePostProcessing(long factory, AudioProcessing processing);
+  private static native long nativeSetRenderPreProcessing(long factory, AudioProcessing processing);
+  private static native void nativeSetBypassFlagForCapturePost(long factory, boolean bypass);
+  private static native void nativeSetBypassFlagForRenderPre(long factory, boolean bypass);
+  private static native void nativeFreeFactory(long factory);
 }

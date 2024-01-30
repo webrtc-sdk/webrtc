@@ -73,8 +73,15 @@ ExternalAudioProcessingFactory::ExternalAudioProcessingFactory() {
 }
 
 static jlong JNI_ExternalAudioProcessingFactory_CreateExternalAudioProcessingFactory(JNIEnv* env) {
-  auto processor = rtc::make_ref_counted<ExternalAudioProcessingFactory>();
-  return webrtc::jni::jlongFromPointer(processor.release());
+  auto factory = rtc::make_ref_counted<ExternalAudioProcessingFactory>();
+  return webrtc::jni::jlongFromPointer(factory.release());
+}
+
+static jlong JNI_ExternalAudioProcessingFactory_GetAudioProcessing(
+    JNIEnv* env,
+    jlong j_native_factory) {
+  auto factory = reinterpret_cast<ExternalAudioProcessingFactory*>(j_native_factory);
+  return webrtc::jni::jlongFromPointer(factory->apm().get());
 }
 
 static jlong JNI_ExternalAudioProcessingFactory_SetCapturePostProcessing(
@@ -119,10 +126,10 @@ static void JNI_ExternalAudioProcessingFactory_SetBypassFlagForRenderPre(
       ->render_pre_processor()->SetBypassFlag(bypass);
 }
 
-static void JNI_ExternalAudioProcessingFactory_Destroy(
+static void JNI_ExternalAudioProcessingFactory_FreeFactory(
     JNIEnv* env,
     jlong j_native_factory) {
-  auto factory = reinterpret_cast<ExternalAudioProcessingFactory*>(j_native_factory)
+  auto factory = reinterpret_cast<ExternalAudioProcessingFactory*>(j_native_factory);
   factory->render_pre_processor()->SetExternalAudioProcessing(
       nullptr);
   factory->capture_post_processor()->SetExternalAudioProcessing(
