@@ -451,20 +451,6 @@ void FrameCryptorTransformer::encryptFrame(
 
     frame->SetData(data_out);
 
-    RTC_LOG(LS_INFO) << "FrameCryptorTransformer::encryptFrame() "
-                     << "frame length = " << static_cast<int>(date_in.size())
-                     << " encrypted_length = "
-                     << static_cast<int>(data_out.size())
-                     << " ivLength=" << static_cast<int>(iv.size())
-                     << " unencrypted_bytes="
-                     << static_cast<int>(unencrypted_bytes)
-                     << " tag=" << to_hex(tag.data(), tag.size())
-                     << " key_index=" << static_cast<int>(key_index_)
-                     << " aesKey="
-                     << to_hex(key_set->encryption_key.data(),
-                               key_set->encryption_key.size())
-                     << " iv=" << to_hex(iv.data(), iv.size());
-
     if (last_enc_error_ != FrameCryptionState::kOk) {
       last_enc_error_ = FrameCryptionState::kOk;
       onFrameCryptionStateChanged(last_enc_error_);
@@ -608,18 +594,6 @@ void FrameCryptorTransformer::decryptFrame(
   }
 
   rtc::Buffer tag(encrypted_payload.data() + encrypted_payload.size() - 16, 16);
-  RTC_LOG(LS_INFO) << "FrameCryptorTransformer::decryptFrame() "
-                   << " frame length = " << static_cast<int>(date_in.size())
-                   << " ivLength=" << static_cast<int>(iv.size())
-                   << " unencrypted_bytes="
-                   << static_cast<int>(unencrypted_bytes)
-                   << " tag=" << to_hex(tag.data(), tag.size())
-                   << " key_index=" << static_cast<int>(key_index_)
-                   << " aesKey="
-                   << to_hex(key_set->encryption_key.data(),
-                             key_set->encryption_key.size())
-                   << " iv=" << to_hex(iv.data(), iv.size());
-
   std::vector<uint8_t> buffer;
 
   int ratchet_count = 0;
