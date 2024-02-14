@@ -41,7 +41,7 @@ def GenerateUmbrellaHeader():
      */\n\n""" % datetime.datetime.now().year))
 
     for s in args.sources:
-      outfile.write("#import <WebRTC/{}>\n".format(os.path.basename(s)))
+      outfile.write("#import <LiveKitWebRTC/{}>\n".format(os.path.basename(s)))
 
   return 0
 

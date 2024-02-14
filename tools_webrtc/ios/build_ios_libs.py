@@ -27,9 +27,9 @@ sys.path.append(os.path.join(SRC_DIR, 'build'))
 import find_depot_tools
 
 SDK_OUTPUT_DIR = os.path.join(SRC_DIR, 'out_ios_libs')
-SDK_FRAMEWORK_NAME = 'WebRTC.framework'
-SDK_DSYM_NAME = 'WebRTC.dSYM'
-SDK_XCFRAMEWORK_NAME = 'WebRTC.xcframework'
+SDK_FRAMEWORK_NAME = 'LiveKitWebRTC.framework'
+SDK_DSYM_NAME = 'LiveKitWebRTC.dSYM'
+SDK_XCFRAMEWORK_NAME = 'LiveKitWebRTC.xcframework'
 
 ENABLED_ARCHS = [
     'device:arm64', 'simulator:arm64', 'simulator:x64',
@@ -246,7 +246,7 @@ def main():
     all_lib_paths.extend(lib_paths)
 
     # Combine the slices.
-    dylib_path = os.path.join(SDK_FRAMEWORK_NAME, 'WebRTC')
+    dylib_path = os.path.join(SDK_FRAMEWORK_NAME, 'LiveKitWebRTC')
     # Dylibs will be combined, all other files are the same across archs.
     shutil.rmtree(os.path.join(framework_path, SDK_FRAMEWORK_NAME),
                   ignore_errors=True)
@@ -275,7 +275,7 @@ def main():
                       os.path.join(framework_path, SDK_DSYM_NAME))
       logging.info('Merging dSYM slices.')
       dsym_path = os.path.join(SDK_DSYM_NAME, 'Contents', 'Resources', 'DWARF',
-                               'WebRTC')
+                               'LiveKitWebRTC')
       lib_dsym_paths = [os.path.join(path, dsym_path) for path in lib_paths]
       out_dsym_path = os.path.join(framework_path, dsym_path)
       try:
