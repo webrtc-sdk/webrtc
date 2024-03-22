@@ -44,14 +44,20 @@ struct KeyProviderOptions {
   std::vector<uint8_t> uncrypted_magic_bytes;
   int ratchet_window_size;
   int failure_tolerance;
+  // key ring size should be between 1 and 255
+  int key_ring_size;
   KeyProviderOptions()
-      : shared_key(false), ratchet_window_size(0), failure_tolerance(-1) {}
+      : shared_key(false),
+      ratchet_window_size(0),
+      failure_tolerance(-1),
+      key_ring_size(KEYRING_SIZE) {}
   KeyProviderOptions(KeyProviderOptions& copy)
       : shared_key(copy.shared_key),
         ratchet_salt(copy.ratchet_salt),
         uncrypted_magic_bytes(copy.uncrypted_magic_bytes),
         ratchet_window_size(copy.ratchet_window_size),
-        failure_tolerance(copy.failure_tolerance) {}
+        failure_tolerance(copy.failure_tolerance),
+        key_ring_size(copy.key_ring_size) {}
 };
 
 class KeyProvider : public rtc::RefCountInterface {
@@ -99,7 +105,13 @@ class ParticipantKeyHandler : public rtc::RefCountInterface {
  public:
   ParticipantKeyHandler(KeyProvider* key_provider)
       : key_provider_(key_provider) {
-    crypto_key_ring_.resize(KEYRING_SIZE);
+    int key_ring_size = key_provider_->options().key_ring_size;
+    if(key_ring_size <= 0) {
+      key_ring_size = KEYRING_SIZE;
+    } else if (key_ring_size >= 255) {
+      key_ring_size = 255;
+    }
+    crypto_key_ring_.resize(key_ring_size);
   }
 
   virtual ~ParticipantKeyHandler() = default;

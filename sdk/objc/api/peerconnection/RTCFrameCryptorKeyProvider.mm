@@ -45,7 +45,8 @@
                   ratchetWindowSize:(int)windowSize
                       sharedKeyMode:(BOOL)sharedKey
                 uncryptedMagicBytes:(nullable NSData *)uncryptedMagicBytes
-                   failureTolerance:(int)failureTolerance {
+                   failureTolerance:(int)failureTolerance
+                        keyRingSize:(int)keyRingSize {
   if (self = [super init]) {
     webrtc::KeyProviderOptions options;
     options.ratchet_salt = std::vector<uint8_t>((const uint8_t *)salt.bytes,
@@ -53,6 +54,7 @@
     options.ratchet_window_size = windowSize;
     options.shared_key = sharedKey;
     options.failure_tolerance = failureTolerance;
+    options.key_ring_size = keyRingSize;
     if(uncryptedMagicBytes != nil) {
       options.uncrypted_magic_bytes = std::vector<uint8_t>((const uint8_t *)uncryptedMagicBytes.bytes,
                                                           ((const uint8_t *)uncryptedMagicBytes.bytes) + uncryptedMagicBytes.length);
