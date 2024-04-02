@@ -63,6 +63,7 @@
 @synthesize iceUnwritableTimeout = _iceUnwritableTimeout;
 @synthesize iceUnwritableMinChecks = _iceUnwritableMinChecks;
 @synthesize iceInactiveTimeout = _iceInactiveTimeout;
+@synthesize enableIceGatheringOnAnyAddressPorts = _enableIceGatheringOnAnyAddressPorts;
 
 - (instancetype)init {
   // Copy defaults.
@@ -158,6 +159,7 @@
     _iceInactiveTimeout = config.ice_inactive_timeout.has_value() ?
         [NSNumber numberWithInt:*config.ice_inactive_timeout] :
         nil;
+    _enableIceGatheringOnAnyAddressPorts = config.enable_any_address_ports;
   }
   return self;
 }
@@ -306,6 +308,7 @@
   if (_iceInactiveTimeout != nil) {
     nativeConfig->ice_inactive_timeout = absl::optional<int>(_iceInactiveTimeout.intValue);
   }
+  nativeConfig->enable_any_address_ports = _enableIceGatheringOnAnyAddressPorts;
   return nativeConfig.release();
 }
 
