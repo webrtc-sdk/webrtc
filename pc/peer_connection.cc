@@ -412,7 +412,7 @@ bool PeerConnectionInterface::RTCConfiguration::operator==(
          port_allocator_config.min_port == o.port_allocator_config.min_port &&
          port_allocator_config.max_port == o.port_allocator_config.max_port &&
          port_allocator_config.flags == o.port_allocator_config.flags &&
-         pacer_burst_interval == o.pacer_burst_interval;
+         pacer_burst_interval == o.pacer_burst_interval &&
          enable_any_address_ports == o.enable_any_address_ports;
 }
 
@@ -2177,7 +2177,7 @@ PeerConnection::InitializePortAllocator_n(
   }
 
   if (configuration.enable_any_address_ports) {
-    port_allocator_flags != cricket::PORTALLOCATOR_ENABLE_ANY_ADDRESS_PORTS;
+    port_allocator_flags |= cricket::PORTALLOCATOR_ENABLE_ANY_ADDRESS_PORTS;
     RTC_LOG(LS_INFO) << "Enable gathering on any address ports.";
   }
 

@@ -159,7 +159,7 @@
     _iceInactiveTimeout = config.ice_inactive_timeout.has_value() ?
         [NSNumber numberWithInt:*config.ice_inactive_timeout] :
         nil;
-    _enableIceGatheringOnAnyAddressPorts = config.enableIceGatheringOnAnyAddressPorts;
+    _enableIceGatheringOnAnyAddressPorts = config.enable_any_address_ports;
   }
   return self;
 }
