@@ -627,6 +627,7 @@ public class PeerConnection {
       allowCodecSwitching = null;
       enableImplicitRollback = false;
       offerExtmapAllowMixed = true;
+      enableIceGatheringOnAnyAddressPorts = false;
     }
 
     @CalledByNative("RTCConfiguration")
