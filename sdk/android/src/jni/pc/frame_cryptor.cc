@@ -180,7 +180,8 @@ JNI_FrameCryptorFactory_CreateFrameCryptorKeyProvider(
     jint j_ratchetWindowSize,
     const base::android::JavaParamRef<jbyteArray>& j_uncryptedMagicBytes,
     jint j_failureTolerance,
-    jint j_keyRingSize) {
+    jint j_keyRingSize,
+    jboolean j_discardFrameWhenCryptorNotReady) {
   auto ratchetSalt = JavaToNativeByteArray(env, j_ratchetSalt);
   KeyProviderOptions options;
   options.ratchet_salt =
@@ -192,6 +193,7 @@ JNI_FrameCryptorFactory_CreateFrameCryptorKeyProvider(
   options.shared_key = j_shared;
   options.failure_tolerance = j_failureTolerance;
   options.key_ring_size = j_keyRingSize;
+  options.discard_frame_when_cryptor_not_ready = j_discardFrameWhenCryptorNotReady;
   return NativeToJavaFrameCryptorKeyProvider(
       env, rtc::make_ref_counted<webrtc::DefaultKeyProviderImpl>(options));
 }

@@ -386,7 +386,9 @@ void FrameCryptorTransformer::encryptFrame(
   if (date_in.size() == 0 || !enabled_cryption) {
     RTC_LOG(LS_WARNING) << "FrameCryptorTransformer::encryptFrame() "
                            "date_in.size() == 0 || enabled_cryption == false";
-    sink_callback->OnTransformedFrame(std::move(frame));
+    if(!key_provider_->options().discard_frame_when_cryptor_not_ready) {
+      sink_callback->OnTransformedFrame(std::move(frame));
+    }
     return;
   }
 
@@ -494,7 +496,9 @@ void FrameCryptorTransformer::decryptFrame(
   if (date_in.size() == 0 || !enabled_cryption) {
     RTC_LOG(LS_WARNING) << "FrameCryptorTransformer::decryptFrame() "
                            "date_in.size() == 0 || enabled_cryption == false";
-    sink_callback->OnTransformedFrame(std::move(frame));
+    if(!key_provider_->options().discard_frame_when_cryptor_not_ready) {
+      sink_callback->OnTransformedFrame(std::move(frame));
+    }
     return;
   }
 

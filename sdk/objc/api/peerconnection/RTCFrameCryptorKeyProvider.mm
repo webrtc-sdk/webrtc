@@ -38,7 +38,8 @@
                   ratchetWindowSize:windowSize
                       sharedKeyMode:sharedKey
                 uncryptedMagicBytes:uncryptedMagicBytes
-                   failureTolerance:-1];
+                   failureTolerance:-1
+                   keyRingSize:webrtc::DEFAULT_KEYRING_SIZE];
 }
 
 - (instancetype)initWithRatchetSalt:(NSData *)salt
@@ -47,6 +48,22 @@
                 uncryptedMagicBytes:(nullable NSData *)uncryptedMagicBytes
                    failureTolerance:(int)failureTolerance
                         keyRingSize:(int)keyRingSize {
+  return [self initWithRatchetSalt:salt
+                  ratchetWindowSize:windowSize
+                      sharedKeyMode:sharedKey
+                uncryptedMagicBytes:uncryptedMagicBytes
+                   failureTolerance:-1
+                   keyRingSize:keyRingSize
+                   discardFrameWhenCryptorNotReady:false];
+}
+
+- (instancetype)initWithRatchetSalt:(NSData *)salt
+                  ratchetWindowSize:(int)windowSize
+                      sharedKeyMode:(BOOL)sharedKey
+                uncryptedMagicBytes:(nullable NSData *)uncryptedMagicBytes
+                   failureTolerance:(int)failureTolerance
+                        keyRingSize:(int)keyRingSize
+    discardFrameWhenCryptorNotReady:(BOOL)discardFrameWhenCryptorNotReady {
   if (self = [super init]) {
     webrtc::KeyProviderOptions options;
     options.ratchet_salt = std::vector<uint8_t>((const uint8_t *)salt.bytes,
@@ -55,6 +72,7 @@
     options.shared_key = sharedKey;
     options.failure_tolerance = failureTolerance;
     options.key_ring_size = keyRingSize;
+    options.discard_frame_when_cryptor_not_ready = discardFrameWhenCryptorNotReady;
     if(uncryptedMagicBytes != nil) {
       options.uncrypted_magic_bytes = std::vector<uint8_t>((const uint8_t *)uncryptedMagicBytes.bytes,
                                                           ((const uint8_t *)uncryptedMagicBytes.bytes) + uncryptedMagicBytes.length);
