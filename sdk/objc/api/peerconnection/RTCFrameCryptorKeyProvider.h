@@ -46,7 +46,16 @@ RTC_OBJC_EXPORT
                   ratchetWindowSize:(int)windowSize
                       sharedKeyMode:(BOOL)sharedKey
                 uncryptedMagicBytes:(nullable NSData *)uncryptedMagicBytes
-                   failureTolerance:(int)failureTolerance;
+                   failureTolerance:(int)failureTolerance
+                        keyRingSize:(int)keyRingSize;
+
+- (instancetype)initWithRatchetSalt:(NSData *)salt
+                  ratchetWindowSize:(int)windowSize
+                      sharedKeyMode:(BOOL)sharedKey
+                uncryptedMagicBytes:(nullable NSData *)uncryptedMagicBytes
+                   failureTolerance:(int)failureTolerance
+                        keyRingSize:(int)keyRingSize
+    discardFrameWhenCryptorNotReady:(BOOL)discardFrameWhenCryptorNotReady;    
 
 @end
 

@@ -386,6 +386,9 @@ void FrameCryptorTransformer::encryptFrame(
   if (date_in.size() == 0 || !enabled_cryption) {
     RTC_LOG(LS_WARNING) << "FrameCryptorTransformer::encryptFrame() "
                            "date_in.size() == 0 || enabled_cryption == false";
+    if(key_provider_->options().discard_frame_when_cryptor_not_ready) {
+      return;
+    }
     sink_callback->OnTransformedFrame(std::move(frame));
     return;
   }
@@ -494,6 +497,10 @@ void FrameCryptorTransformer::decryptFrame(
   if (date_in.size() == 0 || !enabled_cryption) {
     RTC_LOG(LS_WARNING) << "FrameCryptorTransformer::decryptFrame() "
                            "date_in.size() == 0 || enabled_cryption == false";
+    if(key_provider_->options().discard_frame_when_cryptor_not_ready) {
+      return;
+    }
+
     sink_callback->OnTransformedFrame(std::move(frame));
     return;
   }
@@ -551,11 +558,11 @@ void FrameCryptorTransformer::decryptFrame(
                          ? key_provider_->GetSharedKey(participant_id_)
                          : key_provider_->GetKey(participant_id_);
 
-  if (key_index >= KEYRING_SIZE || key_handler == nullptr ||
+  if (0 > key_index || key_index >= key_provider_->options().key_ring_size || key_handler == nullptr ||
       key_handler->GetKeySet(key_index) == nullptr) {
     RTC_LOG(LS_INFO) << "FrameCryptorTransformer::decryptFrame() no keys, or "
                         "key_index["
-                     << key_index_ << "] out of range for participant "
+                     << key_index << "] out of range for participant "
                      << participant_id_;
     if (last_dec_error_ != FrameCryptionState::kMissingKey) {
       last_dec_error_ = FrameCryptionState::kMissingKey;
