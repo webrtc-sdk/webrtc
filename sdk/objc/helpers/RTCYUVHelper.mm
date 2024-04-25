@@ -27,7 +27,7 @@
               dstV:(uint8_t*)dstV
         dstStrideV:(int)dstStrideV
              width:(int)width
-             width:(int)height
+             height:(int)height
               mode:(RTCVideoRotation)mode {
   libyuv::I420Rotate(srcY,
                      srcStrideY,
@@ -57,7 +57,7 @@
             dstUV:(uint8_t*)dstUV
       dstStrideUV:(int)dstStrideUV
             width:(int)width
-            width:(int)height {
+            height:(int)height {
   return libyuv::I420ToNV12(srcY,
                             srcStrideY,
                             srcU,
@@ -83,7 +83,7 @@
             dstUV:(uint8_t*)dstUV
       dstStrideUV:(int)dstStrideUV
             width:(int)width
-            width:(int)height {
+            height:(int)height {
   return libyuv::I420ToNV21(srcY,
                             srcStrideY,
                             srcU,
