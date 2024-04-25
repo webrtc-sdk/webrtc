@@ -1353,13 +1353,6 @@ if (is_ios || is_mac) {
       }
     }
 
-    bundle_data("darwin_privacy_info") {
-      sources = [
-        "objc/PrivacyInfo.xcprivacy",
-       ]
-       outputs = [ "{{bundle_resources_dir}}/{{source_file_part}}" ]
-    }
-
     if (is_ios) {
       apple_framework_bundle_with_umbrella_header("framework_objc") {
         info_plist = "objc/Info.plist"
@@ -1496,7 +1489,6 @@ if (is_ios || is_mac) {
           ":videocapture_objc",
           ":videocodec_objc",
           ":videotoolbox_objc",
-          ":darwin_privacy_info",
         ]
         if (rtc_ios_macos_use_opengl_rendering) {
           deps += [ ":opengl_ui_objc" ]
@@ -1654,7 +1646,6 @@ if (is_ios || is_mac) {
           ":desktopcapture_objc",
           ":videocodec_objc",
           ":videotoolbox_objc",
-          ":darwin_privacy_info",
         ]
         if (!build_with_chromium) {
           deps += [
