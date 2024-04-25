@@ -51,7 +51,8 @@ void ExternalAudioProcessor::Process(webrtc::AudioBuffer* audio) {
   size_t num_frames = audio->num_frames();
   size_t num_bands =audio->num_bands();
 
-  int rate = num_frames * 1000;
+  // 1 buffer = 10ms of frames
+  int rate = num_frames * 100;
 
   if (rate != sample_rate_hz_) {
     external_processor_->Reset(rate);

@@ -261,6 +261,17 @@ RTC_OBJC_EXPORT
  */
 @property(nonatomic, copy, nullable) NSNumber *iceInactiveTimeout;
 
+/**
+  * When this flag is set, ports not bound to any specific network interface
+  * will be used, in addition to normal ports bound to the enumerated
+  * interfaces. Without this flag, these "any address" ports would only be
+  * used when network enumeration fails or is disabled. But under certain
+  * conditions, these ports may succeed where others fail, so they may allow
+  * the application to work in a wider variety of environments, at the expense
+  * of having to allocate additional candidates.
+  */
+@property(nonatomic, assign) BOOL enableIceGatheringOnAnyAddressPorts;
+
 - (instancetype)init;
 
 @end
