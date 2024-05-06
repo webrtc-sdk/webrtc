@@ -43,7 +43,6 @@ const int64_t kNanosecondsPerSecond = 1000000000;
   RTCVideoRotation _rotation;
 #if TARGET_OS_IPHONE
   UIInterfaceOrientation _orientation;
-  BOOL _generatingOrientationNotifications;
 #endif
 }
 
@@ -73,6 +72,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
     if (![self setupCaptureSession:captureSession]) {
       return nil;
     }
+
     NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
 #if TARGET_OS_IPHONE
     _orientation = UIInterfaceOrientationPortrait;
@@ -106,7 +106,16 @@ const int64_t kNanosecondsPerSecond = 1000000000;
                selector:@selector(handleCaptureSessionDidStopRunning:)
                    name:AVCaptureSessionDidStopRunningNotification
                  object:_captureSession];
+
+#if TARGET_OS_IPHONE
+    [[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
+    dispatch_async(dispatch_get_main_queue(), ^{
+      // Must be called on main
+      [self updateOrientation];
+    });
+#endif
   }
+
   return self;
 }
 
@@ -115,6 +124,10 @@ const int64_t kNanosecondsPerSecond = 1000000000;
            @"Session was still running in RTC_OBJC_TYPE(RTCCameraVideoCapturer) dealloc. Forgot to "
            @"call stopCapture?");
   [[NSNotificationCenter defaultCenter] removeObserver:self];
+
+#if TARGET_OS_IPHONE
+  [[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
+#endif
 }
 
 + (NSArray<AVCaptureDevice *> *)captureDevices {
@@ -160,17 +173,6 @@ const int64_t kNanosecondsPerSecond = 1000000000;
                     block:^{
                       RTCLogInfo("startCaptureWithDevice %@ @ %ld fps", format, (long)fps);
 
-#if TARGET_OS_IPHONE
-                      dispatch_async(dispatch_get_main_queue(), ^{
-                        if (!self->_generatingOrientationNotifications) {
-                          [[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
-                          self->_generatingOrientationNotifications = YES;
-                        }
-                        // Must be called on main
-                        [self updateOrientation];
-                      });
-#endif
-
                       self.currentDevice = device;
 
                       NSError *error = nil;
@@ -208,14 +210,6 @@ const int64_t kNanosecondsPerSecond = 1000000000;
                       }
                       [self.captureSession stopRunning];
 
-#if TARGET_OS_IPHONE
-                      dispatch_async(dispatch_get_main_queue(), ^{
-                        if (self->_generatingOrientationNotifications) {
-                          [[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
-                          self->_generatingOrientationNotifications = NO;
-                        }
-                      });
-#endif
                       self.isRunning = NO;
                       if (completionHandler) {
                         completionHandler();
