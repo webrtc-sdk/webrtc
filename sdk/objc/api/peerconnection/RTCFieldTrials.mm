@@ -10,8 +10,8 @@
 
 #import "RTCFieldTrials.h"
 
+#import <os/lock.h>
 #include <memory>
-
 #import "base/RTCLogging.h"
 
 #include "system_wrappers/include/field_trial.h"
