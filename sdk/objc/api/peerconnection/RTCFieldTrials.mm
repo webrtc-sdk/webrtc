@@ -17,40 +17,51 @@
 #include "system_wrappers/include/field_trial.h"
 
 NSString *const kRTCFieldTrialAudioForceABWENoTWCCKey = @"WebRTC-Audio-ABWENoTWCC";
-NSString * const kRTCFieldTrialFlexFec03AdvertisedKey = @"WebRTC-FlexFEC-03-Advertised";
-NSString * const kRTCFieldTrialFlexFec03Key = @"WebRTC-FlexFEC-03";
-NSString * const kRTCFieldTrialH264HighProfileKey = @"WebRTC-H264HighProfile";
-NSString * const kRTCFieldTrialMinimizeResamplingOnMobileKey =
+NSString *const kRTCFieldTrialFlexFec03AdvertisedKey = @"WebRTC-FlexFEC-03-Advertised";
+NSString *const kRTCFieldTrialFlexFec03Key = @"WebRTC-FlexFEC-03";
+NSString *const kRTCFieldTrialH264HighProfileKey = @"WebRTC-H264HighProfile";
+NSString *const kRTCFieldTrialMinimizeResamplingOnMobileKey =
     @"WebRTC-Audio-MinimizeResamplingOnMobile";
 NSString *const kRTCFieldTrialUseNWPathMonitor = @"WebRTC-Network-UseNWPathMonitor";
-NSString * const kRTCFieldTrialEnabledValue = @"Enabled";
+NSString *const kRTCFieldTrialEnabledValue = @"Enabled";
 
 // InitFieldTrialsFromString stores the char*, so the char array must outlive
 // the application.
 static char *gFieldTrialInitString = nullptr;
+static os_unfair_lock fieldTrialLock = OS_UNFAIR_LOCK_INIT;
 
 void RTCInitFieldTrialDictionary(NSDictionary<NSString *, NSString *> *fieldTrials) {
   if (!fieldTrials) {
     RTCLogWarning(@"No fieldTrials provided.");
     return;
   }
+
   // Assemble the keys and values into the field trial string.
-  // We don't perform any extra format checking. That should be done by the underlying WebRTC calls.
   NSMutableString *fieldTrialInitString = [NSMutableString string];
   for (NSString *key in fieldTrials) {
     NSString *fieldTrialEntry = [NSString stringWithFormat:@"%@/%@/", key, fieldTrials[key]];
     [fieldTrialInitString appendString:fieldTrialEntry];
   }
+
   size_t len = fieldTrialInitString.length + 1;
+
+  // Locking before modifying global variable
+  os_unfair_lock_lock(&fieldTrialLock);
   if (gFieldTrialInitString != nullptr) {
     delete[] gFieldTrialInitString;
+    gFieldTrialInitString = nullptr;
   }
+
   gFieldTrialInitString = new char[len];
-  if (![fieldTrialInitString getCString:gFieldTrialInitString
-                              maxLength:len
-                               encoding:NSUTF8StringEncoding]) {
+  bool success = [fieldTrialInitString getCString:gFieldTrialInitString
+                                        maxLength:len
+                                         encoding:NSUTF8StringEncoding];
+  if (!success) {
     RTCLogError(@"Failed to convert field trial string.");
+    os_unfair_lock_unlock(&fieldTrialLock);
     return;
   }
+
   webrtc::field_trial::InitFieldTrialsFromString(gFieldTrialInitString);
+  os_unfair_lock_unlock(&fieldTrialLock);
 }
