@@ -25,11 +25,6 @@ NSString *const kRTCFieldTrialMinimizeResamplingOnMobileKey =
 NSString *const kRTCFieldTrialUseNWPathMonitor = @"WebRTC-Network-UseNWPathMonitor";
 NSString *const kRTCFieldTrialEnabledValue = @"Enabled";
 
-// InitFieldTrialsFromString stores the char*, so the char array must outlive
-// the application.
-static char *gFieldTrialInitString = nullptr;
-static os_unfair_lock fieldTrialLock = OS_UNFAIR_LOCK_INIT;
-
 void RTCInitFieldTrialDictionary(NSDictionary<NSString *, NSString *> *fieldTrials) {
   if (!fieldTrials) {
     RTCLogWarning(@"No fieldTrials provided.");
@@ -37,31 +32,22 @@ void RTCInitFieldTrialDictionary(NSDictionary<NSString *, NSString *> *fieldTria
   }
 
   // Assemble the keys and values into the field trial string.
-  NSMutableString *fieldTrialInitString = [NSMutableString string];
+  NSMutableString *nsString = [NSMutableString string];
   for (NSString *key in fieldTrials) {
     NSString *fieldTrialEntry = [NSString stringWithFormat:@"%@/%@/", key, fieldTrials[key]];
-    [fieldTrialInitString appendString:fieldTrialEntry];
+    [nsString appendString:fieldTrialEntry];
   }
 
-  size_t len = fieldTrialInitString.length + 1;
+  size_t cStringLen = [nsString lengthOfBytesUsingEncoding:NSUTF8StringEncoding] + 1;
+  char *cString = new char[cStringLen];
 
-  // Locking before modifying global variable
-  os_unfair_lock_lock(&fieldTrialLock);
-  if (gFieldTrialInitString != nullptr) {
-    delete[] gFieldTrialInitString;
-    gFieldTrialInitString = nullptr;
-  }
-
-  gFieldTrialInitString = new char[len];
-  bool success = [fieldTrialInitString getCString:gFieldTrialInitString
-                                        maxLength:len
-                                         encoding:NSUTF8StringEncoding];
-  if (!success) {
+  bool isSuccess = [nsString getCString:cString maxLength:cStringLen encoding:NSUTF8StringEncoding];
+  if (!isSuccess) {
     RTCLogError(@"Failed to convert field trial string.");
-    os_unfair_lock_unlock(&fieldTrialLock);
+    delete[] cString;
     return;
   }
 
-  webrtc::field_trial::InitFieldTrialsFromString(gFieldTrialInitString);
-  os_unfair_lock_unlock(&fieldTrialLock);
+  webrtc::field_trial::InitFieldTrialsFromString(cString);
+  delete[] cString;
 }
