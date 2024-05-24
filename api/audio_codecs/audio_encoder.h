@@ -255,6 +255,10 @@ class AudioEncoder {
   virtual EncodedInfo EncodeImpl(uint32_t rtp_timestamp,
                                  rtc::ArrayView<const int16_t> audio,
                                  rtc::Buffer* encoded) = 0;
+
+  // The AppendPreEncodeData function adds raw audio data to the end of the encoded buffer.
+  virtual size_t AppendPreEncodeData(rtc::ArrayView<const int16_t> audio,
+                                 rtc::Buffer* encoded);
 };
 }  // namespace webrtc
 #endif  // API_AUDIO_CODECS_AUDIO_ENCODER_H_

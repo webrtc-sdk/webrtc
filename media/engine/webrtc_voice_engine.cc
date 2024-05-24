@@ -394,6 +394,7 @@ void WebRtcVoiceEngine::Init() {
     options.audio_jitter_buffer_max_packets = 200;
     options.audio_jitter_buffer_fast_accelerate = false;
     options.audio_jitter_buffer_min_delay_ms = 0;
+    options.pre_encoded = false;
     ApplyOptions(options);
   }
   initialized_ = true;
@@ -1650,6 +1651,7 @@ bool WebRtcVoiceMediaChannel::SetSendCodecs(
           IsCodec(voice_codec, kRedCodecName))) {
       webrtc::SdpAudioFormat format(voice_codec.name, voice_codec.clockrate,
                                     voice_codec.channels, voice_codec.params);
+      format.pre_encoded = options_.pre_encoded.value_or(false);
 
       voice_codec_info = engine()->encoder_factory_->QueryAudioEncoder(format);
       if (!voice_codec_info) {

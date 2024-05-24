@@ -257,6 +257,7 @@ absl::optional<AudioEncoderOpusConfig> AudioEncoderOpusImpl::SdpToConfig(
   config.application = config.num_channels == 1
                            ? AudioEncoderOpusConfig::ApplicationMode::kVoip
                            : AudioEncoderOpusConfig::ApplicationMode::kAudio;
+  config.pre_encoded = format.pre_encoded;
 
   constexpr int kMinANAFrameLength = kANASupportedFrameLengths[0];
   constexpr int kMaxANAFrameLength =
@@ -593,18 +594,24 @@ AudioEncoder::EncodedInfo AudioEncoderOpusImpl::EncodeImpl(
                Num10msFramesPerPacket() * SamplesPer10msFrame());
 
   const size_t max_encoded_bytes = SufficientOutputBufferSize();
+  const size_t old_size = encoded->size();
+
   EncodedInfo info;
-  info.encoded_bytes = encoded->AppendData(
-      max_encoded_bytes, [&](rtc::ArrayView<uint8_t> encoded) {
-        int status = WebRtcOpus_Encode(
-            inst_, &input_buffer_[0],
-            rtc::CheckedDivExact(input_buffer_.size(), config_.num_channels),
-            rtc::saturated_cast<int16_t>(max_encoded_bytes), encoded.data());
+  if (config_.pre_encoded) {
+      info.encoded_bytes = AppendPreEncodeData(audio, encoded);
+  } else {
+    info.encoded_bytes = encoded->AppendData(
+        max_encoded_bytes, [&](rtc::ArrayView<uint8_t> encoded) {
+          int status = WebRtcOpus_Encode(
+              inst_, &input_buffer_[0],
+              rtc::CheckedDivExact(input_buffer_.size(), config_.num_channels),
+              rtc::saturated_cast<int16_t>(max_encoded_bytes), encoded.data());
 
-        RTC_CHECK_GE(status, 0);  // Fails only if fed invalid data.
+          RTC_CHECK_GE(status, 0);  // Fails only if fed invalid data.
 
-        return static_cast<size_t>(status);
-      });
+          return static_cast<size_t>(status);
+        });
+  }
   input_buffer_.clear();
 
   bool dtx_frame = (info.encoded_bytes <= 2);

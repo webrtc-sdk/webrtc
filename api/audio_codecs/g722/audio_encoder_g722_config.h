@@ -22,6 +22,7 @@ struct AudioEncoderG722Config {
   }
   int frame_size_ms = 20;
   int num_channels = 1;
+  bool pre_encoded = false;
 };
 
 }  // namespace webrtc

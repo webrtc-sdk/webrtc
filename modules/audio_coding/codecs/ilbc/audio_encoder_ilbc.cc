@@ -46,7 +46,8 @@ AudioEncoderIlbcImpl::AudioEncoderIlbcImpl(const AudioEncoderIlbcConfig& config,
       payload_type_(payload_type),
       num_10ms_frames_per_packet_(
           static_cast<size_t>(config.frame_size_ms / 10)),
-      encoder_(nullptr) {
+      encoder_(nullptr),
+      pre_encoded_(config.pre_encoded) {
   RTC_CHECK(config.IsOk());
   Reset();
 }
@@ -94,22 +95,26 @@ AudioEncoder::EncodedInfo AudioEncoderIlbcImpl::EncodeImpl(
     return EncodedInfo();
   }
 
-  // Encode buffered input.
-  RTC_DCHECK_EQ(num_10ms_frames_buffered_, num_10ms_frames_per_packet_);
-  num_10ms_frames_buffered_ = 0;
-  size_t encoded_bytes = encoded->AppendData(
-      RequiredOutputSizeBytes(), [&](rtc::ArrayView<uint8_t> encoded) {
-        const int r = WebRtcIlbcfix_Encode(
-            encoder_, input_buffer_,
-            kSampleRateHz / 100 * num_10ms_frames_per_packet_, encoded.data());
-        RTC_CHECK_GE(r, 0);
-
-        return static_cast<size_t>(r);
-      });
-
-  RTC_DCHECK_EQ(encoded_bytes, RequiredOutputSizeBytes());
-
   EncodedInfo info;
+  if (pre_encoded_) {
+    info.encoded_bytes = AppendPreEncodeData(audio, encoded);
+  } else {
+    // Encode buffered input.
+    RTC_DCHECK_EQ(num_10ms_frames_buffered_, num_10ms_frames_per_packet_);
+    num_10ms_frames_buffered_ = 0;
+    info.encoded_bytes = encoded->AppendData(
+        RequiredOutputSizeBytes(), [&](rtc::ArrayView<uint8_t> encoded) {
+          const int r = WebRtcIlbcfix_Encode(
+              encoder_, input_buffer_,
+              kSampleRateHz / 100 * num_10ms_frames_per_packet_, encoded.data());
+          RTC_CHECK_GE(r, 0);
+
+          return static_cast<size_t>(r);
+        });
+
+    RTC_DCHECK_EQ(info.encoded_bytes, RequiredOutputSizeBytes());
+  }
+
   info.encoded_bytes = encoded_bytes;
   info.encoded_timestamp = first_timestamp_in_buffer_;
   info.payload_type = payload_type_;

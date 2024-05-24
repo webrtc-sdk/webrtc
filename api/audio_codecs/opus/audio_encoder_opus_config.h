@@ -67,6 +67,8 @@ struct RTC_EXPORT AudioEncoderOpusConfig {
   // NOTE: This member isn't necessary, and will soon go away. See
   // https://bugs.chromium.org/p/webrtc/issues/detail?id=7847
   int payload_type;
+
+  bool pre_encoded;
 };
 
 }  // namespace webrtc

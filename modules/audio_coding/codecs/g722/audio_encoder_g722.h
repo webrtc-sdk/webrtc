@@ -65,6 +65,7 @@ class AudioEncoderG722Impl final : public AudioEncoder {
   uint32_t first_timestamp_in_buffer_;
   const std::unique_ptr<EncoderState[]> encoders_;
   rtc::Buffer interleave_buffer_;
+  bool pre_encoded_;
 };
 
 }  // namespace webrtc
