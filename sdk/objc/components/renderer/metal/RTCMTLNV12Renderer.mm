@@ -54,8 +54,12 @@ static NSString *const shaderSource = MTL_STRINGIFY(
       y = textureY.sample(s, in.texcoord).r;
       uv = textureCbCr.sample(s, in.texcoord).rg - float2(0.5, 0.5);
 
-      // Conversion for YUV to rgb from http://www.fourcc.org/fccyvrgb.php
-      float4 out = float4(y + 1.403 * uv.y, y - 0.344 * uv.x - 0.714 * uv.y, y + 1.770 * uv.x, 1.0);
+      // Adjusted conversion for YUV to RGB for Display P3
+      float r = y + 1.4746 * uv.y; // Adjusted coefficient for Display P3
+      float g = y - 0.1646 * uv.x - 0.5714 * uv.y; // Adjusted coefficient for Display P3
+      float b = y + 1.8814 * uv.x; // Adjusted coefficient for Display P3
+
+      float4 out = float4(r, g, b, 1.0);
 
       return half4(out);
     });

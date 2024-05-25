@@ -53,6 +53,11 @@ static NSString *const shaderSource = MTL_STRINGIFY(
         out = half4(out.g, out.b, out.a, out.r);
       }
 
+      // Adjust for Display P3 color space
+      float3 p3Color = float3(out.r, out.g, out.b);
+      p3Color = mix(p3Color * 0.0774, pow(p3Color * 0.9479 + 0.05213, 2.4), step(0.04045, p3Color));
+      out.rgb = half3(p3Color);
+
       return out;
     });
 

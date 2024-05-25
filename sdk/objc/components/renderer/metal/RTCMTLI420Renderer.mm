@@ -55,15 +55,15 @@ static NSString *const shaderSource = MTL_STRINGIFY(
       float r;
       float g;
       float b;
-      // Conversion for YUV to rgb from http://www.fourcc.org/fccyvrgb.php
+      // Conversion for YUV to RGB for Display P3
       y = textureY.sample(s, in.texcoord).r;
       u = textureU.sample(s, in.texcoord).r;
       v = textureV.sample(s, in.texcoord).r;
       u = u - 0.5;
       v = v - 0.5;
-      r = y + 1.403 * v;
-      g = y - 0.344 * u - 0.714 * v;
-      b = y + 1.770 * u;
+      r = y + 1.4746 * v; // Adjusted coefficient for Display P3
+      g = y - 0.1646 * u - 0.5714 * v; // Adjusted coefficient for Display P3
+      b = y + 1.8814 * u; // Adjusted coefficient for Display P3
 
       float4 out = float4(r, g, b, 1.0);
 
