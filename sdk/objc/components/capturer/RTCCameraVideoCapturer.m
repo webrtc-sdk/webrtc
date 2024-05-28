@@ -175,8 +175,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
 
                       NSError *error = nil;
                       if (![self.currentDevice lockForConfiguration:&error]) {
-                        RTCLogError(@"Failed to lock device %@. Error: %@",
-                                    self.currentDevice,
+                        RTCLogError(@"Failed to lock device %@. Error: %@", self.currentDevice,
                                     error.userInfo);
                         if (completionHandler) {
                           completionHandler(error);
@@ -187,6 +186,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
                       [self reconfigureCaptureSessionInput];
                       [self updateDeviceCaptureFormat:format fps:fps];
                       [self updateVideoDataOutputPixelFormat:format];
+                      [self updateZoomFactor];
                       [self.captureSession startRunning];
                       [self.currentDevice unlockForConfiguration];
                       self.isRunning = YES;
@@ -287,7 +287,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
   RTC_OBJC_TYPE(RTCCVPixelBuffer) *rtcPixelBuffer =
       [[RTC_OBJC_TYPE(RTCCVPixelBuffer) alloc] initWithPixelBuffer:pixelBuffer];
   int64_t timeStampNs = CMTimeGetSeconds(CMSampleBufferGetPresentationTimeStamp(sampleBuffer)) *
-      kNanosecondsPerSecond;
+                        kNanosecondsPerSecond;
   RTC_OBJC_TYPE(RTCVideoFrame) *videoFrame =
       [[RTC_OBJC_TYPE(RTCVideoFrame) alloc] initWithBuffer:rtcPixelBuffer
                                                   rotation:_rotation
@@ -417,8 +417,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
 - (dispatch_queue_t)frameQueue {
   if (!_frameQueue) {
     _frameQueue = RTCDispatchQueueCreateWithTarget(
-        "org.webrtc.cameravideocapturer.video",
-        DISPATCH_QUEUE_SERIAL,
+        "org.webrtc.cameravideocapturer.video", DISPATCH_QUEUE_SERIAL,
         dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0));
   }
   return _frameQueue;
@@ -498,6 +497,14 @@ const int64_t kNanosecondsPerSecond = 1000000000;
     RTCLogError(@"Failed to set active format!\n User info:%@", exception.userInfo);
     return;
   }
+}
+
+- (void)updateZoomFactor {
+  NSAssert([RTC_OBJC_TYPE(RTCDispatcher) isOnQueueForType:RTCDispatcherTypeCaptureSession],
+           @"updateZoomFactor must be called on the capture queue.");
+  double firstSwitchOverZoomFactor =
+      _currentDevice.virtualDeviceSwitchOverVideoZoomFactors.firstObject.doubleValue ?: 1.0;
+  _currentDevice.videoZoomFactor = firstSwitchOverZoomFactor;
 }
 
 - (void)reconfigureCaptureSessionInput {
