@@ -503,13 +503,10 @@ const int64_t kNanosecondsPerSecond = 1000000000;
   NSAssert([RTC_OBJC_TYPE(RTCDispatcher) isOnQueueForType:RTCDispatcherTypeCaptureSession],
            @"updateZoomFactor must be called on the capture queue.");
 
-#if TARGET_OS_IOS
+#if TARGET_OS_IOS || TARGET_OS_TV
   double firstSwitchOverZoomFactor =
       _currentDevice.virtualDeviceSwitchOverVideoZoomFactors.firstObject.doubleValue ?: 1.0;
   _currentDevice.videoZoomFactor = firstSwitchOverZoomFactor;
-#else
-  // Fallback code for macOS or other platforms
-  _currentDevice.videoZoomFactor = 1.0;
 #endif
 }
 
