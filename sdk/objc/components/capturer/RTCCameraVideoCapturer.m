@@ -504,8 +504,9 @@ const int64_t kNanosecondsPerSecond = 1000000000;
            @"updateZoomFactor must be called on the capture queue.");
 
 #if TARGET_OS_IOS || TARGET_OS_TV
-  double firstSwitchOverZoomFactor =
-      _currentDevice.virtualDeviceSwitchOverVideoZoomFactors.firstObject.doubleValue ?: 1.0;
+  CGFloat firstSwitchOverZoomFactor = 1.0;
+  NSNumber *first = _currentDevice.virtualDeviceSwitchOverVideoZoomFactors.firstObject;
+  if (first != nil) firstSwitchOverZoomFactor = first.doubleValue;
   _currentDevice.videoZoomFactor = firstSwitchOverZoomFactor;
 #endif
 }
