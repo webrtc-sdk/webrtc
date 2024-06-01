@@ -210,6 +210,17 @@ int32_t AudioTransportImpl::NeedMorePlayData(const size_t nSamples,
                                              int64_t* elapsed_time_ms,
                                              int64_t* ntp_time_ms) {
   TRACE_EVENT0("webrtc", "AudioTransportImpl::SendProcessedData");
+  // RTC_DCHECK_EQ(sizeof(int16_t) * nChannels, nBytesPerSample);
+  RTC_DCHECK_GE(nChannels, 1);
+  RTC_DCHECK_LE(nChannels, 2);
+  RTC_DCHECK_GE(
+      samplesPerSec,
+      static_cast<uint32_t>(AudioProcessing::NativeRate::kSampleRate8kHz));
+
+  // 100 = 1 second / data duration (10 ms).
+  RTC_DCHECK_EQ(nSamples * 100, samplesPerSec);
+  RTC_DCHECK_LE(nBytesPerSample * nSamples * nChannels,
+                AudioFrame::kMaxDataSizeBytes);
 
   mixer_->Mix(nChannels, &mixed_frame_);
   *elapsed_time_ms = mixed_frame_.elapsed_time_ms_;
@@ -218,10 +229,12 @@ int32_t AudioTransportImpl::NeedMorePlayData(const size_t nSamples,
   if (audio_processing_) {
     const auto error =
         ProcessReverseAudioFrame(audio_processing_, &mixed_frame_);
+    RTC_DCHECK_EQ(error, AudioProcessing::kNoError);
   }
 
   nSamplesOut = Resample(mixed_frame_, samplesPerSec, &render_resampler_,
                          static_cast<int16_t*>(audioSamples));
+  RTC_DCHECK_EQ(nSamplesOut, nChannels * nSamples);
   return 0;
 }
 

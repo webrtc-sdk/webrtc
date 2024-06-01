@@ -112,16 +112,21 @@ ANAStats AudioEncoder::GetANAStats() const {
 
 size_t AudioEncoder::AppendPreEncodeData(rtc::ArrayView<const int16_t> audio,
                                       rtc::Buffer* encoded) {
-  const size_t old_size = encoded->size();
-  for (const int16_t it : audio) {
-    uint8_t arr[2] = {
-       static_cast<uint8_t>((it >> 8) & 0x00ff),
-       static_cast<uint8_t>(it & 0x00ff),
-    };
+  union int16 {
+    int16_t val;
+    uint8_t arr[sizeof(int16_t)];
+  };
 
-    encoded->AppendData(arr, 2);
+  const size_t old_size = encoded->size();
+
+  for (const int16_t it : audio) {
+    union int16 i16 {
+      .val = it,
+    };
+    encoded->AppendData(i16.arr, sizeof(int16_t));
   }
-  return (encoded->size() - old_size);
+
+  return encoded->size() - old_size;
 }
 
 constexpr int AudioEncoder::kMaxNumberOfChannels;
