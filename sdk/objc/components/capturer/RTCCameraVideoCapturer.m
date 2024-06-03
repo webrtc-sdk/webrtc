@@ -144,11 +144,13 @@ const int64_t kNanosecondsPerSecond = 1000000000;
   // AVCaptureDeviceTypeBuiltInTelephotoCamera, Physical
   // AVCaptureDeviceTypeBuiltInUltraWideCamera, Physical
 #if TARGET_OS_IOS || TARGET_OS_TV
-  if ([deviceType isEqualToString:AVCaptureDeviceTypeBuiltInTripleCamera] ||
-      [deviceType isEqualToString:AVCaptureDeviceTypeBuiltInDualWideCamera])
-    // For AVCaptureDeviceTypeBuiltInTripleCamera and AVCaptureDeviceTypeBuiltInDualWideCamera,
-    // it will switch over from ultra-wide to wide on 2.0, so to prefer wide by default, return 2.0.
-    return 2.0;
+  if (@available(iOS 13.0, tvOS 17.0, *)) {
+    if ([deviceType isEqualToString:AVCaptureDeviceTypeBuiltInTripleCamera] ||
+        [deviceType isEqualToString:AVCaptureDeviceTypeBuiltInDualWideCamera])
+      // For AVCaptureDeviceTypeBuiltInTripleCamera and AVCaptureDeviceTypeBuiltInDualWideCamera,
+      // it will switch over from ultra-wide to wide on 2.0, so to prefer wide by default.
+      return 2.0;
+  }
 #endif
 
   return 1.0;
