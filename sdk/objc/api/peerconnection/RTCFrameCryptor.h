@@ -61,13 +61,13 @@ RTC_OBJC_EXPORT
 
 @property(nonatomic, weak, nullable) id<RTC_OBJC_TYPE(RTCFrameCryptorDelegate)> delegate;
 
-- (instancetype)initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
+- (nullable instancetype)initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
                       rtpSender:(RTC_OBJC_TYPE(RTCRtpSender) *)sender
                   participantId:(NSString *)participantId
                       algorithm:(RTCCyrptorAlgorithm)algorithm
                     keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider;
 
-- (instancetype)initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
+- (nullable instancetype)initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
                     rtpReceiver:(RTC_OBJC_TYPE(RTCRtpReceiver) *)receiver
                   participantId:(NSString *)participantId
                       algorithm:(RTCCyrptorAlgorithm)algorithm
