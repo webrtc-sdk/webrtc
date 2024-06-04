@@ -20,6 +20,7 @@
 #import "RTCRtpReceiver+Private.h"
 #import "RTCRtpSender+Private.h"
 
+#import <os/lock.h>
 #include <memory>
 
 #import "base/RTCLogging.h"
@@ -96,6 +97,7 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
   NSString *_participantId;
   rtc::scoped_refptr<webrtc::FrameCryptorTransformer> _frame_crypto_transformer;
   rtc::scoped_refptr<webrtc::RTCFrameCryptorDelegateAdapter> _observer;
+  os_unfair_lock _lock;
 }
 
 @synthesize participantId = _participantId;
@@ -118,6 +120,8 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
                                algorithm:(RTCCyrptorAlgorithm)algorithm
                              keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider {
   if (self = [super init]) {
+    _lock = OS_UNFAIR_LOCK_INIT;
+
     rtc::scoped_refptr<webrtc::RtpSenderInterface> nativeRtpSender = sender.nativeRtpSender;
     if (nativeRtpSender == nullptr) return nil;
 
@@ -150,6 +154,8 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
                                algorithm:(RTCCyrptorAlgorithm)algorithm
                              keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider {
   if (self = [super init]) {
+    _lock = OS_UNFAIR_LOCK_INIT;
+
     rtc::scoped_refptr<webrtc::RtpReceiverInterface> nativeRtpReceiver = receiver.nativeRtpReceiver;
     if (nativeRtpReceiver == nullptr) return nil;
 
@@ -177,28 +183,41 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
 }
 
 - (void)dealloc {
-  if (_frame_crypto_transformer == nullptr) return;
-  _frame_crypto_transformer->UnRegisterFrameCryptorTransformerObserver();
+  os_unfair_lock_lock(&_lock);
+  if (_frame_crypto_transformer != nullptr) {
+    _frame_crypto_transformer->UnRegisterFrameCryptorTransformerObserver();
+  }
+  os_unfair_lock_unlock(&_lock);
 }
 
 - (BOOL)enabled {
-  if (_frame_crypto_transformer == nullptr) return NO;
-  return _frame_crypto_transformer->enabled();
+  os_unfair_lock_lock(&_lock);
+  BOOL result = _frame_crypto_transformer != nullptr ? _frame_crypto_transformer->enabled() : NO;
+  os_unfair_lock_unlock(&_lock);
+  return result;
 }
 
 - (void)setEnabled:(BOOL)enabled {
-  if (_frame_crypto_transformer == nullptr) return;
-  _frame_crypto_transformer->SetEnabled(enabled);
+  os_unfair_lock_lock(&_lock);
+  if (_frame_crypto_transformer != nullptr) {
+    _frame_crypto_transformer->SetEnabled(enabled);
+  }
+  os_unfair_lock_unlock(&_lock);
 }
 
 - (int)keyIndex {
-  if (_frame_crypto_transformer == nullptr) return 0;
-  return _frame_crypto_transformer->key_index();
+  os_unfair_lock_lock(&_lock);
+  int result = _frame_crypto_transformer != nullptr ? _frame_crypto_transformer->key_index() : 0;
+  os_unfair_lock_unlock(&_lock);
+  return result;
 }
 
 - (void)setKeyIndex:(int)keyIndex {
-  if (_frame_crypto_transformer == nullptr) return;
-  _frame_crypto_transformer->SetKeyIndex(keyIndex);
+  os_unfair_lock_lock(&_lock);
+  if (_frame_crypto_transformer != nullptr) {
+    _frame_crypto_transformer->SetKeyIndex(keyIndex);
+  }
+  os_unfair_lock_unlock(&_lock);
 }
 
 @end
