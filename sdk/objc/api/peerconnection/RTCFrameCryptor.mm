@@ -186,6 +186,10 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
   os_unfair_lock_lock(&_lock);
   if (_frame_crypto_transformer != nullptr) {
     _frame_crypto_transformer->UnRegisterFrameCryptorTransformerObserver();
+    _frame_crypto_transformer = nullptr;
+  }
+  if (_observer != nullptr) {
+    _observer = nullptr;
   }
   os_unfair_lock_unlock(&_lock);
 }
