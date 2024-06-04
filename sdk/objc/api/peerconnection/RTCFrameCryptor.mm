@@ -140,6 +140,7 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
     _frame_crypto_transformer->SetEnabled(false);
     _frame_crypto_transformer->RegisterFrameCryptorTransformerObserver(_observer);
   }
+
   return self;
 }
 
@@ -171,6 +172,7 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
     _frame_crypto_transformer->SetEnabled(false);
     _frame_crypto_transformer->RegisterFrameCryptorTransformerObserver(_observer);
   }
+
   return self;
 }
 
@@ -180,18 +182,22 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
 }
 
 - (BOOL)enabled {
+  if (_frame_crypto_transformer == nullptr) return NO;
   return _frame_crypto_transformer->enabled();
 }
 
 - (void)setEnabled:(BOOL)enabled {
+  if (_frame_crypto_transformer == nullptr) return;
   _frame_crypto_transformer->SetEnabled(enabled);
 }
 
 - (int)keyIndex {
+  if (_frame_crypto_transformer == nullptr) return 0;
   return _frame_crypto_transformer->key_index();
 }
 
 - (void)setKeyIndex:(int)keyIndex {
+  if (_frame_crypto_transformer == nullptr) return;
   _frame_crypto_transformer->SetKeyIndex(keyIndex);
 }
 
