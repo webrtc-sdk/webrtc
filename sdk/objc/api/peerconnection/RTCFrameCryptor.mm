@@ -103,11 +103,11 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
 @synthesize participantId = _participantId;
 @synthesize delegate = _delegate;
 
-- (webrtc::FrameCryptorTransformer::Algorithm)algorithmFromEnum:(RTCCyrptorAlgorithm)algorithm {
+- (webrtc::FrameCryptorTransformer::Algorithm)algorithmFromEnum:(RTCCryptorAlgorithm)algorithm {
   switch (algorithm) {
-    case RTCCyrptorAlgorithmAesGcm:
+    case RTCCryptorAlgorithmAesGcm:
       return webrtc::FrameCryptorTransformer::Algorithm::kAesGcm;
-    case RTCCyrptorAlgorithmAesCbc:
+    case RTCCryptorAlgorithmAesCbc:
       return webrtc::FrameCryptorTransformer::Algorithm::kAesCbc;
     default:
       return webrtc::FrameCryptorTransformer::Algorithm::kAesGcm;
@@ -117,7 +117,7 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
 - (nullable instancetype)initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
                                rtpSender:(RTC_OBJC_TYPE(RTCRtpSender) *)sender
                            participantId:(NSString *)participantId
-                               algorithm:(RTCCyrptorAlgorithm)algorithm
+                               algorithm:(RTCCryptorAlgorithm)algorithm
                              keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider {
   if (self = [super init]) {
     _lock = OS_UNFAIR_LOCK_INIT;
@@ -151,7 +151,7 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
 - (nullable instancetype)initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
                              rtpReceiver:(RTC_OBJC_TYPE(RTCRtpReceiver) *)receiver
                            participantId:(NSString *)participantId
-                               algorithm:(RTCCyrptorAlgorithm)algorithm
+                               algorithm:(RTCCryptorAlgorithm)algorithm
                              keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider {
   if (self = [super init]) {
     _lock = OS_UNFAIR_LOCK_INIT;
