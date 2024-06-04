@@ -94,7 +94,6 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
 @implementation RTC_OBJC_TYPE (RTCFrameCryptor) {
   const webrtc::RtpSenderInterface *_sender;
   const webrtc::RtpReceiverInterface *_receiver;
-  NSString *_participantId;
   rtc::scoped_refptr<webrtc::FrameCryptorTransformer> _frame_crypto_transformer;
   rtc::scoped_refptr<webrtc::RTCFrameCryptorDelegateAdapter> _observer;
   os_unfair_lock _lock;
@@ -188,9 +187,7 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
     _frame_crypto_transformer->UnRegisterFrameCryptorTransformerObserver();
     _frame_crypto_transformer = nullptr;
   }
-  if (_observer != nullptr) {
-    _observer = nullptr;
-  }
+  _observer = nullptr;
   os_unfair_lock_unlock(&_lock);
 }
 
