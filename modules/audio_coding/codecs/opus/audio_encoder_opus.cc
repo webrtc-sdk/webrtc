@@ -582,24 +582,23 @@ AudioEncoder::EncodedInfo AudioEncoderOpusImpl::EncodeImpl(
     rtc::Buffer* encoded) {
   MaybeUpdateUplinkBandwidth();
 
-  if (input_buffer_.empty())
-    first_timestamp_in_buffer_ = rtp_timestamp;
-
-  input_buffer_.insert(input_buffer_.end(), audio.cbegin(), audio.cend());
-  if (input_buffer_.size() <
-      (Num10msFramesPerPacket() * SamplesPer10msFrame())) {
-    return EncodedInfo();
-  }
-  RTC_CHECK_EQ(input_buffer_.size(),
-               Num10msFramesPerPacket() * SamplesPer10msFrame());
-
-  const size_t max_encoded_bytes = SufficientOutputBufferSize();
-  const size_t old_size = encoded->size();
-
   EncodedInfo info;
   if (config_.pre_encoded) {
       info.encoded_bytes = AppendPreEncodeData(audio, encoded);
   } else {
+    if (input_buffer_.empty())
+      first_timestamp_in_buffer_ = rtp_timestamp;
+
+    input_buffer_.insert(input_buffer_.end(), audio.cbegin(), audio.cend());
+    if (input_buffer_.size() <
+        (Num10msFramesPerPacket() * SamplesPer10msFrame())) {
+      return EncodedInfo();
+    }
+    RTC_CHECK_EQ(input_buffer_.size(),
+                Num10msFramesPerPacket() * SamplesPer10msFrame());
+
+    const size_t max_encoded_bytes = SufficientOutputBufferSize();
+
     info.encoded_bytes = encoded->AppendData(
         max_encoded_bytes, [&](rtc::ArrayView<uint8_t> encoded) {
           int status = WebRtcOpus_Encode(
@@ -611,8 +610,9 @@ AudioEncoder::EncodedInfo AudioEncoderOpusImpl::EncodeImpl(
 
           return static_cast<size_t>(status);
         });
+
+    input_buffer_.clear();
   }
-  input_buffer_.clear();
 
   bool dtx_frame = (info.encoded_bytes <= 2);
 
