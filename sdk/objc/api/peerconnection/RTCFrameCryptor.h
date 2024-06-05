@@ -26,9 +26,9 @@ NS_ASSUME_NONNULL_BEGIN
 @class RTC_OBJC_TYPE(RTCFrameCryptor);
 @class RTC_OBJC_TYPE(RTCPeerConnectionFactory);
 
-typedef NS_ENUM(NSUInteger, RTCCyrptorAlgorithm) {
-  RTCCyrptorAlgorithmAesGcm = 0,
-  RTCCyrptorAlgorithmAesCbc,
+typedef NS_ENUM(NSUInteger, RTCCryptorAlgorithm) {
+  RTCCryptorAlgorithmAesGcm = 0,
+  RTCCryptorAlgorithmAesCbc,
 };
 
 typedef NS_ENUM(NSInteger, FrameCryptionState) {
@@ -61,17 +61,17 @@ RTC_OBJC_EXPORT
 
 @property(nonatomic, weak, nullable) id<RTC_OBJC_TYPE(RTCFrameCryptorDelegate)> delegate;
 
-- (instancetype)initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
-                      rtpSender:(RTC_OBJC_TYPE(RTCRtpSender) *)sender
-                  participantId:(NSString *)participantId
-                      algorithm:(RTCCyrptorAlgorithm)algorithm
-                    keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider;
+- (nullable instancetype)initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
+                               rtpSender:(RTC_OBJC_TYPE(RTCRtpSender) *)sender
+                           participantId:(NSString *)participantId
+                               algorithm:(RTCCryptorAlgorithm)algorithm
+                             keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider;
 
-- (instancetype)initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
-                    rtpReceiver:(RTC_OBJC_TYPE(RTCRtpReceiver) *)receiver
-                  participantId:(NSString *)participantId
-                      algorithm:(RTCCyrptorAlgorithm)algorithm
-                    keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider;
+- (nullable instancetype)initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
+                             rtpReceiver:(RTC_OBJC_TYPE(RTCRtpReceiver) *)receiver
+                           participantId:(NSString *)participantId
+                               algorithm:(RTCCryptorAlgorithm)algorithm
+                             keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider;
 
 @end
 
