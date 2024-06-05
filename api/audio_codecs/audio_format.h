@@ -56,6 +56,7 @@ struct RTC_EXPORT SdpAudioFormat {
   int clockrate_hz;
   size_t num_channels;
   Parameters parameters;
+  bool pre_encoded;
 };
 
 // Information about how an audio format is treated by the codec implementation.

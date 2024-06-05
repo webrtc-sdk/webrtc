@@ -29,7 +29,8 @@ AudioEncoderPcm::AudioEncoderPcm(const Config& config, int sample_rate_hz)
           static_cast<size_t>(config.frame_size_ms / 10)),
       full_frame_samples_(config.num_channels * config.frame_size_ms *
                           sample_rate_hz / 1000),
-      first_timestamp_in_buffer_(0) {
+      first_timestamp_in_buffer_(0),
+      pre_encoded_(config.pre_encoded) {
   RTC_CHECK_GT(sample_rate_hz, 0) << "Sample rate must be larger than 0 Hz";
   RTC_CHECK_EQ(config.frame_size_ms % 10, 0)
       << "Frame size must be an integer multiple of 10 ms.";
@@ -74,13 +75,16 @@ AudioEncoder::EncodedInfo AudioEncoderPcm::EncodeImpl(
   EncodedInfo info;
   info.encoded_timestamp = first_timestamp_in_buffer_;
   info.payload_type = payload_type_;
-  info.encoded_bytes = encoded->AppendData(
-      full_frame_samples_ * BytesPerSample(),
-      [&](rtc::ArrayView<uint8_t> encoded) {
-        return EncodeCall(&speech_buffer_[0], full_frame_samples_,
-                          encoded.data());
-      });
-  speech_buffer_.clear();
+  if (pre_encoded_) {
+    info.encoded_bytes = AppendPreEncodeData(audio, encoded);
+  } else {
+    info.encoded_bytes = encoded->AppendData(
+        full_frame_samples_ * BytesPerSample(),
+        [&](rtc::ArrayView<uint8_t> encoded) {
+          return EncodeCall(&speech_buffer_[0], full_frame_samples_,
+                            encoded.data());
+        });
+  }  speech_buffer_.clear();
   info.encoder_type = GetCodecType();
   return info;
 }

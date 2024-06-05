@@ -22,7 +22,10 @@ SdpAudioFormat::SdpAudioFormat(SdpAudioFormat&&) = default;
 SdpAudioFormat::SdpAudioFormat(absl::string_view name,
                                int clockrate_hz,
                                size_t num_channels)
-    : name(name), clockrate_hz(clockrate_hz), num_channels(num_channels) {}
+    : name(name),
+      clockrate_hz(clockrate_hz),
+      num_channels(num_channels),
+      pre_encoded(false) {}
 
 SdpAudioFormat::SdpAudioFormat(absl::string_view name,
                                int clockrate_hz,
@@ -31,7 +34,8 @@ SdpAudioFormat::SdpAudioFormat(absl::string_view name,
     : name(name),
       clockrate_hz(clockrate_hz),
       num_channels(num_channels),
-      parameters(param) {}
+      parameters(param),
+      pre_encoded(false) {}
 
 SdpAudioFormat::SdpAudioFormat(absl::string_view name,
                                int clockrate_hz,
@@ -40,7 +44,8 @@ SdpAudioFormat::SdpAudioFormat(absl::string_view name,
     : name(name),
       clockrate_hz(clockrate_hz),
       num_channels(num_channels),
-      parameters(std::move(param)) {}
+      parameters(std::move(param)),
+      pre_encoded(false) {}
 
 bool SdpAudioFormat::Matches(const SdpAudioFormat& o) const {
   return absl::EqualsIgnoreCase(name, o.name) &&

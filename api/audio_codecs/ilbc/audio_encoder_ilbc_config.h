@@ -21,6 +21,7 @@ struct AudioEncoderIlbcConfig {
   int frame_size_ms = 30;  // Valid values are 20, 30, 40, and 60 ms.
   // Note that frame size 40 ms produces encodings with two 20 ms frames in
   // them, and frame size 60 ms consists of two 30 ms frames.
+  bool pre_encoded = false;
 };
 
 }  // namespace webrtc

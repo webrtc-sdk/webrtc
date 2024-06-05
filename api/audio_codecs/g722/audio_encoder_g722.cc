@@ -30,6 +30,7 @@ absl::optional<AudioEncoderG722Config> AudioEncoderG722::SdpToConfig(
 
   AudioEncoderG722Config config;
   config.num_channels = rtc::checked_cast<int>(format.num_channels);
+  config.pre_encoded = format.pre_encoded;
   auto ptime_iter = format.parameters.find("ptime");
   if (ptime_iter != format.parameters.end()) {
     auto ptime = rtc::StringToNumber<int>(ptime_iter->second);

@@ -56,6 +56,7 @@ void AudioOptions::SetAll(const AudioOptions& change) {
   SetFrom(&audio_network_adaptor, change.audio_network_adaptor);
   SetFrom(&audio_network_adaptor_config, change.audio_network_adaptor_config);
   SetFrom(&init_recording_on_send, change.init_recording_on_send);
+  SetFrom(&pre_encoded, change.pre_encoded);
 }
 
 bool AudioOptions::operator==(const AudioOptions& o) const {
@@ -75,7 +76,8 @@ bool AudioOptions::operator==(const AudioOptions& o) const {
          combined_audio_video_bwe == o.combined_audio_video_bwe &&
          audio_network_adaptor == o.audio_network_adaptor &&
          audio_network_adaptor_config == o.audio_network_adaptor_config &&
-         init_recording_on_send == o.init_recording_on_send;
+         init_recording_on_send == o.init_recording_on_send &&
+         pre_encoded == o.pre_encoded;
 }
 
 std::string AudioOptions::ToString() const {
@@ -100,6 +102,7 @@ std::string AudioOptions::ToString() const {
   ToStringIfSet(&result, "combined_audio_video_bwe", combined_audio_video_bwe);
   ToStringIfSet(&result, "audio_network_adaptor", audio_network_adaptor);
   ToStringIfSet(&result, "init_recording_on_send", init_recording_on_send);
+  ToStringIfSet(&result, "pre_encoded", pre_encoded);
   result << "}";
   return result.str();
 }

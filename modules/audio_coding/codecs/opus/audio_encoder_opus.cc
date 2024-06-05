@@ -257,6 +257,7 @@ absl::optional<AudioEncoderOpusConfig> AudioEncoderOpusImpl::SdpToConfig(
   config.application = config.num_channels == 1
                            ? AudioEncoderOpusConfig::ApplicationMode::kVoip
                            : AudioEncoderOpusConfig::ApplicationMode::kAudio;
+  config.pre_encoded = format.pre_encoded;
 
   constexpr int kMinANAFrameLength = kANASupportedFrameLengths[0];
   constexpr int kMaxANAFrameLength =
@@ -581,31 +582,37 @@ AudioEncoder::EncodedInfo AudioEncoderOpusImpl::EncodeImpl(
     rtc::Buffer* encoded) {
   MaybeUpdateUplinkBandwidth();
 
-  if (input_buffer_.empty())
-    first_timestamp_in_buffer_ = rtp_timestamp;
-
-  input_buffer_.insert(input_buffer_.end(), audio.cbegin(), audio.cend());
-  if (input_buffer_.size() <
-      (Num10msFramesPerPacket() * SamplesPer10msFrame())) {
-    return EncodedInfo();
-  }
-  RTC_CHECK_EQ(input_buffer_.size(),
-               Num10msFramesPerPacket() * SamplesPer10msFrame());
-
-  const size_t max_encoded_bytes = SufficientOutputBufferSize();
   EncodedInfo info;
-  info.encoded_bytes = encoded->AppendData(
-      max_encoded_bytes, [&](rtc::ArrayView<uint8_t> encoded) {
-        int status = WebRtcOpus_Encode(
-            inst_, &input_buffer_[0],
-            rtc::CheckedDivExact(input_buffer_.size(), config_.num_channels),
-            rtc::saturated_cast<int16_t>(max_encoded_bytes), encoded.data());
+  if (config_.pre_encoded) {
+      info.encoded_bytes = AppendPreEncodeData(audio, encoded);
+  } else {
+    if (input_buffer_.empty())
+      first_timestamp_in_buffer_ = rtp_timestamp;
 
-        RTC_CHECK_GE(status, 0);  // Fails only if fed invalid data.
+    input_buffer_.insert(input_buffer_.end(), audio.cbegin(), audio.cend());
+    if (input_buffer_.size() <
+        (Num10msFramesPerPacket() * SamplesPer10msFrame())) {
+      return EncodedInfo();
+    }
+    RTC_CHECK_EQ(input_buffer_.size(),
+                Num10msFramesPerPacket() * SamplesPer10msFrame());
 
-        return static_cast<size_t>(status);
-      });
-  input_buffer_.clear();
+    const size_t max_encoded_bytes = SufficientOutputBufferSize();
+
+    info.encoded_bytes = encoded->AppendData(
+        max_encoded_bytes, [&](rtc::ArrayView<uint8_t> encoded) {
+          int status = WebRtcOpus_Encode(
+              inst_, &input_buffer_[0],
+              rtc::CheckedDivExact(input_buffer_.size(), config_.num_channels),
+              rtc::saturated_cast<int16_t>(max_encoded_bytes), encoded.data());
+
+          RTC_CHECK_GE(status, 0);  // Fails only if fed invalid data.
+
+          return static_cast<size_t>(status);
+        });
+
+    input_buffer_.clear();
+  }
 
   bool dtx_frame = (info.encoded_bytes <= 2);
 

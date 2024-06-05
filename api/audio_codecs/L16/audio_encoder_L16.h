@@ -38,6 +38,7 @@ struct RTC_EXPORT AudioEncoderL16 {
     int sample_rate_hz = 8000;
     int num_channels = 1;
     int frame_size_ms = 10;
+    bool pre_encoded = false;
   };
   static absl::optional<Config> SdpToConfig(const SdpAudioFormat& audio_format);
   static void AppendSupportedEncoders(std::vector<AudioCodecSpec>* specs);

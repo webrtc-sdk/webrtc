@@ -73,6 +73,8 @@ struct RTC_EXPORT AudioOptions {
   // true.
   // TODO(webrtc:13566): Remove this option. See issue for details.
   absl::optional<bool> init_recording_on_send;
+  // Audio is already pre-encoded, so we can pass encoding.
+  absl::optional<bool> pre_encoded;
 };
 
 }  // namespace cricket

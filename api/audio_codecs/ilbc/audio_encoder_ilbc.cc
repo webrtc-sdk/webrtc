@@ -45,6 +45,7 @@ absl::optional<AudioEncoderIlbcConfig> AudioEncoderIlbc::SdpToConfig(
   }
 
   AudioEncoderIlbcConfig config;
+  config.pre_encoded = format.pre_encoded;
   auto ptime_iter = format.parameters.find("ptime");
   if (ptime_iter != format.parameters.end()) {
     auto ptime = rtc::StringToNumber<int>(ptime_iter->second);

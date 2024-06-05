@@ -44,7 +44,8 @@ AudioEncoderOpusConfig::AudioEncoderOpusConfig()
       complexity_threshold_window_bps(1500),
       dtx_enabled(false),
       uplink_bandwidth_update_interval_ms(200),
-      payload_type(-1) {}
+      payload_type(-1),
+      pre_encoded(false) {}
 AudioEncoderOpusConfig::AudioEncoderOpusConfig(const AudioEncoderOpusConfig&) =
     default;
 AudioEncoderOpusConfig::~AudioEncoderOpusConfig() = default;

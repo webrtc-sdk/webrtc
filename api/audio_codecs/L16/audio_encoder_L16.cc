@@ -29,6 +29,7 @@ absl::optional<AudioEncoderL16::Config> AudioEncoderL16::SdpToConfig(
   }
   Config config;
   config.sample_rate_hz = format.clockrate_hz;
+  config.pre_encoded = format.pre_encoded;
   config.num_channels = rtc::dchecked_cast<int>(format.num_channels);
   auto ptime_iter = format.parameters.find("ptime");
   if (ptime_iter != format.parameters.end()) {
@@ -66,6 +67,7 @@ std::unique_ptr<AudioEncoder> AudioEncoderL16::MakeAudioEncoder(
   c.num_channels = config.num_channels;
   c.frame_size_ms = config.frame_size_ms;
   c.payload_type = payload_type;
+  c.pre_encoded = config.pre_encoded;
   if (!config.IsOk()) {
     RTC_DCHECK_NOTREACHED();
     return nullptr;

@@ -209,7 +209,7 @@ int32_t AudioTransportImpl::NeedMorePlayData(const size_t nSamples,
                                              size_t& nSamplesOut,
                                              int64_t* elapsed_time_ms,
                                              int64_t* ntp_time_ms) {
-  TRACE_EVENT0("webrtc", "AudioTransportImpl::SendProcessedData");
+  TRACE_EVENT0("webrtc", "AudioTransportImpl::NeedMorePlayData");
   RTC_DCHECK_EQ(sizeof(int16_t) * nChannels, nBytesPerSample);
   RTC_DCHECK_GE(nChannels, 1);
   RTC_DCHECK_LE(nChannels, 2);

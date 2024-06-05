@@ -110,5 +110,24 @@ ANAStats AudioEncoder::GetANAStats() const {
   return ANAStats();
 }
 
+size_t AudioEncoder::AppendPreEncodeData(rtc::ArrayView<const int16_t> audio,
+                                      rtc::Buffer* encoded) {
+  union int16 {
+    int16_t val;
+    uint8_t arr[sizeof(int16_t)];
+  };
+
+  const size_t old_size = encoded->size();
+
+  for (const int16_t it : audio) {
+    union int16 i16 {
+      .val = it,
+    };
+    encoded->AppendData(i16.arr, sizeof(int16_t));
+  }
+
+  return encoded->size() - old_size;
+}
+
 constexpr int AudioEncoder::kMaxNumberOfChannels;
 }  // namespace webrtc

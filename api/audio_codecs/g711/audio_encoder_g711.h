@@ -37,6 +37,7 @@ struct RTC_EXPORT AudioEncoderG711 {
     Type type = Type::kPcmU;
     int num_channels = 1;
     int frame_size_ms = 20;
+    bool pre_encoded = false;
   };
   static absl::optional<AudioEncoderG711::Config> SdpToConfig(
       const SdpAudioFormat& audio_format);

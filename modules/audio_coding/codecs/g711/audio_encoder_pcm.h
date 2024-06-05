@@ -29,10 +29,11 @@ class AudioEncoderPcm : public AudioEncoder {
     int frame_size_ms;
     size_t num_channels;
     int payload_type;
+    bool pre_encoded;
 
    protected:
     explicit Config(int pt)
-        : frame_size_ms(20), num_channels(1), payload_type(pt) {}
+        : frame_size_ms(20), num_channels(1), payload_type(pt), pre_encoded(false) {}
   };
 
   ~AudioEncoderPcm() override;
@@ -67,6 +68,7 @@ class AudioEncoderPcm : public AudioEncoder {
   const int sample_rate_hz_;
   const size_t num_channels_;
   const int payload_type_;
+  bool pre_encoded_;
   const size_t num_10ms_frames_per_packet_;
   const size_t full_frame_samples_;
   std::vector<int16_t> speech_buffer_;

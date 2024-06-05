@@ -31,6 +31,7 @@ absl::optional<AudioEncoderG711::Config> AudioEncoderG711::SdpToConfig(
     config.type = is_pcmu ? Config::Type::kPcmU : Config::Type::kPcmA;
     config.num_channels = rtc::dchecked_cast<int>(format.num_channels);
     config.frame_size_ms = 20;
+    config.pre_encoded = format.pre_encoded;
     auto ptime_iter = format.parameters.find("ptime");
     if (ptime_iter != format.parameters.end()) {
       const auto ptime = rtc::StringToNumber<int>(ptime_iter->second);
@@ -75,6 +76,7 @@ std::unique_ptr<AudioEncoder> AudioEncoderG711::MakeAudioEncoder(
       AudioEncoderPcmU::Config impl_config;
       impl_config.num_channels = config.num_channels;
       impl_config.frame_size_ms = config.frame_size_ms;
+      impl_config.pre_encoded = config.pre_encoded;
       impl_config.payload_type = payload_type;
       return std::make_unique<AudioEncoderPcmU>(impl_config);
     }
@@ -82,6 +84,7 @@ std::unique_ptr<AudioEncoder> AudioEncoderG711::MakeAudioEncoder(
       AudioEncoderPcmA::Config impl_config;
       impl_config.num_channels = config.num_channels;
       impl_config.frame_size_ms = config.frame_size_ms;
+      impl_config.pre_encoded = config.pre_encoded;
       impl_config.payload_type = payload_type;
       return std::make_unique<AudioEncoderPcmA>(impl_config);
     }
