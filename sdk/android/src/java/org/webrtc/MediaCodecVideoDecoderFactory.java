@@ -72,11 +72,11 @@ class MediaCodecVideoDecoderFactory implements VideoDecoderFactory {
         String name = type.name();
         if (type == VideoCodecMimeType.H264 && isH264HighProfileSupported(codec)) {
           supportedCodecInfos.add(new VideoCodecInfo(
-              name, MediaCodecUtils.getCodecProperties(type, /* highProfile= */ true)));
+              name, MediaCodecUtils.getCodecProperties(type, /* highProfile= */ true), new ArrayList<>()));
         }
 
         supportedCodecInfos.add(new VideoCodecInfo(
-            name, MediaCodecUtils.getCodecProperties(type, /* highProfile= */ false)));
+            name, MediaCodecUtils.getCodecProperties(type, /* highProfile= */ false), new ArrayList<>()));
       }
     }
 

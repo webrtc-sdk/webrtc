@@ -14,7 +14,7 @@
 #import "base/RTCVideoFrameBuffer.h"
 #import "components/video_frame_buffer/RTCCVPixelBuffer.h"
 
-@implementation RTCNV12TextureCache {
+@implementation RTC_OBJC_TYPE(RTCNV12TextureCache) {
   CVOpenGLESTextureCacheRef _textureCache;
   CVOpenGLESTextureRef _yTextureRef;
   CVOpenGLESTextureRef _uvTextureRef;

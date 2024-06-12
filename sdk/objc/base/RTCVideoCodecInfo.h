@@ -26,10 +26,16 @@ RTC_OBJC_EXPORT
                   parameters:(nullable NSDictionary<NSString *, NSString *> *)parameters
     NS_DESIGNATED_INITIALIZER;
 
+- (instancetype)initWithName:(NSString *)name
+                  parameters:(nullable NSDictionary<NSString *, NSString *> *)parameters
+             scalabilityModes:(nullable NSArray<NSString *> *)scalabilityModes
+    NS_DESIGNATED_INITIALIZER;
+
 - (BOOL)isEqualToCodecInfo:(RTC_OBJC_TYPE(RTCVideoCodecInfo) *)info;
 
 @property(nonatomic, readonly) NSString *name;
 @property(nonatomic, readonly) NSDictionary<NSString *, NSString *> *parameters;
+@property(nonatomic, readonly) NSArray<NSString *> *scalabilityModes;
 
 @end
 

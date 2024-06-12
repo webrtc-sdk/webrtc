@@ -22,6 +22,8 @@
 #include <endpointvolume.h>
 #include <mediaobj.h>     // IMediaObject
 #include <mmdeviceapi.h>  // MMDevice
+#include <comdef.h>
+#include <objbase.h>
 
 #include "api/scoped_refptr.h"
 #include "modules/audio_device/audio_device_generic.h"
@@ -49,6 +51,34 @@ class AudioDeviceWindowsCore : public AudioDeviceGeneric {
  public:
   AudioDeviceWindowsCore();
   ~AudioDeviceWindowsCore();
+
+  class DeviceStateListener : public IMMNotificationClient {
+   public:
+    virtual ~DeviceStateListener() = default;
+    HRESULT __stdcall OnDeviceStateChanged(LPCWSTR pwstrDeviceId,
+                                           DWORD dwNewState) override;
+    HRESULT __stdcall OnDeviceAdded(LPCWSTR pwstrDeviceId) override;
+
+    HRESULT __stdcall OnDeviceRemoved(LPCWSTR pwstrDeviceId) override;
+
+    HRESULT
+    __stdcall OnDefaultDeviceChanged(EDataFlow flow,
+                                     ERole role,
+                                     LPCWSTR pwstrDefaultDeviceId) override;
+
+    HRESULT __stdcall OnPropertyValueChanged(LPCWSTR pwstrDeviceId,
+                                             const PROPERTYKEY key) override;
+    // IUnknown (required by IMMNotificationClient).
+    ULONG __stdcall AddRef() override;
+    ULONG __stdcall Release() override;
+    HRESULT __stdcall QueryInterface(REFIID iid, void** object) override;
+
+    void SetAudioDeviceSink(AudioDeviceSink *sink);
+
+   private:
+    LONG ref_count_ = 1;
+    AudioDeviceSink *callback_ = nullptr;
+  };
 
   static bool CoreAudioIsSupported();
 
@@ -150,6 +180,8 @@ class AudioDeviceWindowsCore : public AudioDeviceGeneric {
 
   virtual int32_t EnableBuiltInAEC(bool enable);
 
+  virtual int32_t SetAudioDeviceSink(AudioDeviceSink* sink);
+
  public:
   virtual void AttachAudioBuffer(AudioDeviceBuffer* audioBuffer);
 
@@ -237,6 +269,7 @@ class AudioDeviceWindowsCore : public AudioDeviceGeneric {
   IAudioEndpointVolume* _ptrCaptureVolume;
   ISimpleAudioVolume* _ptrRenderSimpleVolume;
 
+  DeviceStateListener *_deviceStateListener = nullptr;
   // DirectX Media Object (DMO) for the built-in AEC.
   rtc::scoped_refptr<IMediaObject> _dmo;
   rtc::scoped_refptr<IMediaBuffer> _mediaBuffer;

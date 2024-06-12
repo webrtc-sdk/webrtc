@@ -2030,9 +2030,15 @@ void VideoStreamEncoder::EncodeVideoFrame(const VideoFrame& video_frame,
   was_encode_called_since_last_initialization_ = true;
 
   if (encode_status < 0) {
-    RTC_LOG(LS_ERROR) << "Encoder failed, failing encoder format: "
-                      << encoder_config_.video_format.ToString();
-    RequestEncoderSwitch();
+    if (encode_status == WEBRTC_VIDEO_CODEC_ENCODER_FAILURE) {
+      RTC_LOG(LS_ERROR) << "Encoder failed, failing encoder format: "
+                        << encoder_config_.video_format.ToString();
+      RequestEncoderSwitch();
+    } else {
+      RTC_LOG(LS_ERROR) << "Failed to encode frame. Error code: "
+                        << encode_status;
+    }
+
     return;
   }
 

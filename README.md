@@ -1,32 +1,47 @@
-**WebRTC is a free, open software project** that provides browsers and mobile
-applications with Real-Time Communications (RTC) capabilities via simple APIs.
-The WebRTC components have been optimized to best serve this purpose.
+# WebRTC-SDK
 
-**Our mission:** To enable rich, high-quality RTC applications to be
-developed for the browser, mobile platforms, and IoT devices, and allow them
-all to communicate via a common set of protocols.
+This repository contains a fork of WebRTC from Google with various improvements.
 
-The WebRTC initiative is a project supported by Google, Mozilla and Opera,
-amongst others.
+## Main changes
 
-### Development
+### All
 
-See [here][native-dev] for instructions on how to get started
-developing with the native code.
+- Dynamically acquire decoder to mitigate decoder limitations [#25](https://github.com/webrtc-sdk/webrtc/pull/25)
+- Support for video simulcast with hardware & software encoders [patch](https://github.com/webrtc-sdk/webrtc/commit/ee030264e2274a2c90548a99b448782049e48fb4)
+- Frame cryptor support (for end-to-end encryption) [patch](https://github.com/webrtc-sdk/webrtc/commit/3a2c008529a15fecde5f979a6ebb75c05463d45e)
 
-[Authoritative list](native-api.md) of directories that contain the
-native API header files.
+### Android
 
-### More info
+- WrappedVideoDecoderFactory [#74](https://github.com/webrtc-sdk/webrtc/pull/74)
 
- * Official web site: http://www.webrtc.org
- * Master source code repo: https://webrtc.googlesource.com/src
- * Samples and reference apps: https://github.com/webrtc
- * Mailing list: http://groups.google.com/group/discuss-webrtc
- * Continuous build: https://ci.chromium.org/p/webrtc/g/ci/console
- * [Coding style guide](g3doc/style-guide.md)
- * [Code of conduct](CODE_OF_CONDUCT.md)
- * [Reporting bugs](docs/bug-reporting.md)
- * [Documentation](g3doc/sitemap.md)
+### iOS / Mac
 
-[native-dev]: https://webrtc.googlesource.com/src/+/main/docs/native-code/
+- Sane audio handling [patch](https://github.com/webrtc-sdk/webrtc/commit/272127d457ab48e36241e82549870405864851f6)
+  - Do not acquire microphone/permissions unless actively publishing audio
+  - Abililty to bypass voice processing on iOS
+  - Remove hardcoded limitation of outputting only to right speaker on MacBook Pro
+- Desktop capture for Mac [patch](https://github.com/webrtc-sdk/webrtc/commit/8e832d1163644ab504412c9b8f3ba8510d9890d6)
+
+### Windows
+
+- Fixed unable to acquire Mic when built-in AEC is enabled [#29](https://github.com/webrtc-sdk/webrtc/pull/29)
+
+## LICENSE
+
+- [Google WebRTC](https://chromium.googlesource.com/external/webrtc.git), is licensed under [BSD license](/LICENSE).
+
+- Contains patches from [shiguredo-webrtc-build](https://github.com/shiguredo-webrtc-build), licensed under [Apache 2.0](/NOTICE).
+
+- Contains changes from LiveKit, licensed under Apache 2.0.
+
+## Who is using this project
+
+- [flutter-webrtc](https://github.com/flutter-webrtc/flutter-webrtc)
+
+- [LiveKit](https://github.com/livekit)
+
+- [Membrane Framework](https://github.com/membraneframework/membrane_rtc_engine)
+
+- [Louper](https://louper.io)
+
+Are you using WebRTC SDK in your framework or app? Feel free to open a PR and add yourself!

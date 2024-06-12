@@ -111,19 +111,6 @@ bool VoiceProcessingAudioUnit::Init() {
     return false;
   }
 
-  // Enable input on the input scope of the input element.
-  UInt32 enable_input = 1;
-  result = AudioUnitSetProperty(vpio_unit_, kAudioOutputUnitProperty_EnableIO,
-                                kAudioUnitScope_Input, kInputBus, &enable_input,
-                                sizeof(enable_input));
-  if (result != noErr) {
-    DisposeAudioUnit();
-    RTCLogError(@"Failed to enable input on input scope of input element. "
-                 "Error=%ld.",
-                (long)result);
-    return false;
-  }
-
   // Enable output on the output scope of the output element.
   UInt32 enable_output = 1;
   result = AudioUnitSetProperty(vpio_unit_, kAudioOutputUnitProperty_EnableIO,
@@ -193,7 +180,7 @@ VoiceProcessingAudioUnit::State VoiceProcessingAudioUnit::GetState() const {
   return state_;
 }
 
-bool VoiceProcessingAudioUnit::Initialize(Float64 sample_rate) {
+bool VoiceProcessingAudioUnit::Initialize(Float64 sample_rate, bool enable_input) {
   RTC_DCHECK_GE(state_, kUninitialized);
   RTCLog(@"Initializing audio unit with sample rate: %f", sample_rate);
 
@@ -203,6 +190,19 @@ bool VoiceProcessingAudioUnit::Initialize(Float64 sample_rate) {
 #if !defined(NDEBUG)
   LogStreamDescription(format);
 #endif
+
+  UInt32 _enable_input = enable_input ? 1 : 0;
+  RTCLog(@"Initializing AudioUnit, _enable_input=%d", (int) _enable_input);
+  result = AudioUnitSetProperty(vpio_unit_, kAudioOutputUnitProperty_EnableIO,
+                                kAudioUnitScope_Input, kInputBus, &_enable_input,
+                                sizeof(_enable_input));
+  if (result != noErr) {
+    DisposeAudioUnit();
+    RTCLogError(@"Failed to enable input on input scope of input element. "
+                 "Error=%ld.",
+                (long)result);
+    return false;
+  }
 
   // Set the format on the output scope of the input element/bus.
   result =

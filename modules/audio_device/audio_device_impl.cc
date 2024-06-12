@@ -63,15 +63,17 @@ namespace webrtc {
 
 rtc::scoped_refptr<AudioDeviceModule> AudioDeviceModule::Create(
     AudioLayer audio_layer,
-    TaskQueueFactory* task_queue_factory) {
+    TaskQueueFactory* task_queue_factory,
+    bool bypass_voice_processing) {
   RTC_DLOG(LS_INFO) << __FUNCTION__;
-  return AudioDeviceModule::CreateForTest(audio_layer, task_queue_factory);
+  return AudioDeviceModule::CreateForTest(audio_layer, task_queue_factory, bypass_voice_processing);
 }
 
 // static
 rtc::scoped_refptr<AudioDeviceModuleForTest> AudioDeviceModule::CreateForTest(
     AudioLayer audio_layer,
-    TaskQueueFactory* task_queue_factory) {
+    TaskQueueFactory* task_queue_factory,
+    bool bypass_voice_processing) {
   RTC_DLOG(LS_INFO) << __FUNCTION__;
 
   // The "AudioDeviceModule::kWindowsCoreAudio2" audio layer has its own
@@ -92,7 +94,7 @@ rtc::scoped_refptr<AudioDeviceModuleForTest> AudioDeviceModule::CreateForTest(
 
   // Create the generic reference counted (platform independent) implementation.
   auto audio_device = rtc::make_ref_counted<AudioDeviceModuleImpl>(
-      audio_layer, task_queue_factory);
+      audio_layer, task_queue_factory, bypass_voice_processing);
 
   // Ensure that the current platform is supported.
   if (audio_device->CheckPlatform() == -1) {
@@ -115,8 +117,13 @@ rtc::scoped_refptr<AudioDeviceModuleForTest> AudioDeviceModule::CreateForTest(
 
 AudioDeviceModuleImpl::AudioDeviceModuleImpl(
     AudioLayer audio_layer,
-    TaskQueueFactory* task_queue_factory)
-    : audio_layer_(audio_layer), audio_device_buffer_(task_queue_factory) {
+    TaskQueueFactory* task_queue_factory,
+    bool bypass_voice_processing)
+    : audio_layer_(audio_layer),
+#if defined(WEBRTC_IOS)
+    bypass_voice_processing_(bypass_voice_processing),
+#endif
+    audio_device_buffer_(task_queue_factory) {
   RTC_DLOG(LS_INFO) << __FUNCTION__;
 }
 
@@ -240,7 +247,7 @@ int32_t AudioDeviceModuleImpl::CreatePlatformSpecificObjects() {
 #if defined(WEBRTC_IOS)
   if (audio_layer == kPlatformDefaultAudio) {
     audio_device_.reset(
-        new ios_adm::AudioDeviceIOS(/*bypass_voice_processing=*/false));
+        new ios_adm::AudioDeviceIOS(/*bypass_voice_processing=*/bypass_voice_processing_));
     RTC_LOG(LS_INFO) << "iPhone Audio APIs will be utilized.";
   }
 // END #if defined(WEBRTC_IOS)
@@ -894,6 +901,27 @@ int AudioDeviceModuleImpl::GetRecordAudioParameters(
   return r;
 }
 #endif  // WEBRTC_IOS
+
+int32_t AudioDeviceModuleImpl::SetAudioDeviceSink(AudioDeviceSink* sink) const {
+  RTC_LOG(LS_INFO) << __FUNCTION__ << "(" << sink << ")";
+  int32_t ok = audio_device_->SetAudioDeviceSink(sink);
+  RTC_LOG(LS_INFO) << "output: " << ok;
+  return ok;
+}
+
+int32_t AudioDeviceModuleImpl::GetPlayoutDevice() const {
+  RTC_LOG(LS_INFO) << __FUNCTION__;
+  int32_t r = audio_device_->GetPlayoutDevice();
+  RTC_LOG(LS_INFO) << "output: " << r;
+  return r;
+}
+
+int32_t AudioDeviceModuleImpl::GetRecordingDevice() const {
+  RTC_LOG(LS_INFO) << __FUNCTION__;
+  int32_t r = audio_device_->GetRecordingDevice();
+  RTC_LOG(LS_INFO) << "output: " << r;
+  return r;
+}
 
 AudioDeviceModuleImpl::PlatformType AudioDeviceModuleImpl::Platform() const {
   RTC_LOG(LS_INFO) << __FUNCTION__;

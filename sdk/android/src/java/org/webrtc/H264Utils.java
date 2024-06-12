@@ -12,6 +12,7 @@ package org.webrtc;
 
 import java.util.Map;
 import java.util.HashMap;
+import java.util.ArrayList;
 
 /** Container for static helper functions related to dealing with H264 codecs. */
 class H264Utils {
@@ -38,9 +39,9 @@ class H264Utils {
   }
 
   public static VideoCodecInfo DEFAULT_H264_BASELINE_PROFILE_CODEC =
-      new VideoCodecInfo("H264", getDefaultH264Params(/* isHighProfile= */ false));
+      new VideoCodecInfo("H264", getDefaultH264Params(/* isHighProfile= */ false), new ArrayList<>());
   public static VideoCodecInfo DEFAULT_H264_HIGH_PROFILE_CODEC =
-      new VideoCodecInfo("H264", getDefaultH264Params(/* isHighProfile= */ true));
+      new VideoCodecInfo("H264", getDefaultH264Params(/* isHighProfile= */ true), new ArrayList<>());
 
   public static boolean isSameH264Profile(
       Map<String, String> params1, Map<String, String> params2) {

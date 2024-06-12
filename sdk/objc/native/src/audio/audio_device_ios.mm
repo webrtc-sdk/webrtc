@@ -95,10 +95,11 @@ AudioDeviceIOS::AudioDeviceIOS(bool bypass_voice_processing)
     : bypass_voice_processing_(bypass_voice_processing),
       audio_device_buffer_(nullptr),
       audio_unit_(nullptr),
+      recording_is_initialized_(false),
       recording_(0),
+      playout_is_initialized_(false),
       playing_(0),
       initialized_(false),
-      audio_is_initialized_(false),
       is_interrupted_(false),
       has_configured_session_(false),
       num_detected_playout_glitches_(0),
@@ -110,7 +111,7 @@ AudioDeviceIOS::AudioDeviceIOS(bool bypass_voice_processing)
   io_thread_checker_.Detach();
   thread_ = rtc::Thread::Current();
 
-  audio_session_observer_ = [[RTCNativeAudioSessionDelegateAdapter alloc] initWithObserver:this];
+  audio_session_observer_ = [[RTC_OBJC_TYPE(RTCNativeAudioSessionDelegateAdapter) alloc] initWithObserver:this];
   mach_timebase_info_data_t tinfo;
   mach_timebase_info(&tinfo);
   machTickUnitsToNanoseconds_ = (double)tinfo.numer / tinfo.denom;
@@ -180,48 +181,57 @@ int32_t AudioDeviceIOS::InitPlayout() {
   LOGI() << "InitPlayout";
   RTC_DCHECK_RUN_ON(thread_);
   RTC_DCHECK(initialized_);
-  RTC_DCHECK(!audio_is_initialized_);
+  RTC_DCHECK(!playout_is_initialized_);
   RTC_DCHECK(!playing_.load());
-  if (!audio_is_initialized_) {
-    if (!InitPlayOrRecord()) {
+  if (!recording_is_initialized_) {
+    // recording not initialized yet, init with no input
+    if (!InitPlayOrRecord(false)) {
       RTC_LOG_F(LS_ERROR) << "InitPlayOrRecord failed for InitPlayout!";
       return -1;
     }
   }
-  audio_is_initialized_ = true;
+
+  playout_is_initialized_ = true;
+
   return 0;
 }
 
 bool AudioDeviceIOS::PlayoutIsInitialized() const {
   RTC_DCHECK_RUN_ON(thread_);
-  return audio_is_initialized_;
+  return playout_is_initialized_;
 }
 
 bool AudioDeviceIOS::RecordingIsInitialized() const {
   RTC_DCHECK_RUN_ON(thread_);
-  return audio_is_initialized_;
+  return recording_is_initialized_;
 }
 
 int32_t AudioDeviceIOS::InitRecording() {
   LOGI() << "InitRecording";
   RTC_DCHECK_RUN_ON(thread_);
   RTC_DCHECK(initialized_);
-  RTC_DCHECK(!audio_is_initialized_);
+  RTC_DCHECK(!recording_is_initialized_);
   RTC_DCHECK(!recording_.load());
-  if (!audio_is_initialized_) {
-    if (!InitPlayOrRecord()) {
+  if (!playout_is_initialized_) {
+    // playout not initialized yet, init with input
+    if (!InitPlayOrRecord(true)) {
       RTC_LOG_F(LS_ERROR) << "InitPlayOrRecord failed for InitRecording!";
       return -1;
     }
+  } else {
+    // playout already initialized, restart audio unit with input
+    RestartAudioUnit(true);
   }
-  audio_is_initialized_ = true;
+
+  recording_is_initialized_ = true;
+
   return 0;
 }
 
 int32_t AudioDeviceIOS::StartPlayout() {
   LOGI() << "StartPlayout";
   RTC_DCHECK_RUN_ON(thread_);
-  RTC_DCHECK(audio_is_initialized_);
+  RTC_DCHECK(playout_is_initialized_);
   RTC_DCHECK(!playing_.load());
   RTC_DCHECK(audio_unit_);
   if (fine_audio_buffer_) {
@@ -246,14 +256,16 @@ int32_t AudioDeviceIOS::StartPlayout() {
 int32_t AudioDeviceIOS::StopPlayout() {
   LOGI() << "StopPlayout";
   RTC_DCHECK_RUN_ON(thread_);
-  if (!audio_is_initialized_ || !playing_.load()) {
+  if (!playout_is_initialized_ || !playing_.load()) {
     return 0;
   }
   if (!recording_.load()) {
     ShutdownPlayOrRecord();
-    audio_is_initialized_ = false;
+
+    recording_is_initialized_ = false;
   }
   playing_.store(0, std::memory_order_release);
+  playout_is_initialized_ = false;
 
   // Derive average number of calls to OnGetPlayoutData() between detected
   // audio glitches and add the result to a histogram.
@@ -277,7 +289,7 @@ bool AudioDeviceIOS::Playing() const {
 int32_t AudioDeviceIOS::StartRecording() {
   LOGI() << "StartRecording";
   RTC_DCHECK_RUN_ON(thread_);
-  RTC_DCHECK(audio_is_initialized_);
+  RTC_DCHECK(recording_is_initialized_);
   RTC_DCHECK(!recording_.load());
   RTC_DCHECK(audio_unit_);
   if (fine_audio_buffer_) {
@@ -300,14 +312,19 @@ int32_t AudioDeviceIOS::StartRecording() {
 int32_t AudioDeviceIOS::StopRecording() {
   LOGI() << "StopRecording";
   RTC_DCHECK_RUN_ON(thread_);
-  if (!audio_is_initialized_ || !recording_.load()) {
+  if (!recording_is_initialized_ || !recording_.load()) {
     return 0;
   }
   if (!playing_.load()) {
     ShutdownPlayOrRecord();
-    audio_is_initialized_ = false;
+
+    playout_is_initialized_ = false;
+  } else if (playout_is_initialized_) {
+    // restart audio unit with no input
+    RestartAudioUnit(false);
   }
   recording_.store(0, std::memory_order_release);
+  recording_is_initialized_ = false;
   return 0;
 }
 
@@ -455,7 +472,7 @@ OSStatus AudioDeviceIOS::OnGetPlayoutData(AudioUnitRenderActionFlags* flags,
       // Exclude extreme delta values since they do most likely not correspond
       // to a real glitch. Instead, the most probable cause is that a headset
       // has been plugged in or out. There are more direct ways to detect
-      // audio device changes (see HandleValidRouteChange()) but experiments
+      // audio device changes (see ValidRouteChange()) but experiments
       // show that using it leads to more complex implementations.
       // TODO(henrika): more tests might be needed to come up with an even
       // better upper limit.
@@ -589,7 +606,7 @@ void AudioDeviceIOS::HandleSampleRateChange() {
   SetupAudioBuffersForActiveAudioSession();
 
   // Initialize the audio unit again with the new sample rate.
-  if (!audio_unit_->Initialize(playout_parameters_.sample_rate())) {
+  if (!audio_unit_->Initialize(playout_parameters_.sample_rate(), recording_is_initialized_)) {
     RTCLogError(@"Failed to initialize the audio unit with sample rate: %d",
                 playout_parameters_.sample_rate());
     return;
@@ -641,6 +658,46 @@ void AudioDeviceIOS::HandleOutputVolumeChange() {
   // Store time of this detection so it can be used to defer detection of
   // glitches too close in time to this event.
   last_output_volume_change_time_ = rtc::TimeMillis();
+}
+
+bool AudioDeviceIOS::RestartAudioUnit(bool enable_input) {
+  RTC_DCHECK_RUN_ON(&io_thread_checker_);
+
+  LOGI() << "RestartAudioUnit";
+
+  // If we don't have an audio unit yet, or the audio unit is uninitialized,
+  // there is no work to do.
+  if (!audio_unit_ || audio_unit_->GetState() < VoiceProcessingAudioUnit::kInitialized) {
+    return false;
+  }
+
+  bool restart_audio_unit = false;
+  if (audio_unit_->GetState() == VoiceProcessingAudioUnit::kStarted) {
+    audio_unit_->Stop();
+    PrepareForNewStart();
+    restart_audio_unit = true;
+  }
+
+  if (audio_unit_->GetState() == VoiceProcessingAudioUnit::kInitialized) {
+    audio_unit_->Uninitialize();
+  }
+
+  // Initialize the audio unit again with the same sample rate.
+  const double sample_rate = playout_parameters_.sample_rate();
+
+  if (!audio_unit_->Initialize(sample_rate, enable_input)) {
+    RTCLogError(@"Failed to initialize the audio unit with sample rate: %f", sample_rate);
+    return false;
+  }
+
+  // Restart the audio unit if it was already running.
+  if (restart_audio_unit && !audio_unit_->Start()) {
+    RTCLogError(@"Failed to start audio unit with sample rate: %f", sample_rate);
+    return false;
+  }
+
+  LOGI() << "Successfully enabled audio unit for recording.";
+  return true;
 }
 
 void AudioDeviceIOS::UpdateAudioDeviceBuffer() {
@@ -736,7 +793,7 @@ void AudioDeviceIOS::UpdateAudioUnit(bool can_play_or_record) {
 
   // If we're not initialized we don't need to do anything. Audio unit will
   // be initialized on initialization.
-  if (!audio_is_initialized_) return;
+  if (!playout_is_initialized_ && !recording_is_initialized_) return;
 
   // If we're initialized, we must have an audio unit.
   RTC_DCHECK(audio_unit_);
@@ -774,7 +831,7 @@ void AudioDeviceIOS::UpdateAudioUnit(bool can_play_or_record) {
     RTCLog(@"Initializing audio unit for UpdateAudioUnit");
     ConfigureAudioSession();
     SetupAudioBuffersForActiveAudioSession();
-    if (!audio_unit_->Initialize(playout_parameters_.sample_rate())) {
+    if (!audio_unit_->Initialize(playout_parameters_.sample_rate(), recording_is_initialized_)) {
       RTCLogError(@"Failed to initialize audio unit.");
       return;
     }
@@ -864,7 +921,7 @@ void AudioDeviceIOS::UnconfigureAudioSession() {
   RTCLog(@"Unconfigured audio session.");
 }
 
-bool AudioDeviceIOS::InitPlayOrRecord() {
+bool AudioDeviceIOS::InitPlayOrRecord(bool enable_input) {
   LOGI() << "InitPlayOrRecord";
   RTC_DCHECK_RUN_ON(thread_);
 
@@ -900,7 +957,7 @@ bool AudioDeviceIOS::InitPlayOrRecord() {
       return false;
     }
     SetupAudioBuffersForActiveAudioSession();
-    audio_unit_->Initialize(playout_parameters_.sample_rate());
+    audio_unit_->Initialize(playout_parameters_.sample_rate(), enable_input);
   }
 
   // Release the lock.

@@ -15,6 +15,8 @@
 #import "RTCRtpParameters+Private.h"
 #import "RTCRtpReceiver+Private.h"
 #import "RTCRtpSender+Private.h"
+#import "RTCRtpCodecCapability.h"
+#import "RTCRtpCodecCapability+Private.h"
 #import "base/RTCLogging.h"
 #import "helpers/NSString+StdString.h"
 
@@ -66,6 +68,20 @@ NSString *const kRTCRtpTransceiverErrorDomain = @"org.webrtc.RTCRtpTranceiver";
   } else {
     return nil;
   }
+}
+
+- (NSArray<RTC_OBJC_TYPE(RTCRtpCodecCapability) *> *)codecPreferences {
+
+  NSMutableArray *result = [NSMutableArray array];
+
+  std::vector<webrtc::RtpCodecCapability> capabilities = _nativeRtpTransceiver->codec_preferences();
+
+  for (auto & element : capabilities) {
+    RTC_OBJC_TYPE(RTCRtpCodecCapability) *object = [[RTC_OBJC_TYPE(RTCRtpCodecCapability) alloc] initWithNativeRtpCodecCapability: element];
+    [result addObject: object];
+  }
+
+  return result;
 }
 
 @synthesize sender = _sender;

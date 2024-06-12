@@ -53,6 +53,7 @@ ScopedJavaLocalRef<jobject> NativeToJavaRtpEncodingParameter(
       NativeToJavaInteger(env, encoding.max_framerate),
       NativeToJavaInteger(env, encoding.num_temporal_layers),
       NativeToJavaDouble(env, encoding.scale_resolution_down_by),
+      NativeToJavaString(env, encoding.scalability_mode),
       encoding.ssrc ? NativeToJavaLong(env, *encoding.ssrc) : nullptr,
       encoding.adaptive_ptime);
 }
@@ -116,6 +117,11 @@ RtpEncodingParameters JavaToNativeRtpEncodingParameters(
       Java_Encoding_getScaleResolutionDownBy(jni, j_encoding_parameters);
   encoding.scale_resolution_down_by =
       JavaToNativeOptionalDouble(jni, j_scale_resolution_down_by);
+  ScopedJavaLocalRef<jstring> j_scalability_mode =
+      Java_Encoding_getScalabilityMode(jni, j_encoding_parameters);
+  if (!IsNull(jni, j_scalability_mode)) {
+    encoding.scalability_mode = JavaToNativeString(jni,j_scalability_mode);
+  }
   encoding.adaptive_ptime =
       Java_Encoding_getAdaptivePTime(jni, j_encoding_parameters);
   ScopedJavaLocalRef<jobject> j_ssrc =

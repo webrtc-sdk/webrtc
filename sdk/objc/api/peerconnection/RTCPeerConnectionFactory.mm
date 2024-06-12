@@ -15,6 +15,9 @@
 #import "RTCPeerConnectionFactoryOptions+Private.h"
 #import "RTCRtpCapabilities+Private.h"
 
+#import "RTCAudioDeviceModule.h"
+#import "RTCAudioDeviceModule+Private.h"
+
 #import "RTCAudioSource+Private.h"
 #import "RTCAudioTrack+Private.h"
 #import "RTCMediaConstraints+Private.h"
@@ -22,6 +25,9 @@
 #import "RTCPeerConnection+Private.h"
 #import "RTCVideoSource+Private.h"
 #import "RTCVideoTrack+Private.h"
+#import "RTCRtpReceiver+Private.h"
+#import "RTCRtpCapabilities+Private.h"
+#import "RTCRtpCodecCapability+Private.h"
 #import "base/RTCLogging.h"
 #import "base/RTCVideoDecoderFactory.h"
 #import "base/RTCVideoEncoderFactory.h"
@@ -49,6 +55,9 @@
 #include "sdk/objc/native/src/objc_video_decoder_factory.h"
 #include "sdk/objc/native/src/objc_video_encoder_factory.h"
 
+#import "components/audio/RTCAudioProcessingModule.h"
+#import "components/audio/RTCDefaultAudioProcessingModule+Private.h"
+
 #if defined(WEBRTC_IOS)
 #import "sdk/objc/native/api/audio_device_module.h"
 #endif
@@ -57,14 +66,18 @@
   std::unique_ptr<rtc::Thread> _networkThread;
   std::unique_ptr<rtc::Thread> _workerThread;
   std::unique_ptr<rtc::Thread> _signalingThread;
+  rtc::scoped_refptr<webrtc::AudioDeviceModule> _nativeAudioDeviceModule;
+  RTC_OBJC_TYPE(RTCDefaultAudioProcessingModule) *_defaultAudioProcessingModule;
+
   BOOL _hasStartedAecDump;
 }
 
 @synthesize nativeFactory = _nativeFactory;
+@synthesize audioDeviceModule = _audioDeviceModule;
 
-- (rtc::scoped_refptr<webrtc::AudioDeviceModule>)audioDeviceModule {
+- (rtc::scoped_refptr<webrtc::AudioDeviceModule>)createAudioDeviceModule:(BOOL)bypassVoiceProcessing {
 #if defined(WEBRTC_IOS)
-  return webrtc::CreateAudioDeviceModule();
+  return webrtc::CreateAudioDeviceModule(bypassVoiceProcessing);
 #else
   return nullptr;
 #endif
@@ -78,8 +91,9 @@
                                             RTCVideoEncoderFactoryH264) alloc] init])
               nativeVideoDecoderFactory:webrtc::ObjCToNativeVideoDecoderFactory([[RTC_OBJC_TYPE(
                                             RTCVideoDecoderFactoryH264) alloc] init])
-                      audioDeviceModule:[self audioDeviceModule].get()
-                  audioProcessingModule:nullptr];
+                      audioDeviceModule:[self createAudioDeviceModule:NO].get()
+                  audioProcessingModule:nullptr
+                  bypassVoiceProcessing:NO];
 }
 
 - (instancetype)
@@ -107,14 +121,66 @@
   if (audioDevice) {
     audio_device_module = webrtc::CreateAudioDeviceModule(audioDevice);
   } else {
-    audio_device_module = [self audioDeviceModule];
+    audio_device_module = [self createAudioDeviceModule:NO];
   }
   return [self initWithNativeAudioEncoderFactory:webrtc::CreateBuiltinAudioEncoderFactory()
                        nativeAudioDecoderFactory:webrtc::CreateBuiltinAudioDecoderFactory()
                        nativeVideoEncoderFactory:std::move(native_encoder_factory)
                        nativeVideoDecoderFactory:std::move(native_decoder_factory)
                                audioDeviceModule:audio_device_module.get()
-                           audioProcessingModule:nullptr];
+                           audioProcessingModule:nullptr
+                           bypassVoiceProcessing:NO];
+#endif
+}
+
+- (RTC_OBJC_TYPE(RTCRtpCapabilities) *)rtpSenderCapabilitiesFor:(RTCRtpMediaType)mediaType {
+
+  webrtc::RtpCapabilities capabilities = _nativeFactory->GetRtpSenderCapabilities([RTC_OBJC_TYPE(RTCRtpReceiver) nativeMediaTypeForMediaType: mediaType]);
+
+  return [[RTCRtpCapabilities alloc] initWithNativeRtpCapabilities: capabilities];
+}
+
+- (RTC_OBJC_TYPE(RTCRtpCapabilities) *)rtpReceiverCapabilitiesFor:(RTCRtpMediaType)mediaType {
+
+  webrtc::RtpCapabilities capabilities = _nativeFactory->GetRtpReceiverCapabilities([RTC_OBJC_TYPE(RTCRtpReceiver) nativeMediaTypeForMediaType: mediaType]);
+
+  return [[RTCRtpCapabilities alloc] initWithNativeRtpCapabilities: capabilities];
+}
+
+- (instancetype)
+    initWithBypassVoiceProcessing:(BOOL)bypassVoiceProcessing
+                   encoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoEncoderFactory)>)encoderFactory
+                   decoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoDecoderFactory)>)decoderFactory
+            audioProcessingModule:
+                (nullable id<RTC_OBJC_TYPE(RTCAudioProcessingModule)>)audioProcessingModule {
+#ifdef HAVE_NO_MEDIA
+  return [self initWithNoMedia];
+#else
+  std::unique_ptr<webrtc::VideoEncoderFactory> native_encoder_factory;
+  std::unique_ptr<webrtc::VideoDecoderFactory> native_decoder_factory;
+  if (encoderFactory) {
+    native_encoder_factory = webrtc::ObjCToNativeVideoEncoderFactory(encoderFactory);
+  }
+  if (decoderFactory) {
+    native_decoder_factory = webrtc::ObjCToNativeVideoDecoderFactory(decoderFactory);
+  }
+  rtc::scoped_refptr<webrtc::AudioDeviceModule> audio_device_module = [self createAudioDeviceModule:bypassVoiceProcessing];
+
+  if ([audioProcessingModule isKindOfClass:[RTC_OBJC_TYPE(RTCDefaultAudioProcessingModule) class]]) {
+    _defaultAudioProcessingModule = (RTC_OBJC_TYPE(RTCDefaultAudioProcessingModule) *)audioProcessingModule;
+  } else {
+    _defaultAudioProcessingModule = [[RTC_OBJC_TYPE(RTCDefaultAudioProcessingModule) alloc] init];
+  }
+
+  NSLog(@"AudioProcessingModule: %@", _defaultAudioProcessingModule);
+  
+  return [self initWithNativeAudioEncoderFactory:webrtc::CreateBuiltinAudioEncoderFactory()
+                       nativeAudioDecoderFactory:webrtc::CreateBuiltinAudioDecoderFactory()
+                       nativeVideoEncoderFactory:std::move(native_encoder_factory)
+                       nativeVideoDecoderFactory:std::move(native_decoder_factory)
+                               audioDeviceModule:audio_device_module.get()
+                           audioProcessingModule:_defaultAudioProcessingModule.nativeAudioProcessingModule
+                           bypassVoiceProcessing:bypassVoiceProcessing];
 #endif
 }
 
@@ -163,14 +229,16 @@
                             (std::unique_ptr<webrtc::VideoDecoderFactory>)videoDecoderFactory
                                 audioDeviceModule:(webrtc::AudioDeviceModule *)audioDeviceModule
                             audioProcessingModule:
-                                (rtc::scoped_refptr<webrtc::AudioProcessing>)audioProcessingModule {
+                                (rtc::scoped_refptr<webrtc::AudioProcessing>)audioProcessingModule
+                            bypassVoiceProcessing:(BOOL)bypassVoiceProcessing {
   return [self initWithNativeAudioEncoderFactory:audioEncoderFactory
                        nativeAudioDecoderFactory:audioDecoderFactory
                        nativeVideoEncoderFactory:std::move(videoEncoderFactory)
                        nativeVideoDecoderFactory:std::move(videoDecoderFactory)
                                audioDeviceModule:audioDeviceModule
                            audioProcessingModule:audioProcessingModule
-                        networkControllerFactory:nullptr];
+                        networkControllerFactory:nullptr
+                           bypassVoiceProcessing:NO];
 }
 - (instancetype)initWithNativeAudioEncoderFactory:
                     (rtc::scoped_refptr<webrtc::AudioEncoderFactory>)audioEncoderFactory
@@ -185,7 +253,8 @@
                                 (rtc::scoped_refptr<webrtc::AudioProcessing>)audioProcessingModule
                          networkControllerFactory:
                              (std::unique_ptr<webrtc::NetworkControllerFactoryInterface>)
-                                 networkControllerFactory {
+                                 networkControllerFactory
+                            bypassVoiceProcessing:(BOOL)bypassVoiceProcessing {
   if (self = [self initNative]) {
     webrtc::PeerConnectionFactoryDependencies dependencies;
     dependencies.network_thread = _networkThread.get();
@@ -197,11 +266,22 @@
     dependencies.trials = std::make_unique<webrtc::FieldTrialBasedConfig>();
     dependencies.task_queue_factory =
         webrtc::CreateDefaultTaskQueueFactory(dependencies.trials.get());
-    dependencies.adm = std::move(audioDeviceModule);
+   
+    // always create ADM on worker thread
+    _nativeAudioDeviceModule = _workerThread->BlockingCall([&dependencies, &bypassVoiceProcessing]() {
+      return webrtc::AudioDeviceModule::Create(webrtc::AudioDeviceModule::AudioLayer::kPlatformDefaultAudio,
+                                               dependencies.task_queue_factory.get(),
+                                               bypassVoiceProcessing == YES);
+	  });
+
+    _audioDeviceModule = [[RTC_OBJC_TYPE(RTCAudioDeviceModule) alloc] initWithNativeModule: _nativeAudioDeviceModule
+                                                       workerThread: _workerThread.get()];
+    dependencies.adm = _nativeAudioDeviceModule;
     dependencies.audio_encoder_factory = std::move(audioEncoderFactory);
     dependencies.audio_decoder_factory = std::move(audioDecoderFactory);
     dependencies.video_encoder_factory = std::move(videoEncoderFactory);
     dependencies.video_decoder_factory = std::move(videoDecoderFactory);
+
     if (audioProcessingModule) {
       dependencies.audio_processing = std::move(audioProcessingModule);
     } else {

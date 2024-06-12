@@ -261,12 +261,18 @@ if (is_android) {
       "api/org/webrtc/AudioProcessingFactory.java",
       "api/org/webrtc/AudioSource.java",
       "api/org/webrtc/AudioTrack.java",
+      "api/org/webrtc/AudioTrackSink.java",
       "api/org/webrtc/CallSessionFileRotatingLogSink.java",
       "api/org/webrtc/CandidatePairChangeEvent.java",
       "api/org/webrtc/CryptoOptions.java",
       "api/org/webrtc/DataChannel.java",
       "api/org/webrtc/DtmfSender.java",
+      "api/org/webrtc/ExternalAudioProcessingFactory.java",
       "api/org/webrtc/FecControllerFactoryFactoryInterface.java",
+      "api/org/webrtc/FrameCryptor.java",
+      "api/org/webrtc/FrameCryptorAlgorithm.java",
+      "api/org/webrtc/FrameCryptorFactory.java",
+      "api/org/webrtc/FrameCryptorKeyProvider.java",
       "api/org/webrtc/FrameDecryptor.java",
       "api/org/webrtc/FrameEncryptor.java",
       "api/org/webrtc/IceCandidate.java",
@@ -365,6 +371,7 @@ if (is_android) {
     sources = [
       "api/org/webrtc/DefaultVideoDecoderFactory.java",
       "api/org/webrtc/DefaultVideoEncoderFactory.java",
+      "api/org/webrtc/WrappedVideoDecoderFactory.java",
     ]
 
     deps = [
@@ -528,6 +535,8 @@ if (is_android) {
     sources = [
       "api/org/webrtc/SoftwareVideoDecoderFactory.java",
       "api/org/webrtc/SoftwareVideoEncoderFactory.java",
+      "api/org/webrtc/SimulcastVideoEncoder.java",
+      "api/org/webrtc/SimulcastVideoEncoderFactory.java",
     ]
 
     deps = [
@@ -717,6 +726,8 @@ if (current_os == "linux" || is_android) {
       "src/jni/pc/add_ice_candidate_observer.cc",
       "src/jni/pc/add_ice_candidate_observer.h",
       "src/jni/pc/android_network_monitor.h",
+      "src/jni/pc/audio_sink.cc",
+      "src/jni/pc/audio_sink.h",
       "src/jni/pc/audio_track.cc",
       "src/jni/pc/call_session_file_rotating_log_sink.cc",
       "src/jni/pc/crypto_options.cc",
@@ -724,6 +735,15 @@ if (current_os == "linux" || is_android) {
       "src/jni/pc/data_channel.cc",
       "src/jni/pc/data_channel.h",
       "src/jni/pc/dtmf_sender.cc",
+      "src/jni/pc/external_audio_processing_factory.cc",
+      "src/jni/pc/external_audio_processing_factory.h",
+      "src/jni/pc/external_audio_processing_interface.h",
+      "src/jni/pc/external_audio_processor.cc",
+      "src/jni/pc/external_audio_processor.h",
+      "src/jni/pc/frame_cryptor.cc",
+      "src/jni/pc/frame_cryptor.h",
+      "src/jni/pc/frame_cryptor_key_provider.cc",
+      "src/jni/pc/frame_cryptor_key_provider.h",
       "src/jni/pc/ice_candidate.cc",
       "src/jni/pc/ice_candidate.h",
       "src/jni/pc/media_constraints.cc",
@@ -782,6 +802,7 @@ if (current_os == "linux" || is_android) {
       "../../api:rtp_parameters",
       "../../api:rtp_sender_interface",
       "../../api:turn_customizer",
+      "../../api/crypto:frame_crypto_transformer",
       "../../api/crypto:options",
       "../../api/rtc_event_log:rtc_event_log_factory",
       "../../api/task_queue:default_task_queue_factory",
@@ -899,6 +920,21 @@ if (current_os == "linux" || is_android) {
     ]
   }
 
+  rtc_library("simulcast_jni") {
+    visibility = [ "*" ]
+    allow_poison = [ "software_video_codecs" ]
+    sources = [
+      "src/jni/simulcast_video_encoder.cc",
+      "src/jni/simulcast_video_encoder.h"
+    ]
+    deps = [
+      ":base_jni",
+      ":video_jni",
+      ":native_api_codecs",
+      "../../media:rtc_simulcast_encoder_adapter"
+    ]
+  }
+
   rtc_library("swcodecs_jni") {
     visibility = [ "*" ]
     allow_poison = [ "software_video_codecs" ]
@@ -912,6 +948,7 @@ if (current_os == "linux" || is_android) {
       ":libvpx_vp8_jni",
       ":libvpx_vp9_jni",
       ":native_api_jni",
+      ":simulcast_jni",
       ":video_jni",
       "../../api/environment",
       "../../api/video_codecs:builtin_video_decoder_factory",
@@ -1396,11 +1433,16 @@ if (current_os == "linux" || is_android) {
     sources = [
       "api/org/webrtc/AddIceObserver.java",
       "api/org/webrtc/AudioTrack.java",
+      "api/org/webrtc/AudioTrackSink.java",
       "api/org/webrtc/CallSessionFileRotatingLogSink.java",
       "api/org/webrtc/CandidatePairChangeEvent.java",
       "api/org/webrtc/CryptoOptions.java",
       "api/org/webrtc/DataChannel.java",
       "api/org/webrtc/DtmfSender.java",
+      "api/org/webrtc/ExternalAudioProcessingFactory.java",
+      "api/org/webrtc/FrameCryptor.java",
+      "api/org/webrtc/FrameCryptorFactory.java",
+      "api/org/webrtc/FrameCryptorKeyProvider.java",
       "api/org/webrtc/IceCandidate.java",
       "api/org/webrtc/IceCandidateErrorEvent.java",
       "api/org/webrtc/MediaConstraints.java",

@@ -680,6 +680,15 @@ class RTC_EXPORT PeerConnectionInterface : public webrtc::RefCountInterface {
     // The burst interval of the pacer, see TaskQueuePacedSender constructor.
     absl::optional<TimeDelta> pacer_burst_interval;
 
+    // When this flag is set, ports not bound to any specific network interface
+    // will be used, in addition to normal ports bound to the enumerated
+    // interfaces. Without this flag, these "any address" ports would only be
+    // used when network enumeration fails or is disabled. But under certain
+    // conditions, these ports may succeed where others fail, so they may allow
+    // the application to work in a wider variety of environments, at the expense
+    // of having to allocate additional candidates.
+    bool enable_any_address_ports = false;
+
     //
     // Don't forget to update operator== if adding something.
     //
