@@ -27,9 +27,9 @@ sys.path.append(os.path.join(SRC_DIR, 'build'))
 import find_depot_tools
 
 SDK_OUTPUT_DIR = os.path.join(SRC_DIR, 'out_ios_libs')
-SDK_FRAMEWORK_NAME = 'WebRTC.framework'
-SDK_DSYM_NAME = 'WebRTC.dSYM'
-SDK_XCFRAMEWORK_NAME = 'WebRTC.xcframework'
+SDK_FRAMEWORK_NAME = 'LiveKitWebRTC.framework'
+SDK_DSYM_NAME = 'LiveKitWebRTC.dSYM'
+SDK_XCFRAMEWORK_NAME = 'LiveKitWebRTC.xcframework'
 
 ENABLED_ARCHS = [
     'device:arm64', 'simulator:arm64', 'simulator:x64',
