@@ -210,9 +210,8 @@
     dependencies.network_thread = _networkThread.get();
     dependencies.worker_thread = _workerThread.get();
     dependencies.signaling_thread = _signalingThread.get();
-    if (webrtc::field_trial::IsEnabled("WebRTC-Network-UseNWPathMonitor")) {
-      dependencies.network_monitor_factory = webrtc::CreateNetworkMonitorFactory();
-    }
+    dependencies.network_monitor_factory = webrtc::CreateNetworkMonitorFactory();
+
     _nativeFactory = webrtc::CreateModularPeerConnectionFactory(std::move(dependencies));
     NSAssert(_nativeFactory, @"Failed to initialize PeerConnectionFactory!");
   }
@@ -260,9 +259,7 @@
     dependencies.network_thread = _networkThread.get();
     dependencies.worker_thread = _workerThread.get();
     dependencies.signaling_thread = _signalingThread.get();
-    if (webrtc::field_trial::IsEnabled("WebRTC-Network-UseNWPathMonitor")) {
-      dependencies.network_monitor_factory = webrtc::CreateNetworkMonitorFactory();
-    }
+    dependencies.network_monitor_factory = webrtc::CreateNetworkMonitorFactory();
     dependencies.trials = std::make_unique<webrtc::FieldTrialBasedConfig>();
     dependencies.task_queue_factory =
         webrtc::CreateDefaultTaskQueueFactory(dependencies.trials.get());
