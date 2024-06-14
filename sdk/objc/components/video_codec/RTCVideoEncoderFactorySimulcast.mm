@@ -43,17 +43,17 @@
 - (NSArray<RTC_OBJC_TYPE(RTCVideoCodecInfo) *> *)supportedCodecs {
     NSArray *supportedCodecs = [[_primary supportedCodecs] arrayByAddingObjectsFromArray: [_fallback supportedCodecs]];
 
-    NSMutableArray<RTCVideoCodecInfo *> *addingCodecs = [[NSMutableArray alloc] init];
+    NSMutableArray<RTC_OBJC_TYPE(RTCVideoCodecInfo) *> *addingCodecs = [[NSMutableArray alloc] init];
 
     for (const webrtc::SdpVideoFormat& format : webrtc::SupportedVP9Codecs(true)) {
-        RTCVideoCodecInfo *codec = [[RTCVideoCodecInfo alloc] initWithNativeSdpVideoFormat: format];
+        RTC_OBJC_TYPE(RTCVideoCodecInfo) *codec = [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithNativeSdpVideoFormat: format];
         [addingCodecs addObject: codec];
     }
 
     auto av1Format = webrtc::SdpVideoFormat(
          cricket::kAv1CodecName, webrtc::CodecParameterMap(),
          webrtc::LibaomAv1EncoderSupportedScalabilityModes());
-    RTCVideoCodecInfo *av1Codec = [[RTCVideoCodecInfo alloc] initWithNativeSdpVideoFormat: av1Format];
+    RTC_OBJC_TYPE(RTCVideoCodecInfo) *av1Codec = [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithNativeSdpVideoFormat: av1Format];
     [addingCodecs addObject: av1Codec];
 
     return [supportedCodecs arrayByAddingObjectsFromArray: addingCodecs];
