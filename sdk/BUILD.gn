@@ -1446,6 +1446,10 @@ if (is_ios || is_mac) {
           # Added for Simulcast support
           "objc/components/video_codec/RTCVideoEncoderFactorySimulcast.h",
           "objc/api/video_codec/RTCVideoEncoderSimulcast.h",
+          "objc/components/audio/RTCAudioBuffer.h",
+          "objc/components/audio/RTCAudioProcessingModule.h",
+          "objc/components/audio/RTCDefaultAudioProcessingModule.h",
+          "objc/components/audio/RTCAudioCustomProcessingDelegate.h",
         ]
 
         if (!build_with_chromium) {
@@ -1607,6 +1611,10 @@ if (is_ios || is_mac) {
           # Added for Simulcast support
           "objc/components/video_codec/RTCVideoEncoderFactorySimulcast.h",
           "objc/api/video_codec/RTCVideoEncoderSimulcast.h",
+          "objc/components/audio/RTCAudioBuffer.h",
+          "objc/components/audio/RTCAudioProcessingModule.h",
+          "objc/components/audio/RTCDefaultAudioProcessingModule.h",
+          "objc/components/audio/RTCAudioCustomProcessingDelegate.h",
         ]
         if (!build_with_chromium) {
           sources += [
@@ -1618,6 +1626,7 @@ if (is_ios || is_mac) {
         deps = [
           ":base_objc",
           ":default_codec_factory_objc",
+          ":metal_objc",
           ":native_api",
           ":native_video",
           ":peerconnectionfactory_base_objc",
