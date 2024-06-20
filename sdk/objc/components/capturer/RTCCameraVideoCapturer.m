@@ -15,7 +15,7 @@
 #import "base/RTCVideoFrameBuffer.h"
 #import "components/video_frame_buffer/RTCCVPixelBuffer.h"
 
-#if TARGET_OS_IPHONE
+#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST
 #import "helpers/UIDevice+RTCDevice.h"
 #endif
 
@@ -41,7 +41,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
   FourCharCode _preferredOutputPixelFormat;
   FourCharCode _outputPixelFormat;
   RTCVideoRotation _rotation;
-#if TARGET_OS_IPHONE
+#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST
   UIInterfaceOrientation _orientation;
   BOOL _generatingOrientationNotifications;
 #endif
@@ -74,7 +74,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
       return nil;
     }
     NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
-#if TARGET_OS_IPHONE
+#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST
     _orientation = UIInterfaceOrientationPortrait;
     _rotation = RTCVideoRotation_90;
     [center addObserver:self
@@ -175,7 +175,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
                     block:^{
                       RTCLogInfo("startCaptureWithDevice %@ @ %ld fps", format, (long)fps);
 
-#if TARGET_OS_IPHONE
+#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST
                       dispatch_async(dispatch_get_main_queue(), ^{
                         if (!self->_generatingOrientationNotifications) {
                           [[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
@@ -224,7 +224,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
                       }
                       [self.captureSession stopRunning];
 
-#if TARGET_OS_IPHONE
+#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST
                       dispatch_async(dispatch_get_main_queue(), ^{
                         if (self->_generatingOrientationNotifications) {
                           [[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
@@ -241,7 +241,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
 
 #pragma mark iOS notifications
 
-#if TARGET_OS_IPHONE
+#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST
 - (void)deviceOrientationDidChange:(NSNotification *)notification {
   [self updateOrientation];
 }
@@ -264,7 +264,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
     return;
   }
 
-#if TARGET_OS_IPHONE
+#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST
   // Default to portrait orientation on iPhone.
   BOOL usingFrontCamera = NO;
   // Check the image's EXIF for the camera the image came from as the image could have been
@@ -314,7 +314,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
 - (void)captureOutput:(AVCaptureOutput *)captureOutput
     didDropSampleBuffer:(CMSampleBufferRef)sampleBuffer
          fromConnection:(AVCaptureConnection *)connection {
-#if TARGET_OS_IPHONE
+#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST
   CFStringRef droppedReason =
       CMGetAttachment(sampleBuffer, kCMSampleBufferAttachmentKey_DroppedFrameReason, nil);
 #else
@@ -328,7 +328,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
 
 - (void)handleCaptureSessionInterruption:(NSNotification *)notification {
   NSString *reasonString = nil;
-#if TARGET_OS_IPHONE
+#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST
   NSNumber *reason = notification.userInfo[AVCaptureSessionInterruptionReasonKey];
   if (reason) {
     switch (reason.intValue) {
@@ -360,7 +360,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
 
   [RTC_OBJC_TYPE(RTCDispatcher) dispatchAsyncOnType:RTCDispatcherTypeCaptureSession
                                               block:^{
-#if TARGET_OS_IPHONE
+#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST
                                                 if (error.code == AVErrorMediaServicesWereReset) {
                                                   [self handleNonFatalError];
                                                 } else {
@@ -411,7 +411,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
                                               }];
 }
 
-#if TARGET_OS_IPHONE
+#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST
 
 #pragma mark - UIApplication notifications
 
@@ -547,7 +547,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
   [_captureSession commitConfiguration];
 }
 
-#if TARGET_OS_IPHONE
+#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST
 - (void)updateOrientation {
   NSAssert([RTC_OBJC_TYPE(RTCDispatcher) isOnQueueForType:RTCDispatcherTypeMain],
            @"statusBarOrientation must be called on the main queue.");
