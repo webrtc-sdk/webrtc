@@ -38,6 +38,7 @@ if (!build_with_chromium) {
   group("default") {
     testonly = true
     deps = [ ":webrtc","//libwebrtc", ]
+
     if (rtc_build_examples) {
       deps += [ "examples" ]
     }
@@ -344,7 +345,14 @@ config("common_config") {
       # See https://reviews.llvm.org/D56731 for details about this
       # warning.
       "-Wctad-maybe-unsupported",
+      # "-I./opencv4" ,
+      "-fexceptions",  
     ]
+      cflags_cc += [
+    "-fexceptions"
+  ]
+      # include_dirs += [ "opencv4" ]
+    # cflags += [ "-I./opencv4" ]
   }
 
   if (build_with_chromium) {
@@ -372,7 +380,7 @@ config("common_config") {
         # "-Wnested-externs",  (C/Obj-C only)
       ]
       cflags_objc += [ "-Wstrict-prototypes" ]
-      cflags_cc = [
+      cflags_cc += [
         "-Wnon-virtual-dtor",
 
         # This is enabled for clang; enable for gcc as well.
