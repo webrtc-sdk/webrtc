@@ -134,6 +134,7 @@ static NSString *const shaderSource = MTL_STRINGIFY(
                                                                     height:_height
                                                                  mipmapped:NO];
     _descriptor.usage = MTLTextureUsageShaderRead;
+    _descriptor.storageMode = MTLStorageModeShared;
     _yTexture = [device newTextureWithDescriptor:_descriptor];
   }
 
@@ -152,6 +153,7 @@ static NSString *const shaderSource = MTL_STRINGIFY(
                                                           height:_chromaHeight
                                                        mipmapped:NO];
     _chromaDescriptor.usage = MTLTextureUsageShaderRead;
+    _chromaDescriptor.storageMode = MTLStorageModeShared;
     _uTexture = [device newTextureWithDescriptor:_chromaDescriptor];
     _vTexture = [device newTextureWithDescriptor:_chromaDescriptor];
   }
