@@ -80,6 +80,8 @@ class WebRtcAudioTrack {
   private final @Nullable AudioTrackStateCallback stateCallback;
   private final @Nullable PlaybackSamplesReadyCallback audioSamplesReadyCallback;
 
+  private boolean checkPlayState = true;
+
   /**
    * Audio thread which keeps calling AudioTrack.write() to stream audio.
    * Data is periodically acquired from the native WebRTC layer using the
@@ -99,7 +101,10 @@ class WebRtcAudioTrack {
     public void run() {
       Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
       Logging.d(TAG, "AudioTrackThread" + WebRtcAudioUtils.getThreadInfo());
-      assertTrue(audioTrack.getPlayState() == AudioTrack.PLAYSTATE_PLAYING);
+      
+      if (checkPlayState) {
+        assertTrue(audioTrack.getPlayState() == AudioTrack.PLAYSTATE_PLAYING);
+      }
 
       // Audio playout has started and the client is informed about it.
       doAudioTrackStateCallback(AUDIO_TRACK_START);
