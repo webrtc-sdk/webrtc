@@ -128,7 +128,9 @@ void AudioState::RemoveSendingStream(webrtc::AudioSendStream* stream) {
   RTC_DCHECK_EQ(1, count);
   UpdateAudioTransportWithSendingStreams();
 
-  if (!ShouldRecord()) {
+  bool should_record = ShouldRecord();
+  RTC_LOG(LS_INFO) << "RemoveSendingStream: should_record = " << should_record;
+  if (!should_record) {
     config_.audio_device_module->StopRecording();
   }
 }
@@ -222,6 +224,7 @@ void AudioState::OnMuteStreamChanged() {
   auto* adm = config_.audio_device_module.get();
   bool should_record = ShouldRecord();
 
+  RTC_LOG(LS_INFO) << "OnMuteStreamChanged: should_record = " << should_record;
   if (should_record && !adm->Recording()) {
     if (adm->InitRecording() == 0) {
       adm->StartRecording();
@@ -232,8 +235,10 @@ void AudioState::OnMuteStreamChanged() {
 }
 
 bool AudioState::ShouldRecord() {
+  RTC_LOG(LS_INFO) << "ShouldRecord";
   // no streams to send
   if (sending_streams_.empty()) {
+    RTC_LOG(LS_INFO) << "ShouldRecord: send stream = empty";
     return false;
   }
 
@@ -246,6 +251,7 @@ bool AudioState::ShouldRecord() {
     }
   }
 
+  RTC_LOG(LS_INFO) << "ShouldRecord: " << muted_count << " muted, " << stream_count << " sending";
   return muted_count != stream_count;
 }
 
