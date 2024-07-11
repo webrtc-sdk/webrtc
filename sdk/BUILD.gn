@@ -172,11 +172,15 @@ if (is_ios || is_mac) {
 
     if (is_ios) {
       sources += [
-        "objc/helpers/RTCCameraPreviewView.h",
-        "objc/helpers/RTCCameraPreviewView.m",
         "objc/helpers/UIDevice+RTCDevice.h",
         "objc/helpers/UIDevice+RTCDevice.mm",
       ]
+      if( target_environment != "xrdevice" && target_environment != "xrsimulator") {
+          sources += [
+            "objc/helpers/RTCCameraPreviewView.h",
+            "objc/helpers/RTCCameraPreviewView.m",
+          ]
+      }
       frameworks += [ "UIKit.framework" ]
     }
   }
@@ -274,11 +278,14 @@ if (is_ios || is_mac) {
         deps = [
           ":base_objc",
           ":helpers_objc",
-          ":metal_objc",
           ":opengl_objc",
           ":videocapture_objc",
           ":videoframebuffer_objc",
         ]
+
+        if( target_environment != "xrdevice" && target_environment != "xrsimulator") {
+          deps += [ ":metal_objc" ]
+        }
       }
 
       rtc_library("audio_device") {
@@ -625,7 +632,7 @@ if (is_ios || is_mac) {
         "Metal.framework",
         "MetalKit.framework",
       ]
-      if (is_ios || is_mac) {
+      if ((is_ios || is_mac) && !(target_environment == "xrsimulator" || target_environment == "xrdevice")) {
         sources += [
           "objc/components/renderer/metal/RTCMTLVideoView.h",
           "objc/components/renderer/metal/RTCMTLVideoView.m",
@@ -664,12 +671,15 @@ if (is_ios || is_mac) {
     rtc_library("videocapture_objc") {
       visibility = [ "*" ]
       allow_poison = [ "audio_codecs" ]  # TODO(bugs.webrtc.org/8396): Remove.
-      sources = [
-        "objc/components/capturer/RTCCameraVideoCapturer.h",
-        "objc/components/capturer/RTCCameraVideoCapturer.m",
-        "objc/components/capturer/RTCFileVideoCapturer.h",
-        "objc/components/capturer/RTCFileVideoCapturer.m",
-      ]
+      sources = []
+      if( target_environment != "xrdevice" && target_environment != "xrsimulator") {
+        sources += [
+          "objc/components/capturer/RTCCameraVideoCapturer.h",
+          "objc/components/capturer/RTCCameraVideoCapturer.m",
+          "objc/components/capturer/RTCFileVideoCapturer.h",
+          "objc/components/capturer/RTCFileVideoCapturer.m",
+        ]
+      }
       frameworks = [
         "AVFoundation.framework",
         "CoreVideo.framework",
@@ -1242,7 +1252,6 @@ if (is_ios || is_mac) {
             ":framework_objc",
             ":helpers_objc",
             ":mediaconstraints_objc",
-            ":metal_objc",
             ":native_api",
             ":native_api_audio_device_module",
             ":native_video",
@@ -1275,7 +1284,11 @@ if (is_ios || is_mac) {
             "../system_wrappers",
             "//third_party/libyuv",
           ]
-
+          if( target_environment != "xrdevice" && target_environment != "xrsimulator") {
+            deps += [
+              ":metal_objc",
+            ]
+          }
           if (rtc_ios_use_opengl_rendering) {
             deps += [ ":opengl_objc" ]
           }
@@ -1472,7 +1485,6 @@ if (is_ios || is_mac) {
           ":audio_objc",
           ":base_objc",
           ":default_codec_factory_objc",
-          ":metal_objc",
           ":native_api",
           ":native_video",
           ":peerconnectionfactory_base_objc",
@@ -1481,6 +1493,9 @@ if (is_ios || is_mac) {
           ":videotoolbox_objc",
           ":darwin_privacy_info",
         ]
+        if( target_environment != "xrdevice" && target_environment != "xrsimulator") {
+          deps += [ ":metal_objc" ]
+        }
         if (!build_with_chromium) {
           deps += [
             ":callback_logger_objc",
@@ -1626,7 +1641,6 @@ if (is_ios || is_mac) {
         deps = [
           ":base_objc",
           ":default_codec_factory_objc",
-          ":metal_objc",
           ":native_api",
           ":native_video",
           ":peerconnectionfactory_base_objc",
@@ -1636,6 +1650,9 @@ if (is_ios || is_mac) {
           ":videotoolbox_objc",
           ":darwin_privacy_info",
         ]
+        if( target_environment != "xrdevice" && target_environment != "xrsimulator") {
+          deps += [ ":metal_objc" ]
+        }
         if (!build_with_chromium) {
           deps += [
             ":callback_logger_objc",

@@ -206,7 +206,7 @@ void decompressionOutputCallback(void *decoderRef,
   NSDictionary *attributes = @{
 #if defined(WEBRTC_IOS) && (TARGET_OS_MACCATALYST || TARGET_OS_SIMULATOR)
     (NSString *)kCVPixelBufferMetalCompatibilityKey : @(YES),
-#elif defined(WEBRTC_IOS)
+#elif defined(WEBRTC_IOS) && !defined(TARGET_OS_VISION)
     (NSString *)kCVPixelBufferOpenGLESCompatibilityKey : @(YES),
 #elif defined(WEBRTC_MAC) && !defined(WEBRTC_ARCH_ARM64)
     (NSString *)kCVPixelBufferOpenGLCompatibilityKey : @(YES),

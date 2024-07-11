@@ -683,9 +683,9 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
   // Set source image buffer attributes. These attributes will be present on
   // buffers retrieved from the encoder's pixel buffer pool.
   NSDictionary *sourceAttributes = @{
-#if defined(WEBRTC_IOS) && (TARGET_OS_MACCATALYST || TARGET_OS_SIMULATOR)
+#if defined(WEBRTC_IOS) && (TARGET_OS_MACCATALYST || TARGET_OS_SIMULATOR || TARGET_OS_VISION)
     (NSString *)kCVPixelBufferMetalCompatibilityKey : @(YES),
-#elif defined(WEBRTC_IOS)
+#elif defined(WEBRTC_IOS) && !defined(TARGET_OS_VISION)
     (NSString *)kCVPixelBufferOpenGLESCompatibilityKey : @(YES),
 #elif defined(WEBRTC_MAC) && !defined(WEBRTC_ARCH_ARM64)
     (NSString *)kCVPixelBufferOpenGLCompatibilityKey : @(YES),
