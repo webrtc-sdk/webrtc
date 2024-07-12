@@ -74,7 +74,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
       return nil;
     }
     NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
-#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST
+#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST && !TARGET_OS_VISION
     _orientation = UIInterfaceOrientationPortrait;
     _rotation = RTCVideoRotation_90;
     [center addObserver:self
@@ -117,6 +117,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
   [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
+#ifndef TARGET_OS_VISION
 + (NSArray<AVCaptureDevice *> *)captureDevices {
   AVCaptureDeviceDiscoverySession *session = [AVCaptureDeviceDiscoverySession
       discoverySessionWithDeviceTypes:@[ AVCaptureDeviceTypeBuiltInWideAngleCamera ]
@@ -124,6 +125,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
                              position:AVCaptureDevicePositionUnspecified];
   return session.devices;
 }
+#endif
 
 + (NSArray<AVCaptureDeviceFormat *> *)supportedFormatsForDevice:(AVCaptureDevice *)device {
   // Support opening the device in any format. We make sure it's converted to a format we
@@ -131,6 +133,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
   return device.formats;
 }
 
+#ifndef TARGET_OS_VISION
 + (CGFloat)defaultZoomFactorForDeviceType:(AVCaptureDeviceType)deviceType {
   // AVCaptureDeviceTypeBuiltInTripleCamera, Virtual, switchOver: [2, 6], default: 2
   // AVCaptureDeviceTypeBuiltInDualCamera, Virtual, switchOver: [3], default: 1
@@ -150,6 +153,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
 
   return 1.0;
 }
+#endif
 
 - (FourCharCode)preferredOutputPixelFormat {
   return _preferredOutputPixelFormat;
@@ -175,7 +179,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
                     block:^{
                       RTCLogInfo("startCaptureWithDevice %@ @ %ld fps", format, (long)fps);
 
-#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST
+#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST && !TARGET_OS_VISION
                       dispatch_async(dispatch_get_main_queue(), ^{
                         if (!self->_generatingOrientationNotifications) {
                           [[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
@@ -224,7 +228,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
                       }
                       [self.captureSession stopRunning];
 
-#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST
+#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST && !TARGET_OS_VISION
                       dispatch_async(dispatch_get_main_queue(), ^{
                         if (self->_generatingOrientationNotifications) {
                           [[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
@@ -241,7 +245,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
 
 #pragma mark iOS notifications
 
-#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST
+#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST && !TARGET_OS_VISION
 - (void)deviceOrientationDidChange:(NSNotification *)notification {
   [self updateOrientation];
 }
@@ -264,7 +268,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
     return;
   }
 
-#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST
+#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST && !TARGET_OS_VISION
   // Default to portrait orientation on iPhone.
   BOOL usingFrontCamera = NO;
   // Check the image's EXIF for the camera the image came from as the image could have been
@@ -442,7 +446,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
 - (BOOL)setupCaptureSession:(AVCaptureSession *)captureSession {
   NSAssert(_captureSession == nil, @"Setup capture session called twice.");
   _captureSession = captureSession;
-#if defined(WEBRTC_IOS)
+#if defined(WEBRTC_IOS) && !TARGET_OS_VISION
   _captureSession.sessionPreset = AVCaptureSessionPresetInputPriority;
   _captureSession.usesApplicationAudioSession = NO;
 #endif
@@ -526,6 +530,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
 }
 
 - (void)reconfigureCaptureSessionInput {
+#if !TARGET_OS_VISION
   NSAssert([RTC_OBJC_TYPE(RTCDispatcher) isOnQueueForType:RTCDispatcherTypeCaptureSession],
            @"reconfigureCaptureSessionInput must be called on the capture queue.");
   NSError *error = nil;
@@ -545,9 +550,10 @@ const int64_t kNanosecondsPerSecond = 1000000000;
     RTCLogError(@"Cannot add camera as an input to the session.");
   }
   [_captureSession commitConfiguration];
+#endif
 }
 
-#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST
+#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST && !TARGET_OS_VISION
 - (void)updateOrientation {
   NSAssert([RTC_OBJC_TYPE(RTCDispatcher) isOnQueueForType:RTCDispatcherTypeMain],
            @"statusBarOrientation must be called on the main queue.");

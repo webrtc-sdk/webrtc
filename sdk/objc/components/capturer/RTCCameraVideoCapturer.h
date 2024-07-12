@@ -26,11 +26,15 @@ NS_EXTENSION_UNAVAILABLE_IOS("Camera not available in app extensions.")
 @property(readonly, nonatomic) AVCaptureSession *captureSession;
 
 // Returns list of available capture devices that support video capture.
+#ifndef TARGET_OS_VISION
 + (NSArray<AVCaptureDevice *> *)captureDevices;
+#endif
 // Returns list of formats that are supported by this class for this device.
 + (NSArray<AVCaptureDeviceFormat *> *)supportedFormatsForDevice:(AVCaptureDevice *)device;
 
+#ifndef TARGET_OS_VISION
 + (CGFloat)defaultZoomFactorForDeviceType:(AVCaptureDeviceType)deviceType;
+#endif
 
 // Returns the most efficient supported output pixel format for this capturer.
 - (FourCharCode)preferredOutputPixelFormat;
