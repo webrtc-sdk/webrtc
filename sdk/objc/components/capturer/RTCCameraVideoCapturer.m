@@ -117,15 +117,18 @@ const int64_t kNanosecondsPerSecond = 1000000000;
   [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
-#ifndef TARGET_OS_VISION
 + (NSArray<AVCaptureDevice *> *)captureDevices {
+#if TARGET_OS_VISION
+  // Simply return an empty array.
+  return [NSArray array];
+#else
   AVCaptureDeviceDiscoverySession *session = [AVCaptureDeviceDiscoverySession
       discoverySessionWithDeviceTypes:@[ AVCaptureDeviceTypeBuiltInWideAngleCamera ]
                             mediaType:AVMediaTypeVideo
                              position:AVCaptureDevicePositionUnspecified];
   return session.devices;
-}
 #endif
+}
 
 + (NSArray<AVCaptureDeviceFormat *> *)supportedFormatsForDevice:(AVCaptureDevice *)device {
   // Support opening the device in any format. We make sure it's converted to a format we
@@ -133,7 +136,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
   return device.formats;
 }
 
-#ifndef TARGET_OS_VISION
+#if !TARGET_OS_VISION
 + (CGFloat)defaultZoomFactorForDeviceType:(AVCaptureDeviceType)deviceType {
   // AVCaptureDeviceTypeBuiltInTripleCamera, Virtual, switchOver: [2, 6], default: 2
   // AVCaptureDeviceTypeBuiltInDualCamera, Virtual, switchOver: [3], default: 1
@@ -523,7 +526,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
   NSAssert([RTC_OBJC_TYPE(RTCDispatcher) isOnQueueForType:RTCDispatcherTypeCaptureSession],
            @"updateZoomFactor must be called on the capture queue.");
 
-#if TARGET_OS_IOS || TARGET_OS_TV
+#if (TARGET_OS_IOS || TARGET_OS_TV) && !TARGET_OS_VISION
   CGFloat videoZoomFactor = [[self class] defaultZoomFactorForDeviceType:_currentDevice.deviceType];
   [_currentDevice setVideoZoomFactor:videoZoomFactor];
 #endif
