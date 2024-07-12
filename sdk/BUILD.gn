@@ -175,7 +175,7 @@ if (is_ios || is_mac) {
         "objc/helpers/UIDevice+RTCDevice.h",
         "objc/helpers/UIDevice+RTCDevice.mm",
       ]
-      if( target_environment != "xrdevice" && target_environment != "xrsimulator") {
+      if (target_environment != "xrdevice" && target_environment != "xrsimulator") {
           sources += [
             "objc/helpers/RTCCameraPreviewView.h",
             "objc/helpers/RTCCameraPreviewView.m",
@@ -283,7 +283,7 @@ if (is_ios || is_mac) {
           ":videoframebuffer_objc",
         ]
 
-        if( target_environment != "xrdevice" && target_environment != "xrsimulator") {
+        if (target_environment != "xrdevice" && target_environment != "xrsimulator") {
           deps += [ ":metal_objc" ]
         }
       }
@@ -698,7 +698,7 @@ if (is_ios || is_mac) {
         "../rtc_base/system:gcd_helpers",
       ]
     }
-    
+
     rtc_library("desktopcapture_objc") {
       visibility = [ "*" ]
       sources = [
@@ -716,7 +716,7 @@ if (is_ios || is_mac) {
         "objc/native/src/objc_desktop_media_list.h",
         "objc/native/src/objc_desktop_media_list.mm",
       ]
-      frameworks = [ 
+      frameworks = [
         "AppKit.framework",
       ]
 
@@ -890,7 +890,7 @@ if (is_ios || is_mac) {
         "../media:rtc_simulcast_encoder_adapter",
       ]
     }
-  
+
     rtc_library("mediaconstraints_objc") {
       configs += [ "..:no_global_constructors" ]
       sources = [
