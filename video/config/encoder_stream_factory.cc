@@ -363,7 +363,7 @@ EncoderStreamFactory::CreateSimulcastOrConferenceModeScreenshareStreams(
     // scaling factor is applied multiple times
 
     size_t simulcast_layer_index =
-        i + std::max(1, encoder_config.simulcast_layers.size() - layers.size());
+        i + encoder_config.simulcast_layers.size() - layers.size();
     auto& simulcast_layer = encoder_config.simulcast_layers[simulcast_layer_i];
     layers[i].active = simulcast_layer.active;
     layers[i].scalability_mode = simulcast_layer.scalability_mode;
