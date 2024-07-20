@@ -675,7 +675,7 @@ if (is_ios || is_mac) {
         "objc/components/capturer/RTCCameraVideoCapturer.h",
         "objc/components/capturer/RTCCameraVideoCapturer.m",
       ]
-      if( target_environment != "xrdevice" && target_environment != "xrsimulator") {
+      if (target_environment != "xrdevice" && target_environment != "xrsimulator") {
         sources += [
           "objc/components/capturer/RTCFileVideoCapturer.h",
           "objc/components/capturer/RTCFileVideoCapturer.m",
@@ -731,7 +731,7 @@ if (is_ios || is_mac) {
         "../rtc_base/system:gcd_helpers",
         "../modules/desktop_capture",
       ]
-      if(is_mac) {
+      if (is_mac) {
         deps += [ "//third_party:jpeg", ]
       }
     }
@@ -1285,7 +1285,7 @@ if (is_ios || is_mac) {
             "../system_wrappers",
             "//third_party/libyuv",
           ]
-          if( target_environment != "xrdevice" && target_environment != "xrsimulator") {
+          if (target_environment != "xrdevice" && target_environment != "xrsimulator") {
             deps += [
               ":metal_objc",
             ]
@@ -1389,7 +1389,6 @@ if (is_ios || is_mac) {
           "objc/components/capturer/RTCCameraVideoCapturer.h",
           "objc/components/capturer/RTCFileVideoCapturer.h",
           "objc/components/network/RTCNetworkMonitor.h",
-          "objc/components/renderer/metal/RTCMTLVideoView.h",
           "objc/components/renderer/opengl/RTCEAGLVideoView.h",
           "objc/components/renderer/opengl/RTCVideoViewShading.h",
           "objc/components/video_codec/RTCCodecSpecificInfoH264.h",
@@ -1401,7 +1400,6 @@ if (is_ios || is_mac) {
           "objc/components/video_codec/RTCVideoEncoderFactoryH264.h",
           "objc/components/video_codec/RTCVideoEncoderH264.h",
           "objc/components/video_frame_buffer/RTCCVPixelBuffer.h",
-          "objc/helpers/RTCCameraPreviewView.h",
           "objc/helpers/RTCDispatcher.h",
           "objc/helpers/RTCYUVHelper.h",
           "objc/helpers/UIDevice+RTCDevice.h",
@@ -1466,6 +1464,13 @@ if (is_ios || is_mac) {
           "objc/components/audio/RTCAudioCustomProcessingDelegate.h",
         ]
 
+        if (target_environment != "xrdevice" && target_environment != "xrsimulator") {
+          common_objc_headers += [
+            "objc/helpers/RTCCameraPreviewView.h",
+            "objc/components/renderer/metal/RTCMTLVideoView.h",
+          ]
+        }
+
         if (!build_with_chromium) {
           common_objc_headers += [
             "objc/api/logging/RTCCallbackLogger.h",
@@ -1494,7 +1499,7 @@ if (is_ios || is_mac) {
           ":videotoolbox_objc",
           ":darwin_privacy_info",
         ]
-        if( target_environment != "xrdevice" && target_environment != "xrsimulator") {
+        if (target_environment != "xrdevice" && target_environment != "xrsimulator") {
           deps += [ ":metal_objc" ]
         }
         if (!build_with_chromium) {
@@ -1651,7 +1656,7 @@ if (is_ios || is_mac) {
           ":videotoolbox_objc",
           ":darwin_privacy_info",
         ]
-        if( target_environment != "xrdevice" && target_environment != "xrsimulator") {
+        if (target_environment != "xrdevice" && target_environment != "xrsimulator") {
           deps += [ ":metal_objc" ]
         }
         if (!build_with_chromium) {
