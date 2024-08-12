@@ -533,12 +533,11 @@ const int64_t kNanosecondsPerSecond = 1000000000;
 }
 
 - (void)reconfigureCaptureSessionInput {
-#if !TARGET_OS_VISION
   NSAssert([RTC_OBJC_TYPE(RTCDispatcher) isOnQueueForType:RTCDispatcherTypeCaptureSession],
            @"reconfigureCaptureSessionInput must be called on the capture queue.");
   NSError *error = nil;
-  AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:_currentDevice
-                                                                      error:&error];
+  AVCaptureDeviceInput *input = [[AVCaptureDeviceInput alloc] initWithDevice:_currentDevice
+                                                                       error:&error];
   if (!input) {
     RTCLogError(@"Failed to create front camera input: %@", error.localizedDescription);
     return;
@@ -553,7 +552,6 @@ const int64_t kNanosecondsPerSecond = 1000000000;
     RTCLogError(@"Cannot add camera as an input to the session.");
   }
   [_captureSession commitConfiguration];
-#endif
 }
 
 #if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST && !TARGET_OS_VISION
