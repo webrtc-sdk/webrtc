@@ -35,6 +35,13 @@ NS_EXTENSION_UNAVAILABLE_IOS("Camera not available in app extensions.")
 + (CGFloat)defaultZoomFactorForDeviceType:(AVCaptureDeviceType)deviceType;
 #endif
 
+- (instancetype)initWithDelegate:
+    (nullable __weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)delegate;
+
+- (instancetype)initWithDelegate:
+                    (nullable __weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)delegate
+                  captureSession:(AVCaptureSession *)captureSession;
+
 // Returns the most efficient supported output pixel format for this capturer.
 - (FourCharCode)preferredOutputPixelFormat;
 
