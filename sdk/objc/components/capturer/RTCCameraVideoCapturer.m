@@ -15,6 +15,13 @@
 #import "base/RTCVideoFrameBuffer.h"
 #import "components/video_frame_buffer/RTCCVPixelBuffer.h"
 
+// AVCaptureMultiCamSession iOS 13.0+, iPadOS 13.0+, Mac Catalyst 14.0+, tvOS 17.0+
+#define TARGET_MULTICAM_CAPABLE (TARGET_OS_IPHONE && !TARGET_OS_VISION)
+
+// iOS 2.0+, iPadOS 2.0+, Mac Catalyst 13.0+
+#define TARGET_WATCH_DEVICE_ROTATION \
+  (TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST && !TARGET_OS_VISION)
+
 #if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST
 #import "helpers/UIDevice+RTCDevice.h"
 #endif
@@ -45,6 +52,10 @@ const int64_t kNanosecondsPerSecond = 1000000000;
   UIInterfaceOrientation _orientation;
   BOOL _generatingOrientationNotifications;
 #endif
+
+#if TARGET_MULTICAM_CAPABLE
+  AVCaptureConnection *_captureConnection;
+#endif
 }
 
 @synthesize frameQueue = _frameQueue;
@@ -55,11 +66,23 @@ const int64_t kNanosecondsPerSecond = 1000000000;
 @synthesize willBeRunning = _willBeRunning;
 
 - (instancetype)init {
-  return [self initWithDelegate:nil captureSession:[[AVCaptureSession alloc] init]];
+#if TARGET_MULTICAM_CAPABLE
+  AVCaptureSession *captureSession = [[AVCaptureMultiCamSession alloc] init];
+#else
+  AVCaptureSession *captureSession = [[AVCaptureSession alloc] init];
+#endif
+
+  return [self initWithDelegate:nil captureSession:captureSession];
 }
 
 - (instancetype)initWithDelegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)delegate {
-  return [self initWithDelegate:delegate captureSession:[[AVCaptureSession alloc] init]];
+#if TARGET_MULTICAM_CAPABLE
+  AVCaptureSession *captureSession = [[AVCaptureMultiCamSession alloc] init];
+#else
+  AVCaptureSession *captureSession = [[AVCaptureSession alloc] init];
+#endif
+
+  return [self initWithDelegate:delegate captureSession:captureSession];
 }
 
 // This initializer is used for testing.
@@ -182,7 +205,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
                     block:^{
                       RTCLogInfo("startCaptureWithDevice %@ @ %ld fps", format, (long)fps);
 
-#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST && !TARGET_OS_VISION
+#if TARGET_WATCH_DEVICE_ROTATION
                       dispatch_async(dispatch_get_main_queue(), ^{
                         if (!self->_generatingOrientationNotifications) {
                           [[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
@@ -225,13 +248,23 @@ const int64_t kNanosecondsPerSecond = 1000000000;
       dispatchAsyncOnType:RTCDispatcherTypeCaptureSession
                     block:^{
                       RTCLogInfo("Stop");
-                      self.currentDevice = nil;
+
+#if TARGET_MULTICAM_CAPABLE
+                      [self.captureSession removeConnection:self->_captureConnection];
+                      self->_captureConnection = nil;
+#endif
+
                       for (AVCaptureDeviceInput *oldInput in [self.captureSession.inputs copy]) {
-                        [self.captureSession removeInput:oldInput];
+                        // Remove any old input with same device.
+                        if ([self->_currentDevice isEqual:oldInput.device]) {
+                          [self.captureSession removeInput:oldInput];
+                        }
                       }
+                      self.currentDevice = nil;
+
                       [self.captureSession stopRunning];
 
-#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST && !TARGET_OS_VISION
+#if TARGET_WATCH_DEVICE_ROTATION
                       dispatch_async(dispatch_get_main_queue(), ^{
                         if (self->_generatingOrientationNotifications) {
                           [[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
@@ -248,7 +281,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
 
 #pragma mark iOS notifications
 
-#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST && !TARGET_OS_VISION
+#if TARGET_WATCH_DEVICE_ROTATION
 - (void)deviceOrientationDidChange:(NSNotification *)notification {
   [self updateOrientation];
 }
@@ -271,7 +304,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
     return;
   }
 
-#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST && !TARGET_OS_VISION
+#if TARGET_WATCH_DEVICE_ROTATION
   // Default to portrait orientation on iPhone.
   BOOL usingFrontCamera = NO;
   // Check the image's EXIF for the camera the image came from as the image could have been
@@ -433,7 +466,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
                     }];
 }
 
-#endif  // TARGET_OS_IPHONE
+#endif
 
 #pragma mark - Private
 
@@ -459,7 +492,12 @@ const int64_t kNanosecondsPerSecond = 1000000000;
     RTCLogError(@"Video data output unsupported.");
     return NO;
   }
+
+#if TARGET_MULTICAM_CAPABLE
+  [_captureSession addOutputWithNoConnections:_videoDataOutput];
+#else
   [_captureSession addOutput:_videoDataOutput];
+#endif
 
   return YES;
 }
@@ -544,17 +582,32 @@ const int64_t kNanosecondsPerSecond = 1000000000;
   }
   [_captureSession beginConfiguration];
   for (AVCaptureDeviceInput *oldInput in [_captureSession.inputs copy]) {
-    [_captureSession removeInput:oldInput];
+    // Remove any old input with same device.
+    if ([_currentDevice isEqual:oldInput.device]) {
+      [_captureSession removeInput:oldInput];
+    }
   }
+
   if ([_captureSession canAddInput:input]) {
+#if TARGET_MULTICAM_CAPABLE
+    [_captureSession addInputWithNoConnections:input];
+
+    AVCaptureInputPort *videoPort = input.ports.firstObject;
+    _captureConnection = [AVCaptureConnection connectionWithInputPorts:@[ videoPort ]
+                                                                output:_videoDataOutput];
+
+    [_captureSession addConnection:_captureConnection];
+#else
     [_captureSession addInput:input];
+#endif
   } else {
     RTCLogError(@"Cannot add camera as an input to the session.");
   }
+
   [_captureSession commitConfiguration];
 }
 
-#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST && !TARGET_OS_VISION
+#if TARGET_WATCH_DEVICE_ROTATION
 - (void)updateOrientation {
   NSAssert([RTC_OBJC_TYPE(RTCDispatcher) isOnQueueForType:RTCDispatcherTypeMain],
            @"statusBarOrientation must be called on the main queue.");
