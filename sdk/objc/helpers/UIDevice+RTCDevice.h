@@ -10,7 +10,7 @@
 
 #import <UIKit/UIKit.h>
 
-@interface UIDevice (RTCDevice)
+@interface UIDevice (LKRTCDevice)
 
 + (NSString *)machineName;
 
