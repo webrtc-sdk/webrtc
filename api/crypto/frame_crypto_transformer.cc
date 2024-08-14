@@ -205,16 +205,17 @@ int AesGcmEncryptDecrypt(EncryptOrDecrypt mode,
                          rtc::ArrayView<uint8_t> additional_data,
                          const EVP_AEAD* aead_alg,
                          std::vector<uint8_t>* buffer) {
-  bssl::ScopedEVP_AEAD_CTX ctx;
-
+  EVP_AEAD_CTX ctx;
+  EVP_AEAD_CTX_zero(&ctx);
   if (!aead_alg) {
     RTC_LOG(LS_ERROR) << "Invalid AES-GCM key size.";
     return ErrorUnexpected;
   }
 
-  if (!EVP_AEAD_CTX_init(ctx.get(), aead_alg, raw_key.data(), raw_key.size(),
+  if (!EVP_AEAD_CTX_init(&ctx, aead_alg, raw_key.data(), raw_key.size(),
                          tag_length_bytes, nullptr)) {
     RTC_LOG(LS_ERROR) << "Failed to initialize AES-GCM context.";
+    EVP_AEAD_CTX_cleanup(&ctx);
     return OperationError;
   }
 
@@ -224,29 +225,31 @@ int AesGcmEncryptDecrypt(EncryptOrDecrypt mode,
   if (mode == EncryptOrDecrypt::kDecrypt) {
     if (data.size() < tag_length_bytes) {
       RTC_LOG(LS_ERROR) << "Data too small for AES-GCM tag.";
+      EVP_AEAD_CTX_cleanup(&ctx);
       return ErrorDataTooSmall;
     }
 
     buffer->resize(data.size() - tag_length_bytes);
 
-    ok = EVP_AEAD_CTX_open(ctx.get(), buffer->data(), &len, buffer->size(),
+    ok = EVP_AEAD_CTX_open(&ctx, buffer->data(), &len, buffer->size(),
                            iv.data(), iv.size(), data.data(), data.size(),
                            additional_data.data(), additional_data.size());
   } else {
     buffer->resize(data.size() + EVP_AEAD_max_overhead(aead_alg));
 
-    ok = EVP_AEAD_CTX_seal(ctx.get(), buffer->data(), &len, buffer->size(),
+    ok = EVP_AEAD_CTX_seal(&ctx, buffer->data(), &len, buffer->size(),
                            iv.data(), iv.size(), data.data(), data.size(),
                            additional_data.data(), additional_data.size());
   }
 
   if (!ok) {
     RTC_LOG(LS_WARNING) << "Failed to perform AES-GCM operation.";
+    EVP_AEAD_CTX_cleanup(&ctx);
     return OperationError;
   }
 
   buffer->resize(len);
-
+  EVP_AEAD_CTX_cleanup(&ctx);
   return Success;
 }
 
@@ -260,11 +263,13 @@ int AesCbcEncryptDecrypt(EncryptOrDecrypt mode,
   RTC_DCHECK_EQ(EVP_CIPHER_iv_length(cipher), iv.size());
   RTC_DCHECK_EQ(EVP_CIPHER_key_length(cipher), raw_key.size());
 
-  bssl::ScopedEVP_CIPHER_CTX ctx;
-  if (!EVP_CipherInit_ex(ctx.get(), cipher, nullptr,
+  EVP_CIPHER_CTX ctx;
+  EVP_CIPHER_CTX_init(&ctx);
+  if (!EVP_CipherInit_ex(&ctx, cipher, nullptr,
                          reinterpret_cast<const uint8_t*>(raw_key.data()),
                          iv.data(),
                          mode == EncryptOrDecrypt::kEncrypt ? 1 : 0)) {
+    EVP_CIPHER_CTX_cleanup(&ctx);
     return OperationError;
   }
 
@@ -272,18 +277,22 @@ int AesCbcEncryptDecrypt(EncryptOrDecrypt mode,
   output->resize(input.size() +
                  (mode == EncryptOrDecrypt::kEncrypt ? iv.size() : 0));
   int out_len;
-  if (!EVP_CipherUpdate(ctx.get(), output->data(), &out_len, input.data(),
-                        input.size()))
+  if (!EVP_CipherUpdate(&ctx, output->data(), &out_len, input.data(),
+                        input.size())) {
+    EVP_CIPHER_CTX_cleanup(&ctx);
     return OperationError;
+  }
 
   // Write out the final block plus padding (if any) to the end of the data
   // just written.
   int tail_len;
-  if (!EVP_CipherFinal_ex(ctx.get(), output->data() + out_len, &tail_len))
+  if (!EVP_CipherFinal_ex(&ctx, output->data() + out_len, &tail_len)){
+    EVP_CIPHER_CTX_cleanup(&ctx);
     return OperationError;
-
+  }
   out_len += tail_len;
   RTC_CHECK_LE(out_len, static_cast<int>(output->size()));
+  EVP_CIPHER_CTX_cleanup(&ctx);
   return Success;
 }
 
@@ -384,8 +393,9 @@ void FrameCryptorTransformer::encryptFrame(
 
   rtc::ArrayView<const uint8_t> date_in = frame->GetData();
   if (date_in.size() == 0 || !enabled_cryption) {
-    RTC_LOG(LS_WARNING) << "FrameCryptorTransformer::encryptFrame() "
-                           "date_in.size() == 0 || enabled_cryption == false";
+    RTC_LOG(LS_WARNING) << "FrameCryptorTransformer::encryptFrame() skipped, "
+                        << "date_in.size() == " << date_in.size()
+                        << " || enabled_cryption == " << enabled_cryption ? "true" : "false";
     if(key_provider_->options().discard_frame_when_cryptor_not_ready) {
       return;
     }
