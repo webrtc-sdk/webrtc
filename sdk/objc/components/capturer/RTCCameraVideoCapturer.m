@@ -58,6 +58,11 @@ const int64_t kNanosecondsPerSecond = 1000000000;
 #endif
 }
 
+#if TARGET_MULTICAM_CAPABLE
+// Shared multi-camera session across capturers.
+static AVCaptureMultiCamSession *_sharedMultiCamSession = nil;
+#endif
+
 @synthesize frameQueue = _frameQueue;
 @synthesize captureSession = _captureSession;
 @synthesize currentDevice = _currentDevice;
@@ -65,24 +70,24 @@ const int64_t kNanosecondsPerSecond = 1000000000;
 @synthesize isRunning = _isRunning;
 @synthesize willBeRunning = _willBeRunning;
 
-- (instancetype)init {
+- (AVCaptureSession *)createCaptureSession {
 #if TARGET_MULTICAM_CAPABLE
-  AVCaptureSession *captureSession = [[AVCaptureMultiCamSession alloc] init];
-#else
-  AVCaptureSession *captureSession = [[AVCaptureSession alloc] init];
-#endif
+  if (_sharedMultiCamSession == nil) {
+    _sharedMultiCamSession = [[AVCaptureMultiCamSession alloc] init];
+  }
 
-  return [self initWithDelegate:nil captureSession:captureSession];
+  return _sharedMultiCamSession;
+#else
+  return [[AVCaptureSession alloc] init];
+#endif
+}
+
+- (instancetype)init {
+  return [self initWithDelegate:nil captureSession:[self createCaptureSession]];
 }
 
 - (instancetype)initWithDelegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)delegate {
-#if TARGET_MULTICAM_CAPABLE
-  AVCaptureSession *captureSession = [[AVCaptureMultiCamSession alloc] init];
-#else
-  AVCaptureSession *captureSession = [[AVCaptureSession alloc] init];
-#endif
-
-  return [self initWithDelegate:delegate captureSession:captureSession];
+  return [self initWithDelegate:delegate captureSession:[self createCaptureSession]];
 }
 
 // This initializer is used for testing.
