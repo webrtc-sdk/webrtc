@@ -142,8 +142,8 @@ const int64_t kNanosecondsPerSecond = 1000000000;
 
 + (NSArray<AVCaptureDevice *> *)captureDevices {
 #if TARGET_OS_VISION
-  // Simply return an empty array.
-  return [NSArray array];
+  AVCaptureDevice *device = AVCaptureDevice.systemPreferredCamera;
+  return device ? @[ device ] : @[];
 #else
   AVCaptureDeviceDiscoverySession *session = [AVCaptureDeviceDiscoverySession
       discoverySessionWithDeviceTypes:@[ AVCaptureDeviceTypeBuiltInWideAngleCamera ]
