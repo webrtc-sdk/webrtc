@@ -72,12 +72,18 @@ static AVCaptureMultiCamSession *_sharedMultiCamSession = nil;
 
 - (AVCaptureSession *)createCaptureSession {
 #if TARGET_MULTICAM_CAPABLE
-  if (_sharedMultiCamSession == nil) {
-    _sharedMultiCamSession = [[AVCaptureMultiCamSession alloc] init];
+  if (AVCaptureMultiCamSession.isMultiCamSupported) {
+    // AVCaptureMultiCamSession exists and device supports multi-cam.
+    if (_sharedMultiCamSession == nil) {
+      _sharedMultiCamSession = [[AVCaptureMultiCamSession alloc] init];
+    }
+    return _sharedMultiCamSession;
+  } else {
+    // AVCaptureMultiCamSession exists but device doesn't support multi-cam.
+    return [[AVCaptureSession alloc] init];
   }
-
-  return _sharedMultiCamSession;
 #else
+  // AVCaptureMultiCamSession doesn't exist with this platform, use AVCaptureSession.
   return [[AVCaptureSession alloc] init];
 #endif
 }
