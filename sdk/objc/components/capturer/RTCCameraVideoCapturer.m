@@ -673,14 +673,9 @@ static NSUInteger _sharedMultiCamSessionCount = 0;
            @"Retrieving device orientation must be called on the main queue.");
 
   // Must be called on the main queue.
-  UIInterfaceOrientation newOrientation;
-  if (@available(iOS 13.0, *)) {
-    UIWindowScene *windowScene =
-        (UIWindowScene *)[UIApplication sharedApplication].connectedScenes.anyObject;
-    newOrientation = windowScene.interfaceOrientation;
-  } else {
-    newOrientation = [UIApplication sharedApplication].statusBarOrientation;
-  }
+  UIWindowScene *windowScene =
+      (UIWindowScene *)[UIApplication sharedApplication].connectedScenes.anyObject;
+  UIInterfaceOrientation newOrientation = windowScene.interfaceOrientation;
 
   [RTC_OBJC_TYPE(RTCDispatcher) dispatchAsyncOnType:RTCDispatcherTypeCaptureSession
                                               block:^{
