@@ -9,6 +9,7 @@
  */
 
 #import <Foundation/Foundation.h>
+#import <os/lock.h>
 
 #import "RTCCameraVideoCapturer.h"
 #import "base/RTCLogging.h"
@@ -22,7 +23,7 @@
 #define TARGET_WATCH_DEVICE_ROTATION \
   (TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST && !TARGET_OS_VISION)
 
-#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST
+#if TARGET_WATCH_DEVICE_ROTATION
 #import "helpers/UIDevice+RTCDevice.h"
 #endif
 
@@ -48,7 +49,8 @@ const int64_t kNanosecondsPerSecond = 1000000000;
   FourCharCode _preferredOutputPixelFormat;
   FourCharCode _outputPixelFormat;
   RTCVideoRotation _rotation;
-#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST
+
+#if TARGET_WATCH_DEVICE_ROTATION
   UIInterfaceOrientation _orientation;
   BOOL _generatingOrientationNotifications;
 #endif
@@ -61,6 +63,8 @@ const int64_t kNanosecondsPerSecond = 1000000000;
 #if TARGET_MULTICAM_CAPABLE
 // Shared multi-camera session across capturers.
 static AVCaptureMultiCamSession *_sharedMultiCamSession = nil;
+static os_unfair_lock _sharedMultiCamSessionLock = OS_UNFAIR_LOCK_INIT;
+static NSUInteger _sharedMultiCamSessionCount = 0;
 #endif
 
 @synthesize frameQueue = _frameQueue;
@@ -70,24 +74,6 @@ static AVCaptureMultiCamSession *_sharedMultiCamSession = nil;
 @synthesize isRunning = _isRunning;
 @synthesize willBeRunning = _willBeRunning;
 
-- (AVCaptureSession *)createCaptureSession {
-#if TARGET_MULTICAM_CAPABLE
-  if (AVCaptureMultiCamSession.isMultiCamSupported) {
-    // AVCaptureMultiCamSession exists and device supports multi-cam.
-    if (_sharedMultiCamSession == nil) {
-      _sharedMultiCamSession = [[AVCaptureMultiCamSession alloc] init];
-    }
-    return _sharedMultiCamSession;
-  } else {
-    // AVCaptureMultiCamSession exists but device doesn't support multi-cam.
-    return [[AVCaptureSession alloc] init];
-  }
-#else
-  // AVCaptureMultiCamSession doesn't exist with this platform, use AVCaptureSession.
-  return [[AVCaptureSession alloc] init];
-#endif
-}
-
 - (instancetype)init {
   return [self initWithDelegate:nil captureSession:[self createCaptureSession]];
 }
@@ -96,7 +82,6 @@ static AVCaptureMultiCamSession *_sharedMultiCamSession = nil;
   return [self initWithDelegate:delegate captureSession:[self createCaptureSession]];
 }
 
-// This initializer is used for testing.
 - (instancetype)initWithDelegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)delegate
                   captureSession:(AVCaptureSession *)captureSession {
   if (self = [super initWithDelegate:delegate]) {
@@ -107,8 +92,10 @@ static AVCaptureMultiCamSession *_sharedMultiCamSession = nil;
     if (![self setupCaptureSession:captureSession]) {
       return nil;
     }
+
     NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
-#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST && !TARGET_OS_VISION
+
+#if TARGET_WATCH_DEVICE_ROTATION
     _orientation = UIInterfaceOrientationPortrait;
     _rotation = RTCVideoRotation_90;
     [center addObserver:self
@@ -128,6 +115,7 @@ static AVCaptureMultiCamSession *_sharedMultiCamSession = nil;
                    name:UIApplicationDidBecomeActiveNotification
                  object:[UIApplication sharedApplication]];
 #endif
+
     [center addObserver:self
                selector:@selector(handleCaptureSessionRuntimeError:)
                    name:AVCaptureSessionRuntimeErrorNotification
@@ -141,6 +129,7 @@ static AVCaptureMultiCamSession *_sharedMultiCamSession = nil;
                    name:AVCaptureSessionDidStopRunningNotification
                  object:_captureSession];
   }
+
   return self;
 }
 
@@ -245,8 +234,8 @@ static AVCaptureMultiCamSession *_sharedMultiCamSession = nil;
                       [self updateZoomFactor];
                       [self.currentDevice unlockForConfiguration];
 
-                      [self.captureSession startRunning];
-                      self.isRunning = YES;
+                      [self startRunning];
+
                       if (completionHandler) {
                         completionHandler(nil);
                       }
@@ -273,7 +262,7 @@ static AVCaptureMultiCamSession *_sharedMultiCamSession = nil;
                       }
                       self.currentDevice = nil;
 
-                      [self.captureSession stopRunning];
+                      [self stopRunning];
 
 #if TARGET_WATCH_DEVICE_ROTATION
                       dispatch_async(dispatch_get_main_queue(), ^{
@@ -283,7 +272,7 @@ static AVCaptureMultiCamSession *_sharedMultiCamSession = nil;
                         }
                       });
 #endif
-                      self.isRunning = NO;
+
                       if (completionHandler) {
                         completionHandler();
                       }
@@ -480,6 +469,66 @@ static AVCaptureMultiCamSession *_sharedMultiCamSession = nil;
 #endif
 
 #pragma mark - Private
+
+- (AVCaptureSession *)createCaptureSession {
+#if TARGET_MULTICAM_CAPABLE
+  if (AVCaptureMultiCamSession.isMultiCamSupported) {
+    // AVCaptureMultiCamSession exists and device supports multi-cam.
+    if (_sharedMultiCamSession == nil) {
+      _sharedMultiCamSession = [[AVCaptureMultiCamSession alloc] init];
+    }
+    return _sharedMultiCamSession;
+  } else {
+    // AVCaptureMultiCamSession exists but device doesn't support multi-cam.
+    return [[AVCaptureSession alloc] init];
+  }
+#else
+  // AVCaptureMultiCamSession doesn't exist with this platform, use AVCaptureSession.
+  return [[AVCaptureSession alloc] init];
+#endif
+}
+
+- (BOOL)isUsingSelfCreatedMultiCamSession {
+#if TARGET_MULTICAM_CAPABLE
+  return _sharedMultiCamSession != nil && _sharedMultiCamSession == _captureSession;
+#else
+  return NO;
+#endif
+}
+
+- (void)startRunning {
+  BOOL shouldStartRunning = YES;
+#if TARGET_MULTICAM_CAPABLE
+  if ([self isUsingSelfCreatedMultiCamSession]) {
+    os_unfair_lock_lock(&_sharedMultiCamSessionLock);
+    shouldStartRunning = _sharedMultiCamSessionCount == 0;
+    _sharedMultiCamSessionCount += 1;
+    os_unfair_lock_unlock(&_sharedMultiCamSessionLock);
+  }
+#endif
+  if (shouldStartRunning) {
+    [_captureSession startRunning];
+  }
+  self.isRunning = YES;
+}
+
+- (void)stopRunning {
+  BOOL shouldStopRunning = YES;
+#if TARGET_MULTICAM_CAPABLE
+  if ([self isUsingSelfCreatedMultiCamSession]) {
+    os_unfair_lock_lock(&_sharedMultiCamSessionLock);
+    if (_sharedMultiCamSessionCount > 0) {
+      _sharedMultiCamSessionCount -= 1;
+      shouldStopRunning = _sharedMultiCamSessionCount == 0;
+    }
+    os_unfair_lock_unlock(&_sharedMultiCamSessionLock);
+  }
+#endif
+  if (shouldStopRunning) {
+    [_captureSession stopRunning];
+  }
+  self.isRunning = NO;
+}
 
 - (dispatch_queue_t)frameQueue {
   if (!_frameQueue) {
