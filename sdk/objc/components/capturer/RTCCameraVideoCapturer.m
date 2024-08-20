@@ -9,13 +9,21 @@
  */
 
 #import <Foundation/Foundation.h>
+#import <os/lock.h>
 
 #import "RTCCameraVideoCapturer.h"
 #import "base/RTCLogging.h"
 #import "base/RTCVideoFrameBuffer.h"
 #import "components/video_frame_buffer/RTCCVPixelBuffer.h"
 
-#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST
+// AVCaptureMultiCamSession iOS 13.0+, iPadOS 13.0+, Mac Catalyst 14.0+, tvOS 17.0+
+#define TARGET_MULTICAM_CAPABLE (TARGET_OS_IPHONE && !TARGET_OS_VISION)
+
+// iOS 2.0+, iPadOS 2.0+, Mac Catalyst 13.0+
+#define TARGET_WATCH_DEVICE_ROTATION \
+  (TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST && !TARGET_OS_VISION)
+
+#if TARGET_WATCH_DEVICE_ROTATION
 #import "helpers/UIDevice+RTCDevice.h"
 #endif
 
@@ -41,11 +49,23 @@ const int64_t kNanosecondsPerSecond = 1000000000;
   FourCharCode _preferredOutputPixelFormat;
   FourCharCode _outputPixelFormat;
   RTCVideoRotation _rotation;
-#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST
+
+#if TARGET_WATCH_DEVICE_ROTATION
   UIInterfaceOrientation _orientation;
   BOOL _generatingOrientationNotifications;
 #endif
+
+#if TARGET_MULTICAM_CAPABLE
+  AVCaptureConnection *_captureConnection;
+#endif
 }
+
+#if TARGET_MULTICAM_CAPABLE
+// Shared multi-camera session across capturers.
+static AVCaptureMultiCamSession *_sharedMultiCamSession = nil;
+static os_unfair_lock _sharedMultiCamSessionLock = OS_UNFAIR_LOCK_INIT;
+static NSUInteger _sharedMultiCamSessionCount = 0;
+#endif
 
 @synthesize frameQueue = _frameQueue;
 @synthesize captureSession = _captureSession;
@@ -55,14 +75,13 @@ const int64_t kNanosecondsPerSecond = 1000000000;
 @synthesize willBeRunning = _willBeRunning;
 
 - (instancetype)init {
-  return [self initWithDelegate:nil captureSession:[[AVCaptureSession alloc] init]];
+  return [self initWithDelegate:nil captureSession:[self createCaptureSession]];
 }
 
 - (instancetype)initWithDelegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)delegate {
-  return [self initWithDelegate:delegate captureSession:[[AVCaptureSession alloc] init]];
+  return [self initWithDelegate:delegate captureSession:[self createCaptureSession]];
 }
 
-// This initializer is used for testing.
 - (instancetype)initWithDelegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)delegate
                   captureSession:(AVCaptureSession *)captureSession {
   if (self = [super initWithDelegate:delegate]) {
@@ -73,8 +92,10 @@ const int64_t kNanosecondsPerSecond = 1000000000;
     if (![self setupCaptureSession:captureSession]) {
       return nil;
     }
+
     NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
-#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST && !TARGET_OS_VISION
+
+#if TARGET_WATCH_DEVICE_ROTATION
     _orientation = UIInterfaceOrientationPortrait;
     _rotation = RTCVideoRotation_90;
     [center addObserver:self
@@ -94,6 +115,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
                    name:UIApplicationDidBecomeActiveNotification
                  object:[UIApplication sharedApplication]];
 #endif
+
     [center addObserver:self
                selector:@selector(handleCaptureSessionRuntimeError:)
                    name:AVCaptureSessionRuntimeErrorNotification
@@ -107,6 +129,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
                    name:AVCaptureSessionDidStopRunningNotification
                  object:_captureSession];
   }
+
   return self;
 }
 
@@ -119,8 +142,8 @@ const int64_t kNanosecondsPerSecond = 1000000000;
 
 + (NSArray<AVCaptureDevice *> *)captureDevices {
 #if TARGET_OS_VISION
-  // Simply return an empty array.
-  return [NSArray array];
+  AVCaptureDevice *device = AVCaptureDevice.systemPreferredCamera;
+  return device ? @[ device ] : @[];
 #else
   AVCaptureDeviceDiscoverySession *session = [AVCaptureDeviceDiscoverySession
       discoverySessionWithDeviceTypes:@[ AVCaptureDeviceTypeBuiltInWideAngleCamera ]
@@ -182,7 +205,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
                     block:^{
                       RTCLogInfo("startCaptureWithDevice %@ @ %ld fps", format, (long)fps);
 
-#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST && !TARGET_OS_VISION
+#if TARGET_WATCH_DEVICE_ROTATION
                       dispatch_async(dispatch_get_main_queue(), ^{
                         if (!self->_generatingOrientationNotifications) {
                           [[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
@@ -211,8 +234,8 @@ const int64_t kNanosecondsPerSecond = 1000000000;
                       [self updateZoomFactor];
                       [self.currentDevice unlockForConfiguration];
 
-                      [self.captureSession startRunning];
-                      self.isRunning = YES;
+                      [self startRunning];
+
                       if (completionHandler) {
                         completionHandler(nil);
                       }
@@ -225,13 +248,23 @@ const int64_t kNanosecondsPerSecond = 1000000000;
       dispatchAsyncOnType:RTCDispatcherTypeCaptureSession
                     block:^{
                       RTCLogInfo("Stop");
-                      self.currentDevice = nil;
-                      for (AVCaptureDeviceInput *oldInput in [self.captureSession.inputs copy]) {
-                        [self.captureSession removeInput:oldInput];
-                      }
-                      [self.captureSession stopRunning];
 
-#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST && !TARGET_OS_VISION
+#if TARGET_MULTICAM_CAPABLE
+                      [self.captureSession removeConnection:self->_captureConnection];
+                      self->_captureConnection = nil;
+#endif
+
+                      for (AVCaptureDeviceInput *oldInput in [self.captureSession.inputs copy]) {
+                        // Remove any old input with same device.
+                        if ([self->_currentDevice isEqual:oldInput.device]) {
+                          [self.captureSession removeInput:oldInput];
+                        }
+                      }
+                      self.currentDevice = nil;
+
+                      [self stopRunning];
+
+#if TARGET_WATCH_DEVICE_ROTATION
                       dispatch_async(dispatch_get_main_queue(), ^{
                         if (self->_generatingOrientationNotifications) {
                           [[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
@@ -239,7 +272,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
                         }
                       });
 #endif
-                      self.isRunning = NO;
+
                       if (completionHandler) {
                         completionHandler();
                       }
@@ -248,7 +281,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
 
 #pragma mark iOS notifications
 
-#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST && !TARGET_OS_VISION
+#if TARGET_WATCH_DEVICE_ROTATION
 - (void)deviceOrientationDidChange:(NSNotification *)notification {
   [self updateOrientation];
 }
@@ -271,7 +304,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
     return;
   }
 
-#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST && !TARGET_OS_VISION
+#if TARGET_WATCH_DEVICE_ROTATION
   // Default to portrait orientation on iPhone.
   BOOL usingFrontCamera = NO;
   // Check the image's EXIF for the camera the image came from as the image could have been
@@ -433,9 +466,69 @@ const int64_t kNanosecondsPerSecond = 1000000000;
                     }];
 }
 
-#endif  // TARGET_OS_IPHONE
+#endif
 
 #pragma mark - Private
+
+- (AVCaptureSession *)createCaptureSession {
+#if TARGET_MULTICAM_CAPABLE
+  if (AVCaptureMultiCamSession.isMultiCamSupported) {
+    // AVCaptureMultiCamSession exists and device supports multi-cam.
+    if (_sharedMultiCamSession == nil) {
+      _sharedMultiCamSession = [[AVCaptureMultiCamSession alloc] init];
+    }
+    return _sharedMultiCamSession;
+  } else {
+    // AVCaptureMultiCamSession exists but device doesn't support multi-cam.
+    return [[AVCaptureSession alloc] init];
+  }
+#else
+  // AVCaptureMultiCamSession doesn't exist with this platform, use AVCaptureSession.
+  return [[AVCaptureSession alloc] init];
+#endif
+}
+
+- (BOOL)isUsingSelfCreatedMultiCamSession {
+#if TARGET_MULTICAM_CAPABLE
+  return _sharedMultiCamSession != nil && _sharedMultiCamSession == _captureSession;
+#else
+  return NO;
+#endif
+}
+
+- (void)startRunning {
+  BOOL shouldStartRunning = YES;
+#if TARGET_MULTICAM_CAPABLE
+  if ([self isUsingSelfCreatedMultiCamSession]) {
+    os_unfair_lock_lock(&_sharedMultiCamSessionLock);
+    shouldStartRunning = _sharedMultiCamSessionCount == 0;
+    _sharedMultiCamSessionCount += 1;
+    os_unfair_lock_unlock(&_sharedMultiCamSessionLock);
+  }
+#endif
+  if (shouldStartRunning) {
+    [_captureSession startRunning];
+  }
+  self.isRunning = YES;
+}
+
+- (void)stopRunning {
+  BOOL shouldStopRunning = YES;
+#if TARGET_MULTICAM_CAPABLE
+  if ([self isUsingSelfCreatedMultiCamSession]) {
+    os_unfair_lock_lock(&_sharedMultiCamSessionLock);
+    if (_sharedMultiCamSessionCount > 0) {
+      _sharedMultiCamSessionCount -= 1;
+      shouldStopRunning = _sharedMultiCamSessionCount == 0;
+    }
+    os_unfair_lock_unlock(&_sharedMultiCamSessionLock);
+  }
+#endif
+  if (shouldStopRunning) {
+    [_captureSession stopRunning];
+  }
+  self.isRunning = NO;
+}
 
 - (dispatch_queue_t)frameQueue {
   if (!_frameQueue) {
@@ -459,7 +552,12 @@ const int64_t kNanosecondsPerSecond = 1000000000;
     RTCLogError(@"Video data output unsupported.");
     return NO;
   }
+
+#if TARGET_MULTICAM_CAPABLE
+  [_captureSession addOutputWithNoConnections:_videoDataOutput];
+#else
   [_captureSession addOutput:_videoDataOutput];
+#endif
 
   return YES;
 }
@@ -544,22 +642,40 @@ const int64_t kNanosecondsPerSecond = 1000000000;
   }
   [_captureSession beginConfiguration];
   for (AVCaptureDeviceInput *oldInput in [_captureSession.inputs copy]) {
-    [_captureSession removeInput:oldInput];
+    // Remove any old input with same device.
+    if ([_currentDevice isEqual:oldInput.device]) {
+      [_captureSession removeInput:oldInput];
+    }
   }
+
   if ([_captureSession canAddInput:input]) {
+#if TARGET_MULTICAM_CAPABLE
+    [_captureSession addInputWithNoConnections:input];
+
+    AVCaptureInputPort *videoPort = input.ports.firstObject;
+    _captureConnection = [AVCaptureConnection connectionWithInputPorts:@[ videoPort ]
+                                                                output:_videoDataOutput];
+
+    [_captureSession addConnection:_captureConnection];
+#else
     [_captureSession addInput:input];
+#endif
   } else {
     RTCLogError(@"Cannot add camera as an input to the session.");
   }
+
   [_captureSession commitConfiguration];
 }
 
-#if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST && !TARGET_OS_VISION
+#if TARGET_WATCH_DEVICE_ROTATION
 - (void)updateOrientation {
   NSAssert([RTC_OBJC_TYPE(RTCDispatcher) isOnQueueForType:RTCDispatcherTypeMain],
-           @"statusBarOrientation must be called on the main queue.");
-  // statusBarOrientation must be called on the main queue
-  UIInterfaceOrientation newOrientation = [UIApplication sharedApplication].statusBarOrientation;
+           @"Retrieving device orientation must be called on the main queue.");
+
+  // Must be called on the main queue.
+  UIWindowScene *windowScene =
+      (UIWindowScene *)[UIApplication sharedApplication].connectedScenes.anyObject;
+  UIInterfaceOrientation newOrientation = windowScene.interfaceOrientation;
 
   [RTC_OBJC_TYPE(RTCDispatcher) dispatchAsyncOnType:RTCDispatcherTypeCaptureSession
                                               block:^{
