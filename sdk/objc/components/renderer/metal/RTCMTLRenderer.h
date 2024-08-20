@@ -37,7 +37,7 @@ NS_ASSUME_NONNULL_BEGIN
  * cleanups.
  */
 
-#if TARGET_OS_IOS
+#if TARGET_OS_IOS || TARGET_OS_TV
 - (BOOL)addRenderingDestination:(__kindof UIView *)view;
 #else
 - (BOOL)addRenderingDestination:(__kindof NSView *)view;
