@@ -739,6 +739,7 @@ ABSL_CONST_INIT thread_local bool mutex_locked = false;
     return NO;
   }
 
+#if !TARGET_OS_TV
   // Ensure that the device currently supports audio input.
   // TODO(tkchin): Figure out if this is really necessary.
   if (!self.inputAvailable) {
@@ -749,6 +750,7 @@ ABSL_CONST_INIT thread_local bool mutex_locked = false;
     }
     return NO;
   }
+#endif
 
   // It can happen (e.g. in combination with BT devices) that the attempt to set
   // the preferred sample rate for WebRTC (48kHz) fails. If so, make a new
