@@ -301,7 +301,7 @@ int AesEncryptDecrypt(EncryptOrDecrypt mode,
     case webrtc::FrameCryptorTransformer::Algorithm::kAesGcm: {
       unsigned int tag_length_bits = 128;
       const EVP_AEAD* cipher = GetAesGcmAlgorithmFromKeySize(raw_key.size());
-        if (!cipher) {
+      if (!cipher) {
         RTC_LOG(LS_ERROR) << "Invalid AES-GCM key size.";
         return ErrorUnexpected;
       }
