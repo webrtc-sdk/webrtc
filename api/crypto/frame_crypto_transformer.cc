@@ -256,7 +256,10 @@ int AesCbcEncryptDecrypt(EncryptOrDecrypt mode,
                          const rtc::ArrayView<uint8_t> input,
                          std::vector<uint8_t>* output) {
   const EVP_CIPHER* cipher = GetAesCbcAlgorithmFromKeySize(raw_key.size());
-  RTC_DCHECK(cipher);  // Already handled in Init();
+  if (!cipher) {
+    RTC_LOG(LS_ERROR) << "Invalid AES-CBC key size.";
+    return ErrorUnexpected;
+  }
   RTC_DCHECK_EQ(EVP_CIPHER_iv_length(cipher), iv.size());
   RTC_DCHECK_EQ(EVP_CIPHER_key_length(cipher), raw_key.size());
 
@@ -297,9 +300,13 @@ int AesEncryptDecrypt(EncryptOrDecrypt mode,
   switch (algorithm) {
     case webrtc::FrameCryptorTransformer::Algorithm::kAesGcm: {
       unsigned int tag_length_bits = 128;
+      const EVP_AEAD* cipher = GetAesGcmAlgorithmFromKeySize(raw_key.size());
+      if (!cipher) {
+        RTC_LOG(LS_ERROR) << "Invalid AES-GCM key size.";
+        return ErrorUnexpected;
+      }
       return AesGcmEncryptDecrypt(
-          mode, raw_key, data, tag_length_bits / 8, iv, additional_data,
-          GetAesGcmAlgorithmFromKeySize(raw_key.size()), buffer);
+          mode, raw_key, data, tag_length_bits / 8, iv, additional_data, cipher, buffer);
     }
     case webrtc::FrameCryptorTransformer::Algorithm::kAesCbc:
       return AesCbcEncryptDecrypt(mode, raw_key, iv, data, buffer);
