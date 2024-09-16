@@ -483,20 +483,7 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
   // Use desktop AEC by default, when not using hardware AEC.
   bool use_mobile_software_aec = false;
 
-#if defined(WEBRTC_IOS)
-  if (options.ios_force_software_aec_HACK &&
-      *options.ios_force_software_aec_HACK) {
-    // EC may be forced on for a device known to have non-functioning platform
-    // AEC.
-    options.echo_cancellation = true;
-    RTC_LOG(LS_WARNING)
-        << "Force software AEC on iOS. May conflict with platform AEC.";
-  } else {
-    // On iOS, VPIO provides built-in EC.
-    options.echo_cancellation = false;
-    RTC_LOG(LS_INFO) << "Always disable AEC on iOS. Use built-in instead.";
-  }
-#elif defined(WEBRTC_ANDROID)
+#if defined(WEBRTC_ANDROID)
   use_mobile_software_aec = true;
 #endif
 
