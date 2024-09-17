@@ -18,5 +18,4 @@ package org.webrtc;
 
 public enum FrameCryptorAlgorithm {
   AES_GCM,
-  AES_CBC,
 }
