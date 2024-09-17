@@ -15,6 +15,8 @@
  */
 
 #import <Foundation/Foundation.h>
+#import <CoreMedia/CoreMedia.h>
+
 #if TARGET_OS_IPHONE
 #import <UIKit/UIKit.h>
 #endif

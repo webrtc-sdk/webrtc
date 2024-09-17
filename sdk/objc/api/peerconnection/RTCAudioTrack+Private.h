@@ -26,8 +26,6 @@ NS_ASSUME_NONNULL_BEGIN
                          source:(RTC_OBJC_TYPE(RTCAudioSource) *)source
                         trackId:(NSString *)trackId;
 
-- (void)didCaptureSampleBuffer:(CMSampleBufferRef)sampleBuffer;
-
 @end
 
 NS_ASSUME_NONNULL_END
