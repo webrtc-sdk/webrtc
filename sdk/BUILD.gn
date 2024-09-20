@@ -1915,6 +1915,7 @@ if (is_ios || is_mac) {
         "CoreMedia.framework",
         "CoreVideo.framework",
         "VideoToolbox.framework",
+        "Accelerate.framework",
       ]
     }
   }
