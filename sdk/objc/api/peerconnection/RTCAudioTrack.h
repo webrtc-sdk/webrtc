@@ -24,12 +24,11 @@ RTC_OBJC_EXPORT
 /** The audio source for this audio track. */
 @property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioSource) * source;
 
-/** Register a renderer that will receive all audio CMSampleBuffers on this track.
- * Does not retain. */
 - (void)addRenderer:(id<RTC_OBJC_TYPE(RTCAudioRenderer)>)renderer;
 
-/** Deregister a renderer */
 - (void)removeRenderer:(id<RTC_OBJC_TYPE(RTCAudioRenderer)>)renderer;
+
+- (void)removeAllRenderers;
 
 @end
 

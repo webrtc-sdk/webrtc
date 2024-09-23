@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 LiveKit
+ * Copyright 2024 LiveKit
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,21 +14,22 @@
  * limitations under the License.
  */
 
-#import <Foundation/Foundation.h>
-#import <AVFoundation/AVFoundation.h>
-#import <CoreMedia/CoreMedia.h>
+#import "RTCAudioRendererAdapter.h"
 
-#if TARGET_OS_IPHONE
-#import <UIKit/UIKit.h>
-#endif
+#import "base/RTCAudioRenderer.h"
 
-#import "RTCMacros.h"
+#include "api/media_stream_interface.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
-RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE(RTCAudioRenderer)<NSObject>
+@interface RTC_OBJC_TYPE(RTCAudioRendererAdapter) ()
 
-- (void)renderPCMBuffer: (AVAudioPCMBuffer *)pcmBuffer NS_SWIFT_NAME(render(pcmBuffer:));
+@property(nonatomic, readonly) id<RTC_OBJC_TYPE(RTCAudioRenderer)> audioRenderer;
+
+@property(nonatomic, readonly) webrtc::AudioTrackSinkInterface *nativeAudioRenderer;
+
+- (instancetype)initWithNativeRenderer:(id<RTC_OBJC_TYPE(RTCAudioRenderer)>)audioRenderer
+    NS_DESIGNATED_INITIALIZER;
 
 @end
 
