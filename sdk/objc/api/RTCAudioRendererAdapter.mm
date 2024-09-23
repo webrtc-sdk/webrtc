@@ -47,19 +47,21 @@ class AudioRendererAdapter : public webrtc::AudioTrackSinkInterface {
         .mBitsPerChannel = 32,
         .mReserved = 0};
 
-    CMFormatDescriptionRef format = nullptr;
+    CMFormatDescriptionRef formatDescription = nullptr;
     status = CMAudioFormatDescriptionCreate(kCFAllocatorDefault, &sd, sizeof(acl), &acl, 0, NULL,
-                                            NULL, &format);
+                                            NULL, &formatDescription);
     if (status != noErr) {
-      NSLog(@"RTCAudioTrack: Failed to create audio format description. Error: %d", (int)status);
+      NSLog(@"RTCAudioTrack: Failed to create audio formatDescription description. Error: %d",
+            (int)status);
       return;
     }
 
-    AVAudioFormat *format2 = [[AVAudioFormat alloc] initWithCMAudioFormatDescription:format];
-    CFRelease(format);
+    AVAudioFormat *format =
+        [[AVAudioFormat alloc] initWithCMAudioFormatDescription:formatDescription];
+    CFRelease(formatDescription);
 
     AVAudioFrameCount frameCount = static_cast<AVAudioFrameCount>(number_of_frames);
-    AVAudioPCMBuffer *pcmBuffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat:format2
+    AVAudioPCMBuffer *pcmBuffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat:format
                                                                 frameCapacity:frameCount];
     if (!pcmBuffer) {
       NSLog(@"Failed to create AVAudioPCMBuffer");
