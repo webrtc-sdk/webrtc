@@ -483,7 +483,7 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
   // Use desktop AEC by default, when not using hardware AEC.
   bool use_mobile_software_aec = false;
 
-#if defined(WEBRTC_IOS)
+#if defined(WEBRTC_IOS) && !TARGET_OS_SIMULATOR
   if (options.ios_force_software_aec_HACK &&
       *options.ios_force_software_aec_HACK) {
     // EC may be forced on for a device known to have non-functioning platform
@@ -501,7 +501,7 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
 #endif
 
 // Set and adjust gain control options.
-#if defined(WEBRTC_IOS)
+#if defined(WEBRTC_IOS) && !TARGET_OS_SIMULATOR
   // On iOS, VPIO provides built-in AGC.
   options.auto_gain_control = false;
   RTC_LOG(LS_INFO) << "Always disable AGC on iOS. Use built-in instead.";
