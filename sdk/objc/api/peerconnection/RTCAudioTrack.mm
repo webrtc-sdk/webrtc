@@ -17,173 +17,14 @@
 #import "RTCAudioSource+Private.h"
 #import "RTCMediaStreamTrack+Private.h"
 #import "RTCPeerConnectionFactory+Private.h"
+#import "api/RTCAudioRendererAdapter+Private.h"
 #import "helpers/NSString+StdString.h"
 
 #include "rtc_base/checks.h"
 
-namespace webrtc {
-/**
- * Captures audio data and converts to CMSampleBuffers
- */
-class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTrackSinkInterface {
- private:
-  os_unfair_lock *lock_;
-  __weak RTC_OBJC_TYPE(RTCAudioTrack) *audio_track_;
-  int64_t total_frames_ = 0;
-  bool attached_ = false;
-
- public:
-  AudioSinkConverter(RTC_OBJC_TYPE(RTCAudioTrack) *audioTrack, os_unfair_lock *lock) {
-    RTC_LOG(LS_INFO) << "RTCAudioTrack.AudioSinkConverter init";
-    audio_track_ = audioTrack;
-    lock_ = lock;
-  }
-
-  ~AudioSinkConverter() {
-    //
-    RTC_LOG(LS_INFO) << "RTCAudioTrack.AudioSinkConverter dealloc";
-  }
-
-  // Must be called while locked
-  void TryAttach() {
-    if (attached_) {
-      // Already attached
-      return;
-    }
-    RTC_LOG(LS_INFO) << "RTCAudioTrack attaching sink...";
-    // Reset for creating CMSampleTimingInfo correctly
-    audio_track_.nativeAudioTrack->AddSink(this);
-    total_frames_ = 0;
-    attached_ = true;
-  }
-
-  // Must be called while locked
-  void TryDetach() {
-    if (!attached_) {
-      // Already detached
-      return;
-    }
-    RTC_LOG(LS_INFO) << "RTCAudioTrack detaching sink...";
-    audio_track_.nativeAudioTrack->RemoveSink(this);
-    attached_ = false;
-  }
-
-  void OnData(const void *audio_data,
-              int bits_per_sample,
-              int sample_rate,
-              size_t number_of_channels,
-              size_t number_of_frames,
-              absl::optional<int64_t> absolute_capture_timestamp_ms) override {
-    RTC_LOG(LS_INFO) << "RTCAudioTrack.AudioSinkConverter OnData bits_per_sample: "
-                     << bits_per_sample << " sample_rate: " << sample_rate
-                     << " number_of_channels: " << number_of_channels
-                     << " number_of_frames: " << number_of_frames
-                     << " absolute_capture_timestamp_ms: "
-                     << (absolute_capture_timestamp_ms ? absolute_capture_timestamp_ms.value() : 0);
-
-    bool is_locked = os_unfair_lock_trylock(lock_);
-    if (!is_locked) {
-      RTC_LOG(LS_INFO) << "RTCAudioTrack.AudioSinkConverter OnData already locked, skipping...";
-      return;
-    }
-    bool is_attached = attached_;
-    os_unfair_lock_unlock(lock_);
-
-    if (!is_attached) {
-      RTC_LOG(LS_INFO) << "RTCAudioTrack.AudioSinkConverter OnData already detached, skipping...";
-      return;
-    }
-
-    /*
-     * Convert to CMSampleBuffer
-     */
-
-    if (!(number_of_channels == 1 || number_of_channels == 2)) {
-      NSLog(@"RTCAudioTrack: Only mono or stereo is supported currently. numberOfChannels: %zu",
-            number_of_channels);
-      return;
-    }
-
-    OSStatus status;
-
-    AudioChannelLayout acl;
-    bzero(&acl, sizeof(acl));
-    acl.mChannelLayoutTag =
-        number_of_channels == 2 ? kAudioChannelLayoutTag_Stereo : kAudioChannelLayoutTag_Mono;
-
-    AudioStreamBasicDescription sd;
-    sd.mSampleRate = sample_rate;
-    sd.mFormatID = kAudioFormatLinearPCM;
-    sd.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger | kLinearPCMFormatFlagIsPacked;
-    sd.mFramesPerPacket = 1;
-    sd.mChannelsPerFrame = number_of_channels;
-    sd.mBitsPerChannel = bits_per_sample; /* 16 */
-    sd.mBytesPerFrame = sd.mChannelsPerFrame * (sd.mBitsPerChannel / 8);
-    sd.mBytesPerPacket = sd.mBytesPerFrame;
-
-    CMSampleTimingInfo timing = {
-        CMTimeMake(1, sample_rate),
-        CMTimeMake(total_frames_, sample_rate),
-        kCMTimeInvalid,
-    };
-
-    total_frames_ += number_of_frames;  // update the total
-
-    CMFormatDescriptionRef format = NULL;
-    status = CMAudioFormatDescriptionCreate(
-        kCFAllocatorDefault, &sd, sizeof(acl), &acl, 0, NULL, NULL, &format);
-
-    if (status != 0) {
-      NSLog(@"RTCAudioTrack: Failed to create audio format description");
-      return;
-    }
-
-    CMSampleBufferRef buffer;
-    status = CMSampleBufferCreate(kCFAllocatorDefault,
-                                  NULL,
-                                  false,
-                                  NULL,
-                                  NULL,
-                                  format,
-                                  (CMItemCount)number_of_frames,
-                                  1,
-                                  &timing,
-                                  0,
-                                  NULL,
-                                  &buffer);
-    // format is no longer required
-    CFRelease(format);
-
-    if (status != 0) {
-      NSLog(@"RTCAudioTrack: Failed to allocate sample buffer");
-      return;
-    }
-
-    AudioBufferList bufferList;
-    bufferList.mNumberBuffers = 1;
-    bufferList.mBuffers[0].mNumberChannels = sd.mChannelsPerFrame;
-    bufferList.mBuffers[0].mDataByteSize = (UInt32)(number_of_frames * sd.mBytesPerFrame);
-    bufferList.mBuffers[0].mData = (void *)audio_data;
-    status = CMSampleBufferSetDataBufferFromAudioBufferList(
-        buffer, kCFAllocatorDefault, kCFAllocatorDefault, 0, &bufferList);
-    if (status != 0) {
-      NSLog(@"RTCAudioTrack: Failed to convert audio buffer list into sample buffer");
-      return;
-    }
-
-    // Report back to RTCAudioTrack
-    [audio_track_ didCaptureSampleBuffer:buffer];
-
-    CFRelease(buffer);
-  }
-};
-}  // namespace webrtc
-
 @implementation RTC_OBJC_TYPE (RTCAudioTrack) {
-  rtc::scoped_refptr<webrtc::AudioSinkConverter> _audioConverter;
-  // Stores weak references to renderers
-  NSHashTable *_renderers;
-  os_unfair_lock _lock;
+  rtc::Thread *_signalingThread;
+  NSMutableArray *_adapters;
 }
 
 @synthesize source = _source;
@@ -201,6 +42,7 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
   if (self = [self initWithFactory:factory nativeTrack:track type:RTCMediaStreamTrackTypeAudio]) {
     _source = source;
   }
+
   return self;
 }
 
@@ -211,20 +53,15 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
   NSParameterAssert(nativeTrack);
   NSParameterAssert(type == RTCMediaStreamTrackTypeAudio);
   if (self = [super initWithFactory:factory nativeTrack:nativeTrack type:type]) {
-    RTC_LOG(LS_INFO) << "RTCAudioTrack init";
-    _renderers = [NSHashTable weakObjectsHashTable];
-    _audioConverter = new rtc::RefCountedObject<webrtc::AudioSinkConverter>(self, &_lock);
+    _adapters = [NSMutableArray array];
+    _signalingThread = factory.signalingThread;
   }
 
   return self;
 }
 
 - (void)dealloc {
-  os_unfair_lock_lock(&_lock);
-  _audioConverter->TryDetach();
-  os_unfair_lock_unlock(&_lock);
-
-  RTC_LOG(LS_INFO) << "RTCAudioTrack dealloc";
+  [self removeAllRenderers];
 }
 
 - (RTC_OBJC_TYPE(RTCAudioSource) *)source {
@@ -239,22 +76,61 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
 }
 
 - (void)addRenderer:(id<RTC_OBJC_TYPE(RTCAudioRenderer)>)renderer {
-  os_unfair_lock_lock(&_lock);
-  [_renderers addObject:renderer];
-  _audioConverter->TryAttach();
-  os_unfair_lock_unlock(&_lock);
+  if (!_signalingThread->IsCurrent()) {
+    _signalingThread->BlockingCall([renderer, self] { [self addRenderer:renderer]; });
+    return;
+  }
+
+  // Make sure we don't have this renderer yet.
+  for (RTC_OBJC_TYPE(RTCAudioRendererAdapter) * adapter in _adapters) {
+    if (adapter.audioRenderer == renderer) {
+      RTC_LOG(LS_INFO) << "|renderer| is already attached to this track";
+      return;
+    }
+  }
+  // Create a wrapper that provides a native pointer for us.
+  RTC_OBJC_TYPE(RTCAudioRendererAdapter) *adapter =
+      [[RTC_OBJC_TYPE(RTCAudioRendererAdapter) alloc] initWithNativeRenderer:renderer];
+  [_adapters addObject:adapter];
+  self.nativeAudioTrack->AddSink(adapter.nativeAudioRenderer);
 }
 
 - (void)removeRenderer:(id<RTC_OBJC_TYPE(RTCAudioRenderer)>)renderer {
-  os_unfair_lock_lock(&_lock);
-  [_renderers removeObject:renderer];
-  NSUInteger renderersCount = _renderers.allObjects.count;
-
-  if (renderersCount == 0) {
-    // Detach if no more renderers...
-    _audioConverter->TryDetach();
+  if (!_signalingThread->IsCurrent()) {
+    _signalingThread->BlockingCall([renderer, self] { [self removeRenderer:renderer]; });
+    return;
   }
-  os_unfair_lock_unlock(&_lock);
+  __block NSUInteger indexToRemove = NSNotFound;
+  [_adapters enumerateObjectsUsingBlock:^(RTC_OBJC_TYPE(RTCAudioRendererAdapter) * adapter,
+                                          NSUInteger idx, BOOL * stop) {
+    if (adapter.audioRenderer == renderer) {
+      indexToRemove = idx;
+      *stop = YES;
+    }
+  }];
+  if (indexToRemove == NSNotFound) {
+    RTC_LOG(LS_INFO) << "removeRenderer called with a renderer that has not been previously added";
+    return;
+  }
+  RTC_OBJC_TYPE(RTCAudioRendererAdapter) *adapterToRemove = [_adapters objectAtIndex:indexToRemove];
+  self.nativeAudioTrack->RemoveSink(adapterToRemove.nativeAudioRenderer);
+  [_adapters removeObjectAtIndex:indexToRemove];
+}
+
+- (void)removeAllRenderers {
+  // Ensure the method is executed on the signaling thread.
+  if (!_signalingThread->IsCurrent()) {
+    _signalingThread->BlockingCall([self] { [self removeAllRenderers]; });
+    return;
+  }
+
+  // Iterate over all adapters and remove each one from the native audio track.
+  for (RTC_OBJC_TYPE(RTCAudioRendererAdapter) * adapter in _adapters) {
+    self.nativeAudioTrack->RemoveSink(adapter.nativeAudioRenderer);
+  }
+
+  // Clear the adapters array after all sinks have been removed.
+  [_adapters removeAllObjects];
 }
 
 #pragma mark - Private
@@ -262,20 +138,6 @@ class AudioSinkConverter : public rtc::RefCountInterface, public webrtc::AudioTr
 - (rtc::scoped_refptr<webrtc::AudioTrackInterface>)nativeAudioTrack {
   return rtc::scoped_refptr<webrtc::AudioTrackInterface>(
       static_cast<webrtc::AudioTrackInterface *>(self.nativeTrack.get()));
-}
-
-- (void)didCaptureSampleBuffer:(CMSampleBufferRef)sampleBuffer {
-  bool is_locked = os_unfair_lock_trylock(&_lock);
-  if (!is_locked) {
-    RTC_LOG(LS_INFO) << "RTCAudioTrack didCaptureSampleBuffer already locked, skipping...";
-    return;
-  }
-  NSArray *renderers = [_renderers allObjects];
-  os_unfair_lock_unlock(&_lock);
-
-  for (id<RTC_OBJC_TYPE(RTCAudioRenderer)> renderer in renderers) {
-    [renderer renderSampleBuffer:sampleBuffer];
-  }
 }
 
 @end

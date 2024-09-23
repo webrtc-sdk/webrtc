@@ -939,6 +939,25 @@ if (is_ios || is_mac) {
       ]
     }
 
+    rtc_library("audiorendereradapter_objc") {
+      visibility = [ "*" ]
+      sources = [
+        "objc/api/RTCAudioRendererAdapter+Private.h",
+        "objc/api/RTCAudioRendererAdapter.h",
+        "objc/api/RTCAudioRendererAdapter.mm",
+      ]
+
+      configs += [ "..:common_objc" ]
+      public_configs = [ ":common_config_objc" ]
+
+      deps = [
+        ":base_objc",
+        ":native_api",
+        "../api:libjingle_peerconnection_api",
+        "../api:media_stream_interface",
+      ]
+    }
+
     rtc_library("mediasource_objc") {
       sources = [
         "objc/api/peerconnection/RTCMediaSource+Private.h",
@@ -1150,6 +1169,7 @@ if (is_ios || is_mac) {
         ":objc_audio_device_module",
         ":videoframebuffer_objc",
         ":videorendereradapter_objc",
+        ":audiorendereradapter_objc",
         ":videosource_objc",
         ":videotoolbox_objc",
         "../api/crypto:frame_crypto_transformer",
@@ -1895,6 +1915,7 @@ if (is_ios || is_mac) {
         "CoreMedia.framework",
         "CoreVideo.framework",
         "VideoToolbox.framework",
+        "Accelerate.framework",
       ]
     }
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 LiveKit
+ * Copyright 2024 LiveKit
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,20 +15,14 @@
  */
 
 #import <Foundation/Foundation.h>
-#import <AVFoundation/AVFoundation.h>
-#import <CoreMedia/CoreMedia.h>
-
-#if TARGET_OS_IPHONE
-#import <UIKit/UIKit.h>
-#endif
 
 #import "RTCMacros.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
-RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE(RTCAudioRenderer)<NSObject>
+@interface RTC_OBJC_TYPE (RTCAudioRendererAdapter): NSObject
 
-- (void)renderPCMBuffer: (AVAudioPCMBuffer *)pcmBuffer NS_SWIFT_NAME(render(pcmBuffer:));
+- (instancetype)init NS_UNAVAILABLE;
 
 @end
 
