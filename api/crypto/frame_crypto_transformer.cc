@@ -250,46 +250,6 @@ int AesGcmEncryptDecrypt(EncryptOrDecrypt mode,
   return Success;
 }
 
-int AesCbcEncryptDecrypt(EncryptOrDecrypt mode,
-                         const std::vector<uint8_t>& raw_key,
-                         rtc::ArrayView<uint8_t> iv,
-                         const rtc::ArrayView<uint8_t> input,
-                         std::vector<uint8_t>* output) {
-  const EVP_CIPHER* cipher = GetAesCbcAlgorithmFromKeySize(raw_key.size());
-  if (!cipher) {
-    RTC_LOG(LS_ERROR) << "Invalid AES-CBC key size.";
-    return ErrorUnexpected;
-  }
-  RTC_DCHECK_EQ(EVP_CIPHER_iv_length(cipher), iv.size());
-  RTC_DCHECK_EQ(EVP_CIPHER_key_length(cipher), raw_key.size());
-
-  bssl::ScopedEVP_CIPHER_CTX ctx;
-  if (!EVP_CipherInit_ex(ctx.get(), cipher, nullptr,
-                         reinterpret_cast<const uint8_t*>(raw_key.data()),
-                         iv.data(),
-                         mode == EncryptOrDecrypt::kEncrypt ? 1 : 0)) {
-    return OperationError;
-  }
-
-  // Encrypting needs a block size of space to allow for any padding.
-  output->resize(input.size() +
-                 (mode == EncryptOrDecrypt::kEncrypt ? iv.size() : 0));
-  int out_len;
-  if (!EVP_CipherUpdate(ctx.get(), output->data(), &out_len, input.data(),
-                        input.size()))
-    return OperationError;
-
-  // Write out the final block plus padding (if any) to the end of the data
-  // just written.
-  int tail_len;
-  if (!EVP_CipherFinal_ex(ctx.get(), output->data() + out_len, &tail_len))
-    return OperationError;
-
-  out_len += tail_len;
-  RTC_CHECK_LE(out_len, static_cast<int>(output->size()));
-  return Success;
-}
-
 int AesEncryptDecrypt(EncryptOrDecrypt mode,
                       webrtc::FrameCryptorTransformer::Algorithm algorithm,
                       const std::vector<uint8_t>& raw_key,
@@ -308,8 +268,9 @@ int AesEncryptDecrypt(EncryptOrDecrypt mode,
       return AesGcmEncryptDecrypt(
           mode, raw_key, data, tag_length_bits / 8, iv, additional_data, cipher, buffer);
     }
-    case webrtc::FrameCryptorTransformer::Algorithm::kAesCbc:
-      return AesCbcEncryptDecrypt(mode, raw_key, iv, data, buffer);
+    default:
+      RTC_LOG(LS_ERROR) << "Unsupported algorithm.";
+      return ErrorUnexpected;
   }
 }
 namespace webrtc {
@@ -724,8 +685,6 @@ uint8_t FrameCryptorTransformer::getIvSize() {
   switch (algorithm_) {
     case Algorithm::kAesGcm:
       return 12;
-    case Algorithm::kAesCbc:
-      return 16;
     default:
       return 0;
   }

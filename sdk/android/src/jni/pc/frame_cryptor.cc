@@ -103,8 +103,6 @@ webrtc::FrameCryptorTransformer::Algorithm AlgorithmFromIndex(int index) {
   switch (index) {
     case 0:
       return webrtc::FrameCryptorTransformer::Algorithm::kAesGcm;
-    case 1:
-      return webrtc::FrameCryptorTransformer::Algorithm::kAesCbc;
     default:
       return webrtc::FrameCryptorTransformer::Algorithm::kAesGcm;
   }

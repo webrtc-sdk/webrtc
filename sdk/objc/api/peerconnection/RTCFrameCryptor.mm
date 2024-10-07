@@ -106,8 +106,6 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
   switch (algorithm) {
     case RTCCryptorAlgorithmAesGcm:
       return webrtc::FrameCryptorTransformer::Algorithm::kAesGcm;
-    case RTCCryptorAlgorithmAesCbc:
-      return webrtc::FrameCryptorTransformer::Algorithm::kAesCbc;
     default:
       return webrtc::FrameCryptorTransformer::Algorithm::kAesGcm;
   }
