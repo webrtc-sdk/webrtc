@@ -72,11 +72,22 @@ class AudioRendererAdapter : public webrtc::AudioTrackSinkInterface {
 
     // Handle both mono and stereo
     const int16_t *inputData = static_cast<const int16_t *>(audio_data);
+    if (number_of_channels == 1) {
+      // Mono: straight copy
+      memcpy(pcmBuffer.int16ChannelData[0], inputData, number_of_frames * sizeof(int16_t));
+    } else if (number_of_channels == 2) {
+      // Stereo: manual deinterleave
+      int16_t *leftChannel = pcmBuffer.int16ChannelData[0];
+      int16_t *rightChannel = pcmBuffer.int16ChannelData[1];
 
-    // Mono: straight copy
-    memcpy(pcmBuffer.int16ChannelData[0], inputData, number_of_frames * sizeof(int16_t));
-
-    // TODO: Handle stereo
+      for (size_t i = 0; i < number_of_frames; i++) {
+        leftChannel[i] = inputData[i * 2];
+        rightChannel[i] = inputData[i * 2 + 1];
+      }
+    } else {
+      NSLog(@"Unsupported number of channels: %zu", number_of_channels);
+      return;
+    }
 
     [adapter_.audioRenderer renderPCMBuffer:pcmBuffer];
   }
