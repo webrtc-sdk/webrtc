@@ -213,14 +213,21 @@ int32_t AudioDeviceIOS::InitRecording() {
   RTC_DCHECK(!recording_is_initialized_);
   RTC_DCHECK(!recording_.load());
   if (!playout_is_initialized_) {
-    // playout not initialized yet, init with input
+    // Playout not initialized yet, init audio unit with input requirement.
     if (!InitPlayOrRecord(true)) {
       RTC_LOG_F(LS_ERROR) << "InitPlayOrRecord failed for InitRecording!";
       return -1;
     }
   } else {
-    // playout already initialized, restart audio unit with input
-    RestartAudioUnit(true);
+    // Playout already initialized and check if input was enabled.
+    if (audio_unit_ && audio_unit_->GetState() == VoiceProcessingAudioUnit::kStarted &&
+        audio_unit_->GetIsInputEnabled()) {
+      // Audio unit already initialized with input enabled, simply ensure it's unmuted.
+      audio_unit_->SetInputMuted(false);
+    } else {
+      // Playout already initialized, restart audio unit with input requirement.
+      RestartAudioUnit(true);
+    }
   }
 
   recording_is_initialized_ = true;
@@ -320,9 +327,17 @@ int32_t AudioDeviceIOS::StopRecording() {
 
     playout_is_initialized_ = false;
   } else if (playout_is_initialized_) {
-    // restart audio unit with no input
-    RestartAudioUnit(false);
+    // Check if audio unit is enabled with input.
+    if (audio_unit_ && audio_unit_->GetState() == VoiceProcessingAudioUnit::kStarted &&
+        audio_unit_->GetIsInputEnabled()) {
+      // Simply mute the input.
+      audio_unit_->SetInputMuted(true);
+    } else {
+      // Restart audio unit with no input.
+      RestartAudioUnit(false);
+    }
   }
+
   recording_.store(0, std::memory_order_release);
   recording_is_initialized_ = false;
   return 0;
@@ -660,7 +675,7 @@ void AudioDeviceIOS::HandleOutputVolumeChange() {
   last_output_volume_change_time_ = rtc::TimeMillis();
 }
 
-bool AudioDeviceIOS::RestartAudioUnit(bool enable_input) {
+bool AudioDeviceIOS::RestartAudioUnit(bool require_input) {
   RTC_DCHECK_RUN_ON(&io_thread_checker_);
 
   LOGI() << "RestartAudioUnit";
@@ -685,7 +700,7 @@ bool AudioDeviceIOS::RestartAudioUnit(bool enable_input) {
   // Initialize the audio unit again with the same sample rate.
   const double sample_rate = playout_parameters_.sample_rate();
 
-  if (!audio_unit_->Initialize(sample_rate, enable_input)) {
+  if (!audio_unit_->Initialize(sample_rate, require_input)) {
     RTCLogError(@"Failed to initialize the audio unit with sample rate: %f", sample_rate);
     return false;
   }
@@ -921,7 +936,7 @@ void AudioDeviceIOS::UnconfigureAudioSession() {
   RTCLog(@"Unconfigured audio session.");
 }
 
-bool AudioDeviceIOS::InitPlayOrRecord(bool enable_input) {
+bool AudioDeviceIOS::InitPlayOrRecord(bool is_record) {
   LOGI() << "InitPlayOrRecord";
   RTC_DCHECK_RUN_ON(thread_);
 
@@ -957,7 +972,7 @@ bool AudioDeviceIOS::InitPlayOrRecord(bool enable_input) {
       return false;
     }
     SetupAudioBuffersForActiveAudioSession();
-    audio_unit_->Initialize(playout_parameters_.sample_rate(), enable_input);
+    audio_unit_->Initialize(playout_parameters_.sample_rate(), is_record);
   }
 
   // Release the lock.
@@ -1087,18 +1102,36 @@ bool AudioDeviceIOS::MicrophoneIsInitialized() const {
 }
 
 int32_t AudioDeviceIOS::MicrophoneMuteIsAvailable(bool& available) {
-  available = false;
+  available = true;
   return 0;
 }
 
 int32_t AudioDeviceIOS::SetMicrophoneMute(bool enable) {
-  RTC_DCHECK_NOTREACHED() << "Not implemented";
-  return -1;
+  RTC_DCHECK_RUN_ON(thread_);
+  RTCLog(@"Set microphone mute: %d", enable);
+
+  if (!audio_unit_ || audio_unit_->GetState() < VoiceProcessingAudioUnit::kInitialized ||
+      !recording_is_initialized_) {
+    return -1;
+  }
+
+  audio_unit_->SetInputMuted(enable);
+
+  return 0;
 }
 
 int32_t AudioDeviceIOS::MicrophoneMute(bool& enabled) const {
-  RTC_DCHECK_NOTREACHED() << "Not implemented";
-  return -1;
+  RTC_DCHECK_RUN_ON(thread_);
+  RTCLog(@"Get microphone mute");
+
+  if (!audio_unit_ || audio_unit_->GetState() < VoiceProcessingAudioUnit::kInitialized ||
+      !recording_is_initialized_) {
+    return -1;
+  }
+
+  enabled = audio_unit_->GetIsInputMuted();
+
+  return 0;
 }
 
 int32_t AudioDeviceIOS::StereoRecordingIsAvailable(bool& available) {

@@ -74,14 +74,20 @@ class VoiceProcessingAudioUnit {
 
   VoiceProcessingAudioUnit::State GetState() const;
 
+  // Whether the audio unit was initialized with input enabled.
+  bool GetIsInputEnabled() const;
+  bool GetIsInputMuted() const;
+
   // Initializes the underlying audio unit with the given sample rate.
-  bool Initialize(Float64 sample_rate, bool enable_input);
+  bool Initialize(Float64 sample_rate, bool require_input);
 
   // Starts the underlying audio unit.
   OSStatus Start();
 
   // Stops the underlying audio unit.
   bool Stop();
+
+  OSStatus SetInputMuted(bool mute);
 
   // Uninitializes the underlying audio unit.
   bool Uninitialize();
@@ -134,6 +140,8 @@ class VoiceProcessingAudioUnit {
   VoiceProcessingAudioUnitObserver* observer_;
   AudioUnit vpio_unit_;
   VoiceProcessingAudioUnit::State state_;
+  bool is_input_enabled_;
+  bool is_input_muted_;
 };
 }  // namespace ios_adm
 }  // namespace webrtc

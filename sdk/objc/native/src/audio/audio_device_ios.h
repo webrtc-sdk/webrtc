@@ -202,7 +202,7 @@ class AudioDeviceIOS : public AudioDeviceGeneric,
 
   // Activates our audio session, creates and initializes the voice-processing
   // audio unit and verifies that we got the preferred native audio parameters.
-  bool InitPlayOrRecord(bool enable_input);
+  bool InitPlayOrRecord(bool is_record);
 
   // Closes and deletes the voice-processing I/O unit.
   void ShutdownPlayOrRecord();

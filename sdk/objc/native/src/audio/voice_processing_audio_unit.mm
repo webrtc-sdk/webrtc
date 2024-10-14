@@ -16,6 +16,24 @@
 #import "base/RTCLogging.h"
 #import "sdk/objc/components/audio/RTCAudioSessionConfiguration.h"
 
+#import <AVFoundation/AVFoundation.h>
+
+bool IsMicrophoneSupported() {
+  #if TARGET_OS_TV
+    return false;
+  #else
+    return true;
+  #endif
+}
+
+bool IsMicrophonePermissionGranted() {
+  #if TARGET_OS_TV
+    return false;
+  #else
+    return [AVAudioSession sharedInstance].recordPermission == AVAudioSessionRecordPermissionGranted;
+  #endif
+}
+
 #if !defined(NDEBUG)
 static void LogStreamDescription(AudioStreamBasicDescription description) {
   char formatIdString[5];
@@ -76,7 +94,9 @@ VoiceProcessingAudioUnit::VoiceProcessingAudioUnit(bool bypass_voice_processing,
     : bypass_voice_processing_(bypass_voice_processing),
       observer_(observer),
       vpio_unit_(nullptr),
-      state_(kInitRequired) {
+      state_(kInitRequired),
+      is_input_enabled_(false),
+      is_input_muted_(false) {
   RTC_DCHECK(observer);
 }
 
@@ -180,7 +200,15 @@ VoiceProcessingAudioUnit::State VoiceProcessingAudioUnit::GetState() const {
   return state_;
 }
 
-bool VoiceProcessingAudioUnit::Initialize(Float64 sample_rate, bool enable_input) {
+bool VoiceProcessingAudioUnit::GetIsInputEnabled() const {
+  return is_input_enabled_;
+}
+
+bool VoiceProcessingAudioUnit::GetIsInputMuted() const {
+  return is_input_muted_;
+}
+
+bool VoiceProcessingAudioUnit::Initialize(Float64 sample_rate, bool require_input) {
   RTC_DCHECK_GE(state_, kUninitialized);
   RTCLog(@"Initializing audio unit with sample rate: %f", sample_rate);
 
@@ -191,17 +219,37 @@ bool VoiceProcessingAudioUnit::Initialize(Float64 sample_rate, bool enable_input
   LogStreamDescription(format);
 #endif
 
-  UInt32 _enable_input = enable_input ? 1 : 0;
-  RTCLog(@"Initializing AudioUnit, _enable_input=%d", (int) _enable_input);
-  result = AudioUnitSetProperty(vpio_unit_, kAudioOutputUnitProperty_EnableIO,
-                                kAudioUnitScope_Input, kInputBus, &_enable_input,
-                                sizeof(_enable_input));
-  if (result != noErr) {
-    DisposeAudioUnit();
-    RTCLogError(@"Failed to enable input on input scope of input element. "
-                 "Error=%ld.",
-                (long)result);
-    return false;
+  // If input is required (recording) or mic permission is already granted, enable input with mute enabled.
+  // This will not cause permission dialog to appear.
+  bool enable_input = require_input || IsMicrophonePermissionGranted();
+  RTCLog(@"Initializing AudioUnit, enable_input=%d", enable_input);
+
+  if (enable_input == 1) {
+    UInt32 _value = 1;
+    result =
+        AudioUnitSetProperty(vpio_unit_, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Input,
+                             kInputBus, &_value, sizeof(_value));
+    if (result != noErr) {
+      DisposeAudioUnit();
+      RTCLogError(@"Failed to enable input on input scope of input element. "
+                   "Error=%ld.",
+                  (long)result);
+      return false;
+    }
+    is_input_enabled_ = true;
+
+    // Initially set as muted if input is enabled.
+    result = AudioUnitSetProperty(vpio_unit_, kAUVoiceIOProperty_MuteOutput, kAudioUnitScope_Global,
+                                  kInputBus, &_value, sizeof(_value));
+
+    if (result != noErr) {
+      DisposeAudioUnit();
+      RTCLogError(@"Failed to mute input on input scope of input element. "
+                   "Error=%ld.",
+                  (long)result);
+      return false;
+    }
+    is_input_muted_ = true;
   }
 
   // Set the format on the output scope of the input element/bus.
@@ -346,6 +394,26 @@ OSStatus VoiceProcessingAudioUnit::Start() {
   return noErr;
 }
 
+OSStatus VoiceProcessingAudioUnit::SetInputMuted(bool mute) {
+  RTC_DCHECK_GE(state_, kUninitialized);
+  RTCLog(@"Set mute audio unit.");
+
+  UInt32 _value = mute ? 1 : 0;
+  OSStatus result =
+      AudioUnitSetProperty(vpio_unit_, kAUVoiceIOProperty_MuteOutput, kAudioUnitScope_Global,
+                           kInputBus, &_value, sizeof(_value));
+
+  if (result != noErr) {
+    RTCLogError(@"Failed to mute audio unit. Error=%ld", (long)result);
+    return result;
+  } else {
+    RTCLog(@"Set mute audio unit");
+  }
+
+  is_input_muted_ = mute;
+  return result;
+}
+
 bool VoiceProcessingAudioUnit::Stop() {
   RTC_DCHECK_GE(state_, kUninitialized);
   RTCLog(@"Stopping audio unit.");
@@ -375,6 +443,8 @@ bool VoiceProcessingAudioUnit::Uninitialize() {
   }
 
   state_ = kUninitialized;
+  is_input_enabled_ = false;
+  is_input_muted_ = false;
   return true;
 }
 
