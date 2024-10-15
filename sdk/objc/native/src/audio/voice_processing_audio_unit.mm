@@ -226,9 +226,8 @@ bool VoiceProcessingAudioUnit::Initialize(Float64 sample_rate, bool require_inpu
 
   if (enable_input == 1) {
     UInt32 _value = 1;
-    result =
-        AudioUnitSetProperty(vpio_unit_, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Input,
-                             kInputBus, &_value, sizeof(_value));
+    result = AudioUnitSetProperty(vpio_unit_, kAudioOutputUnitProperty_EnableIO,
+                                  kAudioUnitScope_Input, kInputBus, &_value, sizeof(_value));
     if (result != noErr) {
       DisposeAudioUnit();
       RTCLogError(@"Failed to enable input on input scope of input element. "
@@ -397,6 +396,11 @@ OSStatus VoiceProcessingAudioUnit::Start() {
 OSStatus VoiceProcessingAudioUnit::SetInputMuted(bool mute) {
   RTC_DCHECK_GE(state_, kUninitialized);
   RTCLog(@"Set mute audio unit.");
+
+  if (is_input_muted_ == mute) {
+    // Already muted or unmuted, nothing to do.
+    return noErr;
+  }
 
   UInt32 _value = mute ? 1 : 0;
   OSStatus result =
