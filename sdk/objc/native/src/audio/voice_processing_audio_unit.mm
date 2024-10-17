@@ -241,32 +241,32 @@ bool VoiceProcessingAudioUnit::Initialize(Float64 sample_rate, bool require_inpu
   // enabled. This will not cause permission dialog to appear.
   bool enable_input = require_input || is_microphone_permission_granted;
 
-  if (enable_input) {
-    UInt32 _value = 1;
+  UInt32 _enable_input_value = enable_input ? 1 : 0;
+  RTCLog(@"Initializing with enable input: %d", _enable_input_value);
+  result =
+      AudioUnitSetProperty(vpio_unit_, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Input,
+                           kInputBus, &_enable_input_value, sizeof(_enable_input_value));
+  if (result != noErr) {
+    DisposeAudioUnit();
+    RTCLogError(@"Failed to enable input on input scope of input element. "
+                 "Error=%ld.",
+                (long)result);
+    return false;
+  }
+  is_input_enabled_ = enable_input;
 
-    result = AudioUnitSetProperty(vpio_unit_, kAudioOutputUnitProperty_EnableIO,
-                                  kAudioUnitScope_Input, kInputBus, &_value, sizeof(_value));
-    if (result != noErr) {
-      DisposeAudioUnit();
-      RTCLogError(@"Failed to enable input on input scope of input element. "
-                   "Error=%ld.",
-                  (long)result);
-      return false;
-    }
-    is_input_enabled_ = true;
+  UInt32 _mute_value = require_input ? 0 : 1;
+  RTCLog(@"Initializing with mute: %d", _mute_value);
+  // Initially set to mute if input is enabled but recording is not immediately required.
+  result = AudioUnitSetProperty(vpio_unit_, kAUVoiceIOProperty_MuteOutput, kAudioUnitScope_Global,
+                                kInputBus, &_mute_value, sizeof(_mute_value));
 
-    UInt32 _mute_value = require_input ? 0 : 1;
-    // Initially set to mute if input is enabled but recording is not immediately required.
-    result = AudioUnitSetProperty(vpio_unit_, kAUVoiceIOProperty_MuteOutput, kAudioUnitScope_Global,
-                                  kInputBus, &_mute_value, sizeof(_mute_value));
-
-    if (result != noErr) {
-      DisposeAudioUnit();
-      RTCLogError(@"Failed to mute input on input scope of input element. "
-                   "Error=%ld.",
-                  (long)result);
-      return false;
-    }
+  if (result != noErr) {
+    DisposeAudioUnit();
+    RTCLogError(@"Failed to mute input on input scope of input element. "
+                 "Error=%ld.",
+                (long)result);
+    return false;
   }
 
   // Set the format on the output scope of the input element/bus.
