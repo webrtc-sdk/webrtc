@@ -95,8 +95,7 @@ VoiceProcessingAudioUnit::VoiceProcessingAudioUnit(bool bypass_voice_processing,
       observer_(observer),
       vpio_unit_(nullptr),
       state_(kInitRequired),
-      is_input_enabled_(false),
-      is_input_muted_(false) {
+      is_input_enabled_(false) {
   RTC_DCHECK(observer);
 }
 
@@ -205,7 +204,23 @@ bool VoiceProcessingAudioUnit::GetIsInputEnabled() const {
 }
 
 bool VoiceProcessingAudioUnit::GetIsInputMuted() const {
-  return is_input_muted_;
+  RTC_DCHECK_GE(state_, kUninitialized);
+  RTCLog(@"Getting audio unit input mute status...");
+
+  UInt32 _value = 0;
+  UInt32 dataSize = sizeof(_value);
+
+  // Get the mute status from the Audio Unit
+  OSStatus result = AudioUnitGetProperty(vpio_unit_, kAUVoiceIOProperty_MuteOutput,
+                                         kAudioUnitScope_Global, kInputBus, &_value, &dataSize);
+
+  if (result != noErr) {
+    RTCLogError(@"Failed to get audio unit input mute status. Error=%ld", (long)result);
+    return false;
+  }
+
+  RTCLog(@"Retrieved audio unit input mute status: %d", _value);
+  return (_value == 1);
 }
 
 bool VoiceProcessingAudioUnit::Initialize(Float64 sample_rate, bool require_input) {
@@ -252,7 +267,6 @@ bool VoiceProcessingAudioUnit::Initialize(Float64 sample_rate, bool require_inpu
                   (long)result);
       return false;
     }
-    is_input_muted_ = !require_input;
   }
 
   // Set the format on the output scope of the input element/bus.
@@ -401,11 +415,6 @@ OSStatus VoiceProcessingAudioUnit::SetInputMuted(bool mute) {
   RTC_DCHECK_GE(state_, kUninitialized);
   RTCLog(@"Updating audio unit input mute to: %d...", mute);
 
-  if (is_input_muted_ == mute) {
-    // Already muted or unmuted, nothing to do.
-    return noErr;
-  }
-
   UInt32 _value = mute ? 1 : 0;
   OSStatus result =
       AudioUnitSetProperty(vpio_unit_, kAUVoiceIOProperty_MuteOutput, kAudioUnitScope_Global,
@@ -418,7 +427,6 @@ OSStatus VoiceProcessingAudioUnit::SetInputMuted(bool mute) {
     RTCLog(@"Update audio unit input mute success, muted: %d", mute);
   }
 
-  is_input_muted_ = mute;
   return result;
 }
 
@@ -452,7 +460,6 @@ bool VoiceProcessingAudioUnit::Uninitialize() {
 
   state_ = kUninitialized;
   is_input_enabled_ = false;
-  is_input_muted_ = false;
   return true;
 }
 
