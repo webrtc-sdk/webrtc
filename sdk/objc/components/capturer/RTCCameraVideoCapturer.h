@@ -42,13 +42,6 @@ NS_EXTENSION_UNAVAILABLE_IOS("Camera not available in app extensions.")
                     (nullable __weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)delegate
                   captureSession:(AVCaptureSession *)captureSession;
 
-- (instancetype)initWithDelegate:
-    (nullable __weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)delegate;
-
-- (instancetype)initWithDelegate:
-                    (nullable __weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)delegate
-                  captureSession:(AVCaptureSession *)captureSession;
-
 // Returns the most efficient supported output pixel format for this capturer.
 - (FourCharCode)preferredOutputPixelFormat;
 
