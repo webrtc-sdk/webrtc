@@ -1698,8 +1698,10 @@ bool WebRtcVoiceSendChannel::MuteStream(uint32_t ssrc, bool muted) {
     ap->set_output_will_be_muted(all_muted);
   }
 
-  // Notfy the AudioState that the mute state has updated.
-  engine_->audio_state()->OnMuteStreamChanged();
+  webrtc::AudioDeviceModule* adm = engine()->adm();
+  if (adm) {
+    adm->SetMicrophoneMute(all_muted);
+  }
 
   return true;
 }

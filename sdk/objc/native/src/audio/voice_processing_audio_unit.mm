@@ -16,6 +16,24 @@
 #import "base/RTCLogging.h"
 #import "sdk/objc/components/audio/RTCAudioSessionConfiguration.h"
 
+#import <AVFoundation/AVFoundation.h>
+
+bool IsMicrophoneSupported() {
+  #if TARGET_OS_TV
+    return false;
+  #else
+    return true;
+  #endif
+}
+
+bool IsMicrophonePermissionGranted() {
+  #if TARGET_OS_TV
+    return false;
+  #else
+    return [AVAudioSession sharedInstance].recordPermission == AVAudioSessionRecordPermissionGranted;
+  #endif
+}
+
 #if !defined(NDEBUG)
 static void LogStreamDescription(AudioStreamBasicDescription description) {
   char formatIdString[5];
@@ -76,7 +94,8 @@ VoiceProcessingAudioUnit::VoiceProcessingAudioUnit(bool bypass_voice_processing,
     : bypass_voice_processing_(bypass_voice_processing),
       observer_(observer),
       vpio_unit_(nullptr),
-      state_(kInitRequired) {
+      state_(kInitRequired),
+      is_input_enabled_(false) {
   RTC_DCHECK(observer);
 }
 
@@ -180,9 +199,36 @@ VoiceProcessingAudioUnit::State VoiceProcessingAudioUnit::GetState() const {
   return state_;
 }
 
-bool VoiceProcessingAudioUnit::Initialize(Float64 sample_rate, bool enable_input) {
+bool VoiceProcessingAudioUnit::GetIsInputEnabled() const {
+  return is_input_enabled_;
+}
+
+bool VoiceProcessingAudioUnit::GetIsInputMuted() const {
   RTC_DCHECK_GE(state_, kUninitialized);
-  RTCLog(@"Initializing audio unit with sample rate: %f", sample_rate);
+  RTCLog(@"Getting audio unit input mute status...");
+
+  UInt32 _value = 0;
+  UInt32 dataSize = sizeof(_value);
+
+  // Get the mute status from the Audio Unit
+  OSStatus result = AudioUnitGetProperty(vpio_unit_, kAUVoiceIOProperty_MuteOutput,
+                                         kAudioUnitScope_Global, kInputBus, &_value, &dataSize);
+
+  if (result != noErr) {
+    RTCLogError(@"Failed to get audio unit input mute status. Error=%ld", (long)result);
+    return false;
+  }
+
+  RTCLog(@"Retrieved audio unit input mute status: %d", _value);
+  return (_value == 1);
+}
+
+bool VoiceProcessingAudioUnit::Initialize(Float64 sample_rate, bool require_input) {
+  RTC_DCHECK_GE(state_, kUninitialized);
+
+  bool is_microphone_permission_granted = IsMicrophonePermissionGranted();
+  RTCLog(@"Initializing audio unit with sample rate: %f, require_input: %d, mic permission: %d",
+         sample_rate, require_input, is_microphone_permission_granted);
 
   OSStatus result = noErr;
   AudioStreamBasicDescription format = GetFormat(sample_rate);
@@ -191,14 +237,33 @@ bool VoiceProcessingAudioUnit::Initialize(Float64 sample_rate, bool enable_input
   LogStreamDescription(format);
 #endif
 
-  UInt32 _enable_input = enable_input ? 1 : 0;
-  RTCLog(@"Initializing AudioUnit, _enable_input=%d", (int) _enable_input);
-  result = AudioUnitSetProperty(vpio_unit_, kAudioOutputUnitProperty_EnableIO,
-                                kAudioUnitScope_Input, kInputBus, &_enable_input,
-                                sizeof(_enable_input));
+  // If input is required (recording) or mic permission is already granted, enable input with mute
+  // enabled. This will not cause permission dialog to appear.
+  bool enable_input = require_input || is_microphone_permission_granted;
+
+  UInt32 _enable_input_value = enable_input ? 1 : 0;
+  RTCLog(@"Initializing with enable input: %d", _enable_input_value);
+  result =
+      AudioUnitSetProperty(vpio_unit_, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Input,
+                           kInputBus, &_enable_input_value, sizeof(_enable_input_value));
   if (result != noErr) {
     DisposeAudioUnit();
     RTCLogError(@"Failed to enable input on input scope of input element. "
+                 "Error=%ld.",
+                (long)result);
+    return false;
+  }
+  is_input_enabled_ = enable_input;
+
+  UInt32 _mute_value = require_input ? 0 : 1;
+  RTCLog(@"Initializing with mute: %d", _mute_value);
+  // Initially set to mute if input is enabled but recording is not immediately required.
+  result = AudioUnitSetProperty(vpio_unit_, kAUVoiceIOProperty_MuteOutput, kAudioUnitScope_Global,
+                                kInputBus, &_mute_value, sizeof(_mute_value));
+
+  if (result != noErr) {
+    DisposeAudioUnit();
+    RTCLogError(@"Failed to mute input on input scope of input element. "
                  "Error=%ld.",
                 (long)result);
     return false;
@@ -277,41 +342,39 @@ bool VoiceProcessingAudioUnit::Initialize(Float64 sample_rate, bool enable_input
   // reasons why it happens.
   int agc_was_enabled_by_default = 0;
   UInt32 agc_is_enabled = 0;
-  result = GetAGCState(vpio_unit_, &agc_is_enabled);
-  if (result != noErr) {
-    RTCLogError(@"Failed to get AGC state (1st attempt). "
-                 "Error=%ld.",
-                (long)result);
-    // Example of error code: kAudioUnitErr_NoConnection (-10876).
-    // All error codes related to audio units are negative and are therefore
-    // converted into a postive value to match the UMA APIs.
-    RTC_HISTOGRAM_COUNTS_SPARSE_100000(
-        "WebRTC.Audio.GetAGCStateErrorCode1", (-1) * result);
-  } else if (agc_is_enabled) {
-    // Remember that the AGC was enabled by default. Will be used in UMA.
-    agc_was_enabled_by_default = 1;
-  } else {
-    // AGC was initially disabled => try to enable it explicitly.
-    UInt32 enable_agc = 1;
-    result =
-        AudioUnitSetProperty(vpio_unit_,
-                             kAUVoiceIOProperty_VoiceProcessingEnableAGC,
-                             kAudioUnitScope_Global, kInputBus, &enable_agc,
-                             sizeof(enable_agc));
-    if (result != noErr) {
-      RTCLogError(@"Failed to enable the built-in AGC. "
-                   "Error=%ld.",
-                  (long)result);
-      RTC_HISTOGRAM_COUNTS_SPARSE_100000(
-          "WebRTC.Audio.SetAGCStateErrorCode", (-1) * result);
-    }
+  // Only attempt to enable AGC if input is enabled.
+  if (enable_input) {
     result = GetAGCState(vpio_unit_, &agc_is_enabled);
     if (result != noErr) {
-      RTCLogError(@"Failed to get AGC state (2nd attempt). "
+      RTCLogError(@"Failed to get AGC state (1st attempt). "
                    "Error=%ld.",
                   (long)result);
-      RTC_HISTOGRAM_COUNTS_SPARSE_100000(
-          "WebRTC.Audio.GetAGCStateErrorCode2", (-1) * result);
+      // Example of error code: kAudioUnitErr_NoConnection (-10876).
+      // All error codes related to audio units are negative and are therefore
+      // converted into a postive value to match the UMA APIs.
+      RTC_HISTOGRAM_COUNTS_SPARSE_100000("WebRTC.Audio.GetAGCStateErrorCode1", (-1) * result);
+    } else if (agc_is_enabled) {
+      // Remember that the AGC was enabled by default. Will be used in UMA.
+      agc_was_enabled_by_default = 1;
+    } else {
+      // AGC was initially disabled => try to enable it explicitly.
+      UInt32 enable_agc = 1;
+      result =
+          AudioUnitSetProperty(vpio_unit_, kAUVoiceIOProperty_VoiceProcessingEnableAGC,
+                               kAudioUnitScope_Global, kInputBus, &enable_agc, sizeof(enable_agc));
+      if (result != noErr) {
+        RTCLogError(@"Failed to enable the built-in AGC. "
+                     "Error=%ld.",
+                    (long)result);
+        RTC_HISTOGRAM_COUNTS_SPARSE_100000("WebRTC.Audio.SetAGCStateErrorCode", (-1) * result);
+      }
+      result = GetAGCState(vpio_unit_, &agc_is_enabled);
+      if (result != noErr) {
+        RTCLogError(@"Failed to get AGC state (2nd attempt). "
+                     "Error=%ld.",
+                    (long)result);
+        RTC_HISTOGRAM_COUNTS_SPARSE_100000("WebRTC.Audio.GetAGCStateErrorCode2", (-1) * result);
+      }
     }
   }
 
@@ -346,6 +409,25 @@ OSStatus VoiceProcessingAudioUnit::Start() {
   return noErr;
 }
 
+OSStatus VoiceProcessingAudioUnit::SetInputMuted(bool mute) {
+  RTC_DCHECK_GE(state_, kUninitialized);
+  RTCLog(@"Updating audio unit input mute to: %d...", mute);
+
+  UInt32 _value = mute ? 1 : 0;
+  OSStatus result =
+      AudioUnitSetProperty(vpio_unit_, kAUVoiceIOProperty_MuteOutput, kAudioUnitScope_Global,
+                           kInputBus, &_value, sizeof(_value));
+
+  if (result != noErr) {
+    RTCLogError(@"Failed to mute audio unit input. Error=%ld", (long)result);
+    return result;
+  } else {
+    RTCLog(@"Update audio unit input mute success, muted: %d", mute);
+  }
+
+  return result;
+}
+
 bool VoiceProcessingAudioUnit::Stop() {
   RTC_DCHECK_GE(state_, kUninitialized);
   RTCLog(@"Stopping audio unit.");
@@ -375,6 +457,7 @@ bool VoiceProcessingAudioUnit::Uninitialize() {
   }
 
   state_ = kUninitialized;
+  is_input_enabled_ = false;
   return true;
 }
 
