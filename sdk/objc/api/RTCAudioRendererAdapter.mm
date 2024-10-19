@@ -39,12 +39,12 @@ class AudioRendererAdapter : public webrtc::AudioTrackSinkInterface {
     AudioStreamBasicDescription sd = {
         .mSampleRate = static_cast<Float64>(sample_rate),
         .mFormatID = kAudioFormatLinearPCM,
-        .mFormatFlags = kAudioFormatFlagIsFloat | kAudioFormatFlagIsPacked,
-        .mBytesPerPacket = static_cast<UInt32>(number_of_channels * 4),
+        .mFormatFlags = kLinearPCMFormatFlagIsSignedInteger | kLinearPCMFormatFlagIsPacked,
+        .mBytesPerPacket = static_cast<UInt32>(number_of_channels * 2),
         .mFramesPerPacket = 1,
-        .mBytesPerFrame = static_cast<UInt32>(number_of_channels * 4),
+        .mBytesPerFrame = static_cast<UInt32>(number_of_channels * 2),
         .mChannelsPerFrame = static_cast<UInt32>(number_of_channels),
-        .mBitsPerChannel = 32,
+        .mBitsPerChannel = 16,
         .mReserved = 0};
 
     CMFormatDescriptionRef formatDescription = nullptr;
@@ -69,16 +69,25 @@ class AudioRendererAdapter : public webrtc::AudioTrackSinkInterface {
     }
 
     pcmBuffer.frameLength = frameCount;
-    const int16_t *inputData = static_cast<const int16_t *>(audio_data);
-    const float scale = 1.0f / 32768.0f;
 
-    dispatch_apply(number_of_channels, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0),
-                   ^(size_t channel) {
-                     vDSP_vflt16(inputData + channel * number_of_frames, 1,
-                                 pcmBuffer.floatChannelData[channel], 1, frameCount);
-                     vDSP_vsmul(pcmBuffer.floatChannelData[channel], 1, &scale,
-                                pcmBuffer.floatChannelData[channel], 1, frameCount);
-                   });
+    // Handle both mono and stereo
+    const int16_t *inputData = static_cast<const int16_t *>(audio_data);
+    if (number_of_channels == 1) {
+      // Mono: straight copy
+      memcpy(pcmBuffer.int16ChannelData[0], inputData, number_of_frames * sizeof(int16_t));
+    } else if (number_of_channels == 2) {
+      // Stereo: manual deinterleave
+      int16_t *leftChannel = pcmBuffer.int16ChannelData[0];
+      int16_t *rightChannel = pcmBuffer.int16ChannelData[1];
+
+      for (size_t i = 0; i < number_of_frames; i++) {
+        leftChannel[i] = inputData[i * 2];
+        rightChannel[i] = inputData[i * 2 + 1];
+      }
+    } else {
+      NSLog(@"Unsupported number of channels: %zu", number_of_channels);
+      return;
+    }
 
     [adapter_.audioRenderer renderPCMBuffer:pcmBuffer];
   }
