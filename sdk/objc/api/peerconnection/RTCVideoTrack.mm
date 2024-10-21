@@ -78,6 +78,14 @@
   self.nativeVideoTrack->set_should_receive(shouldReceive);
 }
 
+- (int)contentHint {
+  return (int)self.nativeVideoTrack->content_hint();
+}
+
+- (void)setContentHint:(int)val {
+  self.nativeVideoTrack->set_content_hint((webrtc::VideoTrackInterface::ContentHint)val);
+}
+
 - (void)addRenderer:(id<RTC_OBJC_TYPE(RTCVideoRenderer)>)renderer {
   if (!_workerThread->IsCurrent()) {
     _workerThread->BlockingCall([renderer, self] { [self addRenderer:renderer]; });

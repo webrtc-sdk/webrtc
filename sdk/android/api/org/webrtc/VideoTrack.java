@@ -72,6 +72,14 @@ public class VideoTrack extends MediaStreamTrack {
     return nativeGetShouldReceive(getNativeMediaStreamTrack());
   }
 
+  public void setContentHint(int val) {
+    nativeSetContentHint(getNativeMediaStreamTrack(), val);
+  }
+
+  public int contentHint() {
+    return nativeGetContentHint(getNativeMediaStreamTrack());
+  }
+
   @Override
   public void dispose() {
     for (long nativeSink : sinks.values()) {
@@ -93,4 +101,6 @@ public class VideoTrack extends MediaStreamTrack {
   private static native void nativeFreeSink(long sink);
   private static native void nativeSetShouldReceive(long track, boolean shouldReceive);
   private static native boolean nativeGetShouldReceive(long track);
+  private static native void nativeSetContentHint(long track, int val);
+  private static native int nativeGetContentHint(long track);
 }
