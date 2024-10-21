@@ -15,6 +15,7 @@
  */
 
 #include <AudioUnit/AudioUnit.h>
+#include <os/lock.h>
 
 #import "RTCAudioDeviceModule.h"
 #import "RTCAudioDeviceModule+Private.h"
@@ -25,19 +26,60 @@
 
 class AudioDeviceSink : public webrtc::AudioDeviceSink {
  public:
-  AudioDeviceSink() {}
+  AudioDeviceSink() : lock_(OS_UNFAIR_LOCK_INIT) {}
 
   void OnDevicesUpdated() override {
-
-    RTCLogInfo(@"AudioDeviceSink OnDevicesUpdated");
-
-    if (callback_handler_) {
-      callback_handler_();
+    os_unfair_lock_lock(&lock_);
+    if (on_devices_did_update_callback_) {
+      on_devices_did_update_callback_();
     }
+    os_unfair_lock_unlock(&lock_);
   }
 
- // private:
-  RTCOnAudioDevicesDidUpdate callback_handler_;
+  void OnMutedSpeechActivityEvent(webrtc::AudioDeviceModule::SpeechActivityEvent event) override {
+    os_unfair_lock_lock(&lock_);
+    if (on_speech_activity_callback_) {
+      on_speech_activity_callback_(ConvertSpeechActivityEvent(event));
+    }
+    os_unfair_lock_unlock(&lock_);
+  }
+
+  void SetDevicesUpdatedCallBack(RTCDevicesDidUpdateCallback cb) {
+    os_unfair_lock_lock(&lock_);
+    on_devices_did_update_callback_ = cb;
+    os_unfair_lock_unlock(&lock_);
+  }
+
+  void SetOnSpeechActivityCallBack(RTCSpeechActivityCallback cb) {
+    os_unfair_lock_lock(&lock_);
+    on_speech_activity_callback_ = cb;
+    os_unfair_lock_unlock(&lock_);
+  }
+
+  bool IsCallbackAttached() {
+    os_unfair_lock_lock(&lock_);
+    bool result =
+        on_devices_did_update_callback_ != nullptr || on_speech_activity_callback_ != nullptr;
+    os_unfair_lock_unlock(&lock_);
+    return result;
+  }
+
+ private:
+  os_unfair_lock lock_;
+  RTCDevicesDidUpdateCallback on_devices_did_update_callback_;
+  RTCSpeechActivityCallback on_speech_activity_callback_;
+
+  RTCSpeechActivityEvent ConvertSpeechActivityEvent(
+      webrtc::AudioDeviceModule::SpeechActivityEvent event) {
+    switch (event) {
+      case webrtc::AudioDeviceModule::SpeechActivityEvent::kStarted:
+        return RTCSpeechActivityEvent::kStarted;
+      case webrtc::AudioDeviceModule::SpeechActivityEvent::kEnded:
+        return RTCSpeechActivityEvent::kEnded;
+      default:
+        return RTCSpeechActivityEvent::kEnded;  // Default to kEnded if unknown value
+    }
+  }
 };
 
 @implementation RTC_OBJC_TYPE (RTCAudioDeviceModule) {
@@ -56,10 +98,6 @@ class AudioDeviceSink : public webrtc::AudioDeviceSink {
   _workerThread = workerThread;
 
   _sink = new AudioDeviceSink();
-
-  _workerThread->BlockingCall([self] {
-    _native->SetAudioDeviceSink(_sink);
-  });
 
   return self;
 }
@@ -240,8 +278,25 @@ class AudioDeviceSink : public webrtc::AudioDeviceSink {
   });
 }
 
-- (BOOL)setDevicesUpdatedHandler: (nullable RTCOnAudioDevicesDidUpdate) handler {
-  _sink->callback_handler_ = handler;
+- (BOOL)setDevicesDidUpdateCallback:(nullable RTCDevicesDidUpdateCallback)callback {
+  _sink->SetDevicesUpdatedCallBack(callback);
+
+  auto audioDeviceSink = _sink->IsCallbackAttached() ? _sink : nullptr;
+
+  _workerThread->BlockingCall(
+      [self, audioDeviceSink] { _native->SetAudioDeviceSink(audioDeviceSink); });
+
+  return YES;
+}
+
+- (BOOL)setSpeechActivityCallback:(nullable RTCSpeechActivityCallback)callback {
+  _sink->SetOnSpeechActivityCallBack(callback);
+
+  auto audioDeviceSink = _sink->IsCallbackAttached() ? _sink : nullptr;
+
+  _workerThread->BlockingCall(
+      [self, audioDeviceSink] { _native->SetAudioDeviceSink(audioDeviceSink); });
+
   return YES;
 }
 

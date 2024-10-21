@@ -22,7 +22,10 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-typedef void (^RTCOnAudioDevicesDidUpdate)();
+typedef NS_ENUM(NSInteger, RTCSpeechActivityEvent) { kStarted, kEnded };
+
+typedef void (^RTCDevicesDidUpdateCallback)();
+typedef void (^RTCSpeechActivityCallback)(RTCSpeechActivityEvent);
 
 RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCAudioDeviceModule) : NSObject
@@ -42,7 +45,8 @@ RTC_OBJC_EXPORT
 - (BOOL)trySetOutputDevice:(nullable RTC_OBJC_TYPE(RTCIODevice) *)device;
 - (BOOL)trySetInputDevice:(nullable RTC_OBJC_TYPE(RTCIODevice) *)device;
 
-- (BOOL)setDevicesUpdatedHandler: (nullable RTCOnAudioDevicesDidUpdate) handler;
+- (BOOL)setDevicesDidUpdateCallback:(nullable RTCDevicesDidUpdateCallback)callback;
+- (BOOL)setSpeechActivityCallback:(nullable RTCSpeechActivityCallback)callback;
 
 - (BOOL)startPlayout;
 - (BOOL)stopPlayout;
