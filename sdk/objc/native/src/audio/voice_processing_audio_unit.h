@@ -140,7 +140,6 @@ class VoiceProcessingAudioUnit {
   VoiceProcessingAudioUnitObserver* observer_;
   AudioUnit vpio_unit_;
   VoiceProcessingAudioUnit::State state_;
-  bool is_input_enabled_;
 };
 }  // namespace ios_adm
 }  // namespace webrtc

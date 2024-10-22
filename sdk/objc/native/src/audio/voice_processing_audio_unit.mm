@@ -94,8 +94,7 @@ VoiceProcessingAudioUnit::VoiceProcessingAudioUnit(bool bypass_voice_processing,
     : bypass_voice_processing_(bypass_voice_processing),
       observer_(observer),
       vpio_unit_(nullptr),
-      state_(kInitRequired),
-      is_input_enabled_(false) {
+      state_(kInitRequired) {
   RTC_DCHECK(observer);
 }
 
@@ -200,7 +199,22 @@ VoiceProcessingAudioUnit::State VoiceProcessingAudioUnit::GetState() const {
 }
 
 bool VoiceProcessingAudioUnit::GetIsInputEnabled() const {
-  return is_input_enabled_;
+  RTC_DCHECK_GE(state_, kUninitialized);
+  RTCLog(@"Getting audio unit input enabled status...");
+
+  UInt32 _value = 0;
+  UInt32 dataSize = sizeof(_value);
+
+  OSStatus result = AudioUnitGetProperty(vpio_unit_, kAudioOutputUnitProperty_EnableIO,
+                                         kAudioUnitScope_Input, kInputBus, &_value, &dataSize);
+
+  if (result != noErr) {
+    RTCLogError(@"Failed to get audio unit input enabled status. Error=%ld", (long)result);
+    return false;
+  }
+
+  RTCLog(@"Retrieved audio unit input enabled status: %d", _value);
+  return (_value == 1);
 }
 
 bool VoiceProcessingAudioUnit::GetIsInputMuted() const {
@@ -210,7 +224,6 @@ bool VoiceProcessingAudioUnit::GetIsInputMuted() const {
   UInt32 _value = 0;
   UInt32 dataSize = sizeof(_value);
 
-  // Get the mute status from the Audio Unit
   OSStatus result = AudioUnitGetProperty(vpio_unit_, kAUVoiceIOProperty_MuteOutput,
                                          kAudioUnitScope_Global, kInputBus, &_value, &dataSize);
 
@@ -253,7 +266,6 @@ bool VoiceProcessingAudioUnit::Initialize(Float64 sample_rate, bool require_inpu
                 (long)result);
     return false;
   }
-  is_input_enabled_ = enable_input;
 
   UInt32 _mute_value = require_input ? 0 : 1;
   RTCLog(@"Initializing with mute: %d", _mute_value);
@@ -457,7 +469,6 @@ bool VoiceProcessingAudioUnit::Uninitialize() {
   }
 
   state_ = kUninitialized;
-  is_input_enabled_ = false;
   return true;
 }
 
