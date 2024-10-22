@@ -18,21 +18,9 @@
 
 #import <AVFoundation/AVFoundation.h>
 
-bool IsMicrophoneSupported() {
-  #if TARGET_OS_TV
-    return false;
-  #else
-    return true;
-  #endif
-}
-
-bool IsMicrophonePermissionGranted() {
-  #if TARGET_OS_TV
-    return false;
-  #else
-    return [AVAudioSession sharedInstance].recordPermission == AVAudioSessionRecordPermissionGranted;
-  #endif
-}
+#import "components/audio/RTCAudioSession+Private.h"
+#import "components/audio/RTCAudioSession.h"
+#import "components/audio/RTCAudioSessionConfiguration.h"
 
 #if !defined(NDEBUG)
 static void LogStreamDescription(AudioStreamBasicDescription description) {
@@ -239,9 +227,12 @@ bool VoiceProcessingAudioUnit::GetIsInputMuted() const {
 bool VoiceProcessingAudioUnit::Initialize(Float64 sample_rate, bool require_input) {
   RTC_DCHECK_GE(state_, kUninitialized);
 
-  bool is_microphone_permission_granted = IsMicrophonePermissionGranted();
-  RTCLog(@"Initializing audio unit with sample rate: %f, require_input: %d, mic permission: %d",
-         sample_rate, require_input, is_microphone_permission_granted);
+  RTC_OBJC_TYPE(RTCAudioSession)* session = [RTC_OBJC_TYPE(RTCAudioSession) sharedInstance];
+  bool is_category_record = session.category == AVAudioSessionCategoryPlayAndRecord ||
+                            session.category == AVAudioSessionCategoryRecord;
+
+  RTCLog(@"Initializing audio unit with sample rate: %f, require_input: %d, category is recordable: %d",
+         sample_rate, require_input, is_category_record);
 
   OSStatus result = noErr;
   AudioStreamBasicDescription format = GetFormat(sample_rate);
@@ -252,7 +243,7 @@ bool VoiceProcessingAudioUnit::Initialize(Float64 sample_rate, bool require_inpu
 
   // If input is required (recording) or mic permission is already granted, enable input with mute
   // enabled. This will not cause permission dialog to appear.
-  bool enable_input = require_input || is_microphone_permission_granted;
+  bool enable_input = require_input || is_category_record;
 
   UInt32 _enable_input_value = enable_input ? 1 : 0;
   RTCLog(@"Initializing with enable input: %d", _enable_input_value);
