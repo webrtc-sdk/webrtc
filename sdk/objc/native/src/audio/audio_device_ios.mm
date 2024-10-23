@@ -105,7 +105,8 @@ AudioDeviceIOS::AudioDeviceIOS(bool bypass_voice_processing)
       num_detected_playout_glitches_(0),
       last_playout_time_(0),
       num_playout_callbacks_(0),
-      last_output_volume_change_time_(0) {
+      last_output_volume_change_time_(0),
+      audio_device_sink_(nullptr) {
   LOGI() << "ctor" << ios::GetCurrentThreadDescription()
          << ",bypass_voice_processing=" << bypass_voice_processing_;
   io_thread_checker_.Detach();
@@ -381,6 +382,13 @@ void AudioDeviceIOS::OnChangedOutputVolume() {
   thread_->PostTask(SafeTask(safety_, [this] { HandleOutputVolumeChange(); }));
 }
 
+int32_t AudioDeviceIOS::SetAudioDeviceSink(AudioDeviceSink* sink) {
+  RTC_DCHECK_RUN_ON(thread_);
+  LOGI() << "SetAudioDeviceSink";
+  audio_device_sink_ = sink;
+  return 0;
+}
+
 OSStatus AudioDeviceIOS::OnDeliverRecordedData(AudioUnitRenderActionFlags* flags,
                                                const AudioTimeStamp* time_stamp,
                                                UInt32 bus_number,
@@ -491,6 +499,30 @@ OSStatus AudioDeviceIOS::OnGetPlayoutData(AudioUnitRenderActionFlags* flags,
   fine_audio_buffer_->GetPlayoutData(
       rtc::ArrayView<int16_t>(static_cast<int16_t*>(audio_buffer->mData), num_frames),
       kFixedPlayoutDelayEstimate);
+  return noErr;
+}
+
+OSStatus AudioDeviceIOS::OnMutedSpeechActivityEvent(AUVoiceIOSpeechActivityEvent event) {
+  RTCLog(@"Received muted speech activity event: %d, sink: %d", event,
+         audio_device_sink_ != nullptr);
+  if (audio_device_sink_) {
+    AudioDeviceModule::SpeechActivityEvent result_event;
+
+    switch (event) {
+      case kAUVoiceIOSpeechActivityHasStarted:
+        result_event = AudioDeviceModule::SpeechActivityEvent::kStarted;
+        break;
+      case kAUVoiceIOSpeechActivityHasEnded:
+        result_event = AudioDeviceModule::SpeechActivityEvent::kEnded;
+        break;
+      default:
+        // Unknown event.
+        return -1;
+    }
+
+    audio_device_sink_->OnMutedSpeechActivityEvent(result_event);
+  }
+
   return noErr;
 }
 

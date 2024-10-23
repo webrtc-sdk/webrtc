@@ -148,6 +148,8 @@ class AudioDeviceIOS : public AudioDeviceGeneric,
   void OnCanPlayOrRecordChange(bool can_play_or_record) override;
   void OnChangedOutputVolume() override;
 
+  int32_t SetAudioDeviceSink(AudioDeviceSink* sink) override;
+
   // VoiceProcessingAudioUnitObserver methods.
   OSStatus OnDeliverRecordedData(AudioUnitRenderActionFlags* flags,
                                  const AudioTimeStamp* time_stamp,
@@ -159,6 +161,8 @@ class AudioDeviceIOS : public AudioDeviceGeneric,
                             UInt32 bus_number,
                             UInt32 num_frames,
                             AudioBufferList* io_data) override;
+
+  OSStatus OnMutedSpeechActivityEvent(AUVoiceIOSpeechActivityEvent event) override;
 
   bool IsInterrupted();
 
@@ -305,6 +309,8 @@ class AudioDeviceIOS : public AudioDeviceGeneric,
   // Ratio between mach tick units and nanosecond. Used to change mach tick
   // units to nanoseconds.
   double machTickUnitsToNanoseconds_;
+
+  AudioDeviceSink* audio_device_sink_;
 };
 }  // namespace ios_adm
 }  // namespace webrtc

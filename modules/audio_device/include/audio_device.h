@@ -20,18 +20,15 @@
 namespace webrtc {
 
 class AudioDeviceModuleForTest;
-
-// Sink for callbacks related to a audio device.
-class AudioDeviceSink {
- public:
-  virtual ~AudioDeviceSink() = default;
-
-  // input/output devices updated or default device changed
-  virtual void OnDevicesUpdated() = 0;
-};
+class AudioDeviceSink;
 
 class AudioDeviceModule : public rtc::RefCountInterface {
  public:
+  enum SpeechActivityEvent {
+    kStarted = 0,
+    kEnded,
+  };
+
   enum AudioLayer {
     kPlatformDefaultAudio = 0,
     kWindowsCoreAudio,
@@ -202,6 +199,16 @@ class AudioDeviceModuleForTest : public AudioDeviceModule {
 
   virtual int SetPlayoutSampleRate(uint32_t sample_rate) = 0;
   virtual int SetRecordingSampleRate(uint32_t sample_rate) = 0;
+};
+
+// Sink for callbacks related to a audio device.
+class AudioDeviceSink {
+ public:
+  virtual ~AudioDeviceSink() = default;
+
+  // input/output devices updated or default device changed
+  virtual void OnDevicesUpdated() = 0;
+  virtual void OnMutedSpeechActivityEvent(AudioDeviceModule::SpeechActivityEvent event) = 0;
 };
 
 }  // namespace webrtc

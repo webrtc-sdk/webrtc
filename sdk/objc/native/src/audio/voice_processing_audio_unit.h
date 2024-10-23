@@ -34,6 +34,8 @@ class VoiceProcessingAudioUnitObserver {
                                     UInt32 num_frames,
                                     AudioBufferList* io_data) = 0;
 
+  virtual OSStatus OnMutedSpeechActivityEvent(AUVoiceIOSpeechActivityEvent event) = 0;
+
  protected:
   ~VoiceProcessingAudioUnitObserver() {}
 };
