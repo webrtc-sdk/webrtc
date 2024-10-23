@@ -270,18 +270,20 @@ bool VoiceProcessingAudioUnit::Initialize(Float64 sample_rate, bool enable_input
     return true;
   }
 
-  // Muted talker detection.
-  if (@available(iOS 15.0, macOS 12.0, tvOS 15.0, visionOS 1.0, *)) {
-    AUVoiceIOMutedSpeechActivityEventListener listener = ^(AUVoiceIOSpeechActivityEvent event) {
-      RTCLog(@"Received speech activity event %d", event);
-      observer_->OnMutedSpeechActivityEvent(event);
-    };
+  if (enable_input) {
+    // Muted talker detection.
+    if (@available(iOS 15.0, macOS 12.0, tvOS 15.0, visionOS 1.0, *)) {
+      AUVoiceIOMutedSpeechActivityEventListener listener = ^(AUVoiceIOSpeechActivityEvent event) {
+        RTCLog(@"Received speech activity event %d", event);
+        observer_->OnMutedSpeechActivityEvent(event);
+      };
 
-    result = AudioUnitSetProperty(vpio_unit_, kAUVoiceIOProperty_MutedSpeechActivityEventListener,
-                                  kAudioUnitScope_Global, 0, &listener,
-                                  sizeof(AUVoiceIOMutedSpeechActivityEventListener));
-    if (result != noErr) {
-      RTCLog(@"Failed to set muted speech activity event listener. Error=%ld.", (long)result);
+      result = AudioUnitSetProperty(vpio_unit_, kAUVoiceIOProperty_MutedSpeechActivityEventListener,
+                                    kAudioUnitScope_Global, 0, &listener,
+                                    sizeof(AUVoiceIOMutedSpeechActivityEventListener));
+      if (result != noErr) {
+        RTCLog(@"Failed to set muted speech activity event listener. Error=%ld.", (long)result);
+      }
     }
   }
 
