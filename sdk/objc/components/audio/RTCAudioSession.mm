@@ -888,6 +888,15 @@ ABSL_CONST_INIT thread_local bool mutex_locked = false;
   }
 }
 
+- (void)notifyAudioUnitWillInitialize:(BOOL)isRecord {
+  for (auto delegate : self.delegates) {
+    SEL sel = @selector(audioSession:audioUnitWillInitialize:);
+    if ([delegate respondsToSelector:sel]) {
+      [delegate audioSession:self audioUnitWillInitialize:isRecord];
+    }
+  }
+}
+
 - (void)notifyDidBeginInterruption {
   for (auto delegate : self.delegates) {
     SEL sel = @selector(audioSessionDidBeginInterruption:);
