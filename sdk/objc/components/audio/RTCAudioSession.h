@@ -102,6 +102,9 @@ RTC_OBJC_EXPORT
 - (void)audioSession:(RTC_OBJC_TYPE(RTCAudioSession) *)audioSession
     audioUnitStartFailedWithError:(NSError *)error;
 
+- (void)audioSession:(RTC_OBJC_TYPE(RTCAudioSession) *)audioSession
+    audioUnitWillInitialize:(BOOL)isRecord;
+
 @end
 
 /** This is a protocol used to inform RTCAudioSession when the audio session

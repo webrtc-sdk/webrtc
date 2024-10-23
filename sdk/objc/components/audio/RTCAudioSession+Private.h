@@ -79,6 +79,8 @@ NS_ASSUME_NONNULL_BEGIN
 /** Notifies the receiver that there was an error when starting an audio unit. */
 - (void)notifyAudioUnitStartFailedWithError:(OSStatus)error;
 
+- (void)notifyAudioUnitWillInitialize:(BOOL)isRecord;
+
 // Properties and methods for tests.
 - (void)notifyDidBeginInterruption;
 - (void)notifyDidEndInterruptionWithShouldResumeSession:(BOOL)shouldResumeSession;
