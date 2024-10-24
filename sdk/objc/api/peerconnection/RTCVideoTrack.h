@@ -27,6 +27,7 @@ RTC_OBJC_EXPORT
 
 /** The receive state, if this is a remote video track. */
 @property(nonatomic, assign) BOOL shouldReceive;
+@property(nonatomic, assign) int contentHint;
 
 - (instancetype)init NS_UNAVAILABLE;
 
