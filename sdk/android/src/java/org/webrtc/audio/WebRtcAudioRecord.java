@@ -177,6 +177,10 @@ class WebRtcAudioRecord {
             }
           }
         }
+
+        if (audioRecord && !useAudioRecord) {
+          releaseAudioResources();
+        }
         
         int bytesRead = 0;
         if (audioRecord != null) {
@@ -507,7 +511,6 @@ class WebRtcAudioRecord {
       WebRtcAudioUtils.logAudioState(TAG, context, audioManager);
     }
     audioThread = null;
-    effects.release();
     releaseAudioResources();
     return true;
   }
@@ -621,6 +624,7 @@ class WebRtcAudioRecord {
   // Releases the native AudioRecord resources.
   private void releaseAudioResources() {
     Logging.d(TAG, "releaseAudioResources");
+    effects.release();
     synchronized (audioRecordStateLock) {
       if (audioRecord != null) {
         audioRecord.release();
