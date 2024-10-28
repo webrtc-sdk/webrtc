@@ -177,9 +177,10 @@ class WebRtcAudioRecord {
             }
           }
         }
-
+        
+        int bytesRead = 0;
         if (audioRecord != null) {
-          int bytesRead = audioRecord.read(byteBuffer, byteBuffer.capacity());
+          bytesRead = audioRecord.read(byteBuffer, byteBuffer.capacity());
           if (bytesRead == byteBuffer.capacity()) {
             if (microphoneMute) {
               byteBuffer.clear();
@@ -205,11 +206,15 @@ class WebRtcAudioRecord {
             // AudioRecord is primary driver in this path, so try again if possible.
             continue;
           }
+        } else {
+          byteBuffer.clear();
+          byteBuffer.put(emptyBytes);
         }
 
         if (keepAlive && audioBufferCallback != null) {
           captureTimeNs = audioBufferCallback.onBuffer(byteBuffer, audioFormat,
               channelCount, sampleRate, bytesRead, captureTimeNs);
+          bytesRead = byteBuffer.capacity();
         }
 
         // It's possible we've been shut down during the read, and stopRecording() tried and
@@ -250,7 +255,8 @@ class WebRtcAudioRecord {
   WebRtcAudioRecord(Context context, AudioManager audioManager) {
     this(context, newDefaultScheduler() /* scheduler */, audioManager, DEFAULT_AUDIO_SOURCE,
         DEFAULT_AUDIO_FORMAT, null /* errorCallback */, null /* stateCallback */,
-        null /* audioSamplesReadyCallback */, WebRtcAudioEffects.isAcousticEchoCancelerSupported(),
+        null /* audioSamplesReadyCallback */, null /* audioBufferCallback */,
+        WebRtcAudioEffects.isAcousticEchoCancelerSupported(),
         WebRtcAudioEffects.isNoiseSuppressorSupported());
   }
 
@@ -357,7 +363,10 @@ class WebRtcAudioRecord {
     nativeCacheDirectBufferAddress(nativeAudioRecord, byteBuffer);
 
     if(useAudioRecord) {
-      initAudioRecord();
+      boolean result = initAudioRecord();
+      if (!result) {
+        return -1;
+      }
     }
 
     logMainParameters();
@@ -378,7 +387,7 @@ class WebRtcAudioRecord {
   private boolean initAudioRecord() {
     if (sampleRate == 0 || channelCount == 0) {
       Logging.w(TAG, "initAudioRecord called before initRecord!");
-      return -1;
+      return false;
     }
 
     synchronized (audioRecordStateLock) {
@@ -393,7 +402,7 @@ class WebRtcAudioRecord {
       int minBufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat);
       if (minBufferSize == AudioRecord.ERROR || minBufferSize == AudioRecord.ERROR_BAD_VALUE) {
         reportWebRtcAudioRecordInitError("AudioRecord.getMinBufferSize failed: " + minBufferSize);
-        return -1;
+        return false;
       }
       Logging.d(TAG, "AudioRecord.getMinBufferSize: " + minBufferSize);
   

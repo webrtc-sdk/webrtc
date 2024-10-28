@@ -16,6 +16,7 @@ import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.os.Build;
 import androidx.annotation.RequiresApi;
+import java.nio.ByteBuffer;
 import java.util.concurrent.ScheduledExecutorService;
 import org.webrtc.JniCommon;
 import org.webrtc.Logging;
@@ -375,7 +376,7 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
      * @param captureTimeNs the capture timestamp of the original audio data.
      * @return the capture timestamp in nanoseconds. Return 0 if not available.
      */
-    long onBuffer(ByteBuffer buffer, int audioFormat, int sampleRate, int channelConfig, int bytesRead, long captureTimeNs);
+    long onBuffer(ByteBuffer buffer, int audioFormat, int channelCount, int sampleRate, int bytesRead, long captureTimeNs);
   }
 
   /**
