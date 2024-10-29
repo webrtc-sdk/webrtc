@@ -155,7 +155,10 @@ class WebRtcAudioRecord {
         if (audioRecord == null && useAudioRecord) {
           boolean result = initAudioRecord();
 
-          if(result) {
+          if (!result) {
+            // Failed audio record init, don't try again.
+            useAudioRecord = false;
+          } else {
             synchronized (audioRecordStateLock) {
               audioRecord = WebRtcAudioRecord.this.audioRecord;
             }
@@ -166,19 +169,21 @@ class WebRtcAudioRecord {
             } catch (IllegalStateException e) {
               reportWebRtcAudioRecordStartError(AudioRecordStartErrorCode.AUDIO_RECORD_START_EXCEPTION,
                   "AudioRecord.startRecording failed: " + e.getMessage());
+              audioRecord = null;
               useAudioRecord = false;
             }
             if (useAudioRecord && audioRecord.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING) {
               reportWebRtcAudioRecordStartError(AudioRecordStartErrorCode.AUDIO_RECORD_START_STATE_MISMATCH,
                   "AudioRecord.startRecording failed - incorrect state: "
                       + audioRecord.getRecordingState());
-              
+              audioRecord = null;
               useAudioRecord = false;
             }
           }
         }
 
-        if (audioRecord && !useAudioRecord) {
+        if (audioRecord != null && !useAudioRecord) {
+          audioRecord = null;
           releaseAudioResources();
         }
         
@@ -339,8 +344,9 @@ class WebRtcAudioRecord {
     return effects.setNS(enable);
   }
 
-  public void enableUseAudioRecord(boolean enable) {
-    Logging.d(TAG, "enableUseAudioRecord(" + enable + ")");
+  public void setUseAudioRecord(boolean enable) {
+    Logging.d(TAG, "setUseAudioRecord(" + enable + ")");
+    this.useAudioRecord = enable;
   }
 
   @CalledByNative
@@ -373,8 +379,6 @@ class WebRtcAudioRecord {
       }
     }
 
-    logMainParameters();
-    logMainParametersExtended();
     // Check number of active recording sessions. Should be zero but we have seen conflict cases
     // and adding a log for it can help us figure out details about conflicting sessions.
     final int numActiveRecordingSessions =
@@ -446,6 +450,9 @@ class WebRtcAudioRecord {
       }
 
       effects.enable(audioRecord.getAudioSessionId());
+
+      logMainParameters();
+      logMainParametersExtended();
     }
     return true;
   }
@@ -469,28 +476,28 @@ class WebRtcAudioRecord {
   @CalledByNative
   private boolean startRecording() {
     Logging.d(TAG, "startRecording");
+    assertTrue(audioThread == null);
     synchronized (audioRecordStateLock) {
       if (useAudioRecord) {
         assertTrue(audioRecord != null);
+        try {
+          audioRecord.startRecording();
+        } catch (IllegalStateException e) {
+          reportWebRtcAudioRecordStartError(AudioRecordStartErrorCode.AUDIO_RECORD_START_EXCEPTION,
+              "AudioRecord.startRecording failed: " + e.getMessage());
+          return false;
+        }
+        if (audioRecord.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING) {
+          reportWebRtcAudioRecordStartError(AudioRecordStartErrorCode.AUDIO_RECORD_START_STATE_MISMATCH,
+              "AudioRecord.startRecording failed - incorrect state: "
+                  + audioRecord.getRecordingState());
+          return false;
+        }
       }
-      assertTrue(audioThread == null);
-      try {
-        audioRecord.startRecording();
-      } catch (IllegalStateException e) {
-        reportWebRtcAudioRecordStartError(AudioRecordStartErrorCode.AUDIO_RECORD_START_EXCEPTION,
-            "AudioRecord.startRecording failed: " + e.getMessage());
-        return false;
-      }
-      if (audioRecord.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING) {
-        reportWebRtcAudioRecordStartError(AudioRecordStartErrorCode.AUDIO_RECORD_START_STATE_MISMATCH,
-            "AudioRecord.startRecording failed - incorrect state: "
-                + audioRecord.getRecordingState());
-        return false;
-      }
-      audioThread = new AudioRecordThread("AudioRecordJavaThread");
-      audioThread.start();
-      scheduleLogRecordingConfigurationsTask(audioRecord);
     }
+    audioThread = new AudioRecordThread("AudioRecordJavaThread");
+    audioThread.start();
+    scheduleLogRecordingConfigurationsTask(audioRecord);
     return true;
   }
 
@@ -537,20 +544,28 @@ class WebRtcAudioRecord {
   }
 
   private void logMainParameters() {
-    Logging.d(TAG,
-        "AudioRecord: "
-            + "session ID: " + audioRecord.getAudioSessionId() + ", "
-            + "channels: " + audioRecord.getChannelCount() + ", "
-            + "sample rate: " + audioRecord.getSampleRate());
+    synchronized(audioRecordStateLock) {
+      if(audioRecord != null) {
+        Logging.d(TAG,
+            "AudioRecord: "
+                + "session ID: " + audioRecord.getAudioSessionId() + ", "
+                + "channels: " + audioRecord.getChannelCount() + ", "
+                + "sample rate: " + audioRecord.getSampleRate());
+      }
+    }
   }
 
   @TargetApi(Build.VERSION_CODES.M)
   private void logMainParametersExtended() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-      Logging.d(TAG,
-          "AudioRecord: "
-              // The frame count of the native AudioRecord buffer.
-              + "buffer size in frames: " + audioRecord.getBufferSizeInFrames());
+      synchronized(audioRecordStateLock) {
+        if(audioRecord != null) {
+          Logging.d(TAG,
+              "AudioRecord: "
+                  // The frame count of the native AudioRecord buffer.
+                  + "buffer size in frames: " + audioRecord.getBufferSizeInFrames());
+        }
+      }
     }
   }
 
@@ -624,8 +639,8 @@ class WebRtcAudioRecord {
   // Releases the native AudioRecord resources.
   private void releaseAudioResources() {
     Logging.d(TAG, "releaseAudioResources");
-    effects.release();
     synchronized (audioRecordStateLock) {
+      effects.release();
       if (audioRecord != null) {
         audioRecord.release();
         audioRecord = null;

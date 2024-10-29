@@ -453,8 +453,8 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
     audioInput.setMicrophoneMute(mute);
   }
 
-  public void enableMicrophoneRecording(boolean enable) {
-    audioInput.enableUseAudioRecord(enable);
+  public void setAudioRecordEnabled(boolean enable) {
+    audioInput.setUseAudioRecord(enable);
   }
 
   @Override
