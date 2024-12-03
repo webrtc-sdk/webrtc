@@ -162,7 +162,7 @@ std::string SocketAddress::HostAsSensitiveURIString() const {
 }
 
 std::string SocketAddress::PortAsString() const {
-  return std::to_string(port_);
+  return rtc::ToString(port_);
 }
 
 std::string SocketAddress::ToString() const {
