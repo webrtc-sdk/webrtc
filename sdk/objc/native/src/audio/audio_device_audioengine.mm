@@ -205,13 +205,27 @@ int32_t AudioDeviceAudioEngine::InitPlayout() {
   source_node_ = [[AVAudioSourceNode alloc] initWithFormat:source_node_format_
                                                renderBlock:source_block];
 
-  [audio_engine_ attachNode:source_node_];
+  // First pause engine if running to safely modify graph
+  BOOL was_running = audio_engine_.running;
+  if (was_running) {
+    [audio_engine_ pause];
+  }
 
+  [audio_engine_ attachNode:source_node_];
   [audio_engine_ connect:source_node_ to:audio_engine_.mainMixerNode format:nil];
 
-  if (!audio_engine_.running) {
-    // Pre-allocate resources
-    [audio_engine_ prepare];
+  // Pre-allocate resources
+  [audio_engine_ prepare];
+
+  // Restart if was running
+  if (was_running) {
+    NSError* error = nil;
+    BOOL start_result = [audio_engine_ startAndReturnError:&error];
+    if (!start_result) {
+      LOGE() << "Failed to restart engine after playout init: "
+             << error.localizedDescription.UTF8String;
+      return -1;
+    }
   }
 
   playout_is_initialized_ = true;
@@ -257,11 +271,20 @@ int32_t AudioDeviceAudioEngine::StartPlayout() {
 int32_t AudioDeviceAudioEngine::StopPlayout() {
   LOGI() << "StopPlayout";
   RTC_DCHECK_RUN_ON(thread_);
-  if (!playout_is_initialized_ || !playing_.load()) {
+
+  if (!playout_is_initialized_) {
+    LOGW() << "StopPlayout: Not initialized";
+    return -1;
+  }
+
+  if (!playing_.load()) {
+    LOGW() << "StopPlayout: Already stopped";
     return 0;
   }
 
-  [audio_engine_ stop];
+  if (!recording_.load()) {
+    [audio_engine_ stop];
+  }
 
   // Disconnect
   [audio_engine_ disconnectNodeInput:source_node_];
@@ -319,6 +342,12 @@ int32_t AudioDeviceAudioEngine::InitRecording() {
 
   sink_node_ = [[AVAudioSinkNode alloc] initWithReceiverBlock:sink_block];
 
+  // First pause engine if running to safely modify graph
+  BOOL was_running = audio_engine_.running;
+  if (was_running) {
+    [audio_engine_ pause];
+  }
+
   [audio_engine_ attachNode:sink_node_];
 
   //
@@ -357,9 +386,17 @@ int32_t AudioDeviceAudioEngine::InitRecording() {
   LOGI() << "setVoiceProcessingEnabled result: " << set_vp_result ? "YES" : "NO";
 #endif
 
-  if (!audio_engine_.running) {
-    // Pre-allocate resources
-    [audio_engine_ prepare];
+  [audio_engine_ prepare];
+
+  // Restart if was running
+  if (was_running) {
+    NSError* error = nil;
+    BOOL start_result = [audio_engine_ startAndReturnError:&error];
+    if (!start_result) {
+      LOGE() << "Failed to restart engine after recording init: "
+             << error.localizedDescription.UTF8String;
+      return -1;
+    }
   }
 
   recording_is_initialized_ = true;
@@ -416,7 +453,9 @@ int32_t AudioDeviceAudioEngine::StopRecording() {
     return 0;
   }
 
-  [audio_engine_ stop];
+  if (!playing_.load()) {
+    [audio_engine_ stop];
+  }
 
   // Disconnect InputMixerNode
   [audio_engine_ disconnectNodeInput:input_mixer_node_];
