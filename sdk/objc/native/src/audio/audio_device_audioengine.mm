@@ -47,27 +47,9 @@ namespace webrtc {
 namespace ios_adm {
 
 #define LOGI() RTC_LOG(LS_INFO) << "AudioDeviceAudioEngine::"
+#define LOGE() RTC_LOG(LS_ERROR) << "AudioDeviceAudioEngine::"
+#define LOGW() RTC_LOG(LS_WARNING) << "AudioDeviceAudioEngine::"
 
-#define LOG_AND_RETURN_IF_ERROR(error, message)    \
-  do {                                             \
-    OSStatus err = error;                          \
-    if (err) {                                     \
-      RTC_LOG(LS_ERROR) << message << ": " << err; \
-      return false;                                \
-    }                                              \
-  } while (0)
-
-#define LOG_IF_ERROR(error, message)               \
-  do {                                             \
-    OSStatus err = error;                          \
-    if (err) {                                     \
-      RTC_LOG(LS_ERROR) << message << ": " << err; \
-    }                                              \
-  } while (0)
-
-// Hardcoded delay estimates based on real measurements.
-// TODO(henrika): these value is not used in combination with built-in AEC.
-// Can most likely be removed.
 const UInt16 kFixedPlayoutDelayEstimate = 30;
 const UInt16 kFixedRecordDelayEstimate = 30;
 
@@ -200,7 +182,7 @@ int32_t AudioDeviceAudioEngine::InitPlayout() {
   RTC_DCHECK(!playing_.load());
 
   if (playout_is_initialized_) {
-    RTC_LOG_F(LS_WARNING) << "InitPlayout: Already initialized";
+    LOGW() << "InitPlayout: Already initialized";
     return 0;
   }
 
@@ -227,8 +209,10 @@ int32_t AudioDeviceAudioEngine::InitPlayout() {
 
   [audio_engine_ connect:source_node_ to:audio_engine_.mainMixerNode format:nil];
 
-  // Pre-allocate resources
-  [audio_engine_ prepare];
+  if (!audio_engine_.running) {
+    // Pre-allocate resources
+    [audio_engine_ prepare];
+  }
 
   playout_is_initialized_ = true;
 
@@ -242,30 +226,30 @@ int32_t AudioDeviceAudioEngine::StartPlayout() {
   RTC_DCHECK(!playing_.load());
 
   if (!playout_is_initialized_) {
-    RTC_LOG_F(LS_WARNING) << "StartPlayout: Not initialized";
+    LOGW() << "StartPlayout: Not initialized";
     return -1;
   }
 
   if (playing_.load()) {
-    RTC_LOG_F(LS_WARNING) << "StartPlayout: Already playing";
+    LOGW() << "StartPlayout: Already playing";
     return 0;
   }
 
-  if (audio_engine_.running) {
-    RTC_LOG_F(LS_WARNING) << "StartPlayout: Already running";
-    return 0;
+  if (!audio_engine_.running) {
+    if (fine_audio_buffer_) {
+      fine_audio_buffer_->ResetPlayout();
+    }
+
+    NSError* error = nil;
+    BOOL start_engine_result = [audio_engine_ startAndReturnError:&error];
+    if (!start_engine_result) {
+      NSLog(@"startAndReturnError error: %@", error.localizedDescription);
+      RTC_DCHECK(start_engine_result);
+      return -1;
+    }
   }
 
-  if (fine_audio_buffer_) {
-    fine_audio_buffer_->ResetPlayout();
-  }
-
-  NSError* error = nil;
-  BOOL start_engine_result = [audio_engine_ startAndReturnError:&error];
-  if (!start_engine_result) {
-    NSLog(@"startAndReturnError error: %@", error.localizedDescription);
-    RTC_DCHECK(start_engine_result);
-  }
+  playing_.store(1, std::memory_order_release);
 
   return 0;
 }
@@ -313,7 +297,7 @@ int32_t AudioDeviceAudioEngine::InitRecording() {
   RTC_DCHECK(!recording_.load());
 
   if (recording_is_initialized_) {
-    RTC_LOG_F(LS_WARNING) << "InitRecording: Already initialized";
+    LOGW() << "InitRecording: Already initialized";
     return 0;
   }
 
@@ -362,19 +346,21 @@ int32_t AudioDeviceAudioEngine::InitRecording() {
   [audio_engine_ connect:audio_engine_.inputNode to:input_mixer_node_ format:input_node_format_];
   [audio_engine_ connect:input_mixer_node_ to:sink_node_ format:rtc_input_format_];
 
-#if TARGET_OS_IOS
+#if defined(WEBRTC_IOS)
   // Enable voice processing
   NSError* error = nil;
-  BOOL start_engine_result = [audio_engine_.inputNode setVoiceProcessingEnabled:YES error:&error];
-  if (!start_engine_result) {
+  BOOL set_vp_result = [audio_engine_.inputNode setVoiceProcessingEnabled:YES error:&error];
+  if (!set_vp_result) {
     NSLog(@"setVoiceProcessingEnabled error: %@", error.localizedDescription);
-    RTC_DCHECK(start_engine_result);
+    RTC_DCHECK(set_vp_result);
   }
-  LOGI() << "setVoiceProcessingEnabled result: " << start_engine_result ? "YES" : "NO";
+  LOGI() << "setVoiceProcessingEnabled result: " << set_vp_result ? "YES" : "NO";
 #endif
 
-  // Pre-allocate resources
-  [audio_engine_ prepare];
+  if (!audio_engine_.running) {
+    // Pre-allocate resources
+    [audio_engine_ prepare];
+  }
 
   recording_is_initialized_ = true;
 
@@ -388,18 +374,30 @@ int32_t AudioDeviceAudioEngine::StartRecording() {
   RTC_DCHECK(!recording_.load());
 
   if (!recording_is_initialized_) {
-    RTC_LOG_F(LS_WARNING) << "StartRecording: Not initialized";
+    LOGW() << "StartRecording: Not initialized";
     return -1;
   }
 
   if (recording_.load()) {
-    RTC_LOG_F(LS_WARNING) << "StartRecording: Already playing";
+    LOGW() << "StartRecording: Already recording";
     return 0;
   }
 
-  if (fine_audio_buffer_) {
-    fine_audio_buffer_->ResetRecord();
+  if (!audio_engine_.running) {
+    if (fine_audio_buffer_) {
+      fine_audio_buffer_->ResetRecord();
+    }
+
+    NSError* error = nil;
+    BOOL start_engine_result = [audio_engine_ startAndReturnError:&error];
+    if (!start_engine_result) {
+      NSLog(@"startAndReturnError error: %@", error.localizedDescription);
+      RTC_DCHECK(start_engine_result);
+      return -1;
+    }
   }
+
+  recording_.store(1, std::memory_order_release);
 
   return 0;
 }
@@ -409,14 +407,16 @@ int32_t AudioDeviceAudioEngine::StopRecording() {
   RTC_DCHECK_RUN_ON(thread_);
 
   if (!recording_is_initialized_) {
-    RTC_LOG_F(LS_WARNING) << "StopRecording: Not initialized";
+    LOGW() << "StopRecording: Not initialized";
     return -1;
   }
 
   if (!recording_.load()) {
-    RTC_LOG_F(LS_WARNING) << "StopRecording: Already stopped";
+    LOGW() << "StopRecording: Already stopped";
     return 0;
   }
+
+  [audio_engine_ stop];
 
   // Disconnect InputMixerNode
   [audio_engine_ disconnectNodeInput:input_mixer_node_];
@@ -583,7 +583,7 @@ int32_t AudioDeviceAudioEngine::StereoPlayoutIsAvailable(bool& available) {
 }
 
 int32_t AudioDeviceAudioEngine::SetStereoPlayout(bool enable) {
-  RTC_LOG_F(LS_WARNING) << "Not implemented";
+  LOGW() << "Not implemented";
   return -1;
 }
 
@@ -601,7 +601,7 @@ int32_t AudioDeviceAudioEngine::StereoRecordingIsAvailable(bool& available) {
 }
 
 int32_t AudioDeviceAudioEngine::SetStereoRecording(bool enable) {
-  RTC_LOG_F(LS_WARNING) << "Not implemented";
+  LOGW() << "Not implemented";
   return -1;
 }
 
@@ -647,7 +647,7 @@ int32_t AudioDeviceAudioEngine::PlayoutIsAvailable(bool& available) {
 }
 
 int32_t AudioDeviceAudioEngine::SetPlayoutDevice(uint16_t index) {
-  RTC_LOG_F(LS_WARNING) << "Not implemented";
+  LOGW() << "Not implemented";
   return 0;
 }
 
@@ -663,7 +663,7 @@ int32_t AudioDeviceAudioEngine::PlayoutDeviceName(uint16_t index, char name[kAdm
 }
 
 int16_t AudioDeviceAudioEngine::PlayoutDevices() {
-  RTC_LOG_F(LS_WARNING) << "Not implemented";
+  LOGW() << "Not implemented";
   return (int16_t)1;
 }
 
@@ -678,7 +678,7 @@ int32_t AudioDeviceAudioEngine::RecordingDeviceName(uint16_t index,
 }
 
 int32_t AudioDeviceAudioEngine::SetRecordingDevice(uint16_t index) {
-  RTC_LOG_F(LS_WARNING) << "Not implemented";
+  LOGW() << "Not implemented";
   return 0;
 }
 
@@ -693,7 +693,7 @@ int32_t AudioDeviceAudioEngine::RecordingIsAvailable(bool& available) {
 }
 
 int16_t AudioDeviceAudioEngine::RecordingDevices() {
-  RTC_LOG_F(LS_WARNING) << "Not implemented";
+  LOGW() << "Not implemented";
   return (int16_t)1;
 }
 
@@ -713,7 +713,7 @@ bool AudioDeviceAudioEngine::EngineCreate() {
   LOGI() << "EngineCreate";
 
   if (audio_engine_ != nil) {
-    RTC_LOG_F(LS_WARNING) << "Engine already created";
+    LOGW() << "Engine already created";
     return 0;
   }
 
