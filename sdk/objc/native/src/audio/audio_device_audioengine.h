@@ -235,6 +235,10 @@ class AudioDeviceAudioEngine : public AudioDeviceGeneric,
   double machTickUnitsToNanoseconds_;
 
   // AVAudioEngine objects
+  AVAudioFormat* source_node_format_;
+  AVAudioFormat* input_node_format_;
+  AVAudioFormat* rtc_input_format_;
+
   AVAudioEngine* audio_engine_;
   AVAudioSinkNode* sink_node_;
   AVAudioSourceNode* source_node_;
