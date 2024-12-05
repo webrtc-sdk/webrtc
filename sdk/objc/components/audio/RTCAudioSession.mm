@@ -1010,4 +1010,16 @@ ABSL_CONST_INIT thread_local bool mutex_locked = false;
   }
 }
 
+- (void)notifyAudioEngineWillUpdateStateWithOutputEnabled:(BOOL)isOutputEnabled
+                                             inputEnabled:(BOOL)isInputEnabled {
+  for (auto delegate : self.delegates) {
+    SEL sel = @selector(audioSession:audioEngineWillUpdateStateWithOutputEnabled:inputEnabled:);
+    if ([delegate respondsToSelector:sel]) {
+      [delegate audioSession:self
+          audioEngineWillUpdateStateWithOutputEnabled:isOutputEnabled
+                                         inputEnabled:isInputEnabled];
+    }
+  }
+}
+
 @end

@@ -90,6 +90,9 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)notifyDidStartPlayOrRecord;
 - (void)notifyDidStopPlayOrRecord;
 
+- (void)notifyAudioEngineWillUpdateStateWithOutputEnabled:(BOOL)isOutputEnabled
+                                             inputEnabled:(BOOL)isInputEnabled;
+
 @end
 
 NS_ASSUME_NONNULL_END
