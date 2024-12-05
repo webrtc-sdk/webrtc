@@ -372,7 +372,6 @@ int32_t AudioDeviceAudioEngine::StopRecording() {
   return 0;
 }
 
-
 // int AudioDeviceAudioEngine::GetPlayoutAudioParameters(AudioParameters* params) const {
 //   LOGI() << "GetPlayoutAudioParameters";
 //   RTC_DCHECK(playout_parameters_.is_valid());
@@ -646,6 +645,14 @@ int32_t AudioDeviceAudioEngine::RecordingIsAvailable(bool& available) {
 int16_t AudioDeviceAudioEngine::RecordingDevices() {
   RTC_LOG_F(LS_WARNING) << "Not implemented";
   return (int16_t)1;
+}
+
+// ----------------------------------------------------------------------------------------------------
+// Misc
+
+int32_t AudioDeviceAudioEngine::PlayoutDelay(uint16_t& delayMS) const {
+  delayMS = kFixedPlayoutDelayEstimate;
+  return 0;
 }
 
 // ----------------------------------------------------------------------------------------------------
