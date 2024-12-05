@@ -415,11 +415,6 @@ void AudioSendStream::SetMuted(bool muted) {
   channel_send_->SetInputMute(muted);
 }
 
-bool AudioSendStream::GetMuted() {
-  RTC_DCHECK_RUN_ON(&worker_thread_checker_);
-  return channel_send_->InputMute();
-}
-
 webrtc::AudioSendStream::Stats AudioSendStream::GetStats() const {
   return GetStats(true);
 }

@@ -14,7 +14,7 @@
 #include <memory>
 
 #include "api/task_queue/task_queue_factory.h"
-#include "audio_device_ios.h"
+#include "audio_device_audioengine.h"
 #include "modules/audio_device/audio_device_buffer.h"
 #include "modules/audio_device/include/audio_device.h"
 #include "rtc_base/checks.h"
@@ -136,7 +136,7 @@ class AudioDeviceModuleIOS : public AudioDeviceModule {
   const bool bypass_voice_processing_;
   bool initialized_ = false;
   const std::unique_ptr<TaskQueueFactory> task_queue_factory_;
-  std::unique_ptr<AudioDeviceIOS> audio_device_;
+  std::unique_ptr<AudioDeviceAudioEngine> audio_device_;
   std::unique_ptr<AudioDeviceBuffer> audio_device_buffer_;
 };
 }  // namespace ios_adm
