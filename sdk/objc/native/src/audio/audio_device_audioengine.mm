@@ -69,8 +69,7 @@ AudioDeviceAudioEngine::AudioDeviceAudioEngine(bool bypass_voice_processing)
       playing_(0),
       initialized_(false),
       is_interrupted_(false),
-      has_configured_session_(false),
-      audio_engine_input_attached_(false) {
+      has_configured_session_(false) {
   LOGI() << "bypass_voice_processing " << bypass_voice_processing_;
 
   io_thread_checker_.Detach();
@@ -634,8 +633,8 @@ int32_t AudioDeviceAudioEngine::SetMicrophoneMute(bool enable) {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "SetMicrophoneMute: " << enable;
 
-  if (!audio_engine_input_attached_) {
-    LOGI() << "Engine input not attached";
+  if (!recording_is_initialized_) {
+    LOGI() << "Recording is not initialized";
     return -1;
   }
 
@@ -648,8 +647,8 @@ int32_t AudioDeviceAudioEngine::MicrophoneMute(bool& enabled) const {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "MicrophoneMute";
 
-  if (!audio_engine_input_attached_) {
-    LOGI() << "Engine input not attached";
+  if (!recording_is_initialized_) {
+    LOGI() << "Recording is not initialized";
     return -1;
   }
 

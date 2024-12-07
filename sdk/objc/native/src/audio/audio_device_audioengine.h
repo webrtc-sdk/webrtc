@@ -245,8 +245,6 @@ class AudioDeviceAudioEngine : public AudioDeviceGeneric,
   AVAudioSinkNode* sink_node_;
   AVAudioSourceNode* source_node_;
   AVAudioMixerNode* input_mixer_node_;
-
-  bool audio_engine_input_attached_ RTC_GUARDED_BY(thread_);
 };
 }  // namespace ios_adm
 }  // namespace webrtc
