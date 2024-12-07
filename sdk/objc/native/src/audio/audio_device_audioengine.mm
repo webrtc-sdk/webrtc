@@ -116,7 +116,9 @@ void AudioDeviceAudioEngine::AttachAudioBuffer(AudioDeviceBuffer* audioBuffer) {
 // MARK: - Main life cycle
 
 bool AudioDeviceAudioEngine::Initialized() const {
+  LOGI() << "Initialized";
   RTC_DCHECK_RUN_ON(thread_);
+
   return initialized_;
 }
 
@@ -168,11 +170,17 @@ int32_t AudioDeviceAudioEngine::Terminate() {
 // Playout
 
 bool AudioDeviceAudioEngine::PlayoutIsInitialized() const {
+  LOGI() << "PlayoutIsInitialized";
   RTC_DCHECK_RUN_ON(thread_);
+
   return playout_is_initialized_;
 }
 
-bool AudioDeviceAudioEngine::Playing() const { return playing_.load(); }
+bool AudioDeviceAudioEngine::Playing() const {
+  LOGI() << "Playing";
+
+  return playing_.load();
+}
 
 int32_t AudioDeviceAudioEngine::InitPlayout() {
   LOGI() << "InitPlayout";
@@ -323,11 +331,15 @@ int32_t AudioDeviceAudioEngine::StopPlayout() {
 // Recording
 
 bool AudioDeviceAudioEngine::RecordingIsInitialized() const {
+  LOGI() << "RecordingIsInitialized";
   RTC_DCHECK_RUN_ON(thread_);
   return recording_is_initialized_;
 }
 
-bool AudioDeviceAudioEngine::Recording() const { return recording_.load(); }
+bool AudioDeviceAudioEngine::Recording() const {
+  LOGI() << "Recording";
+  return recording_.load();
+}
 
 int32_t AudioDeviceAudioEngine::InitRecording() {
   LOGI() << "InitRecording";
@@ -487,98 +499,123 @@ int32_t AudioDeviceAudioEngine::StopRecording() {
 // AudioSessionObserver
 
 void AudioDeviceAudioEngine::OnInterruptionBegin() {
-  RTC_DCHECK(thread_);
   LOGI() << "OnInterruptionBegin";
+
+  RTC_DCHECK(thread_);
 }
 
 void AudioDeviceAudioEngine::OnInterruptionEnd() {
-  RTC_DCHECK(thread_);
   LOGI() << "OnInterruptionEnd";
+
+  RTC_DCHECK(thread_);
 }
 
-void AudioDeviceAudioEngine::OnValidRouteChange() { RTC_DCHECK(thread_); }
+void AudioDeviceAudioEngine::OnValidRouteChange() {
+  LOGI() << "OnValidRouteChange";
+
+  RTC_DCHECK(thread_);
+}
 
 void AudioDeviceAudioEngine::OnCanPlayOrRecordChange(bool can_play_or_record) {
+  LOGI() << "OnCanPlayOrRecordChange";
+
   RTC_DCHECK(thread_);
 }
 
-void AudioDeviceAudioEngine::OnChangedOutputVolume() { RTC_DCHECK(thread_); }
+void AudioDeviceAudioEngine::OnChangedOutputVolume() {
+  LOGI() << "OnChangedOutputVolume";
 
-bool AudioDeviceAudioEngine::InitPlayOrRecord(bool enable_input) {
-  LOGI() << "InitPlayOrRecord";
-  RTC_DCHECK_RUN_ON(thread_);
-  return true;
+  RTC_DCHECK(thread_);
 }
-
-void AudioDeviceAudioEngine::ShutdownPlayOrRecord() {
-  LOGI() << "ShutdownPlayOrRecord";
-  RTC_DCHECK_RUN_ON(thread_);
-}
-
-bool AudioDeviceAudioEngine::IsInterrupted() { return is_interrupted_; }
 
 // ----------------------------------------------------------------------------------------------------
 // Not Implemented
 
+bool AudioDeviceAudioEngine::IsInterrupted() {
+  LOGI() << "IsInterrupted";
+
+  return is_interrupted_;
+}
+
 int32_t AudioDeviceAudioEngine::ActiveAudioLayer(AudioDeviceModule::AudioLayer& audioLayer) const {
+  LOGI() << "ActiveAudioLayer";
   audioLayer = AudioDeviceModule::kPlatformDefaultAudio;
+
   return 0;
 }
 
-int32_t AudioDeviceAudioEngine::InitSpeaker() { return 0; }
+int32_t AudioDeviceAudioEngine::InitSpeaker() {
+  LOGI() << "InitSpeaker";
 
-bool AudioDeviceAudioEngine::SpeakerIsInitialized() const { return true; }
+  return 0;
+}
+
+bool AudioDeviceAudioEngine::SpeakerIsInitialized() const {
+  LOGI() << "SpeakerIsInitialized";
+
+  return true;
+}
 
 int32_t AudioDeviceAudioEngine::SpeakerVolumeIsAvailable(bool& available) {
+  LOGI() << "SpeakerVolumeIsAvailable";
   available = false;
+
   return 0;
 }
 
 int32_t AudioDeviceAudioEngine::SetSpeakerVolume(uint32_t volume) {
-  RTC_DCHECK_NOTREACHED() << "Not implemented";
+  LOGW() << "SetSpeakerVolume: Not implemented, value: " << volume;
+
   return -1;
 }
 
 int32_t AudioDeviceAudioEngine::SpeakerVolume(uint32_t& volume) const {
-  RTC_DCHECK_NOTREACHED() << "Not implemented";
+  LOGW() << "SpeakerVolume: Not implemented";
+
   return -1;
 }
 
 int32_t AudioDeviceAudioEngine::MaxSpeakerVolume(uint32_t& maxVolume) const {
-  RTC_DCHECK_NOTREACHED() << "Not implemented";
+  LOGW() << "MaxSpeakerVolume: Not implemented";
+
   return -1;
 }
 
 int32_t AudioDeviceAudioEngine::MinSpeakerVolume(uint32_t& minVolume) const {
-  RTC_DCHECK_NOTREACHED() << "Not implemented";
+  LOGW() << "MinSpeakerVolume: Not implemented";
+
   return -1;
 }
 
 int32_t AudioDeviceAudioEngine::SpeakerMuteIsAvailable(bool& available) {
+  LOGI() << "SpeakerMuteIsAvailable";
   available = false;
+
   return 0;
 }
 
 int32_t AudioDeviceAudioEngine::SetSpeakerMute(bool enable) {
-  RTC_DCHECK_NOTREACHED() << "Not implemented";
+  LOGI() << "SetSpeakerMute: " << enable;
+
   return -1;
 }
 
 int32_t AudioDeviceAudioEngine::SpeakerMute(bool& enabled) const {
-  RTC_DCHECK_NOTREACHED() << "Not implemented";
+  LOGW() << "SpeakerMute: Not implemented";
+
   return -1;
 }
 
 int32_t AudioDeviceAudioEngine::InitMicrophone() {
-  RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "InitMicrophone";
+  RTC_DCHECK_RUN_ON(thread_);
 
   return 0;
 }
 
 bool AudioDeviceAudioEngine::MicrophoneIsInitialized() const {
-  RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "MicrophoneIsInitialized";
+  RTC_DCHECK_RUN_ON(thread_);
 
   return true;
 }
@@ -587,13 +624,15 @@ bool AudioDeviceAudioEngine::MicrophoneIsInitialized() const {
 // Microphone Muting
 
 int32_t AudioDeviceAudioEngine::MicrophoneMuteIsAvailable(bool& available) {
+  LOGI() << "MicrophoneMuteIsAvailable";
   available = false;
+
   return 0;
 }
 
 int32_t AudioDeviceAudioEngine::SetMicrophoneMute(bool enable) {
   RTC_DCHECK_RUN_ON(thread_);
-  LOGI() << "SetMicrophoneMute";
+  LOGI() << "SetMicrophoneMute: " << enable;
 
   if (!audio_engine_input_attached_) {
     LOGI() << "Engine input not attached";
@@ -623,17 +662,22 @@ int32_t AudioDeviceAudioEngine::MicrophoneMute(bool& enabled) const {
 // Stereo Playout
 
 int32_t AudioDeviceAudioEngine::StereoPlayoutIsAvailable(bool& available) {
+  LOGI() << "StereoPlayoutIsAvailable";
   available = false;
+
   return 0;
 }
 
 int32_t AudioDeviceAudioEngine::SetStereoPlayout(bool enable) {
-  LOGW() << "Not implemented";
+  LOGW() << "SetStereoPlayout: Not implemented, value:" << enable;
+
   return -1;
 }
 
 int32_t AudioDeviceAudioEngine::StereoPlayout(bool& enabled) const {
+  LOGI() << "StereoPlayout";
   enabled = false;
+
   return 0;
 }
 
@@ -641,17 +685,22 @@ int32_t AudioDeviceAudioEngine::StereoPlayout(bool& enabled) const {
 // Stereo Recording
 
 int32_t AudioDeviceAudioEngine::StereoRecordingIsAvailable(bool& available) {
+  LOGI() << "StereoPlayoutIsAvailable";
   available = false;
+
   return 0;
 }
 
 int32_t AudioDeviceAudioEngine::SetStereoRecording(bool enable) {
-  LOGW() << "Not implemented";
+  LOGW() << "SetStereoRecording: Not implemented, value: " << enable;
+
   return -1;
 }
 
 int32_t AudioDeviceAudioEngine::StereoRecording(bool& enabled) const {
+  LOGI() << "StereoRecording";
   enabled = false;
+
   return 0;
 }
 
@@ -659,27 +708,33 @@ int32_t AudioDeviceAudioEngine::StereoRecording(bool& enabled) const {
 // Microphone Volume
 
 int32_t AudioDeviceAudioEngine::MicrophoneVolumeIsAvailable(bool& available) {
+  LOGI() << "MicrophoneVolumeIsAvailable";
   available = false;
+
   return 0;
 }
 
 int32_t AudioDeviceAudioEngine::SetMicrophoneVolume(uint32_t volume) {
-  RTC_DCHECK_NOTREACHED() << "Not implemented";
+  LOGW() << "SetMicrophoneVolume: Not implemented, value: " << volume;
+
   return -1;
 }
 
 int32_t AudioDeviceAudioEngine::MicrophoneVolume(uint32_t& volume) const {
-  RTC_DCHECK_NOTREACHED() << "Not implemented";
+  LOGW() << "SetMicrophoneVolume: Not implemented";
+
   return -1;
 }
 
 int32_t AudioDeviceAudioEngine::MaxMicrophoneVolume(uint32_t& maxVolume) const {
-  RTC_DCHECK_NOTREACHED() << "Not implemented";
+  LOGW() << "SetMicrophoneVolume: Not implemented";
+
   return -1;
 }
 
 int32_t AudioDeviceAudioEngine::MinMicrophoneVolume(uint32_t& minVolume) const {
-  RTC_DCHECK_NOTREACHED() << "Not implemented";
+  LOGW() << "MinMicrophoneVolume: Not implemented";
+
   return -1;
 }
 
@@ -687,28 +742,34 @@ int32_t AudioDeviceAudioEngine::MinMicrophoneVolume(uint32_t& minVolume) const {
 // Playout Device
 
 int32_t AudioDeviceAudioEngine::PlayoutIsAvailable(bool& available) {
+  LOGI() << "PlayoutIsAvailable";
   available = true;
+
   return 0;
 }
 
 int32_t AudioDeviceAudioEngine::SetPlayoutDevice(uint16_t index) {
-  LOGW() << "Not implemented";
+  LOGW() << "SetPlayoutDevice: Not implemented, value: " << index;
+
   return 0;
 }
 
-int32_t AudioDeviceAudioEngine::SetPlayoutDevice(AudioDeviceModule::WindowsDeviceType) {
-  RTC_DCHECK_NOTREACHED() << "Not implemented";
+int32_t AudioDeviceAudioEngine::SetPlayoutDevice(AudioDeviceModule::WindowsDeviceType deviceType) {
+  LOGW() << "SetPlayoutDevice: Not implemented, value: " << deviceType;
+
   return -1;
 }
 
 int32_t AudioDeviceAudioEngine::PlayoutDeviceName(uint16_t index, char name[kAdmMaxDeviceNameSize],
                                                   char guid[kAdmMaxGuidSize]) {
-  RTC_DCHECK_NOTREACHED() << "Not implemented";
+  LOGW() << "PlayoutDeviceName: Not implemented";
+
   return -1;
 }
 
 int16_t AudioDeviceAudioEngine::PlayoutDevices() {
-  LOGW() << "Not implemented";
+  LOGI() << "PlayoutDevices";
+
   return (int16_t)1;
 }
 
@@ -718,27 +779,33 @@ int16_t AudioDeviceAudioEngine::PlayoutDevices() {
 int32_t AudioDeviceAudioEngine::RecordingDeviceName(uint16_t index,
                                                     char name[kAdmMaxDeviceNameSize],
                                                     char guid[kAdmMaxGuidSize]) {
-  RTC_DCHECK_NOTREACHED() << "Not implemented";
+  LOGW() << "RecordingDeviceName";
+
   return -1;
 }
 
 int32_t AudioDeviceAudioEngine::SetRecordingDevice(uint16_t index) {
-  LOGW() << "Not implemented";
+  LOGI() << "SetRecordingDevice, index: " << index;
+
   return 0;
 }
 
-int32_t AudioDeviceAudioEngine::SetRecordingDevice(AudioDeviceModule::WindowsDeviceType) {
-  RTC_DCHECK_NOTREACHED() << "Not implemented";
+int32_t AudioDeviceAudioEngine::SetRecordingDevice(AudioDeviceModule::WindowsDeviceType type) {
+  LOGI() << "SetRecordingDevice, type: " << type;
+
   return -1;
 }
 
 int32_t AudioDeviceAudioEngine::RecordingIsAvailable(bool& available) {
+  LOGI() << "RecordingIsAvailable";
+
   available = true;
   return 0;
 }
 
 int16_t AudioDeviceAudioEngine::RecordingDevices() {
-  LOGW() << "Not implemented";
+  LOGI() << "RecordingDevices";
+
   return (int16_t)1;
 }
 
@@ -746,6 +813,8 @@ int16_t AudioDeviceAudioEngine::RecordingDevices() {
 // Misc
 
 int32_t AudioDeviceAudioEngine::PlayoutDelay(uint16_t& delayMS) const {
+  LOGI() << "PlayoutDelay";
+
   delayMS = kFixedPlayoutDelayEstimate;
   return 0;
 }
