@@ -169,8 +169,8 @@ class AudioDeviceAudioEngine : public AudioDeviceGeneric,
   // Resets thread-checkers before a call is restarted.
   void PrepareForNewStart();
 
-  bool  EngineCreate();
-  bool  EngineCleanUp();
+  bool EngineCreate();
+  bool EngineCleanUp();
 
   bool AttachEngineInput();
   bool DetachEngineInput();
@@ -235,9 +235,11 @@ class AudioDeviceAudioEngine : public AudioDeviceGeneric,
   double machTickUnitsToNanoseconds_;
 
   // AVAudioEngine objects
-  AVAudioFormat* source_node_format_;
+  AVAudioFormat* rtc_playout_format_;  // int16
+  AVAudioFormat* rtc_record_format_;   // int16
+
   AVAudioFormat* input_node_format_;
-  AVAudioFormat* rtc_input_format_;
+  AVAudioFormat* output_node_format_;
 
   AVAudioEngine* audio_engine_;
   AVAudioSinkNode* sink_node_;
