@@ -833,6 +833,7 @@ bool AudioDeviceAudioEngine::EngineCreate() {
 
   audio_engine_ = [[AVAudioEngine alloc] init];
 
+#if defined(WEBRTC_IOS)
   // Enable voice processing
   NSError* error = nil;
   BOOL set_output_vp_result = [audio_engine_.outputNode setVoiceProcessingEnabled:YES error:&error];
@@ -841,6 +842,7 @@ bool AudioDeviceAudioEngine::EngineCreate() {
     RTC_DCHECK(set_output_vp_result);
   }
   LOGI() << "setVoiceProcessingEnabled output result: " << set_output_vp_result ? "YES" : "NO";
+#endif
 
   // Prepare InputMixerNode
 
