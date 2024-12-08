@@ -141,10 +141,15 @@ AudioDeviceGeneric::InitStatus AudioDeviceAudioEngine::Init() {
   record_parameters_.reset(config.sampleRate, config.inputNumberOfChannels);
 #endif
 
-  rtc_playout_format_ = [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatInt16
-                                                         sampleRate:48000.0
-                                                           channels:1
-                                                        interleaved:YES];
+  rtc_internal_format_ = [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatInt16
+                                                          sampleRate:48000.0
+                                                            channels:1
+                                                         interleaved:YES];
+
+  audio_engine_format_ = [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatFloat32
+                                                          sampleRate:48000.0
+                                                            channels:1
+                                                         interleaved:NO];
 
   initialized_ = true;
 
@@ -193,22 +198,13 @@ int32_t AudioDeviceAudioEngine::InitPlayout() {
     return 0;
   }
 
-  output_node_format_ = [audio_engine_.outputNode outputFormatForBus:0];
+  // output_node_format_ = [audio_engine_.outputNode outputFormatForBus:0];
 
-  LOGI() << "Output format - sample rate: " << output_node_format_.sampleRate
-         << ", channels: " << output_node_format_.channelCount
-         << ", format flags: " << output_node_format_.streamDescription->mFormatFlags
-         << ", format ID: " << output_node_format_.streamDescription->mFormatID
-         << ", bytes per frame: " << output_node_format_.streamDescription->mBytesPerFrame;
-
-  AVAudioFormat* tmp_format_ = [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatFloat32
-                                                                sampleRate:48000
-                                                                  channels:1
-                                                               interleaved:NO];
-
-  [audio_engine_ connect:audio_engine_.mainMixerNode
-                      to:audio_engine_.outputNode
-                  format:tmp_format_];
+  // LOGI() << "Output format - sample rate: " << output_node_format_.sampleRate
+  //        << ", channels: " << output_node_format_.channelCount
+  //        << ", format flags: " << output_node_format_.streamDescription->mFormatFlags
+  //        << ", format ID: " << output_node_format_.streamDescription->mFormatID
+  //        << ", bytes per frame: " << output_node_format_.streamDescription->mBytesPerFrame;
 
   // Prepare SourceNode
 
@@ -226,17 +222,22 @@ int32_t AudioDeviceAudioEngine::InitPlayout() {
         return noErr;
       };
 
-  source_node_ = [[AVAudioSourceNode alloc] initWithFormat:rtc_playout_format_
+  source_node_ = [[AVAudioSourceNode alloc] initWithFormat:rtc_internal_format_
                                                renderBlock:source_block];
 
   // First pause engine if running to safely modify graph
   BOOL was_running = audio_engine_.running;
   if (was_running) {
-    [audio_engine_ pause];
+    [audio_engine_ stop];
   }
 
   [audio_engine_ attachNode:source_node_];
-  [audio_engine_ connect:source_node_ to:audio_engine_.mainMixerNode format:nil];
+
+  [audio_engine_ connect:source_node_ to:audio_engine_.mainMixerNode format:audio_engine_format_];
+
+  [audio_engine_ connect:audio_engine_.mainMixerNode
+                      to:audio_engine_.outputNode
+                  format:audio_engine_format_];
 
   // Pre-allocate resources
   [audio_engine_ prepare];
@@ -373,35 +374,35 @@ int32_t AudioDeviceAudioEngine::InitRecording() {
   // First pause engine if running to safely modify graph
   BOOL was_running = audio_engine_.running;
   if (was_running) {
-    [audio_engine_ pause];
+    [audio_engine_ stop];
   }
 
   [audio_engine_ attachNode:sink_node_];
 
-  //
+  // input_node_format_ = [audio_engine_.inputNode outputFormatForBus:0];
 
-  input_node_format_ = [audio_engine_.inputNode outputFormatForBus:0];
-
-  LOGI() << "Input format - sample rate: " << input_node_format_.sampleRate
-         << ", channels: " << input_node_format_.channelCount
-         << ", format flags: " << input_node_format_.streamDescription->mFormatFlags
-         << ", format ID: " << input_node_format_.streamDescription->mFormatID
-         << ", bytes per frame: " << input_node_format_.streamDescription->mBytesPerFrame;
-
-  rtc_record_format_ = [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatInt16
-                                                        sampleRate:input_node_format_.sampleRate
-                                                          channels:input_node_format_.channelCount
-                                                       interleaved:YES];
-
-  LOGI() << "RTC input format - sample rate: " << rtc_record_format_.sampleRate
-         << ", channels: " << rtc_record_format_.channelCount
-         << ", format flags: " << rtc_record_format_.streamDescription->mFormatFlags
-         << ", format ID: " << rtc_record_format_.streamDescription->mFormatID
-         << ", bytes per frame: " << rtc_record_format_.streamDescription->mBytesPerFrame;
+  // LOGI() << "Input format - sample rate: " << input_node_format_.sampleRate
+  //        << ", channels: " << input_node_format_.channelCount
+  //        << ", format flags: " << input_node_format_.streamDescription->mFormatFlags
+  //        << ", format ID: " << input_node_format_.streamDescription->mFormatID
+  //        << ", bytes per frame: " << input_node_format_.streamDescription->mBytesPerFrame;
 
   // InputNode -> InputMixerNode -> SinkNode -> RTC
-  [audio_engine_ connect:audio_engine_.inputNode to:input_mixer_node_ format:input_node_format_];
-  [audio_engine_ connect:input_mixer_node_ to:sink_node_ format:rtc_record_format_];
+  [audio_engine_ connect:audio_engine_.inputNode to:input_mixer_node_ format:nil];
+
+  // Convert to RTC's internal format before passing buffers to SinkNode.
+  [audio_engine_ connect:input_mixer_node_ to:sink_node_ format:rtc_internal_format_];
+
+#if defined(WEBRTC_IOS)
+  // Enable voice processing
+  NSError* error = nil;
+  BOOL set_output_vp_result = [audio_engine_.inputNode setVoiceProcessingEnabled:YES error:&error];
+  if (!set_output_vp_result) {
+    NSLog(@"setVoiceProcessingEnabled error: %@", error.localizedDescription);
+    RTC_DCHECK(set_output_vp_result);
+  }
+  LOGI() << "setVoiceProcessingEnabled output result: " << set_output_vp_result ? "YES" : "NO";
+#endif
 
   [audio_engine_ prepare];
 
@@ -473,6 +474,10 @@ int32_t AudioDeviceAudioEngine::StopRecording() {
   if (!playing_.load()) {
     [audio_engine_ stop];
   }
+
+  // Disconnect input eq
+  // [audio_engine_ disconnectNodeInput:input_eq_node_];
+  // [audio_engine_ disconnectNodeOutput:input_eq_node_];
 
   // Disconnect InputMixerNode
   [audio_engine_ disconnectNodeInput:input_mixer_node_];
@@ -623,9 +628,22 @@ bool AudioDeviceAudioEngine::MicrophoneIsInitialized() const {
 // Microphone Muting
 
 int32_t AudioDeviceAudioEngine::MicrophoneMuteIsAvailable(bool& available) {
+  RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "MicrophoneMuteIsAvailable";
-  available = false;
 
+  if (!recording_is_initialized_) {
+    LOGI() << "Recording is not initialized";
+    available = false;
+    return 0;
+  }
+
+  if (!audio_engine_.outputNode.voiceProcessingEnabled) {
+    LOGI() << "Voice processing is not enabled";
+    available = false;
+    return 0;
+  }
+
+  available = true;
   return 0;
 }
 
@@ -635,6 +653,11 @@ int32_t AudioDeviceAudioEngine::SetMicrophoneMute(bool enable) {
 
   if (!recording_is_initialized_) {
     LOGI() << "Recording is not initialized";
+    return -1;
+  }
+
+  if (!audio_engine_.inputNode.voiceProcessingEnabled) {
+    LOGI() << "Voice processing is not enabled";
     return -1;
   }
 
@@ -649,6 +672,11 @@ int32_t AudioDeviceAudioEngine::MicrophoneMute(bool& enabled) const {
 
   if (!recording_is_initialized_) {
     LOGI() << "Recording is not initialized";
+    return -1;
+  }
+
+  if (!audio_engine_.inputNode.voiceProcessingEnabled) {
+    LOGI() << "Voice processing is not enabled";
     return -1;
   }
 
@@ -812,8 +840,6 @@ int16_t AudioDeviceAudioEngine::RecordingDevices() {
 // Misc
 
 int32_t AudioDeviceAudioEngine::PlayoutDelay(uint16_t& delayMS) const {
-  LOGI() << "PlayoutDelay";
-
   delayMS = kFixedPlayoutDelayEstimate;
   return 0;
 }
@@ -832,18 +858,10 @@ bool AudioDeviceAudioEngine::EngineCreate() {
 
   audio_engine_ = [[AVAudioEngine alloc] init];
 
-#if defined(WEBRTC_IOS)
-  // Enable voice processing
-  NSError* error = nil;
-  BOOL set_output_vp_result = [audio_engine_.outputNode setVoiceProcessingEnabled:YES error:&error];
-  if (!set_output_vp_result) {
-    NSLog(@"setVoiceProcessingEnabled error: %@", error.localizedDescription);
-    RTC_DCHECK(set_output_vp_result);
-  }
-  LOGI() << "setVoiceProcessingEnabled output result: " << set_output_vp_result ? "YES" : "NO";
-#endif
-
   // Prepare InputMixerNode
+
+  input_eq_node_ = [[AVAudioUnitEQ alloc] initWithNumberOfBands:2];
+  [audio_engine_ attachNode:input_eq_node_];
 
   input_mixer_node_ = [[AVAudioMixerNode alloc] init];
   [audio_engine_ attachNode:input_mixer_node_];

@@ -36,6 +36,7 @@ RTC_FWD_DECL_OBJC_CLASS(AVAudioSourceNode);
 RTC_FWD_DECL_OBJC_CLASS(AVAudioSinkNode);
 RTC_FWD_DECL_OBJC_CLASS(AVAudioFormat);
 RTC_FWD_DECL_OBJC_CLASS(AVAudioMixerNode);
+RTC_FWD_DECL_OBJC_CLASS(AVAudioUnitEQ);
 
 namespace webrtc {
 
@@ -235,15 +236,20 @@ class AudioDeviceAudioEngine : public AudioDeviceGeneric,
   double machTickUnitsToNanoseconds_;
 
   // AVAudioEngine objects
-  AVAudioFormat* rtc_playout_format_;  // int16
-  AVAudioFormat* rtc_record_format_;   // int16
+  AVAudioFormat* rtc_internal_format_;  // int16
+  AVAudioFormat* audio_engine_format_;  // float32
 
+  // AVAudioFormat* output_node_format_;
   AVAudioFormat* input_node_format_;
-  AVAudioFormat* output_node_format_;
 
   AVAudioEngine* audio_engine_;
-  AVAudioSinkNode* sink_node_;
+
+  // Output related
   AVAudioSourceNode* source_node_;
+
+  // Input related nodes
+  AVAudioSinkNode* sink_node_;
+  AVAudioUnitEQ* input_eq_node_;
   AVAudioMixerNode* input_mixer_node_;
 };
 }  // namespace ios_adm
