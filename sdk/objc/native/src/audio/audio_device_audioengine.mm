@@ -63,10 +63,6 @@ using ios::CheckAndLogError;
 AudioDeviceAudioEngine::AudioDeviceAudioEngine(bool bypass_voice_processing)
     : bypass_voice_processing_(bypass_voice_processing),
       audio_device_buffer_(nullptr),
-      recording_is_initialized_(false),
-      recording_(0),
-      playout_is_initialized_(false),
-      playing_(0),
       initialized_(false),
       is_interrupted_(false),
       has_configured_session_(false) {
@@ -83,9 +79,6 @@ AudioDeviceAudioEngine::AudioDeviceAudioEngine(bool bypass_voice_processing)
   mach_timebase_info_data_t tinfo;
   mach_timebase_info(&tinfo);
   machTickUnitsToNanoseconds_ = (double)tinfo.numer / tinfo.denom;
-
-  // Create AVAudioEngine early so it can be accessed externally.
-  EngineCreate();
 }
 
 AudioDeviceAudioEngine::~AudioDeviceAudioEngine() {
@@ -177,83 +170,32 @@ bool AudioDeviceAudioEngine::PlayoutIsInitialized() const {
   LOGI() << "PlayoutIsInitialized";
   RTC_DCHECK_RUN_ON(thread_);
 
-  return playout_is_initialized_;
+  return current_engine_state_.output_enabled;
 }
 
 bool AudioDeviceAudioEngine::Playing() const {
   LOGI() << "Playing";
+  RTC_DCHECK_RUN_ON(thread_);
 
-  return playing_.load();
+  return current_engine_state_.output_running;
 }
 
 int32_t AudioDeviceAudioEngine::InitPlayout() {
   LOGI() << "InitPlayout";
   RTC_DCHECK_RUN_ON(thread_);
   RTC_DCHECK(initialized_);
-  RTC_DCHECK(!playout_is_initialized_);
-  RTC_DCHECK(!playing_.load());
+  RTC_DCHECK(!current_engine_state_.output_enabled);
+  RTC_DCHECK(!current_engine_state_.output_running);
 
-  if (playout_is_initialized_) {
+  if (current_engine_state_.output_enabled) {
     LOGW() << "InitPlayout: Already initialized";
     return 0;
   }
 
-  // output_node_format_ = [audio_engine_.outputNode outputFormatForBus:0];
-
-  // LOGI() << "Output format - sample rate: " << output_node_format_.sampleRate
-  //        << ", channels: " << output_node_format_.channelCount
-  //        << ", format flags: " << output_node_format_.streamDescription->mFormatFlags
-  //        << ", format ID: " << output_node_format_.streamDescription->mFormatID
-  //        << ", bytes per frame: " << output_node_format_.streamDescription->mBytesPerFrame;
-
-  // Prepare SourceNode
-
-  AVAudioSourceNodeRenderBlock source_block =
-      ^OSStatus(BOOL* isSilence, const AudioTimeStamp* timestamp, AVAudioFrameCount frameCount,
-                AudioBufferList* outputData) {
-        RTC_DCHECK(outputData->mNumberBuffers == 1);
-
-        int16_t* dest_buffer = (int16_t*)outputData->mBuffers[0].mData;
-
-        fine_audio_buffer_->GetPlayoutData(
-            rtc::ArrayView<int16_t>(static_cast<int16_t*>(dest_buffer), frameCount),
-            kFixedPlayoutDelayEstimate);
-
-        return noErr;
-      };
-
-  source_node_ = [[AVAudioSourceNode alloc] initWithFormat:rtc_internal_format_
-                                               renderBlock:source_block];
-
-  // First pause engine if running to safely modify graph
-  BOOL was_running = audio_engine_.running;
-  if (was_running) {
-    [audio_engine_ stop];
-  }
-
-  [audio_engine_ attachNode:source_node_];
-
-  [audio_engine_ connect:source_node_ to:audio_engine_.mainMixerNode format:audio_engine_format_];
-
-  [audio_engine_ connect:audio_engine_.mainMixerNode
-                      to:audio_engine_.outputNode
-                  format:audio_engine_format_];
-
-  // Pre-allocate resources
-  [audio_engine_ prepare];
-
-  // Restart if was running
-  if (was_running) {
-    NSError* error = nil;
-    BOOL start_result = [audio_engine_ startAndReturnError:&error];
-    if (!start_result) {
-      LOGE() << "Failed to restart engine after playout init: "
-             << error.localizedDescription.UTF8String;
-      return -1;
-    }
-  }
-
-  playout_is_initialized_ = true;
+  SetEngineState([](EngineState state) -> EngineState {
+    state.output_enabled = true;
+    return state;
+  });
 
   return 0;
 }
@@ -261,34 +203,27 @@ int32_t AudioDeviceAudioEngine::InitPlayout() {
 int32_t AudioDeviceAudioEngine::StartPlayout() {
   LOGI() << "StartPlayout";
   RTC_DCHECK_RUN_ON(thread_);
-  RTC_DCHECK(playout_is_initialized_);
-  RTC_DCHECK(!playing_.load());
+  RTC_DCHECK(current_engine_state_.output_enabled);
+  RTC_DCHECK(!current_engine_state_.output_running);
 
-  if (!playout_is_initialized_) {
+  if (!current_engine_state_.output_enabled) {
     LOGW() << "StartPlayout: Not initialized";
     return -1;
   }
 
-  if (playing_.load()) {
+  if (current_engine_state_.output_running) {
     LOGW() << "StartPlayout: Already playing";
     return 0;
   }
 
-  if (!audio_engine_.running) {
-    if (fine_audio_buffer_) {
-      fine_audio_buffer_->ResetPlayout();
-    }
-
-    NSError* error = nil;
-    BOOL start_engine_result = [audio_engine_ startAndReturnError:&error];
-    if (!start_engine_result) {
-      NSLog(@"startAndReturnError error: %@", error.localizedDescription);
-      RTC_DCHECK(start_engine_result);
-      return -1;
-    }
+  if (fine_audio_buffer_) {
+    fine_audio_buffer_->ResetPlayout();
   }
 
-  playing_.store(1, std::memory_order_release);
+  SetEngineState([](EngineState state) -> EngineState {
+    state.output_running = true;
+    return state;
+  });
 
   return 0;
 }
@@ -297,32 +232,21 @@ int32_t AudioDeviceAudioEngine::StopPlayout() {
   LOGI() << "StopPlayout";
   RTC_DCHECK_RUN_ON(thread_);
 
-  if (!playout_is_initialized_) {
+  if (!current_engine_state_.output_enabled) {
     LOGW() << "StopPlayout: Not initialized";
     return -1;
   }
 
-  if (!playing_.load()) {
+  if (!current_engine_state_.output_running) {
     LOGW() << "StopPlayout: Already stopped";
     return 0;
   }
 
-  if (!recording_.load()) {
-    [audio_engine_ stop];
-  }
-
-  // Disconnect
-  [audio_engine_ disconnectNodeInput:source_node_];
-  [audio_engine_ disconnectNodeOutput:source_node_];
-
-  // Detach
-  [audio_engine_ detachNode:source_node_];
-
-  // Release
-  source_node_ = nil;
-
-  playing_.store(0, std::memory_order_release);
-  playout_is_initialized_ = false;
+  SetEngineState([](EngineState state) -> EngineState {
+    state.output_enabled = false;
+    state.output_running = false;
+    return state;
+  });
 
   return 0;
 }
@@ -333,91 +257,33 @@ int32_t AudioDeviceAudioEngine::StopPlayout() {
 bool AudioDeviceAudioEngine::RecordingIsInitialized() const {
   LOGI() << "RecordingIsInitialized";
   RTC_DCHECK_RUN_ON(thread_);
-  return recording_is_initialized_;
+
+  return current_engine_state_.input_enabled;
 }
 
 bool AudioDeviceAudioEngine::Recording() const {
   LOGI() << "Recording";
-  return recording_.load();
+  RTC_DCHECK_RUN_ON(thread_);
+
+  return current_engine_state_.input_running;
 }
 
 int32_t AudioDeviceAudioEngine::InitRecording() {
   LOGI() << "InitRecording";
   RTC_DCHECK_RUN_ON(thread_);
   RTC_DCHECK(initialized_);
-  RTC_DCHECK(!recording_is_initialized_);
-  RTC_DCHECK(!recording_.load());
+  RTC_DCHECK(!current_engine_state_.input_enabled);
+  RTC_DCHECK(!current_engine_state_.input_running);
 
-  if (recording_is_initialized_) {
+  if (current_engine_state_.input_enabled) {
     LOGW() << "InitRecording: Already initialized";
     return 0;
   }
 
-  // Prepare SinkNode
-
-  AVAudioSinkNodeReceiverBlock sink_block = ^OSStatus(const AudioTimeStamp* timestamp,
-                                                      AVAudioFrameCount frameCount,
-                                                      const AudioBufferList* inputData) {
-    RTC_DCHECK(inputData->mNumberBuffers == 1);
-
-    const int64_t capture_time_ns = timestamp->mHostTime * machTickUnitsToNanoseconds_;
-    const int16_t* rtc_buffer = (int16_t*)inputData->mBuffers[0].mData;
-
-    fine_audio_buffer_->DeliverRecordedData(rtc::ArrayView<const int16_t>(rtc_buffer, frameCount),
-                                            kFixedRecordDelayEstimate, capture_time_ns);
-
-    return noErr;
-  };
-
-  sink_node_ = [[AVAudioSinkNode alloc] initWithReceiverBlock:sink_block];
-
-  // First pause engine if running to safely modify graph
-  BOOL was_running = audio_engine_.running;
-  if (was_running) {
-    [audio_engine_ stop];
-  }
-
-  [audio_engine_ attachNode:sink_node_];
-
-  // input_node_format_ = [audio_engine_.inputNode outputFormatForBus:0];
-
-  // LOGI() << "Input format - sample rate: " << input_node_format_.sampleRate
-  //        << ", channels: " << input_node_format_.channelCount
-  //        << ", format flags: " << input_node_format_.streamDescription->mFormatFlags
-  //        << ", format ID: " << input_node_format_.streamDescription->mFormatID
-  //        << ", bytes per frame: " << input_node_format_.streamDescription->mBytesPerFrame;
-
-  // InputNode -> InputMixerNode -> SinkNode -> RTC
-  [audio_engine_ connect:audio_engine_.inputNode to:input_mixer_node_ format:nil];
-
-  // Convert to RTC's internal format before passing buffers to SinkNode.
-  [audio_engine_ connect:input_mixer_node_ to:sink_node_ format:rtc_internal_format_];
-
-#if defined(WEBRTC_IOS)
-  // Enable voice processing
-  NSError* error = nil;
-  BOOL set_output_vp_result = [audio_engine_.inputNode setVoiceProcessingEnabled:YES error:&error];
-  if (!set_output_vp_result) {
-    NSLog(@"setVoiceProcessingEnabled error: %@", error.localizedDescription);
-    RTC_DCHECK(set_output_vp_result);
-  }
-  LOGI() << "setVoiceProcessingEnabled output result: " << set_output_vp_result ? "YES" : "NO";
-#endif
-
-  [audio_engine_ prepare];
-
-  // Restart if was running
-  if (was_running) {
-    NSError* error = nil;
-    BOOL start_result = [audio_engine_ startAndReturnError:&error];
-    if (!start_result) {
-      LOGE() << "Failed to restart engine after recording init: "
-             << error.localizedDescription.UTF8String;
-      return -1;
-    }
-  }
-
-  recording_is_initialized_ = true;
+  SetEngineState([](EngineState state) -> EngineState {
+    state.input_enabled = true;
+    return state;
+  });
 
   return 0;
 }
@@ -425,34 +291,27 @@ int32_t AudioDeviceAudioEngine::InitRecording() {
 int32_t AudioDeviceAudioEngine::StartRecording() {
   LOGI() << "StartRecording";
   RTC_DCHECK_RUN_ON(thread_);
-  RTC_DCHECK(recording_is_initialized_);
-  RTC_DCHECK(!recording_.load());
+  RTC_DCHECK(current_engine_state_.input_enabled);
+  RTC_DCHECK(!current_engine_state_.input_running);
 
-  if (!recording_is_initialized_) {
+  if (!current_engine_state_.input_enabled) {
     LOGW() << "StartRecording: Not initialized";
     return -1;
   }
 
-  if (recording_.load()) {
+  if (current_engine_state_.input_running) {
     LOGW() << "StartRecording: Already recording";
     return 0;
   }
 
-  if (!audio_engine_.running) {
-    if (fine_audio_buffer_) {
-      fine_audio_buffer_->ResetRecord();
-    }
-
-    NSError* error = nil;
-    BOOL start_engine_result = [audio_engine_ startAndReturnError:&error];
-    if (!start_engine_result) {
-      NSLog(@"startAndReturnError error: %@", error.localizedDescription);
-      RTC_DCHECK(start_engine_result);
-      return -1;
-    }
+  if (fine_audio_buffer_) {
+    fine_audio_buffer_->ResetRecord();
   }
 
-  recording_.store(1, std::memory_order_release);
+  SetEngineState([](EngineState state) -> EngineState {
+    state.input_running = true;
+    return state;
+  });
 
   return 0;
 }
@@ -461,40 +320,21 @@ int32_t AudioDeviceAudioEngine::StopRecording() {
   LOGI() << "StopRecording";
   RTC_DCHECK_RUN_ON(thread_);
 
-  if (!recording_is_initialized_) {
+  if (!current_engine_state_.input_enabled) {
     LOGW() << "StopRecording: Not initialized";
     return -1;
   }
 
-  if (!recording_.load()) {
+  if (!current_engine_state_.input_running) {
     LOGW() << "StopRecording: Already stopped";
     return 0;
   }
 
-  if (!playing_.load()) {
-    [audio_engine_ stop];
-  }
-
-  // Disconnect input eq
-  // [audio_engine_ disconnectNodeInput:input_eq_node_];
-  // [audio_engine_ disconnectNodeOutput:input_eq_node_];
-
-  // Disconnect InputMixerNode
-  [audio_engine_ disconnectNodeInput:input_mixer_node_];
-  [audio_engine_ disconnectNodeOutput:input_mixer_node_];
-
-  // Disconnect SinkNode
-  [audio_engine_ disconnectNodeInput:sink_node_];
-  [audio_engine_ disconnectNodeOutput:sink_node_];
-
-  // Detach SinkNode
-  [audio_engine_ detachNode:sink_node_];
-
-  // Release SinkNode
-  sink_node_ = nil;
-
-  recording_.store(0, std::memory_order_release);
-  recording_is_initialized_ = false;
+  SetEngineState([](EngineState state) -> EngineState {
+    state.input_enabled = false;
+    state.input_running = false;
+    return state;
+  });
 
   return 0;
 }
@@ -630,19 +470,6 @@ bool AudioDeviceAudioEngine::MicrophoneIsInitialized() const {
 int32_t AudioDeviceAudioEngine::MicrophoneMuteIsAvailable(bool& available) {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "MicrophoneMuteIsAvailable";
-
-  if (!recording_is_initialized_) {
-    LOGI() << "Recording is not initialized";
-    available = false;
-    return 0;
-  }
-
-  if (!audio_engine_.outputNode.voiceProcessingEnabled) {
-    LOGI() << "Voice processing is not enabled";
-    available = false;
-    return 0;
-  }
-
   available = true;
   return 0;
 }
@@ -651,17 +478,10 @@ int32_t AudioDeviceAudioEngine::SetMicrophoneMute(bool enable) {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "SetMicrophoneMute: " << enable;
 
-  if (!recording_is_initialized_) {
-    LOGI() << "Recording is not initialized";
-    return -1;
-  }
-
-  if (!audio_engine_.inputNode.voiceProcessingEnabled) {
-    LOGI() << "Voice processing is not enabled";
-    return -1;
-  }
-
-  audio_engine_.inputNode.voiceProcessingInputMuted = enable;
+  SetEngineState([enable](EngineState state) -> EngineState {
+    state.input_muted = enable;
+    return state;
+  });
 
   return 0;
 }
@@ -670,17 +490,7 @@ int32_t AudioDeviceAudioEngine::MicrophoneMute(bool& enabled) const {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "MicrophoneMute";
 
-  if (!recording_is_initialized_) {
-    LOGI() << "Recording is not initialized";
-    return -1;
-  }
-
-  if (!audio_engine_.inputNode.voiceProcessingEnabled) {
-    LOGI() << "Voice processing is not enabled";
-    return -1;
-  }
-
-  enabled = audio_engine_.inputNode.voiceProcessingInputMuted;
+  enabled = current_engine_state_.input_muted;
 
   return 0;
 }
@@ -847,39 +657,196 @@ int32_t AudioDeviceAudioEngine::PlayoutDelay(uint16_t& delayMS) const {
 // ----------------------------------------------------------------------------------------------------
 // Private - Engine Related
 
-bool AudioDeviceAudioEngine::EngineCreate() {
+void AudioDeviceAudioEngine::SetEngineState(
+    std::function<EngineState(EngineState)> state_transform) {
   RTC_DCHECK_RUN_ON(thread_);
-  LOGI() << "EngineCreate";
+  LOGI() << "SetEngineState";
 
-  if (audio_engine_ != nil) {
-    LOGW() << "Engine already created";
-    return 0;
+  EngineState old_state = current_engine_state_;
+  EngineState new_state = state_transform(old_state);
+
+  if (old_state == new_state) {
+    LOGI() << "Nothing to update";
+    return;
   }
 
-  audio_engine_ = [[AVAudioEngine alloc] init];
+  // Checks
+  if (new_state.input_running) {
+    RTC_DCHECK(new_state.input_enabled);
+  }
 
-  // Prepare InputMixerNode
+  if (new_state.output_running) {
+    RTC_DCHECK(new_state.output_enabled);
+  }
 
-  input_eq_node_ = [[AVAudioUnitEQ alloc] initWithNumberOfBands:2];
-  [audio_engine_ attachNode:input_eq_node_];
-
-  input_mixer_node_ = [[AVAudioMixerNode alloc] init];
-  [audio_engine_ attachNode:input_mixer_node_];
-
-  return 0;
+  UpdateEngineState(old_state, new_state);
+  current_engine_state_ = new_state;
 }
 
-bool AudioDeviceAudioEngine::EngineCleanUp() {
-  audio_engine_ = [[AVAudioEngine alloc] init];
+void AudioDeviceAudioEngine::UpdateEngineState(EngineState old_state, EngineState new_state) {
+  RTC_DCHECK_RUN_ON(thread_);
+  LOGI() << "UpdateEngineState";
 
-  // Prepare InputMixerNode
+  if (!old_state.IsEnabled() && new_state.IsEnabled()) {
+    LOGI() << "Creating AVAudioEngine...";
+    audio_engine_ = [[AVAudioEngine alloc] init];
+  }
 
-  return 0;
+  bool is_restart_required =
+      (old_state.output_running && old_state.input_enabled != new_state.input_enabled) ||
+      (old_state.input_running && old_state.output_enabled != new_state.output_enabled);
+
+  if ((old_state.IsRunning() && !new_state.IsRunning()) || is_restart_required) {
+    LOGI() << "Stopping AVAudioEngine...";
+    [audio_engine_ stop];
+  }
+
+  if (!old_state.output_enabled && new_state.output_enabled) {
+    LOGI() << "Enabling output for AVAudioEngine...";
+
+    AVAudioSourceNodeRenderBlock source_block =
+        ^OSStatus(BOOL* isSilence, const AudioTimeStamp* timestamp, AVAudioFrameCount frameCount,
+                  AudioBufferList* outputData) {
+          RTC_DCHECK(outputData->mNumberBuffers == 1);
+
+          int16_t* dest_buffer = (int16_t*)outputData->mBuffers[0].mData;
+
+          fine_audio_buffer_->GetPlayoutData(
+              rtc::ArrayView<int16_t>(static_cast<int16_t*>(dest_buffer), frameCount),
+              kFixedPlayoutDelayEstimate);
+
+          return noErr;
+        };
+
+    source_node_ = [[AVAudioSourceNode alloc] initWithFormat:rtc_internal_format_
+                                                 renderBlock:source_block];
+
+    [audio_engine_ attachNode:source_node_];
+
+    [audio_engine_ connect:source_node_ to:audio_engine_.mainMixerNode format:audio_engine_format_];
+
+    [audio_engine_ connect:audio_engine_.mainMixerNode
+                        to:audio_engine_.outputNode
+                    format:audio_engine_format_];
+  } else if (old_state.output_enabled && !new_state.output_enabled) {
+    LOGI() << "Disabling output for AVAudioEngine...";
+
+    // Disconnect
+    [audio_engine_ disconnectNodeInput:source_node_];
+    [audio_engine_ disconnectNodeOutput:source_node_];
+    // Detach
+    [audio_engine_ detachNode:source_node_];
+    // Release
+    source_node_ = nil;
+  }
+
+  if (!old_state.input_enabled && new_state.input_enabled) {
+    LOGI() << "Enabling input for AVAudioEngine...";
+
+    input_eq_node_ = [[AVAudioUnitEQ alloc] initWithNumberOfBands:2];
+    [audio_engine_ attachNode:input_eq_node_];
+
+    input_mixer_node_ = [[AVAudioMixerNode alloc] init];
+    [audio_engine_ attachNode:input_mixer_node_];
+
+    AVAudioSinkNodeReceiverBlock sink_block = ^OSStatus(const AudioTimeStamp* timestamp,
+                                                        AVAudioFrameCount frameCount,
+                                                        const AudioBufferList* inputData) {
+      RTC_DCHECK(inputData->mNumberBuffers == 1);
+
+      const int64_t capture_time_ns = timestamp->mHostTime * machTickUnitsToNanoseconds_;
+      const int16_t* rtc_buffer = (int16_t*)inputData->mBuffers[0].mData;
+
+      fine_audio_buffer_->DeliverRecordedData(rtc::ArrayView<const int16_t>(rtc_buffer, frameCount),
+                                              kFixedRecordDelayEstimate, capture_time_ns);
+
+      return noErr;
+    };
+
+    sink_node_ = [[AVAudioSinkNode alloc] initWithReceiverBlock:sink_block];
+    [audio_engine_ attachNode:sink_node_];
+
+    // input_node_format_ = [audio_engine_.inputNode outputFormatForBus:0];
+
+    // LOGI() << "Input format - sample rate: " << input_node_format_.sampleRate
+    //        << ", channels: " << input_node_format_.channelCount
+    //        << ", format flags: " << input_node_format_.streamDescription->mFormatFlags
+    //        << ", format ID: " << input_node_format_.streamDescription->mFormatID
+    //        << ", bytes per frame: " << input_node_format_.streamDescription->mBytesPerFrame;
+
+    // InputNode -> InputMixerNode -> SinkNode -> RTC
+    [audio_engine_ connect:audio_engine_.inputNode to:input_mixer_node_ format:nil];
+    // Convert to RTC's internal format before passing buffers to SinkNode.
+    [audio_engine_ connect:input_mixer_node_ to:sink_node_ format:rtc_internal_format_];
+
+#if defined(WEBRTC_IOS)
+    // Enable voice processing
+    NSError* error = nil;
+    BOOL set_output_vp_result = [audio_engine_.inputNode setVoiceProcessingEnabled:YES
+                                                                             error:&error];
+    if (!set_output_vp_result) {
+      NSLog(@"setVoiceProcessingEnabled error: %@", error.localizedDescription);
+      RTC_DCHECK(set_output_vp_result);
+    }
+    LOGI() << "setVoiceProcessingEnabled output result: " << set_output_vp_result ? "YES" : "NO";
+#endif
+
+  } else if (old_state.input_enabled && !new_state.input_enabled) {
+    LOGI() << "Disabling input for AVAudioEngine...";
+
+    // Disconnect input eq
+    [audio_engine_ disconnectNodeInput:input_eq_node_];
+    [audio_engine_ disconnectNodeOutput:input_eq_node_];
+    [audio_engine_ detachNode:input_eq_node_];
+    input_eq_node_ = nil;
+
+    // InputMixerNode
+    [audio_engine_ disconnectNodeInput:input_mixer_node_];
+    [audio_engine_ disconnectNodeOutput:input_mixer_node_];
+    [audio_engine_ detachNode:input_mixer_node_];
+    input_mixer_node_ = nil;
+
+    // SinkNode
+    [audio_engine_ disconnectNodeInput:sink_node_];
+    [audio_engine_ disconnectNodeOutput:sink_node_];
+    [audio_engine_ detachNode:sink_node_];
+    sink_node_ = nil;
+  }
+
+  if (new_state.input_enabled) {
+    // Re-apply muted state.
+    audio_engine_.inputNode.voiceProcessingInputMuted = new_state.input_muted;
+  }
+
+  if ((!old_state.IsRunning() && new_state.IsRunning()) || is_restart_required) {
+    LOGI() << "Starting AVAudioEngine...";
+    NSError* error = nil;
+    BOOL start_result = [audio_engine_ startAndReturnError:&error];
+    if (!start_result) {
+      LOGE() << "Failed to restart engine after playout init: "
+             << error.localizedDescription.UTF8String;
+      return;
+    }
+  }
+
+  if (old_state.IsEnabled() && !new_state.IsEnabled()) {
+    LOGI() << "Releasing AVAudioEngine...";
+    audio_engine_ = nil;
+  }
 }
 
-bool AudioDeviceAudioEngine::AttachEngineInput() { return 0; }
+// ----------------------------------------------------------------------------------------------------
+// Private - EngineState
 
-bool AudioDeviceAudioEngine::DetachEngineInput() { return 0; }
+bool AudioDeviceAudioEngine::EngineState::operator==(const EngineState& rhs) const {
+  return input_enabled == rhs.input_enabled && output_enabled == rhs.output_enabled &&
+         input_running == rhs.input_running && output_running == rhs.output_running &&
+         input_muted == rhs.input_muted;
+}
+
+bool AudioDeviceAudioEngine::EngineState::operator!=(const EngineState& rhs) const {
+  return !(*this == rhs);
+}
 
 }  // namespace ios_adm
 }  // namespace webrtc
