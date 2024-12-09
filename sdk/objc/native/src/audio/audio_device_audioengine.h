@@ -180,16 +180,6 @@ class AudioDeviceAudioEngine : public AudioDeviceGeneric,
   // Unconfigures the audio session.
   void UnconfigureAudioSession();
 
-  // Activates our audio session, creates and initializes the voice-processing
-  // audio unit and verifies that we got the preferred native audio parameters.
-  bool InitPlayOrRecord(bool enable_input);
-
-  // Closes and deletes the voice-processing I/O unit.
-  void ShutdownPlayOrRecord();
-
-  // Resets thread-checkers before a call is restarted.
-  void PrepareForNewStart();
-
   // Determines whether voice processing should be enabled or disabled.
   const bool bypass_voice_processing_;
 
@@ -217,16 +207,6 @@ class AudioDeviceAudioEngine : public AudioDeviceGeneric,
   AudioParameters record_parameters_;
 
   std::unique_ptr<FineAudioBuffer> fine_audio_buffer_;
-
-  // bool recording_is_initialized_ RTC_GUARDED_BY(thread_);
-
-  // Set to 1 when recording is active and 0 otherwise.
-  // std::atomic<int> recording_;
-
-  // bool playout_is_initialized_ RTC_GUARDED_BY(thread_);
-
-  // Set to 1 when playout is active and 0 otherwise.
-  // std::atomic<int> playing_;
 
   // Set to true after successful call to Init(), false otherwise.
   bool initialized_ RTC_GUARDED_BY(thread_);
