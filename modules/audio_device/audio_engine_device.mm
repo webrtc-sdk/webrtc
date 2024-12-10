@@ -852,6 +852,7 @@ void AudioEngineDevice::UpdateEngineState(EngineState old_state, EngineState new
 
 #if defined(WEBRTC_IOS)
     if (!audio_engine_.inputNode.voiceProcessingEnabled) {
+      // Voice processing.
       NSError* error = nil;
       BOOL set_input_vp_result = [audio_engine_.inputNode setVoiceProcessingEnabled:YES
                                                                               error:&error];
@@ -860,6 +861,17 @@ void AudioEngineDevice::UpdateEngineState(EngineState old_state, EngineState new
         RTC_DCHECK(set_input_vp_result);
       }
       LOGI() << "setVoiceProcessingEnabled (input) result: " << set_input_vp_result ? "YES" : "NO";
+
+      // Other audio ducking.
+      // iOS 17.0+, iPadOS 17.0+, Mac Catalyst 17.0+, macOS 14.0+, visionOS 1.0+
+      if (@available(iOS 17.0, macCatalyst 17.0, macOS 14.0, visionOS 1.0, *)) {
+        AVAudioVoiceProcessingOtherAudioDuckingConfiguration ducking_config;
+        ducking_config.enableAdvancedDucking = YES;
+        ducking_config.duckingLevel = AVAudioVoiceProcessingOtherAudioDuckingLevelMax;
+
+        LOGI() << "setVoiceProcessingOtherAudioDuckingConfiguration";
+        [audio_engine_.inputNode setVoiceProcessingOtherAudioDuckingConfiguration:ducking_config];
+      }
     }
 #endif
   } else if (old_state.input_enabled && !new_state.input_enabled) {
