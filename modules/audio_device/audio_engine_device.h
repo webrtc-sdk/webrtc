@@ -126,6 +126,7 @@ class AudioEngineDevice : public AudioDeviceGeneric,
 
   bool IsInterrupted();
 
+  int32_t SetObserver(AudioDeviceObserver* observer) override;
 
  private:
   struct EngineState {
@@ -183,6 +184,8 @@ class AudioEngineDevice : public AudioDeviceGeneric,
 
   // Set to true after successful call to Init(), false otherwise.
   bool initialized_ RTC_GUARDED_BY(thread_);
+
+  AudioDeviceObserver* observer_ RTC_GUARDED_BY(thread_);
 
   // Audio interruption observer instance.
   RTC_OBJC_TYPE(RTCNativeAudioSessionDelegateAdapter) * audio_session_observer_

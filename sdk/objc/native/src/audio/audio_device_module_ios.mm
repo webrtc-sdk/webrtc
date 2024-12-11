@@ -667,9 +667,10 @@ AudioDeviceModuleIOS::AudioDeviceModuleIOS(bool bypass_voice_processing)
 #endif  // WEBRTC_IOS
 
   int32_t AudioDeviceModuleIOS::SetObserver(AudioDeviceObserver* observer) const {
-    // not implemented
-    RTC_LOG(LS_WARNING) << __FUNCTION__ << "(" << observer << ") Not implemented";
-    return -1;
+    RTC_DLOG(LS_INFO) << __FUNCTION__;
+    int r = audio_device_->SetObserver(observer);
+    RTC_DLOG(LS_INFO) << "output: " << r;
+    return r;
   }
 }
 }

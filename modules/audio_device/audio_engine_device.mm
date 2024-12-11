@@ -673,6 +673,14 @@ int32_t AudioEngineDevice::PlayoutDelay(uint16_t& delayMS) const {
   return 0;
 }
 
+int32_t AudioEngineDevice::SetObserver(AudioDeviceObserver* observer) {
+  LOGI() << "SetObserver";
+  RTC_DCHECK_RUN_ON(thread_);
+
+  observer_ = observer;
+  return 0;
+}
+
 // ----------------------------------------------------------------------------------------------------
 // Private - Engine Related
 
@@ -861,6 +869,32 @@ void AudioEngineDevice::UpdateEngineState(EngineState old_state, EngineState new
         RTC_DCHECK(set_input_vp_result);
       }
       LOGI() << "setVoiceProcessingEnabled (input) result: " << set_input_vp_result ? "YES" : "NO";
+
+      // Muted talker detection.
+      if (@available(iOS 17.0, macCatalyst 17.0, macOS 14.0, tvOS 17.0, visionOS 1.0, *)) {
+        auto listener_block = ^(AVAudioVoiceProcessingSpeechActivityEvent event) {
+          LOGI() << "AVAudioVoiceProcessingSpeechActivityEvent: " << event;
+          RTC_DCHECK(event == AVAudioVoiceProcessingSpeechActivityStarted ||
+                     event == AVAudioVoiceProcessingSpeechActivityEnded);
+          AudioDeviceModule::SpeechActivityEvent rtc_event =
+              (event == AVAudioVoiceProcessingSpeechActivityStarted
+                   ? AudioDeviceModule::SpeechActivityEvent::kStarted
+                   : AudioDeviceModule::SpeechActivityEvent::kEnded);
+
+          thread_->PostTask(SafeTask(safety_, [this, rtc_event] {
+            RTC_DCHECK_RUN_ON(thread_);  // Silence warning.
+            if (this->observer_ != nullptr) {
+              this->observer_->OnSpeechActivityEvent(rtc_event);
+            }
+          }));
+        };
+
+        BOOL set_listener_result =
+            [audio_engine_.inputNode setMutedSpeechActivityEventListener:listener_block];
+        LOGI() << "setMutedSpeechActivityEventListener result: " << set_listener_result ? "YES"
+                                                                                        : "NO";
+        RTC_DCHECK(set_listener_result);
+      }
 
       // Other audio ducking.
       // iOS 17.0+, iPadOS 17.0+, Mac Catalyst 17.0+, macOS 14.0+, visionOS 1.0+

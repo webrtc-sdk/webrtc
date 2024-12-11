@@ -20,14 +20,7 @@
 namespace webrtc {
 
 class AudioDeviceModuleForTest;
-
-class AudioDeviceObserver {
- public:
-  virtual ~AudioDeviceObserver() = default;
-
-  // input/output devices updated or default device changed
-  virtual void OnDevicesUpdated() = 0;
-};
+class AudioDeviceObserver;
 
 class AudioDeviceModule : public rtc::RefCountInterface {
  public:
@@ -48,6 +41,11 @@ class AudioDeviceModule : public rtc::RefCountInterface {
   enum WindowsDeviceType {
     kDefaultCommunicationDevice = -1,
     kDefaultDevice = -2
+  };
+
+  enum SpeechActivityEvent {
+    kStarted = 0,
+    kEnded,
   };
 
   struct Stats {
@@ -201,6 +199,16 @@ class AudioDeviceModuleForTest : public AudioDeviceModule {
 
   virtual int SetPlayoutSampleRate(uint32_t sample_rate) = 0;
   virtual int SetRecordingSampleRate(uint32_t sample_rate) = 0;
+};
+
+class AudioDeviceObserver {
+ public:
+  virtual ~AudioDeviceObserver() = default;
+
+  // input/output devices updated or default device changed
+  virtual void OnDevicesUpdated() {}
+  virtual void OnSpeechActivityEvent(
+      AudioDeviceModule::SpeechActivityEvent event) {}
 };
 
 }  // namespace webrtc
