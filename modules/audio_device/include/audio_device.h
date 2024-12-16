@@ -21,10 +21,9 @@ namespace webrtc {
 
 class AudioDeviceModuleForTest;
 
-// Sink for callbacks related to a audio device.
-class AudioDeviceSink {
+class AudioDeviceObserver {
  public:
-  virtual ~AudioDeviceSink() = default;
+  virtual ~AudioDeviceObserver() = default;
 
   // input/output devices updated or default device changed
   virtual void OnDevicesUpdated() = 0;
@@ -182,7 +181,7 @@ class AudioDeviceModule : public rtc::RefCountInterface {
   virtual int GetRecordAudioParameters(AudioParameters* params) const = 0;
 #endif  // WEBRTC_IOS
 
-  virtual int32_t SetAudioDeviceSink(AudioDeviceSink* sink) const { return -1; }
+  virtual int32_t SetObserver(AudioDeviceObserver* observer) const { return -1; }
   virtual int32_t GetPlayoutDevice() const { return -1; }
   virtual int32_t GetRecordingDevice() const { return -1; }
 
