@@ -126,8 +126,6 @@ class AudioEngineDevice : public AudioDeviceGeneric,
 
   bool IsInterrupted();
 
-  // AudioEngine observer methods. May be called from any thread.
-  void OnEngineConfigurationChange();
 
  private:
   struct EngineState {
@@ -163,6 +161,9 @@ class AudioEngineDevice : public AudioDeviceGeneric,
 
   // Unconfigures the audio session.
   void UnconfigureAudioSession();
+
+  // AudioEngine observer methods. May be called from any thread.
+  void OnEngineConfigurationChange();
 
   // Determines whether voice processing should be enabled or disabled.
   const bool bypass_voice_processing_;
