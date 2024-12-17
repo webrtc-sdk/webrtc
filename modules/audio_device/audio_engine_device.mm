@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-#import <AVFoundation/AVFoundation.h>
 #import <Foundation/Foundation.h>
+#import <AVFoundation/AVFoundation.h>
 
 #include "audio_engine_device.h"
 
-#include <AudioUnit/AudioUnit.h>
 #include <mach/mach_time.h>
 #include <cmath>
 
@@ -31,9 +30,6 @@
 #include "rtc_base/thread.h"
 #include "rtc_base/thread_annotations.h"
 #include "rtc_base/time_utils.h"
-#include "sdk/objc/native/src/audio/helpers.h"
-#include "system_wrappers/include/field_trial.h"
-#include "system_wrappers/include/metrics.h"
 
 #import "base/RTCLogging.h"
 
@@ -57,8 +53,6 @@ const uint32_t N_REC_SAMPLES_PER_SEC = 48000;
 const uint32_t N_PLAY_SAMPLES_PER_SEC = 48000;
 const uint32_t N_REC_CHANNELS = 1;   // default is mono recording
 const uint32_t N_PLAY_CHANNELS = 1;  // default is stereo playout
-
-using ios::CheckAndLogError;
 
 AudioEngineDevice::AudioEngineDevice(bool bypass_voice_processing)
     : bypass_voice_processing_(bypass_voice_processing),
