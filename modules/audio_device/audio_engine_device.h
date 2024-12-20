@@ -204,7 +204,8 @@ class AudioEngineDevice : public AudioDeviceGeneric,
 
   // AVAudioEngine objects
   AVAudioEngine* audio_engine_;
-  AVAudioFormat* rtc_internal_format_;  // Int16
+  AVAudioFormat* rtc_internal_format_;     // Int16
+  AVAudioFormat* engine_internal_format_;  // Float32
 
   // Output related
   AVAudioSourceNode* source_node_;

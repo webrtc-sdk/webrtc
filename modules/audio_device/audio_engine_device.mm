@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#import <Foundation/Foundation.h>
 #import <AVFoundation/AVFoundation.h>
+#import <Foundation/Foundation.h>
 
 #include "audio_engine_device.h"
 
@@ -146,6 +146,11 @@ AudioDeviceGeneric::InitStatus AudioEngineDevice::Init() {
                                                           sampleRate:48000.0
                                                             channels:1
                                                          interleaved:YES];
+
+  engine_internal_format_ = [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatFloat32
+                                                             sampleRate:48000.0
+                                                               channels:1
+                                                            interleaved:NO];
 
   initialized_ = true;
 
@@ -776,7 +781,15 @@ void AudioEngineDevice::UpdateEngineState(EngineState old_state, EngineState new
     LOGI() << "Enabling output for AVAudioEngine...";
     RTC_DCHECK(!audio_engine_.running);
 
-    AVAudioFormat* output_format = [audio_engine_.outputNode outputFormatForBus:0];
+    if (!audio_engine_.outputNode.voiceProcessingEnabled) {
+      NSError* error = nil;
+      BOOL set_vp_result = [audio_engine_.outputNode setVoiceProcessingEnabled:YES error:&error];
+      if (!set_vp_result) {
+        NSLog(@"setVoiceProcessingEnabled error: %@", error.localizedDescription);
+        RTC_DCHECK(set_vp_result);
+      }
+      LOGI() << "setVoiceProcessingEnabled (output) result: " << set_vp_result ? "YES" : "NO";
+    }
 
     AVAudioSourceNodeRenderBlock source_block =
         ^OSStatus(BOOL* isSilence, const AudioTimeStamp* timestamp, AVAudioFrameCount frameCount,
@@ -797,11 +810,13 @@ void AudioEngineDevice::UpdateEngineState(EngineState old_state, EngineState new
 
     [audio_engine_ attachNode:source_node_];
 
-    [audio_engine_ connect:source_node_ to:audio_engine_.mainMixerNode format:output_format];
+    [audio_engine_ connect:source_node_
+                        to:audio_engine_.mainMixerNode
+                    format:engine_internal_format_];
 
     [audio_engine_ connect:audio_engine_.mainMixerNode
                         to:audio_engine_.outputNode
-                    format:output_format];
+                    format:engine_internal_format_];
 
   } else if (old_state.output_enabled && !new_state.output_enabled) {
     LOGI() << "Disabling output for AVAudioEngine...";
@@ -820,50 +835,17 @@ void AudioEngineDevice::UpdateEngineState(EngineState old_state, EngineState new
     LOGI() << "Enabling input for AVAudioEngine...";
     RTC_DCHECK(!audio_engine_.running);
 
-    AVAudioFormat* input_format = [audio_engine_.inputNode outputFormatForBus:0];
-
-    input_eq_node_ = [[AVAudioUnitEQ alloc] initWithNumberOfBands:2];
-    [audio_engine_ attachNode:input_eq_node_];
-
-    input_mixer_node_ = [[AVAudioMixerNode alloc] init];
-    [audio_engine_ attachNode:input_mixer_node_];
-
-    AVAudioSinkNodeReceiverBlock sink_block = ^OSStatus(const AudioTimeStamp* timestamp,
-                                                        AVAudioFrameCount frameCount,
-                                                        const AudioBufferList* inputData) {
-      RTC_DCHECK(inputData->mNumberBuffers == 1);
-
-      const int64_t capture_time_ns = timestamp->mHostTime * machTickUnitsToNanoseconds_;
-      const int16_t* rtc_buffer = (int16_t*)inputData->mBuffers[0].mData;
-
-      fine_audio_buffer_->DeliverRecordedData(rtc::ArrayView<const int16_t>(rtc_buffer, frameCount),
-                                              kFixedRecordDelayEstimate, capture_time_ns);
-
-      return noErr;
-    };
-
-    sink_node_ = [[AVAudioSinkNode alloc] initWithReceiverBlock:sink_block];
-    [audio_engine_ attachNode:sink_node_];
-
-    // InputNode -> InputEQNode -> InputMixerNode -> SinkNode -> RTC
-    [audio_engine_ connect:audio_engine_.inputNode to:input_eq_node_ format:input_format];
-
-    [audio_engine_ connect:input_eq_node_ to:input_mixer_node_ format:input_format];
-    // Convert to RTC's internal format before passing buffers to SinkNode.
-    [audio_engine_ connect:input_mixer_node_ to:sink_node_ format:rtc_internal_format_];
-
-#if defined(WEBRTC_IOS)
     if (!audio_engine_.inputNode.voiceProcessingEnabled) {
-      // Voice processing.
       NSError* error = nil;
-      BOOL set_input_vp_result = [audio_engine_.inputNode setVoiceProcessingEnabled:YES
-                                                                              error:&error];
-      if (!set_input_vp_result) {
+      BOOL set_vp_result = [audio_engine_.inputNode setVoiceProcessingEnabled:YES error:&error];
+      if (!set_vp_result) {
         NSLog(@"setVoiceProcessingEnabled error: %@", error.localizedDescription);
-        RTC_DCHECK(set_input_vp_result);
+        RTC_DCHECK(set_vp_result);
       }
-      LOGI() << "setVoiceProcessingEnabled (input) result: " << set_input_vp_result ? "YES" : "NO";
+      LOGI() << "setVoiceProcessingEnabled (input) result: " << set_vp_result ? "YES" : "NO";
+    }
 
+    if (audio_engine_.inputNode.voiceProcessingEnabled) {
       // Muted talker detection.
       if (@available(iOS 17.0, macCatalyst 17.0, macOS 14.0, tvOS 17.0, visionOS 1.0, *)) {
         auto listener_block = ^(AVAudioVoiceProcessingSpeechActivityEvent event) {
@@ -895,13 +877,45 @@ void AudioEngineDevice::UpdateEngineState(EngineState old_state, EngineState new
       if (@available(iOS 17.0, macCatalyst 17.0, macOS 14.0, visionOS 1.0, *)) {
         AVAudioVoiceProcessingOtherAudioDuckingConfiguration ducking_config;
         ducking_config.enableAdvancedDucking = YES;
-        ducking_config.duckingLevel = AVAudioVoiceProcessingOtherAudioDuckingLevelMax;
+        ducking_config.duckingLevel = AVAudioVoiceProcessingOtherAudioDuckingLevelMid;
 
         LOGI() << "setVoiceProcessingOtherAudioDuckingConfiguration";
         [audio_engine_.inputNode setVoiceProcessingOtherAudioDuckingConfiguration:ducking_config];
       }
     }
-#endif
+
+    input_eq_node_ = [[AVAudioUnitEQ alloc] initWithNumberOfBands:2];
+    [audio_engine_ attachNode:input_eq_node_];
+
+    input_mixer_node_ = [[AVAudioMixerNode alloc] init];
+    [audio_engine_ attachNode:input_mixer_node_];
+
+    AVAudioSinkNodeReceiverBlock sink_block = ^OSStatus(const AudioTimeStamp* timestamp,
+                                                        AVAudioFrameCount frameCount,
+                                                        const AudioBufferList* inputData) {
+      RTC_DCHECK(inputData->mNumberBuffers == 1);
+
+      const int64_t capture_time_ns = timestamp->mHostTime * machTickUnitsToNanoseconds_;
+      const int16_t* rtc_buffer = (int16_t*)inputData->mBuffers[0].mData;
+
+      fine_audio_buffer_->DeliverRecordedData(rtc::ArrayView<const int16_t>(rtc_buffer, frameCount),
+                                              kFixedRecordDelayEstimate, capture_time_ns);
+
+      return noErr;
+    };
+
+    sink_node_ = [[AVAudioSinkNode alloc] initWithReceiverBlock:sink_block];
+    [audio_engine_ attachNode:sink_node_];
+
+    // InputNode -> InputEQNode -> InputMixerNode -> SinkNode -> RTC
+    // [audio_engine_ connect:audio_engine_.inputNode to:input_eq_node_ format:input_format];
+
+    [audio_engine_ connect:audio_engine_.inputNode
+                        to:input_mixer_node_
+                    format:engine_internal_format_];
+    // Convert to RTC's internal format before passing buffers to SinkNode.
+    [audio_engine_ connect:input_mixer_node_ to:sink_node_ format:rtc_internal_format_];
+
   } else if (old_state.input_enabled && !new_state.input_enabled) {
     LOGI() << "Disabling input for AVAudioEngine...";
     RTC_DCHECK(!audio_engine_.running);
