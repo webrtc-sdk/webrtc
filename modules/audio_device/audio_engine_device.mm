@@ -843,6 +843,8 @@ void AudioEngineDevice::UpdateEngineState(EngineState old_state, EngineState new
         RTC_DCHECK(set_vp_result);
       }
       LOGI() << "setVoiceProcessingEnabled (input) result: " << set_vp_result ? "YES" : "NO";
+
+      RTC_DCHECK(audio_engine_.inputNode.isVoiceProcessingAGCEnabled);
     }
 
     if (audio_engine_.inputNode.voiceProcessingEnabled) {
