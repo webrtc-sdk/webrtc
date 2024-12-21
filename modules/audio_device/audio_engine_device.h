@@ -166,6 +166,8 @@ class AudioEngineDevice : public AudioDeviceGeneric,
   // AudioEngine observer methods. May be called from any thread.
   void OnEngineConfigurationChange();
 
+  void DebugAudioEngine();
+
   // Determines whether voice processing should be enabled or disabled.
   const bool bypass_voice_processing_;
 

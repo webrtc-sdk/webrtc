@@ -954,6 +954,7 @@ void AudioEngineDevice::UpdateEngineState(EngineState old_state, EngineState new
       BOOL start_result = [audio_engine_ startAndReturnError:&error];
       if (!start_result) {
         LOGE() << "Failed to start engine: " << error.localizedDescription.UTF8String;
+        DebugAudioEngine();
       }
     }
   }
@@ -979,6 +980,7 @@ bool AudioEngineDevice::EngineState::operator!=(const EngineState& rhs) const {
 
 // ----------------------------------------------------------------------------------------------------
 // Private - Audio session
+
 #if defined(WEBRTC_IOS)
 bool AudioEngineDevice::ConfigureAudioSession() {
   RTC_DCHECK_RUN_ON(thread_);
@@ -1034,5 +1036,104 @@ void AudioEngineDevice::UnconfigureAudioSession() {
   RTCLog(@"Unconfigured audio session.");
 }
 #endif
+
+// ----------------------------------------------------------------------------------------------------
+// Private - Debug
+
+void AudioEngineDevice::DebugAudioEngine() {
+  RTC_DCHECK_RUN_ON(thread_);
+
+  auto padded_string = [](int pad) { return std::string(pad * 2, ' '); };
+
+  auto audio_format = [](AVAudioFormat* format) {
+    std::ostringstream result;
+
+    // Get the underlying AudioStreamBasicDescription
+    const AudioStreamBasicDescription& asbd = *format.streamDescription;
+
+    result << "(";
+    // Basic properties
+    result << "sampleRate: " << format.sampleRate;
+    result << ", channels: " << format.channelCount;
+    result << ", bitsPerChannel: " << asbd.mBitsPerChannel;
+
+    // Format ID (should be LinearPCM)
+    result << ", formatID: ";
+    char formatID[5] = {0};
+    *(UInt32*)formatID = CFSwapInt32HostToBig(asbd.mFormatID);
+    result << formatID;
+    result << (asbd.mFormatID == kAudioFormatLinearPCM ? " (LinearPCM)" : " (Not LinearPCM)");
+
+    // Format Flags
+    result << std::hex << std::showbase;
+    result << ", formatFlags: " << asbd.mFormatFlags;
+
+    // Check specific flags
+    bool isFloat = (asbd.mFormatFlags & kAudioFormatFlagIsFloat);
+    bool isPacked = (asbd.mFormatFlags & kAudioFormatFlagIsPacked);
+    bool isNonInterleaved = (asbd.mFormatFlags & kAudioFormatFlagIsNonInterleaved);
+    bool isNativeEndian = (asbd.mFormatFlags & kAudioFormatFlagsNativeEndian);
+
+    bool isAudioUnitCanonical = isNativeEndian && isFloat && isPacked && isNonInterleaved;
+
+    result << std::dec;  // Switch back to decimal
+    result << " [";
+    result << "float:" << (isFloat ? "true" : "false") << ", ";
+    result << "packed:" << (isPacked ? "true" : "false") << ", ";
+    result << "non-interleaved:" << (isNonInterleaved ? "true" : "false") << ", ";
+    result << "native-endian:" << (isNativeEndian ? "true" : "false") << ", ";
+    result << "audio-unit-canonical:" << (isAudioUnitCanonical ? "true" : "false");
+    result << "]";
+
+    result << ")";
+    return result.str();
+  };
+
+  std::function<void(AVAudioNode*, int)> print_node;
+  print_node = [this, &padded_string, &audio_format](AVAudioNode* node, int base_depth = 0) {
+    LOGI() << padded_string(base_depth) << NSStringFromClass([node class]).UTF8String << "."
+           << node.hash;
+
+    // Inputs
+    for (NSUInteger i = 0; i < node.numberOfInputs; i++) {
+      AVAudioFormat* format = [node inputFormatForBus:i];
+      LOGI() << padded_string(base_depth) << " <- #" << i << audio_format(format);
+
+      AVAudioConnectionPoint* connection = [this->audio_engine_ inputConnectionPointForNode:node
+                                                                                   inputBus:i];
+      if (connection != nil) {
+        LOGI() << padded_string(base_depth + 1) << " <-> "
+               << NSStringFromClass([connection.node class]).UTF8String << "."
+               << connection.node.hash << " #" << connection.bus;
+      }
+    }
+
+    // Outputs
+    for (NSUInteger i = 0; i < node.numberOfOutputs; i++) {
+      AVAudioFormat* format = [node outputFormatForBus:i];
+      LOGI() << padded_string(base_depth) << " -> #" << i << audio_format(format);
+
+      for (NSUInteger o = 0; o < node.numberOfOutputs; o++) {
+        NSArray* points = [this->audio_engine_ outputConnectionPointsForNode:node outputBus:o];
+        for (AVAudioConnectionPoint* connection in points) {
+          LOGI() << padded_string(base_depth + 1) << " <-> "
+                 << NSStringFromClass([connection.node class]).UTF8String << "."
+                 << connection.node.hash << " #" << connection.bus;
+        }
+      }
+    }
+  };
+
+  NSArray<AVAudioNode*>* attachedNodes = [audio_engine_.attachedNodes allObjects];
+  LOGI() << "==================================================";
+  LOGI() << "DebugAudioEngine attached nodes: " << attachedNodes.count;
+
+  for (NSUInteger i = 0; i < attachedNodes.count; i++) {
+    AVAudioNode* node = attachedNodes[i];
+    print_node(node, 0);
+  }
+
+  LOGI() << "==================================================";
+}
 
 }  // namespace webrtc
