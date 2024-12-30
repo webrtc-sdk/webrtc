@@ -34,12 +34,11 @@
 #if defined(WEBRTC_ENABLE_LINUX_PULSE)
 #include "modules/audio_device/linux/audio_device_pulse_linux.h"
 #endif
+#elif defined(WEBRTC_IOS)
+#include "sdk/objc/native/src/audio/audio_device_ios.h"
+#elif defined(WEBRTC_MAC)
+#include "modules/audio_device/mac/audio_device_mac.h"
 #endif
-
-#if defined(WEBRTC_IOS) || defined(WEBRTC_MAC)
-#include "modules/audio_device/audio_engine_device.h"
-#endif
-
 #if defined(WEBRTC_DUMMY_FILE_DEVICES)
 #include "modules/audio_device/dummy/file_audio_device.h"
 #include "modules/audio_device/dummy/file_audio_device_factory.h"
@@ -247,7 +246,8 @@ int32_t AudioDeviceModuleImpl::CreatePlatformSpecificObjects() {
 // iOS ADM implementation.
 #if defined(WEBRTC_IOS)
   if (audio_layer == kPlatformDefaultAudio) {
-    audio_device_.reset(new AudioEngineDevice(/*bypass_voice_processing=*/bypass_voice_processing_));
+    audio_device_.reset(
+        new ios_adm::AudioDeviceIOS(/*bypass_voice_processing=*/bypass_voice_processing_));
     RTC_LOG(LS_INFO) << "iPhone Audio APIs will be utilized.";
   }
 // END #if defined(WEBRTC_IOS)
@@ -255,7 +255,7 @@ int32_t AudioDeviceModuleImpl::CreatePlatformSpecificObjects() {
 // Mac OS X ADM implementation.
 #elif defined(WEBRTC_MAC)
   if (audio_layer == kPlatformDefaultAudio) {
-    audio_device_.reset(new AudioEngineDevice(/*bypass_voice_processing=*/false));
+    audio_device_.reset(new AudioDeviceMac());
     RTC_LOG(LS_INFO) << "Mac OS X Audio APIs will be utilized.";
   }
 #endif  // WEBRTC_MAC
@@ -902,7 +902,7 @@ int AudioDeviceModuleImpl::GetRecordAudioParameters(
 }
 #endif  // WEBRTC_IOS
 
-int32_t AudioDeviceModuleImpl::SetObserver(AudioDeviceObserver* observer) const {
+int32_t AudioDeviceModuleImpl::SetObserver(AudioDeviceObserver* observer) {
   RTC_LOG(LS_INFO) << __FUNCTION__ << "(" << observer << ")";
   int32_t ok = audio_device_->SetObserver(observer);
   RTC_LOG(LS_INFO) << "output: " << ok;

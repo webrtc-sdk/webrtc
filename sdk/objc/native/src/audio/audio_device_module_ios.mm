@@ -19,7 +19,7 @@
 #include "system_wrappers/include/metrics.h"
 
 #if defined(WEBRTC_IOS)
-#include "modules/audio_device/audio_engine_device.h"
+#include "audio_device_ios.h"
 #endif
 
 #define CHECKinitialized_() \
@@ -72,7 +72,7 @@ AudioDeviceModuleIOS::AudioDeviceModuleIOS(bool bypass_voice_processing)
       return 0;
 
     audio_device_buffer_.reset(new webrtc::AudioDeviceBuffer(task_queue_factory_.get()));
-    audio_device_.reset(new AudioEngineDevice(bypass_voice_processing_));
+    audio_device_.reset(new ios_adm::AudioDeviceIOS(bypass_voice_processing_));
     RTC_CHECK(audio_device_);
 
     this->AttachAudioBuffer();
@@ -666,7 +666,7 @@ AudioDeviceModuleIOS::AudioDeviceModuleIOS(bool bypass_voice_processing)
   }
 #endif  // WEBRTC_IOS
 
-  int32_t AudioDeviceModuleIOS::SetObserver(AudioDeviceObserver* observer) const {
+  int32_t AudioDeviceModuleIOS::SetObserver(AudioDeviceObserver* observer) {
     RTC_DLOG(LS_INFO) << __FUNCTION__;
     int r = audio_device_->SetObserver(observer);
     RTC_DLOG(LS_INFO) << "output: " << r;

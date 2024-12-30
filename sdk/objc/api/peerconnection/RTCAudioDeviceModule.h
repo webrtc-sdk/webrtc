@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
+#import <AVFAudio/AVFAudio.h>
 #import <CoreMedia/CoreMedia.h>
 #import <Foundation/Foundation.h>
 
-#import "RTCMacros.h"
 #import "RTCIODevice.h"
+#import "RTCMacros.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -29,6 +30,11 @@ typedef NS_ENUM(NSInteger, RTCSpeechActivityEvent) {
 
 typedef void (^RTCDevicesDidUpdateCallback)();
 typedef void (^RTCSpeechActivityCallback)(RTCSpeechActivityEvent);
+typedef void (^RTCOnEngineWillStart)(AVAudioEngine *, BOOL, BOOL);
+typedef bool (^RTCOnEngineWillConnectInput)(AVAudioEngine *, AVAudioNode *, AVAudioNode *,
+                                            AVAudioFormat *);
+typedef bool (^RTCOnEngineWillConnectOutput)(AVAudioEngine *, AVAudioNode *, AVAudioNode *,
+                                             AVAudioFormat *);
 
 RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCAudioDeviceModule) : NSObject
@@ -39,8 +45,8 @@ RTC_OBJC_EXPORT
 @property(nonatomic, readonly) BOOL playing;
 @property(nonatomic, readonly) BOOL recording;
 
-@property(nonatomic, assign) RTC_OBJC_TYPE(RTCIODevice) *outputDevice;
-@property(nonatomic, assign) RTC_OBJC_TYPE(RTCIODevice) *inputDevice;
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCIODevice) * outputDevice;
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCIODevice) * inputDevice;
 
 // Executes low-level API's in sequence to switch the device
 // Use outputDevice / inputDevice property unless you need to know if setting the device is
@@ -50,6 +56,9 @@ RTC_OBJC_EXPORT
 
 - (BOOL)setDevicesDidUpdateCallback:(nullable RTCDevicesDidUpdateCallback)callback;
 - (BOOL)setSpeechActivityCallback:(nullable RTCSpeechActivityCallback)callback;
+- (BOOL)setOnEngineWillStartCallback:(nullable RTCOnEngineWillStart)callback;
+- (BOOL)setOnEngineWillConnectInputCallback:(nullable RTCOnEngineWillConnectInput)callback;
+- (BOOL)setOnEngineWillConnectOutputCallback:(nullable RTCOnEngineWillConnectOutput)callback;
 
 - (BOOL)startPlayout;
 - (BOOL)stopPlayout;
@@ -57,6 +66,18 @@ RTC_OBJC_EXPORT
 - (BOOL)startRecording;
 - (BOOL)stopRecording;
 - (BOOL)initRecording;
+
+- (BOOL)initAndStartRecording;
+
+// Manual rendering.
+@property(nonatomic, readonly, getter=isManualRenderingMode) BOOL manualRenderingMode;
+- (BOOL)setManualRenderingMode:(BOOL)enabled;
+
+// Ducking.
+@property(nonatomic, assign, getter=isAdvancedDuckingEnabled) BOOL advancedDuckingEnabled;
+@property(nonatomic, assign)
+    AVAudioVoiceProcessingOtherAudioDuckingLevel duckingLevel API_AVAILABLE(
+        ios(17.0), macos(14.0), visionos(1.0)) API_UNAVAILABLE(tvos);
 
 @end
 

@@ -16,11 +16,12 @@
 
 #include <os/lock.h>
 
-#import "RTCAudioDeviceModule.h"
 #import "RTCAudioDeviceModule+Private.h"
+#import "RTCAudioDeviceModule.h"
 #import "RTCIODevice+Private.h"
 #import "base/RTCLogging.h"
 
+#import "modules/audio_device/audio_engine_device.h"
 #import "sdk/objc/native/api/audio_device_module.h"
 
 class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
@@ -43,7 +44,38 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
     os_unfair_lock_unlock(&lock_);
   }
 
- void SetDevicesUpdatedCallBack(RTCDevicesDidUpdateCallback cb) {
+  void OnEngineWillStart(AVAudioEngine *engine, bool playout_enabled,
+                         bool recording_enabled) override {
+    os_unfair_lock_lock(&lock_);
+    if (on_engine_will_start_) {
+      on_engine_will_start_(engine, playout_enabled, recording_enabled);
+    }
+    os_unfair_lock_unlock(&lock_);
+  }
+
+  bool OnEngineWillConnectInput(AVAudioEngine *engine, AVAudioNode *src, AVAudioNode *dst,
+                                AVAudioFormat *format) override {
+    bool result = false;
+    os_unfair_lock_lock(&lock_);
+    if (on_engine_will_connect_input_) {
+      result = on_engine_will_connect_input_(engine, src, dst, format);
+    }
+    os_unfair_lock_unlock(&lock_);
+    return result;
+  }
+
+  bool OnEngineWillConnectOutput(AVAudioEngine *engine, AVAudioNode *src, AVAudioNode *dst,
+                                 AVAudioFormat *format) override {
+    bool result = false;
+    os_unfair_lock_lock(&lock_);
+    if (on_engine_will_connect_output_) {
+      result = on_engine_will_connect_output_(engine, src, dst, format);
+    }
+    os_unfair_lock_unlock(&lock_);
+    return result;
+  }
+
+  void SetDevicesUpdatedCallBack(RTCDevicesDidUpdateCallback cb) {
     os_unfair_lock_lock(&lock_);
     on_devices_did_update_callback_ = cb;
     os_unfair_lock_unlock(&lock_);
@@ -55,10 +87,30 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
     os_unfair_lock_unlock(&lock_);
   }
 
+  void SetOnEngineWillStartCallback(RTCOnEngineWillStart cb) {
+    os_unfair_lock_lock(&lock_);
+    on_engine_will_start_ = cb;
+    os_unfair_lock_unlock(&lock_);
+  }
+
+  void SetOnEngineWillConnectInputCallback(RTCOnEngineWillConnectInput cb) {
+    os_unfair_lock_lock(&lock_);
+    on_engine_will_connect_input_ = cb;
+    os_unfair_lock_unlock(&lock_);
+  }
+
+  void SetOnEngineWillConnectOutputCallback(RTCOnEngineWillConnectOutput cb) {
+    os_unfair_lock_lock(&lock_);
+    on_engine_will_connect_output_ = cb;
+    os_unfair_lock_unlock(&lock_);
+  }
+
   bool IsAnyCallbackAttached() {
     os_unfair_lock_lock(&lock_);
-    bool result =
-        on_devices_did_update_callback_ != nullptr || on_speech_activity_callback_ != nullptr;
+    bool result = on_devices_did_update_callback_ != nullptr ||
+                  on_speech_activity_callback_ != nullptr || on_engine_will_start_ != nullptr ||
+                  on_engine_will_connect_input_ != nullptr ||
+                  on_engine_will_connect_output_ != nullptr;
     os_unfair_lock_unlock(&lock_);
     return result;
   }
@@ -67,6 +119,9 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   os_unfair_lock lock_;
   RTCDevicesDidUpdateCallback on_devices_did_update_callback_;
   RTCSpeechActivityCallback on_speech_activity_callback_;
+  RTCOnEngineWillStart on_engine_will_start_;
+  RTCOnEngineWillConnectInput on_engine_will_connect_input_;
+  RTCOnEngineWillConnectOutput on_engine_will_connect_output_;
 
   RTCSpeechActivityEvent ConvertSpeechActivityEvent(
       webrtc::AudioDeviceModule::SpeechActivityEvent event) {
@@ -87,9 +142,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   AudioDeviceObserver *_observer;
 }
 
-- (instancetype)initWithNativeModule:(rtc::scoped_refptr<webrtc::AudioDeviceModule> )module
-                        workerThread:(rtc::Thread * )workerThread {
-
+- (instancetype)initWithNativeModule:(rtc::scoped_refptr<webrtc::AudioDeviceModule>)module
+                        workerThread:(rtc::Thread *)workerThread {
   RTCLogInfo(@"RTCAudioDeviceModule initWithNativeModule:workerThread:");
 
   self = [super init];
@@ -102,21 +156,15 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (NSArray<RTC_OBJC_TYPE(RTCIODevice) *> *)outputDevices {
-
-  return _workerThread->BlockingCall([self] {
-    return [self _outputDevices];
-  });
+  return _workerThread->BlockingCall([self] { return [self _outputDevices]; });
 }
 
 - (NSArray<RTC_OBJC_TYPE(RTCIODevice) *> *)inputDevices {
-  return _workerThread->BlockingCall([self] {
-    return [self _inputDevices];
-  });
+  return _workerThread->BlockingCall([self] { return [self _inputDevices]; });
 }
 
 - (RTC_OBJC_TYPE(RTCIODevice) *)outputDevice {
   return _workerThread->BlockingCall([self] {
-
     NSArray<RTC_OBJC_TYPE(RTCIODevice) *> *devices = [self _outputDevices];
     int16_t devicesCount = (int16_t)([devices count]);
     int16_t index = _native->GetPlayoutDevice();
@@ -129,14 +177,12 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   });
 }
 
-- (void)setOutputDevice: (RTC_OBJC_TYPE(RTCIODevice) *)device {
-  [self trySetOutputDevice: device];
+- (void)setOutputDevice:(RTC_OBJC_TYPE(RTCIODevice) *)device {
+  [self trySetOutputDevice:device];
 }
 
-- (BOOL)trySetOutputDevice: (RTC_OBJC_TYPE(RTCIODevice) *)device {
-
+- (BOOL)trySetOutputDevice:(RTC_OBJC_TYPE(RTCIODevice) *)device {
   return _workerThread->BlockingCall([self, device] {
-
     NSUInteger index = 0;
     NSArray *devices = [self _outputDevices];
 
@@ -145,7 +191,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
     }
 
     if (device != nil) {
-      index = [devices indexOfObjectPassingTest:^BOOL(RTC_OBJC_TYPE(RTCIODevice) *e, NSUInteger i, BOOL *stop) {
+      index = [devices indexOfObjectPassingTest:^BOOL(RTC_OBJC_TYPE(RTCIODevice) * e, NSUInteger i,
+                                                      BOOL * stop) {
         return (*stop = [e.deviceId isEqualToString:device.deviceId]);
       }];
       if (index == NSNotFound) {
@@ -155,11 +202,9 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 
     _native->StopPlayout();
 
-    if (_native->SetPlayoutDevice(index) == 0 
-        && _native->InitPlayout() == 0
-        && _native->StartPlayout() == 0) {
-
-        return YES;
+    if (_native->SetPlayoutDevice(index) == 0 && _native->InitPlayout() == 0 &&
+        _native->StartPlayout() == 0) {
+      return YES;
     }
 
     return NO;
@@ -167,9 +212,7 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (RTC_OBJC_TYPE(RTCIODevice) *)inputDevice {
-
   return _workerThread->BlockingCall([self] {
-  
     NSArray<RTC_OBJC_TYPE(RTCIODevice) *> *devices = [self _inputDevices];
     int16_t devicesCount = (int16_t)([devices count]);
     int16_t index = _native->GetRecordingDevice();
@@ -182,14 +225,12 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   });
 }
 
-- (void)setInputDevice: (RTC_OBJC_TYPE(RTCIODevice) *)device {
-  [self trySetInputDevice: device];
+- (void)setInputDevice:(RTC_OBJC_TYPE(RTCIODevice) *)device {
+  [self trySetInputDevice:device];
 }
 
-- (BOOL)trySetInputDevice: (RTC_OBJC_TYPE(RTCIODevice) *)device {
-
+- (BOOL)trySetInputDevice:(RTC_OBJC_TYPE(RTCIODevice) *)device {
   return _workerThread->BlockingCall([self, device] {
-
     NSUInteger index = 0;
     NSArray *devices = [self _inputDevices];
 
@@ -198,7 +239,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
     }
 
     if (device != nil) {
-      index = [devices indexOfObjectPassingTest:^BOOL(RTC_OBJC_TYPE(RTCIODevice) *e, NSUInteger i, BOOL *stop) {
+      index = [devices indexOfObjectPassingTest:^BOOL(RTC_OBJC_TYPE(RTCIODevice) * e, NSUInteger i,
+                                                      BOOL * stop) {
         return (*stop = [e.deviceId isEqualToString:device.deviceId]);
       }];
       if (index == NSNotFound) {
@@ -208,11 +250,9 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 
     _native->StopRecording();
 
-    if (_native->SetRecordingDevice(index) == 0 
-        && _native->InitRecording() == 0
-        && _native->StartRecording() == 0) {
-
-        return YES;
+    if (_native->SetRecordingDevice(index) == 0 && _native->InitRecording() == 0 &&
+        _native->StartRecording() == 0) {
+      return YES;
     }
 
     return NO;
@@ -220,61 +260,44 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (BOOL)playing {
-
-  return _workerThread->BlockingCall([self] {
-    return _native->Playing();
-  });
+  return _workerThread->BlockingCall([self] { return _native->Playing(); });
 }
 
 - (BOOL)recording {
-
-  return _workerThread->BlockingCall([self] {
-    return _native->Recording();
-  });
+  return _workerThread->BlockingCall([self] { return _native->Recording(); });
 }
 
 #pragma mark - Low-level access
 
 - (BOOL)startPlayout {
-
-  return _workerThread->BlockingCall([self] {
-    return _native->StartPlayout() == 0;
-  });
+  return _workerThread->BlockingCall([self] { return _native->StartPlayout() == 0; });
 }
 
 - (BOOL)stopPlayout {
-
-  return _workerThread->BlockingCall([self] {
-    return _native->StopPlayout() == 0;
-  });
+  return _workerThread->BlockingCall([self] { return _native->StopPlayout() == 0; });
 }
 
 - (BOOL)initPlayout {
-
-  return _workerThread->BlockingCall([self] {
-    return _native->InitPlayout() == 0;
-  });
+  return _workerThread->BlockingCall([self] { return _native->InitPlayout() == 0; });
 }
 
 - (BOOL)startRecording {
-
-  return _workerThread->BlockingCall([self] {
-    return _native->StartRecording() == 0;
-  });
+  return _workerThread->BlockingCall([self] { return _native->StartRecording() == 0; });
 }
 
 - (BOOL)stopRecording {
-
-  return _workerThread->BlockingCall([self] {
-    return _native->StopRecording() == 0;
-  });
+  return _workerThread->BlockingCall([self] { return _native->StopRecording() == 0; });
 }
 
 - (BOOL)initRecording {
+  return _workerThread->BlockingCall([self] { return _native->InitRecording() == 0; });
+}
 
-  return _workerThread->BlockingCall([self] {
-    return _native->InitRecording() == 0;
-  });
+- (BOOL)initAndStartRecording {
+  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  if (module == nullptr) return NO;
+
+  return _workerThread->BlockingCall([module] { return module->InitAndStartRecording() == 0; });
 }
 
 - (BOOL)setDevicesDidUpdateCallback:(nullable RTCDevicesDidUpdateCallback)callback {
@@ -293,13 +316,95 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   return YES;
 }
 
+- (BOOL)setOnEngineWillStartCallback:(nullable RTCOnEngineWillStart)callback {
+  _observer->SetOnEngineWillStartCallback(callback);
+  webrtc::AudioDeviceObserver *observer = _observer->IsAnyCallbackAttached() ? _observer : nullptr;
+  _workerThread->BlockingCall([self, observer] { _native->SetObserver(observer); });
+
+  return YES;
+}
+
+- (BOOL)setOnEngineWillConnectInputCallback:(nullable RTCOnEngineWillConnectInput)callback {
+  _observer->SetOnEngineWillConnectInputCallback(callback);
+  webrtc::AudioDeviceObserver *observer = _observer->IsAnyCallbackAttached() ? _observer : nullptr;
+  _workerThread->BlockingCall([self, observer] { _native->SetObserver(observer); });
+
+  return YES;
+}
+
+- (BOOL)setOnEngineWillConnectOutputCallback:(nullable RTCOnEngineWillConnectOutput)callback {
+  _observer->SetOnEngineWillConnectOutputCallback(callback);
+  webrtc::AudioDeviceObserver *observer = _observer->IsAnyCallbackAttached() ? _observer : nullptr;
+  _workerThread->BlockingCall([self, observer] { _native->SetObserver(observer); });
+
+  return YES;
+}
+
+#pragma mark - Unique to AudioEngineDevice
+
+- (BOOL)isManualRenderingMode {
+  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  if (module == nullptr) return NO;
+
+  return _workerThread->BlockingCall([module] {
+    bool value = false;
+    return module->ManualRenderingMode(&value) == 0 ? value : NO;
+  });
+}
+
+- (BOOL)setManualRenderingMode:(BOOL)enabled {
+  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  if (module == nullptr) return NO;
+
+  return _workerThread->BlockingCall(
+      [module, enabled] { return module->SetManualRenderingMode(enabled) == 0; });
+}
+
+- (BOOL)isAdvancedDuckingEnabled {
+  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  if (module == nullptr) return NO;
+
+  return _workerThread->BlockingCall([module] {
+    bool value = false;
+    return module->AdvancedDucking(&value) == 0 ? value : NO;
+  });
+}
+
+- (void)setAdvancedDuckingEnabled:(BOOL)enabled {
+  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  if (module == nullptr) return;
+
+  _workerThread->BlockingCall(
+      [module, enabled] { return module->SetAdvancedDucking(enabled) == 0; });
+}
+
+- (AVAudioVoiceProcessingOtherAudioDuckingLevel)duckingLevel API_AVAILABLE(ios(17.0), macos(14.0),
+                                                                           visionos(1.0))
+    API_UNAVAILABLE(tvos) {
+  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  if (module == nullptr) return AVAudioVoiceProcessingOtherAudioDuckingLevelDefault;
+
+  return _workerThread->BlockingCall([module] {
+    long value = false;
+    return module->DuckingLevel(&value) == 0 ? (AVAudioVoiceProcessingOtherAudioDuckingLevel)value
+                                             : AVAudioVoiceProcessingOtherAudioDuckingLevelDefault;
+  });
+}
+
+- (void)setDuckingLevel:(AVAudioVoiceProcessingOtherAudioDuckingLevel)value
+    API_AVAILABLE(ios(17.0), macos(14.0), visionos(1.0)) {
+  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  if (module == nullptr) return;
+
+  _workerThread->BlockingCall([module, value] { return module->SetDuckingLevel(value) == 0; });
+}
+
 #pragma mark - Private
 
 - (NSArray<RTC_OBJC_TYPE(RTCIODevice) *> *)_outputDevices {
-
   char guid[webrtc::kAdmMaxGuidSize + 1] = {0};
   char name[webrtc::kAdmMaxDeviceNameSize + 1] = {0};
-  
+
   NSMutableArray *result = [NSMutableArray array];
 
   int16_t count = _native->PlayoutDevices();
@@ -309,8 +414,11 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
       _native->PlayoutDeviceName(i, name, guid);
       NSString *strGUID = [[NSString alloc] initWithCString:guid encoding:NSUTF8StringEncoding];
       NSString *strName = [[NSString alloc] initWithCString:name encoding:NSUTF8StringEncoding];
-      RTC_OBJC_TYPE(RTCIODevice) *device = [[RTC_OBJC_TYPE(RTCIODevice) alloc] initWithType:RTCIODeviceTypeOutput deviceId:strGUID name:strName];
-      [result addObject: device];
+      RTC_OBJC_TYPE(RTCIODevice) *device =
+          [[RTC_OBJC_TYPE(RTCIODevice) alloc] initWithType:RTCIODeviceTypeOutput
+                                                  deviceId:strGUID
+                                                      name:strName];
+      [result addObject:device];
     }
   }
 
@@ -318,10 +426,9 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (NSArray<RTC_OBJC_TYPE(RTCIODevice) *> *)_inputDevices {
-  
   char guid[webrtc::kAdmMaxGuidSize + 1] = {0};
   char name[webrtc::kAdmMaxDeviceNameSize + 1] = {0};
-  
+
   NSMutableArray *result = [NSMutableArray array];
 
   int16_t count = _native->RecordingDevices();
@@ -331,8 +438,11 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
       _native->RecordingDeviceName(i, name, guid);
       NSString *strGUID = [[NSString alloc] initWithCString:guid encoding:NSUTF8StringEncoding];
       NSString *strName = [[NSString alloc] initWithCString:name encoding:NSUTF8StringEncoding];
-      RTC_OBJC_TYPE(RTCIODevice) *device = [[RTC_OBJC_TYPE(RTCIODevice) alloc] initWithType:RTCIODeviceTypeInput deviceId:strGUID name:strName];
-      [result addObject: device];
+      RTC_OBJC_TYPE(RTCIODevice) *device =
+          [[RTC_OBJC_TYPE(RTCIODevice) alloc] initWithType:RTCIODeviceTypeInput
+                                                  deviceId:strGUID
+                                                      name:strName];
+      [result addObject:device];
     }
   }
 

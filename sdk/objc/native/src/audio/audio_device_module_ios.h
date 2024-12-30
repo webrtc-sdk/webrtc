@@ -14,8 +14,8 @@
 #include <memory>
 
 #include "api/task_queue/task_queue_factory.h"
+#include "audio_device_ios.h"
 #include "modules/audio_device/audio_device_buffer.h"
-#include "modules/audio_device/audio_engine_device.h"
 #include "modules/audio_device/include/audio_device.h"
 #include "rtc_base/checks.h"
 
@@ -130,13 +130,13 @@ class AudioDeviceModuleIOS : public AudioDeviceModule {
   int GetRecordAudioParameters(AudioParameters* params) const override;
 #endif  // WEBRTC_IOS
 
-  int32_t SetObserver(AudioDeviceObserver* observer) const override;
+  int32_t SetObserver(AudioDeviceObserver* observer) override;
 
  private:
   const bool bypass_voice_processing_;
   bool initialized_ = false;
   const std::unique_ptr<TaskQueueFactory> task_queue_factory_;
-  std::unique_ptr<AudioEngineDevice> audio_device_;
+  std::unique_ptr<AudioDeviceIOS> audio_device_;
   std::unique_ptr<AudioDeviceBuffer> audio_device_buffer_;
 };
 }  // namespace ios_adm

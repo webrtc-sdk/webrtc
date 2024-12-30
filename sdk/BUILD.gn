@@ -292,6 +292,8 @@ if (is_ios || is_mac) {
         visibility = [ "*" ]
 
         sources = [
+          "objc/native/src/audio/audio_device_ios.h",
+          "objc/native/src/audio/audio_device_ios.mm",
           "objc/native/src/audio/audio_device_module_ios.h",
           "objc/native/src/audio/audio_device_module_ios.mm",
           "objc/native/src/audio/helpers.h",

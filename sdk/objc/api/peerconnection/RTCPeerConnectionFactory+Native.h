@@ -48,7 +48,7 @@ NS_ASSUME_NONNULL_BEGIN
                         nativeVideoDecoderFactory:
                             (std::unique_ptr<webrtc::VideoDecoderFactory>)videoDecoderFactory
                                 audioDeviceModule:
-                                    (nullable webrtc::AudioDeviceModule *)audioDeviceModule
+                                    (rtc::scoped_refptr<webrtc::AudioDeviceModule>)audioDeviceModule
                             audioProcessingModule:
                                 (rtc::scoped_refptr<webrtc::AudioProcessing>)audioProcessingModule
                             bypassVoiceProcessing:(BOOL)bypassVoiceProcessing;
@@ -62,7 +62,7 @@ NS_ASSUME_NONNULL_BEGIN
                 (std::unique_ptr<webrtc::VideoEncoderFactory>)videoEncoderFactory
             nativeVideoDecoderFactory:
                 (std::unique_ptr<webrtc::VideoDecoderFactory>)videoDecoderFactory
-                    audioDeviceModule:(nullable webrtc::AudioDeviceModule *)audioDeviceModule
+                    audioDeviceModule:(rtc::scoped_refptr<webrtc::AudioDeviceModule>)audioDeviceModule
                 audioProcessingModule:
                     (rtc::scoped_refptr<webrtc::AudioProcessing>)audioProcessingModule
              networkControllerFactory:(std::unique_ptr<webrtc::NetworkControllerFactoryInterface>)
