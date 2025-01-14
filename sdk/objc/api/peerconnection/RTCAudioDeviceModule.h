@@ -30,7 +30,14 @@ typedef NS_ENUM(NSInteger, RTCSpeechActivityEvent) {
 
 typedef void (^RTCDevicesDidUpdateCallback)();
 typedef void (^RTCSpeechActivityCallback)(RTCSpeechActivityEvent);
+
+typedef void (^RTCOnEngineDidCreate)(AVAudioEngine *);
+typedef void (^RTCOnEngineWillEnable)(AVAudioEngine *, BOOL, BOOL);
 typedef void (^RTCOnEngineWillStart)(AVAudioEngine *, BOOL, BOOL);
+typedef void (^RTCOnEngineDidStop)(AVAudioEngine *, BOOL, BOOL);
+typedef void (^RTCOnEngineDidDisable)(AVAudioEngine *, BOOL, BOOL);
+typedef void (^RTCOnEngineWillRelease)(AVAudioEngine *);
+
 typedef bool (^RTCOnEngineWillConnectInput)(AVAudioEngine *, AVAudioNode *, AVAudioNode *,
                                             AVAudioFormat *);
 typedef bool (^RTCOnEngineWillConnectOutput)(AVAudioEngine *, AVAudioNode *, AVAudioNode *,
@@ -56,7 +63,14 @@ RTC_OBJC_EXPORT
 
 - (BOOL)setDevicesDidUpdateCallback:(nullable RTCDevicesDidUpdateCallback)callback;
 - (BOOL)setSpeechActivityCallback:(nullable RTCSpeechActivityCallback)callback;
+
+- (BOOL)setOnEngineDidCreateCallback:(nullable RTCOnEngineDidCreate)callback;
+- (BOOL)setOnEngineWillEnableCallback:(nullable RTCOnEngineWillEnable)callback;
 - (BOOL)setOnEngineWillStartCallback:(nullable RTCOnEngineWillStart)callback;
+- (BOOL)setOnEngineDidStopCallback:(nullable RTCOnEngineDidStop)callback;
+- (BOOL)setOnEngineDidDisableCallback:(nullable RTCOnEngineDidDisable)callback;
+- (BOOL)setOnEngineWillReleaseCallback:(nullable RTCOnEngineWillRelease)callback;
+
 - (BOOL)setOnEngineWillConnectInputCallback:(nullable RTCOnEngineWillConnectInput)callback;
 - (BOOL)setOnEngineWillConnectOutputCallback:(nullable RTCOnEngineWillConnectOutput)callback;
 
@@ -73,11 +87,10 @@ RTC_OBJC_EXPORT
 @property(nonatomic, readonly, getter=isManualRenderingMode) BOOL manualRenderingMode;
 - (BOOL)setManualRenderingMode:(BOOL)enabled;
 
-// Ducking.
+// Advanced other audio ducking.
 @property(nonatomic, assign, getter=isAdvancedDuckingEnabled) BOOL advancedDuckingEnabled;
-@property(nonatomic, assign)
-    AVAudioVoiceProcessingOtherAudioDuckingLevel duckingLevel API_AVAILABLE(
-        ios(17.0), macos(14.0), visionos(1.0)) API_UNAVAILABLE(tvos);
+
+@property(nonatomic, assign) NSInteger duckingLevel;
 
 @end
 

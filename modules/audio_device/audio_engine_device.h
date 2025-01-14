@@ -17,9 +17,36 @@
 #ifndef SDK_OBJC_NATIVE_SRC_AUDIO_AUDIO_DEVICE_AUDIOENGINE_H_
 #define SDK_OBJC_NATIVE_SRC_AUDIO_AUDIO_DEVICE_AUDIOENGINE_H_
 
-#import <AVFAudio/AVFAudio.h>
-
 #include <atomic>
+
+#if defined(__OBJC__)
+#import <AVFAudio/AVFAudio.h>
+#else
+// Forward declarations for C++ code
+#ifdef __OBJC__
+@class AVAudioEngine;
+@class AVAudioInputNode;
+@class AVAudioOutputNode;
+@class AVAudioSourceNode;
+@class AVAudioSinkNode;
+@class AVAudioMixerNode;
+@class AVAudioPCMBuffer;
+@class AVAudioFormat;
+typedef void (^AVAudioEngineManualRenderingBlock)(AVAudioFrameCount,
+                                                  AudioBufferList*, OSStatus*);
+#else
+typedef void AVAudioEngine;
+typedef void AVAudioInputNode;
+typedef void AVAudioOutputNode;
+typedef void AVAudioSourceNode;
+typedef void AVAudioSinkNode;
+typedef void AVAudioMixerNode;
+typedef void AVAudioPCMBuffer;
+typedef void AVAudioFormat;
+typedef void* AVAudioEngineManualRenderingBlock;
+#endif
+#endif
+
 #include <memory>
 
 #include "api/scoped_refptr.h"
@@ -147,29 +174,73 @@ class AudioEngineDevice : public AudioDeviceModule,
 
   int32_t InitAndStartRecording();
 
+  enum RenderMode { Device, Manual };
+
  private:
+  // Represents the state of the audio engine, including input/output status,
+  // rendering mode, and various configuration flags.
   struct EngineState {
     bool input_enabled = false;
     bool input_running = false;
     bool output_enabled = false;
     bool output_running = false;
 
+    // Output will be enabled when input is enabled
+    bool input_follow_mode = true;
+
     bool input_muted = false;
     bool is_interrupted = false;
 
-    bool is_manual_mode = false;
+    RenderMode render_mode = RenderMode::Device;
     bool voice_processing = true;
     bool advanced_ducking = true;
-    long ducking_level = 0; // 0 = Default
+    long ducking_level = 0;  // 0 = Default
 
-    bool operator==(const EngineState& rhs) const;
-    bool operator!=(const EngineState& rhs) const;
+    bool operator==(const EngineState& rhs) const {
+      return input_enabled == rhs.input_enabled &&
+             input_running == rhs.input_running &&
+             output_enabled == rhs.output_enabled &&
+             output_running == rhs.output_running &&
+             input_follow_mode == rhs.input_follow_mode &&
+             input_muted == rhs.input_muted &&
+             is_interrupted == rhs.is_interrupted &&
+             render_mode == rhs.render_mode &&
+             voice_processing == rhs.voice_processing &&
+             advanced_ducking == rhs.advanced_ducking &&
+             ducking_level == rhs.ducking_level;
+    }
+
+    bool operator!=(const EngineState& rhs) const { return !(*this == rhs); }
+
+    bool IsOutputInputLinked() const {
+      return input_follow_mode && voice_processing;
+    }
+
+    bool IsOutputEnabled() const {
+      return IsOutputInputLinked() ? input_enabled || output_enabled
+                                   : output_enabled;
+    }
+
+    bool IsOutputRunning() const {
+      return IsOutputInputLinked() ? input_running || output_running
+                                   : output_running;
+    }
+
+    bool IsInputEnabled() const { return input_enabled; }
+    bool IsInputRunning() const { return input_running; }
 
     bool IsAnyEnabled() const { return input_enabled || output_enabled; }
     bool IsAnyRunning() const { return input_running || output_running; }
 
-    bool IsAllEnabled() const { return input_enabled && output_enabled; }
-    bool IsAllRunning() const { return input_running && output_running; }
+    bool IsAllEnabled() const {
+      return IsOutputInputLinked() ? input_enabled
+                                   : input_enabled && output_enabled;
+    }
+
+    bool IsAllRunning() const {
+      return IsOutputInputLinked() ? input_running
+                                   : input_running && output_running;
+    }
   };
 
   EngineState engine_state_ RTC_GUARDED_BY(thread_);
@@ -222,15 +293,16 @@ class AudioEngineDevice : public AudioDeviceModule,
   double machTickUnitsToNanoseconds_;
 
   // AVAudioEngine objects
-  AVAudioEngine* audio_engine_;
-  AVAudioFormat* manual_render_rtc_format_;     // Int16
+  AVAudioEngine* engine_device_;
+
+  // Used for manual rendering mode
+  AVAudioFormat* manual_render_rtc_format_;  // Int16
 
   // Output related
   AVAudioSourceNode* source_node_;
 
   // Input related nodes
   AVAudioSinkNode* sink_node_;
-  AVAudioUnitEQ* input_eq_node_;
   AVAudioMixerNode* input_mixer_node_;
 
   void* configuration_observer_;

@@ -215,13 +215,26 @@ class AudioDeviceObserver {
   virtual void OnSpeechActivityEvent(
       AudioDeviceModule::SpeechActivityEvent event) {}
 
+  // AVAudioEngine lifecycle
+  virtual void OnEngineDidCreate(AVAudioEngine* engine) {}
+
+  virtual void OnEngineWillEnable(AVAudioEngine* engine, bool playout_enabled,
+                                  bool recording_enabled) {}
+
   virtual void OnEngineWillStart(AVAudioEngine* engine, bool playout_enabled,
                                  bool recording_enabled) {}
 
+  virtual void OnEngineDidStop(AVAudioEngine* engine, bool playout_enabled,
+                               bool recording_enabled) {}
+
+  virtual void OnEngineDidDisable(AVAudioEngine* engine, bool playout_enabled,
+                                  bool recording_enabled) {}
+
+  virtual void OnEngineWillRelease(AVAudioEngine* engine) {}
+
   // Override the input node configuration with a custom implementation.
   // Return true if the original implementation is used.
-  virtual bool OnEngineWillConnectInput(AVAudioEngine* engine,
-                                        AVAudioNode* src,
+  virtual bool OnEngineWillConnectInput(AVAudioEngine* engine, AVAudioNode* src,
                                         AVAudioNode* dst,
                                         AVAudioFormat* format) {
     return false;
@@ -230,8 +243,7 @@ class AudioDeviceObserver {
   // Override the input node configuration with a custom implementation.
   // Return true if the original implementation is used.
   virtual bool OnEngineWillConnectOutput(AVAudioEngine* engine,
-                                         AVAudioNode* src,
-                                         AVAudioNode* dst,
+                                         AVAudioNode* src, AVAudioNode* dst,
                                          AVAudioFormat* format) {
     return false;
   }
