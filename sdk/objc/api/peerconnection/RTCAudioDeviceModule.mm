@@ -464,7 +464,41 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   return YES;
 }
 
+- (BOOL)isPlayoutInitialized {
+  return _workerThread->BlockingCall([self] { return _native->PlayoutIsInitialized(); });
+}
+
+- (BOOL)isRecordingInitialized {
+  return _workerThread->BlockingCall([self] { return _native->RecordingIsInitialized(); });
+}
+
+- (BOOL)isPlaying {
+  return _workerThread->BlockingCall([self] { return _native->Playing(); });
+}
+
+- (BOOL)isRecording {
+  return _workerThread->BlockingCall([self] { return _native->Recording(); });
+}
+
 #pragma mark - Unique to AudioEngineDevice
+
+- (BOOL)isInitRecordingPersistentMode {
+  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  if (module == nullptr) return NO;
+
+  return _workerThread->BlockingCall([module] {
+    bool value = false;
+    return module->InitRecordingPersistentMode(&value) == 0 ? value : NO;
+  });
+}
+
+- (void)setInitRecordingPersistentMode:(BOOL)enabled {
+  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  if (module == nullptr) return;
+
+  _workerThread->BlockingCall(
+      [module, enabled] { return module->SetInitRecordingPersistentMode(enabled); });
+}
 
 - (BOOL)isManualRenderingMode {
   webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());

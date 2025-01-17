@@ -154,7 +154,7 @@ class AudioEngineDevice : public AudioDeviceModule,
 
   // AudioSessionObserver methods. May be called from any thread.
   void OnInterruptionBegin() override;
-  void OnInterruptionEnd() override;
+  void OnInterruptionEnd(bool should_resume) override;
   void OnValidRouteChange() override;
   void OnCanPlayOrRecordChange(bool can_play_or_record) override;
   void OnChangedOutputVolume() override;
@@ -172,6 +172,9 @@ class AudioEngineDevice : public AudioDeviceModule,
   int32_t SetDuckingLevel(long level);
   int32_t DuckingLevel(long* level);
 
+  int32_t SetInitRecordingPersistentMode(bool enable);
+  int32_t InitRecordingPersistentMode(bool* enabled);
+
   int32_t InitAndStartRecording();
 
   enum RenderMode { Device, Manual };
@@ -187,8 +190,9 @@ class AudioEngineDevice : public AudioDeviceModule,
 
     // Output will be enabled when input is enabled
     bool input_follow_mode = true;
+    bool input_enabled_persistent_mode = false;
 
-    bool input_muted = false;
+    bool input_muted = true;
     bool is_interrupted = false;
 
     RenderMode render_mode = RenderMode::Device;
@@ -202,6 +206,8 @@ class AudioEngineDevice : public AudioDeviceModule,
              output_enabled == rhs.output_enabled &&
              output_running == rhs.output_running &&
              input_follow_mode == rhs.input_follow_mode &&
+             input_enabled_persistent_mode ==
+                 rhs.input_enabled_persistent_mode &&
              input_muted == rhs.input_muted &&
              is_interrupted == rhs.is_interrupted &&
              render_mode == rhs.render_mode &&
@@ -217,7 +223,7 @@ class AudioEngineDevice : public AudioDeviceModule,
     }
 
     bool IsOutputEnabled() const {
-      return IsOutputInputLinked() ? input_enabled || output_enabled
+      return IsOutputInputLinked() ? IsInputEnabled() || output_enabled
                                    : output_enabled;
     }
 
@@ -226,20 +232,74 @@ class AudioEngineDevice : public AudioDeviceModule,
                                    : output_running;
     }
 
-    bool IsInputEnabled() const { return input_enabled; }
+    bool IsInputEnabled() const {
+      return input_enabled || input_enabled_persistent_mode;
+    }
     bool IsInputRunning() const { return input_running; }
 
-    bool IsAnyEnabled() const { return input_enabled || output_enabled; }
+    bool IsAnyEnabled() const { return IsInputEnabled() || output_enabled; }
     bool IsAnyRunning() const { return input_running || output_running; }
 
     bool IsAllEnabled() const {
-      return IsOutputInputLinked() ? input_enabled
-                                   : input_enabled && output_enabled;
+      return IsOutputInputLinked() ? IsInputEnabled()
+                                   : IsInputEnabled() && output_enabled;
     }
 
     bool IsAllRunning() const {
       return IsOutputInputLinked() ? input_running
                                    : input_running && output_running;
+    }
+  };
+
+  struct EngineStateUpdate {
+    EngineState prev;
+    EngineState next;
+
+    bool HasNoChanges() const { return prev == next; }
+
+    bool DidEnableOutput() const {
+      return !prev.IsOutputEnabled() && next.IsOutputEnabled();
+    }
+
+    bool DidEnableInput() const {
+      return !prev.IsInputEnabled() && next.IsInputEnabled();
+    }
+    bool DidEnableOutputOrInput() const {
+      return DidEnableOutput() || DidEnableInput();
+    }
+
+    bool DidDisableOutput() const {
+      return prev.IsOutputEnabled() && next.IsOutputEnabled();
+    }
+
+    bool DidDisableInput() const {
+      return prev.IsInputEnabled() && next.IsInputEnabled();
+    }
+
+    bool DidAnyEnable() const { return DidEnableOutput() || DidEnableInput(); }
+
+    bool DidAnyDisable() const {
+      return DidDisableOutput() || DidDisableInput();
+    }
+
+    bool DidBeginInterruption() const {
+      return !prev.is_interrupted && next.is_interrupted;
+    }
+
+    bool DidEndInterruption() const {
+      return prev.is_interrupted && next.is_interrupted;
+    }
+
+    bool DidUpdateAudioGraph() const {
+      return (prev.IsInputEnabled() != next.IsInputEnabled()) ||
+             (prev.IsOutputEnabled() != next.IsOutputEnabled());
+    }
+
+    // Special case to re-create engine when switching from Speaker & Mic ->
+    // Speaker only.
+    bool IsEngineRecreateRequired() const {
+      return (prev.IsOutputEnabled() && next.IsOutputEnabled()) &&
+             (prev.IsInputEnabled() && !next.IsInputEnabled());
     }
   };
 
@@ -250,7 +310,7 @@ class AudioEngineDevice : public AudioDeviceModule,
 
   bool IsMicrophonePermissionGranted();
   void SetEngineState(std::function<EngineState(EngineState)> state_transform);
-  void UpdateEngineState(EngineState old_state, EngineState new_state);
+  void UpdateEngineState(EngineStateUpdate state);
 
   // AudioEngine observer methods. May be called from any thread.
   void OnEngineConfigurationChange();
@@ -280,9 +340,11 @@ class AudioEngineDevice : public AudioDeviceModule,
 
   AudioDeviceObserver* observer_ RTC_GUARDED_BY(thread_);
 
+#if defined(WEBRTC_IOS)
   // Audio interruption observer instance.
   RTC_OBJC_TYPE(RTCNativeAudioSessionDelegateAdapter) * audio_session_observer_
       RTC_GUARDED_BY(thread_);
+#endif
 
   // Avoids running pending task after `this` is Terminated.
   rtc::scoped_refptr<PendingTaskSafetyFlag> safety_ =

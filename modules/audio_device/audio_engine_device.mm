@@ -47,11 +47,13 @@ namespace webrtc {
 #define LOGE() RTC_LOG(LS_ERROR) << "AudioEngineDevice::"
 #define LOGW() RTC_LOG(LS_WARNING) << "AudioEngineDevice::"
 
-const UInt16 kFixedPlayoutDelayEstimate = 30;
-const UInt16 kFixedRecordDelayEstimate = 30;
+const UInt16 kFixedPlayoutDelayEstimate = 0;
+const UInt16 kFixedRecordDelayEstimate = 0;
+const UInt16 kStartEngineMaxRetries = 10;  // Maximum blocking 1sec.
+const useconds_t kStartEngineRetryDelayMs = 100;
 
-const size_t kMaximumFramesPerBuffer = 3072;  // Maximum slice size for VoiceProcessingIO
-const size_t kAudioSampleSize = 2;            // Signed 16-bit integer
+// const size_t kMaximumFramesPerBuffer = 3072;  // Maximum slice size for VoiceProcessingIO
+const size_t kAudioSampleSize = 2;  // Signed 16-bit integer
 
 AudioEngineDevice::AudioEngineDevice(bool bypass_voice_processing)
     : bypass_voice_processing_(bypass_voice_processing),
@@ -67,7 +69,7 @@ AudioEngineDevice::AudioEngineDevice(bool bypass_voice_processing)
       [[RTC_OBJC_TYPE(RTCNativeAudioSessionDelegateAdapter) alloc] initWithObserver:this];
   // Subscribe to audio session events.
   RTC_OBJC_TYPE(RTCAudioSession)* session = [RTC_OBJC_TYPE(RTCAudioSession) sharedInstance];
-  [session pushDelegate:audio_session_observer_];
+  [session addDelegate:audio_session_observer_];
 #endif
 
   // Add observer for configuration changes
@@ -103,7 +105,12 @@ AudioEngineDevice::~AudioEngineDevice() {
   safety_->SetNotAlive();
 
   Terminate();
+
+#if defined(WEBRTC_IOS)
+  RTC_OBJC_TYPE(RTCAudioSession)* session = [RTC_OBJC_TYPE(RTCAudioSession) sharedInstance];
+  [session removeDelegate:audio_session_observer_];
   audio_session_observer_ = nil;
+#endif
 }
 
 // MARK: - Main life cycle
@@ -228,7 +235,6 @@ int32_t AudioEngineDevice::InitRecording() {
 
   SetEngineState([](EngineState state) -> EngineState {
     state.input_enabled = true;
-    state.input_muted = true;  // Muted by default
     return state;
   });
 
@@ -276,8 +282,8 @@ void AudioEngineDevice::OnInterruptionBegin() {
   }));
 }
 
-void AudioEngineDevice::OnInterruptionEnd() {
-  LOGI() << "OnInterruptionEnd";
+void AudioEngineDevice::OnInterruptionEnd(bool should_resume) {
+  LOGI() << "OnInterruptionEnd should_resume: " << should_resume;
 
   RTC_DCHECK(thread_);
   thread_->PostTask(SafeTask(safety_, [this] {
@@ -716,17 +722,6 @@ int32_t AudioEngineDevice::InitAndStartRecording() {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "InitAndStartRecording";
 
-  if (engine_state_.input_running) {
-    LOGW() << "InitAndStartRecording: Already recording";
-    return 0;
-  }
-
-  audio_device_buffer_->StartRecording();
-
-  if (fine_audio_buffer_) {
-    fine_audio_buffer_->ResetRecord();
-  }
-
   SetEngineState([](EngineState state) -> EngineState {
     state.input_enabled = true;
     state.input_running = true;
@@ -788,6 +783,32 @@ int32_t AudioEngineDevice::DuckingLevel(long* level) {
   return 0;
 }
 
+int32_t AudioEngineDevice::SetInitRecordingPersistentMode(bool enable) {
+  RTC_DCHECK_RUN_ON(thread_);
+  LOGI() << "SetInitRecordingPersistentMode: " << enable;
+
+  SetEngineState([enable](EngineState state) -> EngineState {
+    state.input_enabled_persistent_mode = enable;
+    return state;
+  });
+
+  return 0;
+}
+
+int32_t AudioEngineDevice::InitRecordingPersistentMode(bool* enabled) {
+  LOGI() << "InitRecordingPersistentMode";
+  RTC_DCHECK_RUN_ON(thread_);
+
+  if (enabled == nullptr) {
+    return -1;
+  }
+
+  *enabled = engine_state_.input_enabled_persistent_mode;
+  LOGI() << "InitRecordingPersistentMode value: " << *enabled;
+
+  return 0;
+}
+
 // ----------------------------------------------------------------------------------------------------
 // Private - Engine Related
 
@@ -819,33 +840,70 @@ void AudioEngineDevice::SetEngineState(std::function<EngineState(EngineState)> s
 
   EngineState old_state = engine_state_;
   EngineState new_state = state_transform(old_state);
+  EngineStateUpdate state = {old_state, new_state};
 
-  if (old_state == new_state) {
-    LOGI() << "SetEngineState: Nothing to update";
+  if (state.HasNoChanges()) {
+    LOGI() << "SetEngineState: Nothing to state";
     return;
   }
 
-  // Checks
+  // Check input should be enabled if running.
   if (new_state.IsInputRunning()) {
     RTC_DCHECK(new_state.IsInputEnabled());
   }
 
+  // Check output should be enabled if running.
   if (new_state.IsOutputRunning()) {
     RTC_DCHECK(new_state.IsOutputEnabled());
   }
 
+  // Apply engine state changes
   engine_state_ = new_state;
-  UpdateEngineState(old_state, new_state);
+  UpdateEngineState(state);
+
+  // Buffer should be playing if output is running.
+  if (new_state.IsOutputEnabled()) {
+    RTC_DCHECK(audio_device_buffer_->IsPlaying());
+  } else {
+    RTC_DCHECK(!audio_device_buffer_->IsPlaying());
+  }
+
+  // Buffer should be recording if input is running.
+  if (new_state.IsInputEnabled()) {
+    RTC_DCHECK(audio_device_buffer_->IsRecording());
+  } else {
+    RTC_DCHECK(!audio_device_buffer_->IsRecording());
+  }
 }
 
-void AudioEngineDevice::UpdateEngineState(EngineState old_state, EngineState new_state) {
+void AudioEngineDevice::UpdateEngineState(EngineStateUpdate state) {
   RTC_DCHECK_RUN_ON(thread_);
 
-  bool is_restart_required = (old_state.IsInputEnabled() != new_state.IsInputEnabled()) ||
-                             (old_state.IsOutputEnabled() != new_state.IsOutputEnabled());
+  if (state.prev.IsAnyRunning() &&
+      (!state.next.IsAnyRunning() || state.DidUpdateAudioGraph() || state.DidBeginInterruption() ||
+       state.IsEngineRecreateRequired())) {
+    LOGI() << "Stopping AVAudioEngine...";
+    RTC_DCHECK(engine_device_ != nil);
+    [engine_device_ stop];
 
-  if (!old_state.IsAnyEnabled() && new_state.IsAnyEnabled()) {
+    if (observer_ != nullptr) {
+      observer_->OnEngineDidStop(engine_device_, state.next.IsOutputEnabled(),
+                                 state.next.IsInputEnabled());
+    }
+  }
+
+  if (state.IsEngineRecreateRequired()) {
+    LOGI() << "Recreate required, releasing AVAudioEngine...";
+    if (observer_ != nullptr) {
+      observer_->OnEngineWillRelease(engine_device_);
+    }
+    engine_device_ = nil;
+  }
+
+  if (state.next.IsAnyEnabled() &&
+      (!state.prev.IsAnyEnabled() || state.IsEngineRecreateRequired())) {
     LOGI() << "Creating AVAudioEngine...";
+    RTC_DCHECK(engine_device_ == nullptr);
     engine_device_ = [[AVAudioEngine alloc] init];
 
     if (observer_ != nullptr) {
@@ -853,45 +911,33 @@ void AudioEngineDevice::UpdateEngineState(EngineState old_state, EngineState new
     }
   }
 
-  if (old_state.IsAnyRunning() && (!new_state.IsAnyRunning() || is_restart_required)) {
-    LOGI() << "Stopping AVAudioEngine...";
-    [engine_device_ stop];
-  } else if (old_state.IsAnyRunning() && !old_state.is_interrupted && new_state.is_interrupted) {
-    LOGI() << "Pausing AVAudioEngine...";
-    [engine_device_ pause];
+  if (!state.next.IsOutputEnabled() && audio_device_buffer_->IsPlaying()) {
+    LOGI() << "Stopping Playout buffer...";
+    if (engine_device_ != nullptr) {
+      // Rendering must be stopped first.
+      RTC_DCHECK(!engine_device_.running);
+    }
+    audio_device_buffer_->StopPlayout();
   }
 
-  if (old_state.IsAnyRunning() && (!new_state.IsAnyRunning() || is_restart_required ||
-                                   (!old_state.is_interrupted && new_state.is_interrupted))) {
-    if (observer_ != nullptr) {
-      observer_->OnEngineDidStop(engine_device_, new_state.IsOutputEnabled(),
-                                 new_state.IsInputEnabled());
+  if (!state.next.IsInputEnabled() && audio_device_buffer_->IsRecording()) {
+    LOGI() << "Stopping Record buffer...";
+    if (engine_device_ != nullptr) {
+      // Rendering must be stopped first.
+      RTC_DCHECK(!engine_device_.running);
     }
+    audio_device_buffer_->StopRecording();
   }
 
-  if (old_state.IsAnyRunning() && (!new_state.IsAnyRunning() || is_restart_required ||
-                                   (!old_state.is_interrupted && new_state.is_interrupted))) {
-    if (old_state.IsOutputRunning() && !new_state.IsOutputRunning()) {
-      LOGI() << "Stopping Playout buffer...";
-      audio_device_buffer_->StopPlayout();
-    }
-    if (old_state.IsInputRunning() && !new_state.IsInputRunning()) {
-      LOGI() << "Stopping Record buffer...";
-      audio_device_buffer_->StopRecording();
-    }
+  if (state.DidAnyEnable() && observer_ != nullptr) {
+    // Invoke here before configuring nodes. In iOS, session configuration is required before
+    // enabling AGC, muted talker etc.
+    observer_->OnEngineWillEnable(engine_device_, state.next.IsOutputEnabled(),
+                                  state.next.IsInputEnabled());
   }
 
-  if ((!old_state.IsOutputEnabled() && new_state.IsOutputEnabled()) ||
-      (!old_state.IsInputEnabled() && new_state.IsInputEnabled())) {
-    if (observer_ != nullptr) {
-      // Invoke here before configuring nodes. In iOS, session configuration is required before
-      // enabling AGC, muted talker etc.
-      observer_->OnEngineWillEnable(engine_device_, new_state.IsOutputEnabled(),
-                                    new_state.IsInputEnabled());
-    }
-  }
-
-  if (!old_state.IsOutputEnabled() && new_state.IsOutputEnabled()) {
+  if (state.next.IsOutputEnabled() &&
+      (!state.prev.IsOutputEnabled() || state.IsEngineRecreateRequired())) {
     LOGI() << "Enabling output for AVAudioEngine...";
     RTC_DCHECK(!engine_device_.running);
 
@@ -948,7 +994,8 @@ void AudioEngineDevice::UpdateEngineState(EngineState old_state, EngineState new
                        format:engine_output_format];
     }
 
-  } else if (old_state.IsOutputEnabled() && !new_state.IsOutputEnabled()) {
+  } else if ((state.prev.IsOutputEnabled() && !state.next.IsOutputEnabled()) &&
+             !state.IsEngineRecreateRequired()) {
     LOGI() << "Disabling output for AVAudioEngine...";
     RTC_DCHECK(!engine_device_.running);
 
@@ -961,7 +1008,8 @@ void AudioEngineDevice::UpdateEngineState(EngineState old_state, EngineState new
     }
   }
 
-  if (!old_state.IsInputEnabled() && new_state.IsInputEnabled()) {
+  if (state.next.IsInputEnabled() &&
+      (!state.prev.IsInputEnabled() || state.IsEngineRecreateRequired())) {
     LOGI() << "Enabling input for AVAudioEngine...";
     RTC_DCHECK(!engine_device_.running);
 
@@ -969,7 +1017,7 @@ void AudioEngineDevice::UpdateEngineState(EngineState old_state, EngineState new
       NSError* error = nil;
       BOOL set_vp_result = [this->InputNode() setVoiceProcessingEnabled:YES error:&error];
       if (!set_vp_result) {
-        NSLog(@"setVoiceProcessingEnabled error: %@", error.localizedDescription);
+        NSLog(@"AudioEngineDevice setVoiceProcessingEnabled error: %@", error.localizedDescription);
         RTC_DCHECK(set_vp_result);
       }
       LOGI() << "setVoiceProcessingEnabled (input) result: " << set_vp_result ? "YES" : "NO";
@@ -1067,7 +1115,8 @@ void AudioEngineDevice::UpdateEngineState(EngineState old_state, EngineState new
     // Convert to RTC's internal format before passing buffers to SinkNode.
     [engine_device_ connect:input_mixer_node_ to:sink_node_ format:rtc_input_format];
 
-  } else if (old_state.IsInputEnabled() && !new_state.IsInputEnabled()) {
+  } else if ((state.prev.IsInputEnabled() && !state.next.IsInputEnabled()) &&
+             !state.IsEngineRecreateRequired()) {
     LOGI() << "Disabling input for AVAudioEngine...";
     RTC_DCHECK(!engine_device_.running);
 
@@ -1088,32 +1137,29 @@ void AudioEngineDevice::UpdateEngineState(EngineState old_state, EngineState new
     }
   }
 
-  if ((old_state.IsOutputEnabled() && !new_state.IsOutputEnabled()) ||
-      (old_state.IsInputEnabled() && !new_state.IsInputEnabled())) {
-    if (observer_ != nullptr) {
-      observer_->OnEngineDidDisable(engine_device_, new_state.IsOutputEnabled(),
-                                    new_state.IsInputEnabled());
-    }
+  if (state.DidAnyDisable() && observer_ != nullptr) {
+    observer_->OnEngineDidDisable(engine_device_, state.next.IsOutputEnabled(),
+                                  state.next.IsInputEnabled());
   }
 
-  if (new_state.IsInputEnabled()) {
-    if (this->InputNode().voiceProcessingEnabled) {
-      // Re-apply muted state.
-      this->InputNode().voiceProcessingInputMuted = new_state.input_muted;
-    }
+  if (state.next.IsInputEnabled() && this->InputNode().voiceProcessingEnabled &&
+      this->InputNode().voiceProcessingInputMuted != state.next.input_muted) {
+    LOGI() << "setVoiceProcessingInputMuted: " << state.next.input_muted;
+    this->InputNode().voiceProcessingInputMuted = state.next.input_muted;
   }
 
 #if !TARGET_OS_TV
-  if (new_state.IsInputEnabled() && this->InputNode().voiceProcessingEnabled &&
-      (!old_state.IsInputEnabled() || (old_state.advanced_ducking != new_state.advanced_ducking ||
-                                       old_state.ducking_level != new_state.ducking_level))) {
+  if (state.next.IsInputEnabled() && this->InputNode().voiceProcessingEnabled &&
+      (!state.prev.IsInputEnabled() ||
+       (state.prev.advanced_ducking != state.next.advanced_ducking ||
+        state.prev.ducking_level != state.next.ducking_level))) {
     // Other audio ducking.
     // iOS 17.0+, iPadOS 17.0+, Mac Catalyst 17.0+, macOS 14.0+, visionOS 1.0+
     if (@available(iOS 17.0, macCatalyst 17.0, macOS 14.0, visionOS 1.0, *)) {
       AVAudioVoiceProcessingOtherAudioDuckingConfiguration ducking_config;
-      ducking_config.enableAdvancedDucking = new_state.advanced_ducking;
+      ducking_config.enableAdvancedDucking = state.next.advanced_ducking;
       ducking_config.duckingLevel =
-          (AVAudioVoiceProcessingOtherAudioDuckingLevel)new_state.ducking_level;
+          (AVAudioVoiceProcessingOtherAudioDuckingLevel)state.next.ducking_level;
 
       LOGI() << "setVoiceProcessingOtherAudioDuckingConfiguration";
       this->InputNode().voiceProcessingOtherAudioDuckingConfiguration = ducking_config;
@@ -1121,40 +1167,65 @@ void AudioEngineDevice::UpdateEngineState(EngineState old_state, EngineState new
   }
 #endif
 
-  if ((!old_state.IsOutputRunning() && new_state.IsOutputRunning() &&
-       !new_state.IsInputRunning()) ||
-      (!old_state.IsOutputEnabled() && new_state.IsOutputEnabled() && new_state.IsInputRunning())) {
+  // Start playout buffer if output is running
+  if (state.next.IsOutputEnabled() && !audio_device_buffer_->IsPlaying()) {
+    if (engine_device_ != nullptr) {
+      // Rendering must be stopped first.
+      RTC_DCHECK(!engine_device_.running);
+    }
     LOGI() << "Starting Playout buffer...";
     audio_device_buffer_->StartPlayout();
     fine_audio_buffer_->ResetPlayout();
   }
 
-  if ((!old_state.IsInputRunning() && new_state.IsInputRunning() && !new_state.IsOutputRunning()) ||
-      (!old_state.IsInputEnabled() && new_state.IsInputEnabled() && new_state.IsOutputRunning())) {
+  // Start recording buffer if input is running
+  if (state.next.IsInputEnabled() && !audio_device_buffer_->IsRecording()) {
+    if (engine_device_ != nullptr) {
+      // Rendering must be stopped first.
+      RTC_DCHECK(!engine_device_.running);
+    }
     LOGI() << "Starting Record buffer...";
     audio_device_buffer_->StartRecording();
     fine_audio_buffer_->ResetRecord();
   }
 
-  if (new_state.IsAnyRunning()) {
-    if (!old_state.IsAnyRunning() || (old_state.is_interrupted && !new_state.is_interrupted) ||
-        is_restart_required) {
+  if (state.next.IsAnyRunning()) {
+    if (!state.prev.IsAnyRunning() || state.DidEndInterruption() || state.DidUpdateAudioGraph() ||
+        state.IsEngineRecreateRequired()) {
       if (observer_ != nullptr) {
-        observer_->OnEngineWillStart(engine_device_, new_state.IsOutputEnabled(),
-                                     new_state.IsInputEnabled());
+        observer_->OnEngineWillStart(engine_device_, state.next.IsOutputEnabled(),
+                                     state.next.IsInputEnabled());
       }
 
       LOGI() << "Starting AVAudioEngine...";
       NSError* error = nil;
-      BOOL start_result = [engine_device_ startAndReturnError:&error];
+      BOOL start_result = false;
+      int start_retry_count = 0;
+
+      // Workaround for error -66637, when recovering from interruptions with categoryMode:
+      // .mixWithOthers.
+      while (!start_result && start_retry_count < kStartEngineMaxRetries) {
+        if (start_retry_count > 0) {
+          LOGW() << "Retrying engine start (attempt " << start_retry_count + 1 << "/"
+                 << kStartEngineMaxRetries << ")";
+          usleep(kStartEngineRetryDelayMs * 1000);
+        }
+
+        start_result = [engine_device_ startAndReturnError:&error];
+        if (!start_result) {
+          LOGE() << "Failed to start engine: " << error.localizedDescription.UTF8String;
+          start_retry_count++;
+        }
+      }
+
       if (!start_result) {
-        LOGE() << "Failed to start engine: " << error.localizedDescription.UTF8String;
+        LOGE() << "Failed to start engine after " << kStartEngineMaxRetries << " attempts";
         DebugAudioEngine();
       }
     }
   }
 
-  if (old_state.IsAnyEnabled() && !new_state.IsAnyEnabled()) {
+  if (state.prev.IsAnyEnabled() && !state.next.IsAnyEnabled()) {
     if (observer_ != nullptr) {
       observer_->OnEngineWillRelease(engine_device_);
     }
@@ -1280,6 +1351,11 @@ AVAudioOutputNode* AudioEngineDevice::OutputNode() {
 
 void AudioEngineDevice::DebugAudioEngine() {
   RTC_DCHECK_RUN_ON(thread_);
+
+#if TARGET_OS_IOS
+  RTC_OBJC_TYPE(RTCAudioSession)* session = [RTC_OBJC_TYPE(RTCAudioSession) sharedInstance];
+  RTCLog(@"RTCAudioSession %@", session);
+#endif
 
   auto padded_string = [](int pad) { return std::string(pad * 2, ' '); };
 

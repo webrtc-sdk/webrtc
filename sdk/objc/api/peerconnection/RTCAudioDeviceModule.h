@@ -83,6 +83,13 @@ RTC_OBJC_EXPORT
 
 - (BOOL)initAndStartRecording;
 
+@property(nonatomic, readonly) BOOL isPlayoutInitialized;
+@property(nonatomic, readonly) BOOL isRecordingInitialized;
+@property(nonatomic, readonly) BOOL isPlaying;
+@property(nonatomic, readonly) BOOL isRecording;
+
+@property(nonatomic, getter=isInitRecordingPersistentMode) BOOL initRecordingPersistentMode;
+
 // Manual rendering.
 @property(nonatomic, readonly, getter=isManualRenderingMode) BOOL manualRenderingMode;
 - (BOOL)setManualRenderingMode:(BOOL)enabled;
