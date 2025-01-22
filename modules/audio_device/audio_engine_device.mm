@@ -52,7 +52,7 @@ const UInt16 kFixedRecordDelayEstimate = 0;
 const UInt16 kStartEngineMaxRetries = 10;  // Maximum blocking 1sec.
 const useconds_t kStartEngineRetryDelayMs = 100;
 
-// const size_t kMaximumFramesPerBuffer = 3072;  // Maximum slice size for VoiceProcessingIO
+const size_t kMaximumFramesPerBuffer = 3072;
 const size_t kAudioSampleSize = 2;  // Signed 16-bit integer
 
 AudioEngineDevice::AudioEngineDevice(bool bypass_voice_processing)
@@ -857,9 +857,29 @@ void AudioEngineDevice::SetEngineState(std::function<EngineState(EngineState)> s
     RTC_DCHECK(new_state.IsOutputEnabled());
   }
 
-  // Apply engine state changes
+  // Save new state
   engine_state_ = new_state;
-  UpdateEngineState(state);
+
+  // Did switch Device -> Manual rendering
+  if (state.DidEnableManualRenderingMode()) {
+    EngineStateUpdate shutdown_state = state;  // Copy current state
+    shutdown_state.next = {};                  // Reset next state to default
+    UpdateDeviceEngineState(shutdown_state);   // Shutdown device rendering
+    EngineStateUpdate startup_state = state;   // Copy current state
+    shutdown_state.prev = {};                  //
+    UpdateManualEngineState(startup_state);    // Start manual mode
+  } else if (state.DidEnableDeviceRenderingMode()) {
+    EngineStateUpdate shutdown_state = state;
+    shutdown_state.next = {};                 // Reset next state to default
+    UpdateManualEngineState(shutdown_state);  // Shutdown manual rendering
+    EngineStateUpdate startup_state = state;  // Copy current state
+    shutdown_state.prev = {};                 //
+    UpdateDeviceEngineState(startup_state);   // Start device mode
+  } else if (new_state.render_mode == RenderMode::Device) {
+    UpdateDeviceEngineState(state);
+  } else if (new_state.render_mode == RenderMode::Manual) {
+    UpdateManualEngineState(state);
+  }
 
   // Buffer should be playing if output is running.
   if (new_state.IsOutputEnabled()) {
@@ -876,8 +896,177 @@ void AudioEngineDevice::SetEngineState(std::function<EngineState(EngineState)> s
   }
 }
 
-void AudioEngineDevice::UpdateEngineState(EngineStateUpdate state) {
+void AudioEngineDevice::UpdateManualEngineState(EngineStateUpdate state) {
   RTC_DCHECK_RUN_ON(thread_);
+  RTC_DCHECK(engine_device_ == nullptr);
+
+  if (state.prev.IsAnyRunning() && !state.next.IsAnyRunning()) {
+    LOGI() << "Stopping AVAudioEngine...";
+    RTC_DCHECK(engine_manual_input_ != nil);
+    [engine_manual_input_ stop];
+
+    LOGI() << "Stopping render thread...";
+    RTC_DCHECK(render_thread_ != nullptr);
+    render_thread_->Stop();
+    render_thread_ = nullptr;
+
+    LOGI() << "Releasing render buffer...";
+    RTC_DCHECK(render_buffer_ != nullptr);
+    render_buffer_ = nullptr;
+
+    if (observer_ != nullptr) {
+      observer_->OnEngineDidStop(engine_manual_input_, state.next.IsOutputEnabled(),
+                                 state.next.IsInputEnabled());
+    }
+  }
+
+  if (state.next.IsAnyEnabled() && !state.prev.IsAnyEnabled()) {
+    LOGI() << "Creating AVAudioEngine (manual)...";
+    RTC_DCHECK(engine_manual_input_ == nullptr);
+    engine_manual_input_ = [[AVAudioEngine alloc] init];
+
+    NSError* error = nil;
+    BOOL result =
+        [engine_manual_input_ enableManualRenderingMode:AVAudioEngineManualRenderingModeRealtime
+                                                 format:manual_render_rtc_format_
+                                      maximumFrameCount:kMaximumFramesPerBuffer
+                                                  error:&error];
+    if (!result) {
+      LOGE() << "Failed to set manual rendering mode: " << error.localizedDescription.UTF8String;
+    }
+
+    // Assign manual rendering block
+    render_block_ = engine_manual_input_.manualRenderingBlock;
+
+    if (observer_ != nullptr) {
+      observer_->OnEngineDidCreate(engine_manual_input_);
+    }
+  }
+
+  if (!state.next.IsOutputEnabled() && audio_device_buffer_->IsPlaying()) {
+    LOGI() << "Stopping Playout buffer...";
+    if (engine_device_ != nullptr) {
+      // Rendering must be stopped first.
+      RTC_DCHECK(!engine_device_.running);
+    }
+    audio_device_buffer_->StopPlayout();
+  }
+
+  if (!state.next.IsInputEnabled() && audio_device_buffer_->IsRecording()) {
+    LOGI() << "Stopping Record buffer...";
+    if (engine_device_ != nullptr) {
+      // Rendering must be stopped first.
+      RTC_DCHECK(!engine_device_.running);
+    }
+    audio_device_buffer_->StopRecording();
+  }
+
+  if (state.DidAnyEnable() && observer_ != nullptr) {
+    // Invoke here before configuring nodes. In iOS, session configuration is required before
+    // enabling AGC, muted talker etc.
+    observer_->OnEngineWillEnable(engine_manual_input_, state.next.IsOutputEnabled(),
+                                  state.next.IsInputEnabled());
+  }
+
+  if (state.next.IsOutputEnabled() && !state.prev.IsOutputEnabled()) {
+    LOGI() << "Enabling output for AVAudioEngine...";
+
+    audio_device_buffer_->SetPlayoutSampleRate(manual_render_rtc_format_.sampleRate);
+    audio_device_buffer_->SetPlayoutChannels(manual_render_rtc_format_.channelCount);
+    RTC_DCHECK(audio_device_buffer_ != nullptr);
+    fine_audio_buffer_.reset(new FineAudioBuffer(audio_device_buffer_.get()));
+
+  } else if (state.prev.IsOutputEnabled() && !state.next.IsOutputEnabled()) {
+    LOGI() << "Disabling output for AVAudioEngine...";
+    RTC_DCHECK(!engine_manual_input_.running);
+  }
+
+  if (state.next.IsInputEnabled() &&
+      (!state.prev.IsInputEnabled() || state.IsEngineRecreateRequired())) {
+    LOGI() << "Enabling input for AVAudioEngine...";
+
+    audio_device_buffer_->SetPlayoutSampleRate(manual_render_rtc_format_.sampleRate);
+    audio_device_buffer_->SetPlayoutChannels(manual_render_rtc_format_.channelCount);
+    RTC_DCHECK(audio_device_buffer_ != nullptr);
+    fine_audio_buffer_.reset(new FineAudioBuffer(audio_device_buffer_.get()));
+
+    RTC_DCHECK(!engine_manual_input_.running);
+  } else if (state.prev.IsInputEnabled() && !state.next.IsInputEnabled()) {
+    LOGI() << "Disabling input for AVAudioEngine...";
+    RTC_DCHECK(!engine_manual_input_.running);
+  }
+
+  if (state.DidAnyDisable() && observer_ != nullptr) {
+    observer_->OnEngineDidDisable(engine_manual_input_, state.next.IsOutputEnabled(),
+                                  state.next.IsInputEnabled());
+  }
+
+  // Start playout buffer if output is running
+  if (state.next.IsOutputEnabled() && !audio_device_buffer_->IsPlaying()) {
+    if (engine_device_ != nullptr) {
+      // Rendering must be stopped first.
+      RTC_DCHECK(!engine_device_.running);
+    }
+    LOGI() << "Starting Playout buffer...";
+    audio_device_buffer_->StartPlayout();
+    fine_audio_buffer_->ResetPlayout();
+  }
+
+  // Start recording buffer if input is running
+  if (state.next.IsInputEnabled() && !audio_device_buffer_->IsRecording()) {
+    if (engine_device_ != nullptr) {
+      // Rendering must be stopped first.
+      RTC_DCHECK(!engine_device_.running);
+    }
+    LOGI() << "Starting Record buffer...";
+    audio_device_buffer_->StartRecording();
+    fine_audio_buffer_->ResetRecord();
+  }
+
+  if (state.next.IsAnyRunning() && !state.prev.IsAnyRunning()) {
+    if (observer_ != nullptr) {
+      observer_->OnEngineWillStart(engine_manual_input_, state.next.IsOutputEnabled(),
+                                   state.next.IsInputEnabled());
+    }
+
+    LOGI() << "Allocating render buffer...";
+    RTC_DCHECK(render_buffer_ == nullptr);
+    render_buffer_ = [[AVAudioPCMBuffer alloc] initWithPCMFormat:manual_render_rtc_format_
+                                                   frameCapacity:kMaximumFramesPerBuffer];
+
+    LOGI() << "Starting AVAudioEngine...";
+    NSError* error = nil;
+
+    BOOL start_result = [engine_manual_input_ startAndReturnError:&error];
+    if (!start_result) {
+      LOGE() << "Failed to start engine after " << kStartEngineMaxRetries << " attempts";
+      DebugAudioEngine();
+    }
+
+    // Create render thread
+    LOGI() << "Starting render thread...";
+    RTC_DCHECK(render_thread_ == nullptr);
+    render_thread_ = rtc::Thread::Create();
+    render_thread_->SetName("render_thread", nullptr);
+    render_thread_->Start();
+    render_thread_->PostTask([this] {
+      // RTC_DCHECK_RUN_ON(thread_);
+      this->StartRenderLoop();
+    });
+  }
+
+  if (state.prev.IsAnyEnabled() && !state.next.IsAnyEnabled()) {
+    if (observer_ != nullptr) {
+      observer_->OnEngineWillRelease(engine_manual_input_);
+    }
+    LOGI() << "Releasing AVAudioEngine...";
+    engine_manual_input_ = nil;
+  }
+}
+
+void AudioEngineDevice::UpdateDeviceEngineState(EngineStateUpdate state) {
+  RTC_DCHECK_RUN_ON(thread_);
+  RTC_DCHECK(engine_manual_input_ == nullptr);
 
   if (state.prev.IsAnyRunning() &&
       (!state.next.IsAnyRunning() || state.DidUpdateAudioGraph() || state.DidBeginInterruption() ||
@@ -902,7 +1091,7 @@ void AudioEngineDevice::UpdateEngineState(EngineStateUpdate state) {
 
   if (state.next.IsAnyEnabled() &&
       (!state.prev.IsAnyEnabled() || state.IsEngineRecreateRequired())) {
-    LOGI() << "Creating AVAudioEngine...";
+    LOGI() << "Creating AVAudioEngine (device)...";
     RTC_DCHECK(engine_device_ == nullptr);
     engine_device_ = [[AVAudioEngine alloc] init];
 

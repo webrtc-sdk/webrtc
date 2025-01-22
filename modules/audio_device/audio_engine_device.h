@@ -264,6 +264,7 @@ class AudioEngineDevice : public AudioDeviceModule,
     bool DidEnableInput() const {
       return !prev.IsInputEnabled() && next.IsInputEnabled();
     }
+
     bool DidEnableOutputOrInput() const {
       return DidEnableOutput() || DidEnableInput();
     }
@@ -301,6 +302,16 @@ class AudioEngineDevice : public AudioDeviceModule,
       return (prev.IsOutputEnabled() && next.IsOutputEnabled()) &&
              (prev.IsInputEnabled() && !next.IsInputEnabled());
     }
+
+    bool DidEnableManualRenderingMode() const {
+      return prev.render_mode != RenderMode::Manual &&
+             next.render_mode == RenderMode::Manual;
+    }
+
+    bool DidEnableDeviceRenderingMode() const {
+      return prev.render_mode != RenderMode::Device &&
+             next.render_mode == RenderMode::Device;
+    }
   };
 
   EngineState engine_state_ RTC_GUARDED_BY(thread_);
@@ -310,7 +321,8 @@ class AudioEngineDevice : public AudioDeviceModule,
 
   bool IsMicrophonePermissionGranted();
   void SetEngineState(std::function<EngineState(EngineState)> state_transform);
-  void UpdateEngineState(EngineStateUpdate state);
+  void UpdateDeviceEngineState(EngineStateUpdate state);
+  void UpdateManualEngineState(EngineStateUpdate state);
 
   // AudioEngine observer methods. May be called from any thread.
   void OnEngineConfigurationChange();
@@ -356,6 +368,7 @@ class AudioEngineDevice : public AudioDeviceModule,
 
   // AVAudioEngine objects
   AVAudioEngine* engine_device_;
+  AVAudioEngine* engine_manual_input_;
 
   // Used for manual rendering mode
   AVAudioFormat* manual_render_rtc_format_;  // Int16
