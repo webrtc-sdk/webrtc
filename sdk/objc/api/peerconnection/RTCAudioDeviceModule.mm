@@ -26,186 +26,77 @@
 
 class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
  public:
-  AudioDeviceObserver() : lock_(OS_UNFAIR_LOCK_INIT) {}
+  AudioDeviceObserver(RTC_OBJC_TYPE(RTCAudioDeviceModule) * adm) { adm_ = adm; }
 
-  void OnDevicesUpdated() override {
-    os_unfair_lock_lock(&lock_);
-    if (on_devices_did_update_callback_) {
-      on_devices_did_update_callback_();
-    }
-    os_unfair_lock_unlock(&lock_);
-  }
+  void OnDevicesUpdated() override { [delegate_ audioDeviceModuleDidUpdateDevices:adm_]; }
 
   void OnSpeechActivityEvent(webrtc::AudioDeviceModule::SpeechActivityEvent event) override {
-    os_unfair_lock_lock(&lock_);
-    if (on_speech_activity_callback_) {
-      on_speech_activity_callback_(ConvertSpeechActivityEvent(event));
-    }
-    os_unfair_lock_unlock(&lock_);
+    [delegate_ audioDeviceModule:adm_
+        didReceiveSpeechActivityEvent:ConvertSpeechActivityEvent(event)];
   }
 
   void OnEngineDidCreate(AVAudioEngine *engine) override {
-    os_unfair_lock_lock(&lock_);
-    if (on_engine_did_create_) {
-      on_engine_did_create_(engine);
-    }
-    os_unfair_lock_unlock(&lock_);
+    [delegate_ audioDeviceModule:adm_ didCreateEngine:engine];
   }
 
   void OnEngineWillEnable(AVAudioEngine *engine, bool playout_enabled,
                           bool recording_enabled) override {
-    os_unfair_lock_lock(&lock_);
-    if (on_engine_will_enable_) {
-      on_engine_will_enable_(engine, playout_enabled, recording_enabled);
-    }
-    os_unfair_lock_unlock(&lock_);
+    [delegate_ audioDeviceModule:adm_
+                willEnableEngine:engine
+                isPlayoutEnabled:playout_enabled
+              isRecordingEnabled:recording_enabled];
   }
 
   void OnEngineWillStart(AVAudioEngine *engine, bool playout_enabled,
                          bool recording_enabled) override {
-    os_unfair_lock_lock(&lock_);
-    if (on_engine_will_start_) {
-      on_engine_will_start_(engine, playout_enabled, recording_enabled);
-    }
-    os_unfair_lock_unlock(&lock_);
+    [delegate_ audioDeviceModule:adm_
+                 willStartEngine:engine
+                isPlayoutEnabled:playout_enabled
+              isRecordingEnabled:recording_enabled];
   }
 
   void OnEngineDidStop(AVAudioEngine *engine, bool playout_enabled,
                        bool recording_enabled) override {
-    os_unfair_lock_lock(&lock_);
-    if (on_engine_did_stop_) {
-      on_engine_did_stop_(engine, playout_enabled, recording_enabled);
-    }
-    os_unfair_lock_unlock(&lock_);
+    [delegate_ audioDeviceModule:adm_
+                   didStopEngine:engine
+                isPlayoutEnabled:playout_enabled
+              isRecordingEnabled:recording_enabled];
   }
 
   void OnEngineDidDisable(AVAudioEngine *engine, bool playout_enabled,
                           bool recording_enabled) override {
-    os_unfair_lock_lock(&lock_);
-    if (on_engine_did_disable_) {
-      on_engine_did_disable_(engine, playout_enabled, recording_enabled);
-    }
-    os_unfair_lock_unlock(&lock_);
+    [delegate_ audioDeviceModule:adm_
+                didDisableEngine:engine
+                isPlayoutEnabled:playout_enabled
+              isRecordingEnabled:recording_enabled];
   }
 
   void OnEngineWillRelease(AVAudioEngine *engine) override {
-    os_unfair_lock_lock(&lock_);
-    if (on_engine_will_release_) {
-      on_engine_will_release_(engine);
-    }
-    os_unfair_lock_unlock(&lock_);
+    [delegate_ audioDeviceModule:adm_ willReleaseEngine:engine];
   }
 
   bool OnEngineWillConnectInput(AVAudioEngine *engine, AVAudioNode *src, AVAudioNode *dst,
                                 AVAudioFormat *format) override {
-    bool result = false;
-    os_unfair_lock_lock(&lock_);
-    if (on_engine_will_connect_input_) {
-      result = on_engine_will_connect_input_(engine, src, dst, format);
-    }
-    os_unfair_lock_unlock(&lock_);
-    return result;
+    return [delegate_ audioDeviceModule:adm_
+                                 engine:engine
+               configureInputFromSource:src
+                          toDestination:dst
+                             withFormat:format];
   }
 
   bool OnEngineWillConnectOutput(AVAudioEngine *engine, AVAudioNode *src, AVAudioNode *dst,
                                  AVAudioFormat *format) override {
-    bool result = false;
-    os_unfair_lock_lock(&lock_);
-    if (on_engine_will_connect_output_) {
-      result = on_engine_will_connect_output_(engine, src, dst, format);
-    }
-    os_unfair_lock_unlock(&lock_);
-    return result;
+    return [delegate_ audioDeviceModule:adm_
+                                 engine:engine
+              configureOutputFromSource:src
+                          toDestination:dst
+                             withFormat:format];
   }
 
-  //
-
-  void SetDevicesUpdatedCallBack(RTCDevicesDidUpdateCallback cb) {
-    os_unfair_lock_lock(&lock_);
-    on_devices_did_update_callback_ = cb;
-    os_unfair_lock_unlock(&lock_);
-  }
-
-  void SetOnSpeechActivityCallBack(RTCSpeechActivityCallback cb) {
-    os_unfair_lock_lock(&lock_);
-    on_speech_activity_callback_ = cb;
-    os_unfair_lock_unlock(&lock_);
-  }
-
-  void SetOnEngineDidCreateCallback(RTCOnEngineDidCreate cb) {
-    os_unfair_lock_lock(&lock_);
-    on_engine_did_create_ = cb;
-    os_unfair_lock_unlock(&lock_);
-  }
-
-  void SetOnEngineWillEnableCallback(RTCOnEngineWillEnable cb) {
-    os_unfair_lock_lock(&lock_);
-    on_engine_will_enable_ = cb;
-    os_unfair_lock_unlock(&lock_);
-  }
-
-  void SetOnEngineWillStartCallback(RTCOnEngineWillStart cb) {
-    os_unfair_lock_lock(&lock_);
-    on_engine_will_start_ = cb;
-    os_unfair_lock_unlock(&lock_);
-  }
-
-  void SetOnEngineDidStopCallback(RTCOnEngineDidStop cb) {
-    os_unfair_lock_lock(&lock_);
-    on_engine_did_stop_ = cb;
-    os_unfair_lock_unlock(&lock_);
-  }
-
-  void SetOnEngineDidDisableCallback(RTCOnEngineDidDisable cb) {
-    os_unfair_lock_lock(&lock_);
-    on_engine_did_disable_ = cb;
-    os_unfair_lock_unlock(&lock_);
-  }
-
-  void SetOnEngineWillReleaseCallback(RTCOnEngineWillRelease cb) {
-    os_unfair_lock_lock(&lock_);
-    on_engine_will_release_ = cb;
-    os_unfair_lock_unlock(&lock_);
-  }
-
-  void SetOnEngineWillConnectInputCallback(RTCOnEngineWillConnectInput cb) {
-    os_unfair_lock_lock(&lock_);
-    on_engine_will_connect_input_ = cb;
-    os_unfair_lock_unlock(&lock_);
-  }
-
-  void SetOnEngineWillConnectOutputCallback(RTCOnEngineWillConnectOutput cb) {
-    os_unfair_lock_lock(&lock_);
-    on_engine_will_connect_output_ = cb;
-    os_unfair_lock_unlock(&lock_);
-  }
-
-  bool IsAnyCallbackAttached() {
-    os_unfair_lock_lock(&lock_);
-    bool result = on_devices_did_update_callback_ != nullptr ||
-                  on_speech_activity_callback_ != nullptr || on_engine_did_create_ != nullptr ||
-                  on_engine_will_enable_ != nullptr || on_engine_will_start_ != nullptr ||
-                  on_engine_did_stop_ != nullptr || on_engine_did_disable_ != nullptr ||
-                  on_engine_will_release_ != nullptr || on_engine_will_connect_input_ != nullptr ||
-                  on_engine_will_connect_output_ != nullptr;
-    os_unfair_lock_unlock(&lock_);
-    return result;
-  }
+  __weak id<RTC_OBJC_TYPE(RTCAudioDeviceModuleDelegate)> delegate_;
 
  private:
-  os_unfair_lock lock_;
-  RTCDevicesDidUpdateCallback on_devices_did_update_callback_;
-  RTCSpeechActivityCallback on_speech_activity_callback_;
-
-  RTCOnEngineDidCreate on_engine_did_create_;
-  RTCOnEngineWillEnable on_engine_will_enable_;
-  RTCOnEngineWillStart on_engine_will_start_;
-  RTCOnEngineDidStop on_engine_did_stop_;
-  RTCOnEngineDidDisable on_engine_did_disable_;
-  RTCOnEngineWillRelease on_engine_will_release_;
-
-  RTCOnEngineWillConnectInput on_engine_will_connect_input_;
-  RTCOnEngineWillConnectOutput on_engine_will_connect_output_;
+  __weak RTC_OBJC_TYPE(RTCAudioDeviceModule) * adm_;
 
   RTCSpeechActivityEvent ConvertSpeechActivityEvent(
       webrtc::AudioDeviceModule::SpeechActivityEvent event) {
@@ -226,6 +117,17 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   AudioDeviceObserver *_observer;
 }
 
+- (id<RTC_OBJC_TYPE(RTCAudioDeviceModuleDelegate)>)observer {
+  return _workerThread->BlockingCall([self] { return _observer->delegate_; });
+}
+
+- (void)setObserver:(id<RTC_OBJC_TYPE(RTCAudioDeviceModuleDelegate)>)observer {
+  _workerThread->BlockingCall([self, observer] {
+    _observer->delegate_ = observer;
+    _native->SetObserver(observer != nil ? _observer : nullptr);
+  });
+}
+
 - (instancetype)initWithNativeModule:(rtc::scoped_refptr<webrtc::AudioDeviceModule>)module
                         workerThread:(rtc::Thread *)workerThread {
   RTCLogInfo(@"RTCAudioDeviceModule initWithNativeModule:workerThread:");
@@ -234,7 +136,7 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   _native = module;
   _workerThread = workerThread;
 
-  _observer = new AudioDeviceObserver();
+  _observer = new AudioDeviceObserver(self);
 
   return self;
 }
@@ -382,86 +284,6 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   if (module == nullptr) return NO;
 
   return _workerThread->BlockingCall([module] { return module->InitAndStartRecording() == 0; });
-}
-
-- (BOOL)setDevicesDidUpdateCallback:(nullable RTCDevicesDidUpdateCallback)callback {
-  _observer->SetDevicesUpdatedCallBack(callback);
-  webrtc::AudioDeviceObserver *observer = _observer->IsAnyCallbackAttached() ? _observer : nullptr;
-  _workerThread->BlockingCall([self, observer] { _native->SetObserver(observer); });
-
-  return YES;
-}
-
-- (BOOL)setSpeechActivityCallback:(nullable RTCSpeechActivityCallback)callback {
-  _observer->SetOnSpeechActivityCallBack(callback);
-  webrtc::AudioDeviceObserver *observer = _observer->IsAnyCallbackAttached() ? _observer : nullptr;
-  _workerThread->BlockingCall([self, observer] { _native->SetObserver(observer); });
-
-  return YES;
-}
-
-- (BOOL)setOnEngineDidCreateCallback:(nullable RTCOnEngineDidCreate)callback {
-  _observer->SetOnEngineDidCreateCallback(callback);
-  webrtc::AudioDeviceObserver *observer = _observer->IsAnyCallbackAttached() ? _observer : nullptr;
-  _workerThread->BlockingCall([self, observer] { _native->SetObserver(observer); });
-
-  return YES;
-}
-
-- (BOOL)setOnEngineWillEnableCallback:(nullable RTCOnEngineWillEnable)callback {
-  _observer->SetOnEngineWillEnableCallback(callback);
-  webrtc::AudioDeviceObserver *observer = _observer->IsAnyCallbackAttached() ? _observer : nullptr;
-  _workerThread->BlockingCall([self, observer] { _native->SetObserver(observer); });
-
-  return YES;
-}
-
-- (BOOL)setOnEngineWillStartCallback:(nullable RTCOnEngineWillStart)callback {
-  _observer->SetOnEngineWillStartCallback(callback);
-  webrtc::AudioDeviceObserver *observer = _observer->IsAnyCallbackAttached() ? _observer : nullptr;
-  _workerThread->BlockingCall([self, observer] { _native->SetObserver(observer); });
-
-  return YES;
-}
-
-- (BOOL)setOnEngineDidStopCallback:(nullable RTCOnEngineDidStop)callback {
-  _observer->SetOnEngineDidStopCallback(callback);
-  webrtc::AudioDeviceObserver *observer = _observer->IsAnyCallbackAttached() ? _observer : nullptr;
-  _workerThread->BlockingCall([self, observer] { _native->SetObserver(observer); });
-
-  return YES;
-}
-
-- (BOOL)setOnEngineDidDisableCallback:(nullable RTCOnEngineDidDisable)callback {
-  _observer->SetOnEngineDidDisableCallback(callback);
-  webrtc::AudioDeviceObserver *observer = _observer->IsAnyCallbackAttached() ? _observer : nullptr;
-  _workerThread->BlockingCall([self, observer] { _native->SetObserver(observer); });
-
-  return YES;
-}
-
-- (BOOL)setOnEngineWillReleaseCallback:(nullable RTCOnEngineWillRelease)callback {
-  _observer->SetOnEngineWillReleaseCallback(callback);
-  webrtc::AudioDeviceObserver *observer = _observer->IsAnyCallbackAttached() ? _observer : nullptr;
-  _workerThread->BlockingCall([self, observer] { _native->SetObserver(observer); });
-
-  return YES;
-}
-
-- (BOOL)setOnEngineWillConnectInputCallback:(nullable RTCOnEngineWillConnectInput)callback {
-  _observer->SetOnEngineWillConnectInputCallback(callback);
-  webrtc::AudioDeviceObserver *observer = _observer->IsAnyCallbackAttached() ? _observer : nullptr;
-  _workerThread->BlockingCall([self, observer] { _native->SetObserver(observer); });
-
-  return YES;
-}
-
-- (BOOL)setOnEngineWillConnectOutputCallback:(nullable RTCOnEngineWillConnectOutput)callback {
-  _observer->SetOnEngineWillConnectOutputCallback(callback);
-  webrtc::AudioDeviceObserver *observer = _observer->IsAnyCallbackAttached() ? _observer : nullptr;
-  _workerThread->BlockingCall([self, observer] { _native->SetObserver(observer); });
-
-  return YES;
 }
 
 - (BOOL)isPlayoutInitialized {
