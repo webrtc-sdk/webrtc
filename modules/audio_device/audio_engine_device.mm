@@ -935,9 +935,6 @@ void AudioEngineDevice::UpdateManualEngineState(EngineStateUpdate state) {
       LOGE() << "Failed to set manual rendering mode: " << error.localizedDescription.UTF8String;
     }
 
-    // Assign manual rendering block
-    render_block_ = engine_manual_input_.manualRenderingBlock;
-
     if (observer_ != nullptr) {
       observer_->OnEngineDidCreate(engine_manual_input_);
     }
@@ -970,6 +967,7 @@ void AudioEngineDevice::UpdateManualEngineState(EngineStateUpdate state) {
 
   if (state.next.IsOutputEnabled() && !state.prev.IsOutputEnabled()) {
     LOGI() << "Enabling output for AVAudioEngine...";
+    RTC_DCHECK(!engine_manual_input_.running);
 
     audio_device_buffer_->SetPlayoutSampleRate(manual_render_rtc_format_.sampleRate);
     audio_device_buffer_->SetPlayoutChannels(manual_render_rtc_format_.channelCount);
@@ -981,16 +979,25 @@ void AudioEngineDevice::UpdateManualEngineState(EngineStateUpdate state) {
     RTC_DCHECK(!engine_manual_input_.running);
   }
 
-  if (state.next.IsInputEnabled() &&
-      (!state.prev.IsInputEnabled() || state.IsEngineRecreateRequired())) {
+  if (state.next.IsInputEnabled() && !state.prev.IsInputEnabled()) {
     LOGI() << "Enabling input for AVAudioEngine...";
+    RTC_DCHECK(!engine_manual_input_.running);
 
-    audio_device_buffer_->SetPlayoutSampleRate(manual_render_rtc_format_.sampleRate);
-    audio_device_buffer_->SetPlayoutChannels(manual_render_rtc_format_.channelCount);
+    audio_device_buffer_->SetRecordingSampleRate(manual_render_rtc_format_.sampleRate);
+    audio_device_buffer_->SetRecordingChannels(manual_render_rtc_format_.channelCount);
     RTC_DCHECK(audio_device_buffer_ != nullptr);
     fine_audio_buffer_.reset(new FineAudioBuffer(audio_device_buffer_.get()));
 
-    RTC_DCHECK(!engine_manual_input_.running);
+    if (!(this->observer_ != nullptr &&
+          this->observer_->OnEngineWillConnectOutput(
+              engine_manual_input_, engine_manual_input_.mainMixerNode, this->OutputNode(),
+              manual_render_rtc_format_))) {
+      // Default implementation.
+      [engine_manual_input_ connect:engine_manual_input_.mainMixerNode
+                                 to:this->OutputNode()
+                             format:manual_render_rtc_format_];
+    }
+
   } else if (state.prev.IsInputEnabled() && !state.next.IsInputEnabled()) {
     LOGI() << "Disabling input for AVAudioEngine...";
     RTC_DCHECK(!engine_manual_input_.running);
@@ -1042,6 +1049,10 @@ void AudioEngineDevice::UpdateManualEngineState(EngineStateUpdate state) {
       LOGE() << "Failed to start engine after " << kStartEngineMaxRetries << " attempts";
       DebugAudioEngine();
     }
+
+    // Assign manual rendering block
+    render_block_ = engine_manual_input_.manualRenderingBlock;
+    RTC_DCHECK(render_block_ != nullptr);
 
     // Create render thread
     LOGI() << "Starting render thread...";
@@ -1429,88 +1440,36 @@ void AudioEngineDevice::UpdateDeviceEngineState(EngineStateUpdate state) {
 void AudioEngineDevice::StartRenderLoop() {
   RTC_DCHECK_RUN_ON(render_thread_.get());
 
-  // Constants for timing and frame management
   const double sample_rate = manual_render_rtc_format_.sampleRate;
-  const double target_frame_count = sample_rate / 100;  // 10ms chunks
-  const double nanoseconds_per_frame = 1e9 / sample_rate;
-  const double target_cycle_time_ns = target_frame_count * nanoseconds_per_frame;
-
-  // Timing management with exponential moving average
-  uint64_t last_cycle_time = mach_absolute_time();
-  double sleep_time_ms = 5.0;
-  const double min_sleep_time_ms = 0.5;
-  const double max_sleep_time_ms = 10.0;
-
-  // EMA coefficient (α) - higher value means more weight on recent samples
-  const double alpha = 0.2;
-  double ema_cycle_time = target_cycle_time_ns;
-
-  // Pre-allocate buffer for performance
-  const size_t buffer_size = static_cast<size_t>(target_frame_count) * kAudioSampleSize;
-
-  // Error recovery
-  int consecutive_errors = 0;
-  const int max_consecutive_errors = 3;
+  const size_t frames_per_buffer = static_cast<size_t>(sample_rate / 100);  // 10ms chunks
+  const size_t buffer_size = frames_per_buffer * kAudioSampleSize;
+  const int sleep_ms = 5;  // Fixed sleep time
 
   while (!render_thread_->IsQuitting()) {
     RTC_DCHECK(render_buffer_ != nullptr);
     AudioBufferList* abl = const_cast<AudioBufferList*>(render_buffer_.audioBufferList);
-
-    // Precise timing calculation
-    uint64_t current_time = mach_absolute_time();
-    double elapsed_time_ns = (current_time - last_cycle_time) * machTickUnitsToNanoseconds_;
-
-    // Update EMA of cycle time
-    ema_cycle_time = (alpha * elapsed_time_ns) + ((1.0 - alpha) * ema_cycle_time);
-
-    // Dynamic sleep time adjustment using PID-like control
-    const double error = target_cycle_time_ns - ema_cycle_time;
-    const double kP = 0.2;  // Proportional gain
-    const double adjustment = (error / target_cycle_time_ns) * kP;
-    sleep_time_ms =
-        std::clamp(sleep_time_ms * (1.0 + adjustment), min_sleep_time_ms, max_sleep_time_ms);
-
-    // Optimize buffer management
-    const unsigned int frames_to_render = static_cast<unsigned int>(target_frame_count);
     abl->mBuffers[0].mDataByteSize = buffer_size;
 
-    // Render audio with error handling
     OSStatus err = noErr;
-    AVAudioEngineManualRenderingStatus result = render_block_(frames_to_render, abl, &err);
+    AVAudioEngineManualRenderingStatus result = render_block_(frames_per_buffer, abl, &err);
 
     if (result == AVAudioEngineManualRenderingStatusSuccess) {
-      consecutive_errors = 0;  // Reset error counter on success
-
       RTC_DCHECK(abl->mNumberBuffers == 1);
       const int16_t* rtc_buffer =
           static_cast<const int16_t*>(static_cast<const void*>(abl->mBuffers[0].mData));
 
-      // Update timing before processing
-      last_cycle_time = mach_absolute_time();
+      const uint64_t capture_time = mach_absolute_time();
+      const int64_t capture_time_ns = capture_time * machTickUnitsToNanoseconds_;
 
-      // Process audio data
       fine_audio_buffer_->DeliverRecordedData(
-          rtc::ArrayView<const int16_t>(rtc_buffer, frames_to_render), kFixedRecordDelayEstimate,
-          absl::nullopt);
+          rtc::ArrayView<const int16_t>(rtc_buffer, frames_per_buffer), kFixedRecordDelayEstimate,
+          capture_time_ns);
     } else {
-      consecutive_errors++;
-      LOGW() << "Render error: " << err << " frames: " << frames_to_render
-             << " consecutive errors: " << consecutive_errors;
-
-      if (consecutive_errors >= max_consecutive_errors) {
-        // Reset timing on persistent errors
-        sleep_time_ms = 5.0;
-        ema_cycle_time = target_cycle_time_ns;
-        consecutive_errors = 0;
-      }
+      LOGW() << "Render error: " << err << " frames: " << frames_per_buffer;
     }
 
-    // Precise sleep timing
     if (!render_thread_->IsQuitting()) {
-      const int sleep_ms = static_cast<int>(std::round(sleep_time_ms));
-      if (sleep_ms > 0) {
-        render_thread_->SleepMs(sleep_ms);
-      }
+      render_thread_->SleepMs(sleep_ms);
     }
   }
 }
@@ -1529,10 +1488,15 @@ AVAudioInputNode* AudioEngineDevice::InputNode() {
 
 AVAudioOutputNode* AudioEngineDevice::OutputNode() {
   RTC_DCHECK_RUN_ON(thread_);
-  RTC_DCHECK(engine_device_ != nil);
-  RTC_DCHECK(engine_state_.IsOutputEnabled() || engine_state_.render_mode == RenderMode::Manual);
+  RTC_DCHECK(engine_state_.IsOutputEnabled());
 
-  return engine_device_.outputNode;
+  if (engine_state_.render_mode == RenderMode::Manual) {
+    RTC_DCHECK(engine_manual_input_ != nil);
+    return engine_manual_input_.outputNode;
+  } else {
+    RTC_DCHECK(engine_device_ != nil);
+    return engine_device_.outputNode;
+  }
 }
 
 // ----------------------------------------------------------------------------------------------------
