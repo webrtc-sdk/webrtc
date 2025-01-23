@@ -14,15 +14,79 @@
  * limitations under the License.
  */
 
+#import <AVFAudio/AVFAudio.h>
 #import <CoreMedia/CoreMedia.h>
 #import <Foundation/Foundation.h>
 
-#import "RTCMacros.h"
 #import "RTCIODevice.h"
+#import "RTCMacros.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
-typedef void (^RTCOnAudioDevicesDidUpdate)();
+typedef NS_ENUM(NSInteger, RTCSpeechActivityEvent) {
+  RTCSpeechActivityEventStarted,
+  RTCSpeechActivityEventEnded,
+};
+
+@class RTC_OBJC_TYPE(RTCAudioDeviceModule);
+
+RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE(RTCAudioDeviceModuleDelegate)<NSObject>
+
+- (void)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+    didReceiveSpeechActivityEvent:(RTCSpeechActivityEvent)speechActivityEvent
+    NS_SWIFT_NAME(audioDeviceModule(_:didReceiveSpeechActivityEvent:));
+
+// Engine events
+- (void)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+          didCreateEngine:(AVAudioEngine *)engine
+    NS_SWIFT_NAME(audioDeviceModule(_:didCreateEngine:));
+
+- (void)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+         willEnableEngine:(AVAudioEngine *)engine
+         isPlayoutEnabled:(BOOL)isPlayoutEnabled
+       isRecordingEnabled:(BOOL)isRecordingEnabled
+    NS_SWIFT_NAME(audioDeviceModule(_:willEnableEngine:isPlayoutEnabled:isRecordingEnabled:));
+
+- (void)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+          willStartEngine:(AVAudioEngine *)engine
+         isPlayoutEnabled:(BOOL)isPlayoutEnabled
+       isRecordingEnabled:(BOOL)isRecordingEnabled
+    NS_SWIFT_NAME(audioDeviceModule(_:willStartEngine:isPlayoutEnabled:isRecordingEnabled:));
+
+- (void)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+            didStopEngine:(AVAudioEngine *)engine
+         isPlayoutEnabled:(BOOL)isPlayoutEnabled
+       isRecordingEnabled:(BOOL)isRecordingEnabled
+    NS_SWIFT_NAME(audioDeviceModule(_:didStopEngine:isPlayoutEnabled:isRecordingEnabled:));
+
+- (void)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+         didDisableEngine:(AVAudioEngine *)engine
+         isPlayoutEnabled:(BOOL)isPlayoutEnabled
+       isRecordingEnabled:(BOOL)isRecordingEnabled
+    NS_SWIFT_NAME(audioDeviceModule(_:didDisableEngine:isPlayoutEnabled:isRecordingEnabled:));
+
+- (void)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+        willReleaseEngine:(AVAudioEngine *)engine
+    NS_SWIFT_NAME(audioDeviceModule(_:willReleaseEngine:));
+
+- (BOOL)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+                      engine:(AVAudioEngine *)engine
+    configureInputFromSource:(AVAudioNode *)source
+               toDestination:(AVAudioNode *)destination
+                  withFormat:(AVAudioFormat *)format
+    NS_SWIFT_NAME(audioDeviceModule(_:engine:configureInputFromSource:toDestination:format:));
+
+- (BOOL)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+                       engine:(AVAudioEngine *)engine
+    configureOutputFromSource:(AVAudioNode *)source
+                toDestination:(AVAudioNode *)destination
+                   withFormat:(AVAudioFormat *)format
+    NS_SWIFT_NAME(audioDeviceModule(_:engine:configureOutputFromSource:toDestination:format:));
+
+- (void)audioDeviceModuleDidUpdateDevices:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+    NS_SWIFT_NAME(audioDeviceModuleDidUpdateDevices(_:));
+
+@end
 
 RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCAudioDeviceModule) : NSObject
@@ -33,8 +97,8 @@ RTC_OBJC_EXPORT
 @property(nonatomic, readonly) BOOL playing;
 @property(nonatomic, readonly) BOOL recording;
 
-@property(nonatomic, assign) RTC_OBJC_TYPE(RTCIODevice) *outputDevice;
-@property(nonatomic, assign) RTC_OBJC_TYPE(RTCIODevice) *inputDevice;
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCIODevice) * outputDevice;
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCIODevice) * inputDevice;
 
 // Executes low-level API's in sequence to switch the device
 // Use outputDevice / inputDevice property unless you need to know if setting the device is
@@ -42,14 +106,32 @@ RTC_OBJC_EXPORT
 - (BOOL)trySetOutputDevice:(nullable RTC_OBJC_TYPE(RTCIODevice) *)device;
 - (BOOL)trySetInputDevice:(nullable RTC_OBJC_TYPE(RTCIODevice) *)device;
 
-- (BOOL)setDevicesUpdatedHandler: (nullable RTCOnAudioDevicesDidUpdate) handler;
-
 - (BOOL)startPlayout;
 - (BOOL)stopPlayout;
 - (BOOL)initPlayout;
 - (BOOL)startRecording;
 - (BOOL)stopRecording;
 - (BOOL)initRecording;
+
+- (BOOL)initAndStartRecording;
+
+@property(nonatomic, readonly) BOOL isPlayoutInitialized;
+@property(nonatomic, readonly) BOOL isRecordingInitialized;
+@property(nonatomic, readonly) BOOL isPlaying;
+@property(nonatomic, readonly) BOOL isRecording;
+
+@property(nonatomic, getter=isInitRecordingPersistentMode) BOOL initRecordingPersistentMode;
+
+@property(nonatomic, weak, nullable) id<RTC_OBJC_TYPE(RTCAudioDeviceModuleDelegate)> observer;
+
+// Manual rendering.
+@property(nonatomic, readonly, getter=isManualRenderingMode) BOOL manualRenderingMode;
+- (BOOL)setManualRenderingMode:(BOOL)enabled;
+
+// Advanced other audio ducking.
+@property(nonatomic, assign, getter=isAdvancedDuckingEnabled) BOOL advancedDuckingEnabled;
+
+@property(nonatomic, assign) NSInteger duckingLevel;
 
 @end
 

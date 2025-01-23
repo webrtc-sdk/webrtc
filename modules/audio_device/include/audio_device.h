@@ -16,19 +16,18 @@
 #include "api/task_queue/task_queue_factory.h"
 #include "modules/audio_device/include/audio_device_defines.h"
 #include "rtc_base/ref_count.h"
+#include "sdk/objc/base/RTCMacros.h"
+
+RTC_FWD_DECL_OBJC_CLASS(AVAudioEngine);
+RTC_FWD_DECL_OBJC_CLASS(AVAudioFormat);
+RTC_FWD_DECL_OBJC_CLASS(AVAudioNode);
+RTC_FWD_DECL_OBJC_CLASS(AVAudioSourceNode);
+RTC_FWD_DECL_OBJC_CLASS(AVAudioMixerNode);
 
 namespace webrtc {
 
 class AudioDeviceModuleForTest;
-
-// Sink for callbacks related to a audio device.
-class AudioDeviceSink {
- public:
-  virtual ~AudioDeviceSink() = default;
-
-  // input/output devices updated or default device changed
-  virtual void OnDevicesUpdated() = 0;
-};
+class AudioDeviceObserver;
 
 class AudioDeviceModule : public rtc::RefCountInterface {
  public:
@@ -51,6 +50,11 @@ class AudioDeviceModule : public rtc::RefCountInterface {
     kDefaultDevice = -2
   };
 
+  enum SpeechActivityEvent {
+    kStarted = 0,
+    kEnded,
+  };
+
   struct Stats {
     // The fields below correspond to similarly-named fields in the WebRTC stats
     // spec. https://w3c.github.io/webrtc-stats/#playoutstats-dict*
@@ -64,14 +68,12 @@ class AudioDeviceModule : public rtc::RefCountInterface {
  public:
   // Creates a default ADM for usage in production code.
   static rtc::scoped_refptr<AudioDeviceModule> Create(
-      AudioLayer audio_layer,
-      TaskQueueFactory* task_queue_factory,
+      AudioLayer audio_layer, TaskQueueFactory* task_queue_factory,
       bool bypass_voice_processing = false);
   // Creates an ADM with support for extra test methods. Don't use this factory
   // in production code.
   static rtc::scoped_refptr<AudioDeviceModuleForTest> CreateForTest(
-      AudioLayer audio_layer,
-      TaskQueueFactory* task_queue_factory,
+      AudioLayer audio_layer, TaskQueueFactory* task_queue_factory,
       bool bypass_voice_processing = false);
 
   // Retrieve the currently utilized audio layer
@@ -182,7 +184,7 @@ class AudioDeviceModule : public rtc::RefCountInterface {
   virtual int GetRecordAudioParameters(AudioParameters* params) const = 0;
 #endif  // WEBRTC_IOS
 
-  virtual int32_t SetAudioDeviceSink(AudioDeviceSink* sink) const { return -1; }
+  virtual int32_t SetObserver(AudioDeviceObserver* observer) { return -1; }
   virtual int32_t GetPlayoutDevice() const { return -1; }
   virtual int32_t GetRecordingDevice() const { return -1; }
 
@@ -202,6 +204,49 @@ class AudioDeviceModuleForTest : public AudioDeviceModule {
 
   virtual int SetPlayoutSampleRate(uint32_t sample_rate) = 0;
   virtual int SetRecordingSampleRate(uint32_t sample_rate) = 0;
+};
+
+class AudioDeviceObserver {
+ public:
+  virtual ~AudioDeviceObserver() = default;
+
+  // input/output devices updated or default device changed
+  virtual void OnDevicesUpdated() {}
+  virtual void OnSpeechActivityEvent(
+      AudioDeviceModule::SpeechActivityEvent event) {}
+
+  // AVAudioEngine lifecycle
+  virtual void OnEngineDidCreate(AVAudioEngine* engine) {}
+
+  virtual void OnEngineWillEnable(AVAudioEngine* engine, bool playout_enabled,
+                                  bool recording_enabled) {}
+
+  virtual void OnEngineWillStart(AVAudioEngine* engine, bool playout_enabled,
+                                 bool recording_enabled) {}
+
+  virtual void OnEngineDidStop(AVAudioEngine* engine, bool playout_enabled,
+                               bool recording_enabled) {}
+
+  virtual void OnEngineDidDisable(AVAudioEngine* engine, bool playout_enabled,
+                                  bool recording_enabled) {}
+
+  virtual void OnEngineWillRelease(AVAudioEngine* engine) {}
+
+  // Override the input node configuration with a custom implementation.
+  // Return true if the original implementation is used.
+  virtual bool OnEngineWillConnectInput(AVAudioEngine* engine, AVAudioNode* src,
+                                        AVAudioNode* dst,
+                                        AVAudioFormat* format) {
+    return false;
+  }
+
+  // Override the input node configuration with a custom implementation.
+  // Return true if the original implementation is used.
+  virtual bool OnEngineWillConnectOutput(AVAudioEngine* engine,
+                                         AVAudioNode* src, AVAudioNode* dst,
+                                         AVAudioFormat* format) {
+    return false;
+  }
 };
 
 }  // namespace webrtc
