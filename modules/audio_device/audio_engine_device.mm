@@ -989,14 +989,15 @@ void AudioEngineDevice::UpdateManualEngineState(EngineStateUpdate state) {
     fine_audio_buffer_.reset(new FineAudioBuffer(audio_device_buffer_.get()));
 
     if (!(this->observer_ != nullptr &&
-          this->observer_->OnEngineWillConnectOutput(
-              engine_manual_input_, engine_manual_input_.mainMixerNode, this->OutputNode(),
-              manual_render_rtc_format_))) {
-      // Default implementation.
-      [engine_manual_input_ connect:engine_manual_input_.mainMixerNode
-                                 to:this->OutputNode()
-                             format:manual_render_rtc_format_];
+          this->observer_->OnEngineWillConnectInput(engine_manual_input_, nil,
+                                                    engine_manual_input_.mainMixerNode,
+                                                    manual_render_rtc_format_))) {
+      // No default implementation since device is not used.
     }
+
+    [engine_manual_input_ connect:engine_manual_input_.mainMixerNode
+                               to:this->OutputNode()
+                           format:manual_render_rtc_format_];
 
   } else if (state.prev.IsInputEnabled() && !state.next.IsInputEnabled()) {
     LOGI() << "Disabling input for AVAudioEngine...";
@@ -1060,10 +1061,7 @@ void AudioEngineDevice::UpdateManualEngineState(EngineStateUpdate state) {
     render_thread_ = rtc::Thread::Create();
     render_thread_->SetName("render_thread", nullptr);
     render_thread_->Start();
-    render_thread_->PostTask([this] {
-      // RTC_DCHECK_RUN_ON(thread_);
-      this->StartRenderLoop();
-    });
+    render_thread_->PostTask([this] { this->StartRenderLoop(); });
   }
 
   if (state.prev.IsAnyEnabled() && !state.next.IsAnyEnabled()) {
