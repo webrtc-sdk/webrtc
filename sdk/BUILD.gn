@@ -1482,6 +1482,7 @@ if (is_ios || is_mac) {
           "objc/components/audio/RTCAudioProcessingModule.h",
           "objc/components/audio/RTCDefaultAudioProcessingModule.h",
           "objc/components/audio/RTCAudioCustomProcessingDelegate.h",
+          "objc/components/audio/RTCAudioProcessingConfig.h",
         ]
 
         if (target_environment != "xrdevice" && target_environment != "xrsimulator") {
@@ -1656,6 +1657,7 @@ if (is_ios || is_mac) {
           "objc/components/audio/RTCAudioProcessingModule.h",
           "objc/components/audio/RTCDefaultAudioProcessingModule.h",
           "objc/components/audio/RTCAudioCustomProcessingDelegate.h",
+          "objc/components/audio/RTCAudioProcessingConfig.h",
         ]
         if (!build_with_chromium) {
           sources += [
