@@ -186,10 +186,7 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
       }
     }
 
-    _native->StopPlayout();
-
-    if (_native->SetPlayoutDevice(index) == 0 && _native->InitPlayout() == 0 &&
-        _native->StartPlayout() == 0) {
+    if (_native->SetPlayoutDevice(index)) {
       return YES;
     }
 
@@ -234,10 +231,7 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
       }
     }
 
-    _native->StopRecording();
-
-    if (_native->SetRecordingDevice(index) == 0 && _native->InitRecording() == 0 &&
-        _native->StartRecording() == 0) {
+    if (_native->SetRecordingDevice(index)) {
       return YES;
     }
 
@@ -373,6 +367,42 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   if (module == nullptr) return;
 
   _workerThread->BlockingCall([module, value] { return module->SetDuckingLevel(value) == 0; });
+}
+
+- (BOOL)isVoiceProcessingBypassed {
+  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  if (module == nullptr) return NO;
+
+  return _workerThread->BlockingCall([module] {
+    bool value = false;
+    return module->VoiceProcessingBypassed(&value) == 0 ? value : NO;
+  });
+}
+
+- (void)setVoiceProcessingBypassed:(BOOL)enabled {
+  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  if (module == nullptr) return;
+
+  _workerThread->BlockingCall(
+      [module, enabled] { return module->SetVoiceProcessingBypassed(enabled) == 0; });
+}
+
+- (BOOL)isVoiceProcessingAGCEnabled {
+  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  if (module == nullptr) return NO;
+
+  return _workerThread->BlockingCall([module] {
+    bool value = false;
+    return module->VoiceProcessingAGCEnabled(&value) == 0 ? value : NO;
+  });
+}
+
+- (void)setVoiceProcessingAGCEnabled:(BOOL)enabled {
+  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  if (module == nullptr) return;
+
+  _workerThread->BlockingCall(
+      [module, enabled] { return module->SetVoiceProcessingAGCEnabled(enabled) == 0; });
 }
 
 #pragma mark - Private

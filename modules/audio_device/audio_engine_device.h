@@ -59,6 +59,10 @@ typedef void* AVAudioEngineManualRenderingBlock;
 #include "sdk/objc/base/RTCMacros.h"
 #include "sdk/objc/native/src/audio/audio_session_observer.h"
 
+#if TARGET_OS_OSX
+#import <CoreAudio/CoreAudio.h>
+#endif
+
 RTC_FWD_DECL_OBJC_CLASS(RTC_OBJC_TYPE(RTCNativeAudioSessionDelegateAdapter));
 
 namespace webrtc {
@@ -68,7 +72,7 @@ class FineAudioBuffer;
 class AudioEngineDevice : public AudioDeviceModule,
                           public AudioSessionObserver {
  public:
-  explicit AudioEngineDevice(bool bypass_voice_processing);
+  explicit AudioEngineDevice(bool voice_processing_bypassed);
   ~AudioEngineDevice() override;
 
   int32_t Init() override;
@@ -175,6 +179,12 @@ class AudioEngineDevice : public AudioDeviceModule,
   int32_t SetInitRecordingPersistentMode(bool enable);
   int32_t InitRecordingPersistentMode(bool* enabled);
 
+  int32_t SetVoiceProcessingBypassed(bool enable);
+  int32_t VoiceProcessingBypassed(bool* enabled);
+
+  int32_t SetVoiceProcessingAGCEnabled(bool enable);
+  int32_t VoiceProcessingAGCEnabled(bool* enabled);
+
   int32_t InitAndStartRecording();
 
   enum RenderMode { Device, Manual };
@@ -196,9 +206,14 @@ class AudioEngineDevice : public AudioDeviceModule,
     bool is_interrupted = false;
 
     RenderMode render_mode = RenderMode::Device;
-    bool voice_processing = true;
+    bool voice_processing_enabled = true;
+    bool voice_processing_bypassed = false;
+    bool voice_processing_agc_enabled = true;
     bool advanced_ducking = true;
     long ducking_level = 0;  // 0 = Default
+
+    uint32_t output_device_id = 0;  // kAudioObjectUnknown
+    uint32_t input_device_id = 0;   // kAudioObjectUnknown
 
     bool operator==(const EngineState& rhs) const {
       return input_enabled == rhs.input_enabled &&
@@ -211,15 +226,19 @@ class AudioEngineDevice : public AudioDeviceModule,
              input_muted == rhs.input_muted &&
              is_interrupted == rhs.is_interrupted &&
              render_mode == rhs.render_mode &&
-             voice_processing == rhs.voice_processing &&
+             voice_processing_enabled == rhs.voice_processing_enabled &&
+             voice_processing_bypassed == rhs.voice_processing_bypassed &&
+             voice_processing_agc_enabled == rhs.voice_processing_agc_enabled &&
              advanced_ducking == rhs.advanced_ducking &&
-             ducking_level == rhs.ducking_level;
+             ducking_level == rhs.ducking_level &&
+             output_device_id == rhs.output_device_id &&
+             input_device_id == rhs.input_device_id;
     }
 
     bool operator!=(const EngineState& rhs) const { return !(*this == rhs); }
 
     bool IsOutputInputLinked() const {
-      return input_follow_mode && voice_processing;
+      return input_follow_mode && voice_processing_enabled;
     }
 
     bool IsOutputEnabled() const {
@@ -288,12 +307,25 @@ class AudioEngineDevice : public AudioDeviceModule,
     }
 
     bool DidEndInterruption() const {
-      return prev.is_interrupted && next.is_interrupted;
+      return prev.is_interrupted && !next.is_interrupted;
     }
 
     bool DidUpdateAudioGraph() const {
       return (prev.IsInputEnabled() != next.IsInputEnabled()) ||
              (prev.IsOutputEnabled() != next.IsOutputEnabled());
+    }
+
+    bool DidUpdateOutputDevice() const {
+      return prev.output_device_id != next.output_device_id;
+    }
+
+    bool DidUpdateInputDevice() const {
+      return prev.input_device_id != next.input_device_id;
+    }
+
+    bool IsEngineRestartRequired() const {
+      return DidUpdateAudioGraph() || DidUpdateOutputDevice() ||
+             DidUpdateInputDevice();
     }
 
     // Special case to re-create engine when switching from Speaker & Mic ->
@@ -325,15 +357,21 @@ class AudioEngineDevice : public AudioDeviceModule,
   void UpdateManualEngineState(EngineStateUpdate state);
 
   // AudioEngine observer methods. May be called from any thread.
-  void OnEngineConfigurationChange();
+  void ReconfigureEngine(bool is_required);
+
+// Device related
+#if TARGET_OS_OSX
+  void UpdateDeviceInformation();
+  std::vector<AudioObjectID> input_device_ids_;
+  std::vector<AudioObjectID> output_device_ids_;
+  std::vector<std::string> output_device_labels_;
+  std::vector<std::string> input_device_labels_;
+#endif
 
   void DebugAudioEngine();
 
   void StartRenderLoop();
   AVAudioEngineManualRenderingBlock render_block_;
-
-  // Determines whether voice processing should be enabled or disabled.
-  const bool bypass_voice_processing_;
 
   // Thread that this object is created on.
   rtc::Thread* thread_;
@@ -367,20 +405,20 @@ class AudioEngineDevice : public AudioDeviceModule,
   double machTickUnitsToNanoseconds_;
 
   // AVAudioEngine objects
-  AVAudioEngine* engine_device_;
-  AVAudioEngine* engine_manual_input_;
+  AVAudioEngine* engine_device_ RTC_GUARDED_BY(thread_);
+  AVAudioEngine* engine_manual_input_ RTC_GUARDED_BY(thread_);
 
   // Used for manual rendering mode
   AVAudioFormat* manual_render_rtc_format_;  // Int16
 
   // Output related
-  AVAudioSourceNode* source_node_;
+  AVAudioSourceNode* source_node_ RTC_GUARDED_BY(thread_);
 
   // Input related nodes
-  AVAudioSinkNode* sink_node_;
-  AVAudioMixerNode* input_mixer_node_;
+  AVAudioSinkNode* sink_node_ RTC_GUARDED_BY(thread_);
+  AVAudioMixerNode* input_mixer_node_ RTC_GUARDED_BY(thread_);
 
-  void* configuration_observer_;
+  void* configuration_observer_ RTC_GUARDED_BY(thread_);
 };
 }  // namespace webrtc
 

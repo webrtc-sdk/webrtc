@@ -32,13 +32,15 @@
 #include "rtc_base/thread_annotations.h"
 #include "rtc_base/time_utils.h"
 
-#import "base/RTCLogging.h"
-
 #if defined(WEBRTC_IOS)
 #import "components/audio/RTCAudioSession+Private.h"
 #import "components/audio/RTCAudioSession.h"
 #import "components/audio/RTCAudioSessionConfiguration.h"
 #import "components/audio/RTCNativeAudioSessionDelegateAdapter.h"
+#endif
+
+#if TARGET_OS_OSX
+#import "./mac/audio_device_utils_mac.h"
 #endif
 
 namespace webrtc {
@@ -55,11 +57,11 @@ const useconds_t kStartEngineRetryDelayMs = 100;
 const size_t kMaximumFramesPerBuffer = 3072;
 const size_t kAudioSampleSize = 2;  // Signed 16-bit integer
 
-AudioEngineDevice::AudioEngineDevice(bool bypass_voice_processing)
-    : bypass_voice_processing_(bypass_voice_processing),
-      task_queue_factory_(CreateDefaultTaskQueueFactory()),
-      initialized_(false) {
-  LOGI() << "bypass_voice_processing " << bypass_voice_processing_;
+AudioEngineDevice::AudioEngineDevice(bool voice_processing_bypassed)
+    : task_queue_factory_(CreateDefaultTaskQueueFactory()), initialized_(false) {
+  LOGI() << "voice_processing_bypassed " << voice_processing_bypassed;
+
+  engine_state_.voice_processing_bypassed = voice_processing_bypassed;
 
   thread_ = rtc::Thread::Current();
   audio_device_buffer_.reset(new webrtc::AudioDeviceBuffer(task_queue_factory_.get()));
@@ -71,16 +73,6 @@ AudioEngineDevice::AudioEngineDevice(bool bypass_voice_processing)
   RTC_OBJC_TYPE(RTCAudioSession)* session = [RTC_OBJC_TYPE(RTCAudioSession) sharedInstance];
   [session addDelegate:audio_session_observer_];
 #endif
-
-  // Add observer for configuration changes
-  NSNotificationCenter* center = [NSNotificationCenter defaultCenter];
-  configuration_observer_ = (__bridge_retained void*)[center
-      addObserverForName:AVAudioEngineConfigurationChangeNotification
-                  object:engine_device_
-                   queue:nil
-              usingBlock:^(NSNotification* notification) {
-                OnEngineConfigurationChange();
-              }];
 
   mach_timebase_info_data_t tinfo;
   mach_timebase_info(&tinfo);
@@ -95,12 +87,6 @@ AudioEngineDevice::AudioEngineDevice(bool bypass_voice_processing)
 
 AudioEngineDevice::~AudioEngineDevice() {
   RTC_DCHECK_RUN_ON(thread_);
-
-  if (configuration_observer_) {
-    [[NSNotificationCenter defaultCenter]
-        removeObserver:(__bridge_transfer id)configuration_observer_];
-    configuration_observer_ = nil;
-  }
 
   safety_->SetNotAlive();
 
@@ -136,6 +122,14 @@ int32_t AudioEngineDevice::Init() {
       [RTC_OBJC_TYPE(RTCAudioSessionConfiguration) webRTCConfiguration];
   playout_parameters_.reset(config.sampleRate, config.outputNumberOfChannels);
   record_parameters_.reset(config.sampleRate, config.inputNumberOfChannels);
+#endif
+
+#if TARGET_OS_OSX
+  UpdateDeviceInformation();
+  engine_state_.output_device_id =
+      mac_audio_utils::GetDefaultOutputDeviceID().value_or(kAudioObjectUnknown);
+  engine_state_.input_device_id =
+      mac_audio_utils::GetDefaultInputDeviceID().value_or(kAudioObjectUnknown);
 #endif
 
   initialized_ = true;
@@ -573,7 +567,22 @@ int32_t AudioEngineDevice::PlayoutIsAvailable(bool* available) {
 }
 
 int32_t AudioEngineDevice::SetPlayoutDevice(uint16_t index) {
-  LOGW() << "SetPlayoutDevice: Not implemented, value: " << index;
+  LOGW() << "SetPlayoutDevice value: " << index;
+  RTC_DCHECK_RUN_ON(thread_);
+
+#if TARGET_OS_OSX
+  if (index > (output_device_ids_.size() - 1)) {
+    LOGE() << "Device index is out of range: " << index;
+    return -1;
+  }
+
+  AudioDeviceID output_device_id = output_device_ids_[index];
+
+  SetEngineState([output_device_id](EngineState state) -> EngineState {
+    state.output_device_id = output_device_id;
+    return state;
+  });
+#endif
 
   return 0;
 }
@@ -583,18 +592,47 @@ int32_t AudioEngineDevice::SetPlayoutDevice(AudioDeviceModule::WindowsDeviceType
 
   return -1;
 }
-
 int32_t AudioEngineDevice::PlayoutDeviceName(uint16_t index, char name[kAdmMaxDeviceNameSize],
                                              char guid[kAdmMaxGuidSize]) {
-  // LOGW() << "PlayoutDeviceName: Not implemented";
+  RTC_DCHECK_RUN_ON(thread_);
 
+#if TARGET_OS_OSX
+  RTC_DCHECK(output_device_ids_.size() == output_device_labels_.size());
+
+  if ((index > (output_device_ids_.size() - 1)) || (name == NULL)) {
+    LOGE() << "Device index is out of range: " << index;
+    return -1;
+  }
+
+  memset(name, 0, kAdmMaxDeviceNameSize);
+  memset(guid, 0, kAdmMaxGuidSize);
+
+  // Get device name
+  strncpy(name, output_device_labels_[index].c_str(), kAdmMaxDeviceNameSize - 1);
+
+  std::optional<std::string> device_guid =
+      mac_audio_utils::GetDeviceUniqueID(output_device_ids_[index]);
+  if (device_guid) {
+    strncpy(guid, device_guid->c_str(), kAdmMaxGuidSize - 1);
+  } else {
+    LOGE() << "Failed to get device unique ID for device: " << output_device_ids_[index];
+    return -1;
+  }
+
+  return 0;
+#else
   return -1;
+#endif
 }
 
 int16_t AudioEngineDevice::PlayoutDevices() {
-  // LOGI() << "PlayoutDevices";
+  RTC_DCHECK_RUN_ON(thread_);
 
+#if TARGET_OS_OSX
+  return output_device_ids_.size();
+#else
   return (int16_t)1;
+#endif
 }
 
 // ----------------------------------------------------------------------------------------------------
@@ -602,13 +640,52 @@ int16_t AudioEngineDevice::PlayoutDevices() {
 
 int32_t AudioEngineDevice::RecordingDeviceName(uint16_t index, char name[kAdmMaxDeviceNameSize],
                                                char guid[kAdmMaxGuidSize]) {
-  // LOGW() << "RecordingDeviceName";
+#if TARGET_OS_OSX
+  RTC_DCHECK(input_device_ids_.size() == input_device_labels_.size());
 
+  if ((index > (input_device_ids_.size() - 1)) || (name == NULL)) {
+    LOGE() << "Device index is out of range: " << index;
+    return -1;
+  }
+
+  memset(name, 0, kAdmMaxDeviceNameSize);
+  memset(guid, 0, kAdmMaxGuidSize);
+
+  // Get device name
+  strncpy(name, input_device_labels_[index].c_str(), kAdmMaxDeviceNameSize - 1);
+
+  std::optional<std::string> device_guid =
+      mac_audio_utils::GetDeviceUniqueID(input_device_ids_[index]);
+  if (device_guid) {
+    strncpy(guid, device_guid->c_str(), kAdmMaxGuidSize - 1);
+  } else {
+    LOGE() << "Failed to get device unique ID for device: " << input_device_ids_[index];
+    return -1;
+  }
+
+  return 0;
+#else
   return -1;
+#endif
 }
 
 int32_t AudioEngineDevice::SetRecordingDevice(uint16_t index) {
   LOGI() << "SetRecordingDevice, index: " << index;
+  RTC_DCHECK_RUN_ON(thread_);
+
+#if TARGET_OS_OSX
+  if (index > (input_device_ids_.size() - 1)) {
+    RTC_LOG(LS_ERROR) << "Device index is out of range";
+    return -1;
+  }
+
+  AudioDeviceID input_device_id = input_device_ids_[index];
+
+  SetEngineState([input_device_id](EngineState state) -> EngineState {
+    state.input_device_id = input_device_id;
+    return state;
+  });
+#endif
 
   return 0;
 }
@@ -631,9 +708,13 @@ int32_t AudioEngineDevice::RecordingIsAvailable(bool* available) {
 }
 
 int16_t AudioEngineDevice::RecordingDevices() {
-  // LOGI() << "RecordingDevices";
+  RTC_DCHECK_RUN_ON(thread_);
 
+#if TARGET_OS_OSX
+  return input_device_ids_.size();
+#else
   return (int16_t)1;
+#endif
 }
 
 //
@@ -650,15 +731,15 @@ int32_t AudioEngineDevice::RegisterAudioCallback(AudioTransport* audioCallback) 
 // ----------------------------------------------------------------------------------------------------
 // Misc
 
-bool AudioEngineDevice::BuiltInAECIsAvailable() const { return false; }
+bool AudioEngineDevice::BuiltInAECIsAvailable() const { return true; }
 
-bool AudioEngineDevice::BuiltInAGCIsAvailable() const { return false; }
+bool AudioEngineDevice::BuiltInAGCIsAvailable() const { return true; }
 
 bool AudioEngineDevice::BuiltInNSIsAvailable() const { return false; }
 
-int32_t AudioEngineDevice::EnableBuiltInAEC(bool enable) { return -1; }
+int32_t AudioEngineDevice::EnableBuiltInAEC(bool enable) { return 0; }
 
-int32_t AudioEngineDevice::EnableBuiltInAGC(bool enable) { return -1; }
+int32_t AudioEngineDevice::EnableBuiltInAGC(bool enable) { return 0; }
 
 int32_t AudioEngineDevice::EnableBuiltInNS(bool enable) { return -1; }
 
@@ -692,6 +773,56 @@ int32_t AudioEngineDevice::SetObserver(AudioDeviceObserver* observer) {
 
 // ----------------------------------------------------------------------------------------------------
 // Unique methods to AudioEngineDevice
+
+int32_t AudioEngineDevice::VoiceProcessingBypassed(bool* enabled) {
+  LOGI() << "VoiceProcessingBypassed";
+  RTC_DCHECK_RUN_ON(thread_);
+
+  if (enabled == nullptr) {
+    return -1;
+  }
+
+  *enabled = engine_state_.voice_processing_bypassed;
+
+  return 0;
+}
+
+int32_t AudioEngineDevice::SetVoiceProcessingBypassed(bool enable) {
+  RTC_DCHECK_RUN_ON(thread_);
+  LOGI() << "SetVoiceProcessingBypassed: " << enable;
+
+  SetEngineState([enable](EngineState state) -> EngineState {
+    state.voice_processing_bypassed = enable;
+    return state;
+  });
+
+  return 0;
+}
+
+int32_t AudioEngineDevice::VoiceProcessingAGCEnabled(bool* enabled) {
+  LOGI() << "VoiceProcessingAGCEnabled";
+  RTC_DCHECK_RUN_ON(thread_);
+
+  if (enabled == nullptr) {
+    return -1;
+  }
+
+  *enabled = engine_state_.voice_processing_agc_enabled;
+
+  return 0;
+}
+
+int32_t AudioEngineDevice::SetVoiceProcessingAGCEnabled(bool enable) {
+  RTC_DCHECK_RUN_ON(thread_);
+  LOGI() << "SetVoiceProcessingAGCEnabled: " << enable;
+
+  SetEngineState([enable](EngineState state) -> EngineState {
+    state.voice_processing_agc_enabled = enable;
+    return state;
+  });
+
+  return 0;
+}
 
 int32_t AudioEngineDevice::ManualRenderingMode(bool* enabled) {
   LOGI() << "ManualRenderingMode";
@@ -812,22 +943,53 @@ int32_t AudioEngineDevice::InitRecordingPersistentMode(bool* enabled) {
 // ----------------------------------------------------------------------------------------------------
 // Private - Engine Related
 
-void AudioEngineDevice::OnEngineConfigurationChange() {
-  LOGI() << "OnEngineConfigurationChange";
+void AudioEngineDevice::ReconfigureEngine(bool is_required) {
+  LOGI() << "ReconfigureEngine is_required: " << is_required;
 
-  // thread_->PostTask(SafeTask(safety_, [this] {
-  //   RTC_DCHECK_RUN_ON(thread_);
+  // TODO: More optimizations
+  // We only need to re-attach the input / output nodes with updated sample rate etc.
 
-  //   EngineState previous_state = this->engine_state_;
+  thread_->PostTask(SafeTask(safety_, [this] {
+    RTC_DCHECK_RUN_ON(thread_);
 
-  //   this->SetEngineState([](EngineState state) -> EngineState {
-  //     return EngineState();  // Return default state to shutdown
-  //   });
+    EngineState current_state = this->engine_state_;
 
-  //   this->SetEngineState([previous_state](EngineState state) -> EngineState {
-  //     return previous_state;  // Recover engine state
-  //   });
-  // }));
+    // Re-configure is only for device mode
+    if (current_state.render_mode != RenderMode::Device) return;
+
+    //     bool is_reconfigure_required = is_required;
+
+    // #if defined(WEBRTC_IOS)
+    //     RTC_OBJC_TYPE(RTCAudioSession)* session = [RTC_OBJC_TYPE(RTCAudioSession)
+    //     sharedInstance]; const double new_sample_rate = session.sampleRate; if
+    //     (!is_reconfigure_required && current_state.output_enabled) {
+    //       AVAudioFormat* format = [this->OutputNode() outputFormatForBus:0];
+    //       if (format.sampleRate != new_sample_rate) {
+    //         is_reconfigure_required = true;
+    //       }
+    //     }
+    // #endif
+
+    //     // No configuration required
+    //     if (!is_reconfigure_required) {
+    //       LOGI() << "ReconfigureEngine no configuration required";
+    //       return;
+    //     }
+
+    EngineState shutdown_state = this->engine_state_;
+    shutdown_state.input_enabled = false;
+    shutdown_state.input_running = false;
+    shutdown_state.output_enabled = false;
+    shutdown_state.output_running = false;
+
+    this->SetEngineState([shutdown_state](EngineState state) -> EngineState {
+      return shutdown_state;  // Shutdown engine
+    });
+
+    this->SetEngineState([current_state](EngineState state) -> EngineState {
+      return current_state;  // Recover engine state
+    });
+  }));
 }
 
 bool AudioEngineDevice::IsMicrophonePermissionGranted() {
@@ -989,14 +1151,15 @@ void AudioEngineDevice::UpdateManualEngineState(EngineStateUpdate state) {
     fine_audio_buffer_.reset(new FineAudioBuffer(audio_device_buffer_.get()));
 
     if (!(this->observer_ != nullptr &&
-          this->observer_->OnEngineWillConnectOutput(
-              engine_manual_input_, engine_manual_input_.mainMixerNode, this->OutputNode(),
-              manual_render_rtc_format_))) {
-      // Default implementation.
-      [engine_manual_input_ connect:engine_manual_input_.mainMixerNode
-                                 to:this->OutputNode()
-                             format:manual_render_rtc_format_];
+          this->observer_->OnEngineWillConnectInput(engine_manual_input_, nil,
+                                                    engine_manual_input_.mainMixerNode,
+                                                    manual_render_rtc_format_))) {
+      // No default implementation since device is not used.
     }
+
+    [engine_manual_input_ connect:engine_manual_input_.mainMixerNode
+                               to:this->OutputNode()
+                           format:manual_render_rtc_format_];
 
   } else if (state.prev.IsInputEnabled() && !state.next.IsInputEnabled()) {
     LOGI() << "Disabling input for AVAudioEngine...";
@@ -1060,10 +1223,7 @@ void AudioEngineDevice::UpdateManualEngineState(EngineStateUpdate state) {
     render_thread_ = rtc::Thread::Create();
     render_thread_->SetName("render_thread", nullptr);
     render_thread_->Start();
-    render_thread_->PostTask([this] {
-      // RTC_DCHECK_RUN_ON(thread_);
-      this->StartRenderLoop();
-    });
+    render_thread_->PostTask([this] { this->StartRenderLoop(); });
   }
 
   if (state.prev.IsAnyEnabled() && !state.next.IsAnyEnabled()) {
@@ -1080,10 +1240,19 @@ void AudioEngineDevice::UpdateDeviceEngineState(EngineStateUpdate state) {
   RTC_DCHECK(engine_manual_input_ == nullptr);
 
   if (state.prev.IsAnyRunning() &&
-      (!state.next.IsAnyRunning() || state.DidUpdateAudioGraph() || state.DidBeginInterruption() ||
-       state.IsEngineRecreateRequired())) {
+      (!state.next.IsAnyRunning() || state.IsEngineRestartRequired() ||
+       state.DidBeginInterruption() || state.IsEngineRecreateRequired())) {
     LOGI() << "Stopping AVAudioEngine...";
     RTC_DCHECK(engine_device_ != nil);
+
+    if (configuration_observer_ != nullptr) {
+      NSNotificationCenter* center = [NSNotificationCenter defaultCenter];
+      [center removeObserver:(__bridge_transfer id)configuration_observer_
+                        name:AVAudioEngineConfigurationChangeNotification
+                      object:engine_device_];
+      configuration_observer_ = nil;
+    }
+
     [engine_device_ stop];
 
     if (observer_ != nullptr) {
@@ -1103,7 +1272,8 @@ void AudioEngineDevice::UpdateDeviceEngineState(EngineStateUpdate state) {
   if (state.next.IsAnyEnabled() &&
       (!state.prev.IsAnyEnabled() || state.IsEngineRecreateRequired())) {
     LOGI() << "Creating AVAudioEngine (device)...";
-    RTC_DCHECK(engine_device_ == nullptr);
+    RTC_DCHECK(engine_device_ == nil);
+
     engine_device_ = [[AVAudioEngine alloc] init];
 
     if (observer_ != nullptr) {
@@ -1367,6 +1537,56 @@ void AudioEngineDevice::UpdateDeviceEngineState(EngineStateUpdate state) {
   }
 #endif
 
+  // Bypass
+  if (state.next.IsInputEnabled() && this->InputNode().voiceProcessingEnabled &&
+      this->InputNode().voiceProcessingBypassed != state.next.voice_processing_bypassed) {
+    LOGI() << "setting voiceProcessingBypassed: " << state.next.voice_processing_bypassed;
+    this->InputNode().voiceProcessingBypassed = state.next.voice_processing_bypassed;
+  }
+
+  // AGC
+  if (state.next.IsInputEnabled() && this->InputNode().voiceProcessingEnabled &&
+      this->InputNode().voiceProcessingAGCEnabled != state.next.voice_processing_agc_enabled) {
+    LOGI() << "setting voiceProcessingAGCEnabled: " << state.next.voice_processing_agc_enabled;
+    this->InputNode().voiceProcessingAGCEnabled = state.next.voice_processing_agc_enabled;
+  }
+
+#if TARGET_OS_OSX
+
+  if (state.next.IsAnyEnabled() &&
+      (!state.prev.IsAnyEnabled() || state.IsEngineRecreateRequired() ||
+       state.DidUpdateInputDevice() || state.DidUpdateOutputDevice())) {
+    if (state.next.IsInputEnabled() && state.next.input_device_id != 0) {
+      // Input device selection
+      OSStatus err = noErr;
+      uint32_t input_deviceId = state.next.input_device_id;
+      LOGI() << "Setting input device: " << input_deviceId;
+      AudioUnit inputUnit = this->InputNode().audioUnit;
+      err =
+          AudioUnitSetProperty(inputUnit, kAudioOutputUnitProperty_CurrentDevice,
+                               kAudioUnitScope_Global, 1, &input_deviceId, sizeof(input_deviceId));
+      if (err != noErr) {
+        LOGE() << "Failed to set input device: " << input_deviceId;
+      }
+    }
+
+    if (state.next.IsOutputEnabled() && state.next.output_device_id != 0) {
+      // Output device selection
+      OSStatus err = noErr;
+      uint32_t output_deviceId = state.next.output_device_id;
+      LOGI() << "Setting output device: " << output_deviceId;
+      AudioUnit outputUnit = this->OutputNode().audioUnit;
+      err = AudioUnitSetProperty(outputUnit, kAudioOutputUnitProperty_CurrentDevice,
+                                 kAudioUnitScope_Global, 0, &output_deviceId,
+                                 sizeof(output_deviceId));
+      if (err != noErr) {
+        LOGE() << "Failed to set output device: " << output_deviceId;
+      }
+    }
+  }
+
+#endif
+
   // Start playout buffer if output is running
   if (state.next.IsOutputEnabled() && !audio_device_buffer_->IsPlaying()) {
     if (engine_device_ != nullptr) {
@@ -1390,8 +1610,8 @@ void AudioEngineDevice::UpdateDeviceEngineState(EngineStateUpdate state) {
   }
 
   if (state.next.IsAnyRunning()) {
-    if (!state.prev.IsAnyRunning() || state.DidEndInterruption() || state.DidUpdateAudioGraph() ||
-        state.IsEngineRecreateRequired()) {
+    if (!state.prev.IsAnyRunning() || state.DidEndInterruption() ||
+        state.IsEngineRestartRequired() || state.IsEngineRecreateRequired()) {
       if (observer_ != nullptr) {
         observer_->OnEngineWillStart(engine_device_, state.next.IsOutputEnabled(),
                                      state.next.IsInputEnabled());
@@ -1418,7 +1638,19 @@ void AudioEngineDevice::UpdateDeviceEngineState(EngineStateUpdate state) {
         }
       }
 
-      if (!start_result) {
+      if (start_result) {
+        RTC_DCHECK(configuration_observer_ == nullptr);
+        // Add observer for configuration changes
+        NSNotificationCenter* center = [NSNotificationCenter defaultCenter];
+        configuration_observer_ = (__bridge_retained void*)[center
+            addObserverForName:AVAudioEngineConfigurationChangeNotification
+                        object:engine_device_
+                         queue:nil
+                    usingBlock:^(NSNotification* notification) {
+                      ReconfigureEngine(true);
+                    }];
+
+      } else {
         LOGE() << "Failed to start engine after " << kStartEngineMaxRetries << " attempts";
         DebugAudioEngine();
       }
@@ -1426,9 +1658,12 @@ void AudioEngineDevice::UpdateDeviceEngineState(EngineStateUpdate state) {
   }
 
   if (state.prev.IsAnyEnabled() && !state.next.IsAnyEnabled()) {
+    RTC_DCHECK(engine_device_ != nullptr);
+
     if (observer_ != nullptr) {
       observer_->OnEngineWillRelease(engine_device_);
     }
+
     LOGI() << "Releasing AVAudioEngine...";
     engine_device_ = nil;
   }
@@ -1500,15 +1735,50 @@ AVAudioOutputNode* AudioEngineDevice::OutputNode() {
 }
 
 // ----------------------------------------------------------------------------------------------------
+// Private - Device access
+
+#if TARGET_OS_OSX
+
+void AudioEngineDevice::UpdateDeviceInformation() {
+  using namespace webrtc::mac_audio_utils;
+
+  input_device_ids_.clear();
+  output_device_ids_.clear();
+  input_device_labels_.clear();
+  output_device_labels_.clear();
+
+  std::vector<AudioObjectID> all_device_ids = GetAllAudioDeviceIDs();
+
+  for (AudioObjectID device_id : all_device_ids) {
+    if (IsInputDevice(device_id)) {
+      input_device_ids_.push_back(device_id);
+      auto label = GetDeviceLabel(device_id, true);
+      if (label) {
+        input_device_labels_.push_back(*label);
+      } else {
+        input_device_labels_.push_back("Unknown Input Device");
+      }
+    }
+
+    if (IsOutputDevice(device_id)) {
+      output_device_ids_.push_back(device_id);
+      auto label = GetDeviceLabel(device_id, false);
+      if (label) {
+        output_device_labels_.push_back(*label);
+      } else {
+        output_device_labels_.push_back("Unknown Output Device");
+      }
+    }
+  }
+}
+
+#endif
+
+// ----------------------------------------------------------------------------------------------------
 // Private - Debug
 
 void AudioEngineDevice::DebugAudioEngine() {
   RTC_DCHECK_RUN_ON(thread_);
-
-#if TARGET_OS_IOS
-  RTC_OBJC_TYPE(RTCAudioSession)* session = [RTC_OBJC_TYPE(RTCAudioSession) sharedInstance];
-  RTCLog(@"RTCAudioSession %@", session);
-#endif
 
   auto padded_string = [](int pad) { return std::string(pad * 2, ' '); };
 
@@ -1558,6 +1828,7 @@ void AudioEngineDevice::DebugAudioEngine() {
 
   std::function<void(AVAudioNode*, int)> print_node;
   print_node = [this, &padded_string, &audio_format](AVAudioNode* node, int base_depth = 0) {
+    RTC_DCHECK_RUN_ON(thread_);
     LOGI() << padded_string(base_depth) << NSStringFromClass([node class]).UTF8String << "."
            << node.hash;
 
