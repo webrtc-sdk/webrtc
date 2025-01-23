@@ -427,15 +427,10 @@ void WebRtcVoiceEngine::Init() {
   // Set default engine options.
   {
     AudioOptions options;
-    options.echo_cancellation = true;
-    options.auto_gain_control = true;
-#if defined(WEBRTC_IOS)
-    // On iOS, VPIO provides built-in NS.
+    options.echo_cancellation = false;
+    options.auto_gain_control = false;
     options.noise_suppression = false;
-#else
-    options.noise_suppression = true;
-#endif
-    options.highpass_filter = true;
+    options.highpass_filter = false;
     options.stereo_swapping = false;
     options.audio_jitter_buffer_max_packets = 200;
     options.audio_jitter_buffer_fast_accelerate = false;
@@ -496,12 +491,16 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
     options.echo_cancellation = false;
     RTC_LOG(LS_INFO) << "Always disable AEC on iOS. Use built-in instead.";
   }
+#elif defined(WEBRTC_MAC)
+  // On macOS, VPIO provides built-in EC.
+  options.echo_cancellation = false;
+  RTC_LOG(LS_INFO) << "Always disable AEC on macOS. Use built-in instead.";
 #elif defined(WEBRTC_ANDROID)
   use_mobile_software_aec = true;
 #endif
 
 // Set and adjust gain control options.
-#if defined(WEBRTC_IOS) && !TARGET_OS_SIMULATOR
+#if (defined(WEBRTC_IOS) && !TARGET_OS_SIMULATOR) || defined(WEBRTC_MAC)
   // On iOS, VPIO provides built-in AGC.
   options.auto_gain_control = false;
   RTC_LOG(LS_INFO) << "Always disable AGC on iOS. Use built-in instead.";
