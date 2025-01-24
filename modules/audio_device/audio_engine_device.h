@@ -68,7 +68,7 @@ class FineAudioBuffer;
 class AudioEngineDevice : public AudioDeviceModule,
                           public AudioSessionObserver {
  public:
-  explicit AudioEngineDevice(bool bypass_voice_processing);
+  explicit AudioEngineDevice(bool voice_processing_bypassed);
   ~AudioEngineDevice() override;
 
   int32_t Init() override;
@@ -175,6 +175,12 @@ class AudioEngineDevice : public AudioDeviceModule,
   int32_t SetInitRecordingPersistentMode(bool enable);
   int32_t InitRecordingPersistentMode(bool* enabled);
 
+  int32_t SetVoiceProcessingBypassed(bool enable);
+  int32_t VoiceProcessingBypassed(bool* enabled);
+
+  int32_t SetVoiceProcessingAGCEnabled(bool enable);
+  int32_t VoiceProcessingAGCEnabled(bool* enabled);
+
   int32_t InitAndStartRecording();
 
   enum RenderMode { Device, Manual };
@@ -196,7 +202,9 @@ class AudioEngineDevice : public AudioDeviceModule,
     bool is_interrupted = false;
 
     RenderMode render_mode = RenderMode::Device;
-    bool voice_processing = true;
+    bool voice_processing_enabled = true;
+    bool voice_processing_bypassed = false;
+    bool voice_processing_agc_enabled = true;
     bool advanced_ducking = true;
     long ducking_level = 0;  // 0 = Default
 
@@ -211,7 +219,9 @@ class AudioEngineDevice : public AudioDeviceModule,
              input_muted == rhs.input_muted &&
              is_interrupted == rhs.is_interrupted &&
              render_mode == rhs.render_mode &&
-             voice_processing == rhs.voice_processing &&
+             voice_processing_enabled == rhs.voice_processing_enabled &&
+             voice_processing_bypassed == rhs.voice_processing_bypassed &&
+             voice_processing_agc_enabled == rhs.voice_processing_agc_enabled &&
              advanced_ducking == rhs.advanced_ducking &&
              ducking_level == rhs.ducking_level;
     }
@@ -219,7 +229,7 @@ class AudioEngineDevice : public AudioDeviceModule,
     bool operator!=(const EngineState& rhs) const { return !(*this == rhs); }
 
     bool IsOutputInputLinked() const {
-      return input_follow_mode && voice_processing;
+      return input_follow_mode && voice_processing_enabled;
     }
 
     bool IsOutputEnabled() const {
@@ -331,9 +341,6 @@ class AudioEngineDevice : public AudioDeviceModule,
 
   void StartRenderLoop();
   AVAudioEngineManualRenderingBlock render_block_;
-
-  // Determines whether voice processing should be enabled or disabled.
-  const bool bypass_voice_processing_;
 
   // Thread that this object is created on.
   rtc::Thread* thread_;

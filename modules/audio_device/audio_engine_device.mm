@@ -55,11 +55,11 @@ const useconds_t kStartEngineRetryDelayMs = 100;
 const size_t kMaximumFramesPerBuffer = 3072;
 const size_t kAudioSampleSize = 2;  // Signed 16-bit integer
 
-AudioEngineDevice::AudioEngineDevice(bool bypass_voice_processing)
-    : bypass_voice_processing_(bypass_voice_processing),
-      task_queue_factory_(CreateDefaultTaskQueueFactory()),
-      initialized_(false) {
-  LOGI() << "bypass_voice_processing " << bypass_voice_processing_;
+AudioEngineDevice::AudioEngineDevice(bool voice_processing_bypassed)
+    : task_queue_factory_(CreateDefaultTaskQueueFactory()), initialized_(false) {
+  LOGI() << "voice_processing_bypassed " << voice_processing_bypassed;
+
+  engine_state_.voice_processing_bypassed = voice_processing_bypassed;
 
   thread_ = rtc::Thread::Current();
   audio_device_buffer_.reset(new webrtc::AudioDeviceBuffer(task_queue_factory_.get()));
@@ -692,6 +692,56 @@ int32_t AudioEngineDevice::SetObserver(AudioDeviceObserver* observer) {
 
 // ----------------------------------------------------------------------------------------------------
 // Unique methods to AudioEngineDevice
+
+int32_t AudioEngineDevice::VoiceProcessingBypassed(bool* enabled) {
+  LOGI() << "VoiceProcessingBypassed";
+  RTC_DCHECK_RUN_ON(thread_);
+
+  if (enabled == nullptr) {
+    return -1;
+  }
+
+  *enabled = engine_state_.voice_processing_bypassed;
+
+  return 0;
+}
+
+int32_t AudioEngineDevice::SetVoiceProcessingBypassed(bool enable) {
+  RTC_DCHECK_RUN_ON(thread_);
+  LOGI() << "SetVoiceProcessingBypassed: " << enable;
+
+  SetEngineState([enable](EngineState state) -> EngineState {
+    state.voice_processing_bypassed = enable;
+    return state;
+  });
+
+  return 0;
+}
+
+int32_t AudioEngineDevice::VoiceProcessingAGCEnabled(bool* enabled) {
+  LOGI() << "VoiceProcessingAGCEnabled";
+  RTC_DCHECK_RUN_ON(thread_);
+
+  if (enabled == nullptr) {
+    return -1;
+  }
+
+  *enabled = engine_state_.voice_processing_agc_enabled;
+
+  return 0;
+}
+
+int32_t AudioEngineDevice::SetVoiceProcessingAGCEnabled(bool enable) {
+  RTC_DCHECK_RUN_ON(thread_);
+  LOGI() << "SetVoiceProcessingAGCEnabled: " << enable;
+
+  SetEngineState([enable](EngineState state) -> EngineState {
+    state.voice_processing_agc_enabled = enable;
+    return state;
+  });
+
+  return 0;
+}
 
 int32_t AudioEngineDevice::ManualRenderingMode(bool* enabled) {
   LOGI() << "ManualRenderingMode";
@@ -1364,6 +1414,20 @@ void AudioEngineDevice::UpdateDeviceEngineState(EngineStateUpdate state) {
     }
   }
 #endif
+
+  // Bypass
+  if (state.next.IsInputEnabled() && this->InputNode().voiceProcessingEnabled &&
+      this->InputNode().voiceProcessingBypassed != state.next.voice_processing_bypassed) {
+    LOGI() << "setting voiceProcessingBypassed: " << state.next.voice_processing_bypassed;
+    this->InputNode().voiceProcessingBypassed = state.next.voice_processing_bypassed;
+  }
+
+  // AGC
+  if (state.next.IsInputEnabled() && this->InputNode().voiceProcessingEnabled &&
+      this->InputNode().voiceProcessingAGCEnabled != state.next.voice_processing_agc_enabled) {
+    LOGI() << "setting voiceProcessingAGCEnabled: " << state.next.voice_processing_agc_enabled;
+    this->InputNode().voiceProcessingAGCEnabled = state.next.voice_processing_agc_enabled;
+  }
 
   // Start playout buffer if output is running
   if (state.next.IsOutputEnabled() && !audio_device_buffer_->IsPlaying()) {
