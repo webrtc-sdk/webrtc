@@ -22,8 +22,14 @@ NS_ASSUME_NONNULL_BEGIN
 RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCAudioProcessingConfig) : NSObject 
 
-@property(nonatomic, assign) BOOL echoCancellerEnabled;
-@property(nonatomic, assign) BOOL echoCancellerMobileMode;
+@property(nonatomic, assign) BOOL isEchoCancellationEnabled;
+@property(nonatomic, assign) BOOL isEchoCancellationMobileMode;
+
+@property(nonatomic, assign) BOOL isNoiseSuppressionEnabled;
+@property(nonatomic, assign) BOOL isHighpassFilterEnabled;
+
+@property(nonatomic, assign) BOOL isAutoGainControl1Enabled;
+@property(nonatomic, assign) BOOL isAutoGainControl2Enabled;
 
 
 @end

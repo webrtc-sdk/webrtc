@@ -24,9 +24,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE (RTCAudioProcessingModule)<NSObject>
 
-- (void)applyConfig: (RTC_OBJC_TYPE(RTCAudioProcessingConfig) *)config;
-
-// TODO: Implement...
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCAudioProcessingConfig) * config;
 
 @end
 
