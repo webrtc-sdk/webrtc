@@ -298,7 +298,7 @@ class AudioEngineDevice : public AudioDeviceModule,
     }
 
     bool DidEndInterruption() const {
-      return prev.is_interrupted && next.is_interrupted;
+      return prev.is_interrupted && !next.is_interrupted;
     }
 
     bool DidUpdateAudioGraph() const {
@@ -335,7 +335,7 @@ class AudioEngineDevice : public AudioDeviceModule,
   void UpdateManualEngineState(EngineStateUpdate state);
 
   // AudioEngine observer methods. May be called from any thread.
-  void OnEngineConfigurationChange();
+  void ReconfigureEngine(bool is_required);
 
   void DebugAudioEngine();
 
@@ -374,20 +374,20 @@ class AudioEngineDevice : public AudioDeviceModule,
   double machTickUnitsToNanoseconds_;
 
   // AVAudioEngine objects
-  AVAudioEngine* engine_device_;
-  AVAudioEngine* engine_manual_input_;
+  AVAudioEngine* engine_device_ RTC_GUARDED_BY(thread_);
+  AVAudioEngine* engine_manual_input_ RTC_GUARDED_BY(thread_);
 
   // Used for manual rendering mode
   AVAudioFormat* manual_render_rtc_format_;  // Int16
 
   // Output related
-  AVAudioSourceNode* source_node_;
+  AVAudioSourceNode* source_node_ RTC_GUARDED_BY(thread_);
 
   // Input related nodes
-  AVAudioSinkNode* sink_node_;
-  AVAudioMixerNode* input_mixer_node_;
+  AVAudioSinkNode* sink_node_ RTC_GUARDED_BY(thread_);
+  AVAudioMixerNode* input_mixer_node_ RTC_GUARDED_BY(thread_);
 
-  void* configuration_observer_;
+  void* configuration_observer_ RTC_GUARDED_BY(thread_);
 };
 }  // namespace webrtc
 

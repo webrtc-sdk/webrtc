@@ -72,16 +72,6 @@ AudioEngineDevice::AudioEngineDevice(bool voice_processing_bypassed)
   [session addDelegate:audio_session_observer_];
 #endif
 
-  // Add observer for configuration changes
-  NSNotificationCenter* center = [NSNotificationCenter defaultCenter];
-  configuration_observer_ = (__bridge_retained void*)[center
-      addObserverForName:AVAudioEngineConfigurationChangeNotification
-                  object:engine_device_
-                   queue:nil
-              usingBlock:^(NSNotification* notification) {
-                OnEngineConfigurationChange();
-              }];
-
   mach_timebase_info_data_t tinfo;
   mach_timebase_info(&tinfo);
   machTickUnitsToNanoseconds_ = (double)tinfo.numer / tinfo.denom;
@@ -95,12 +85,6 @@ AudioEngineDevice::AudioEngineDevice(bool voice_processing_bypassed)
 
 AudioEngineDevice::~AudioEngineDevice() {
   RTC_DCHECK_RUN_ON(thread_);
-
-  if (configuration_observer_) {
-    [[NSNotificationCenter defaultCenter]
-        removeObserver:(__bridge_transfer id)configuration_observer_];
-    configuration_observer_ = nil;
-  }
 
   safety_->SetNotAlive();
 
@@ -862,22 +846,53 @@ int32_t AudioEngineDevice::InitRecordingPersistentMode(bool* enabled) {
 // ----------------------------------------------------------------------------------------------------
 // Private - Engine Related
 
-void AudioEngineDevice::OnEngineConfigurationChange() {
-  LOGI() << "OnEngineConfigurationChange";
+void AudioEngineDevice::ReconfigureEngine(bool is_required) {
+  LOGI() << "ReconfigureEngine is_required: " << is_required;
 
-  // thread_->PostTask(SafeTask(safety_, [this] {
-  //   RTC_DCHECK_RUN_ON(thread_);
+  // TODO: More optimizations
+  // We only need to re-attach the input / output nodes with updated sample rate etc.
 
-  //   EngineState previous_state = this->engine_state_;
+  thread_->PostTask(SafeTask(safety_, [this] {
+    RTC_DCHECK_RUN_ON(thread_);
 
-  //   this->SetEngineState([](EngineState state) -> EngineState {
-  //     return EngineState();  // Return default state to shutdown
-  //   });
+    EngineState current_state = this->engine_state_;
 
-  //   this->SetEngineState([previous_state](EngineState state) -> EngineState {
-  //     return previous_state;  // Recover engine state
-  //   });
-  // }));
+    // Re-configure is only for device mode
+    if (current_state.render_mode != RenderMode::Device) return;
+
+    //     bool is_reconfigure_required = is_required;
+
+    // #if defined(WEBRTC_IOS)
+    //     RTC_OBJC_TYPE(RTCAudioSession)* session = [RTC_OBJC_TYPE(RTCAudioSession)
+    //     sharedInstance]; const double new_sample_rate = session.sampleRate; if
+    //     (!is_reconfigure_required && current_state.output_enabled) {
+    //       AVAudioFormat* format = [this->OutputNode() outputFormatForBus:0];
+    //       if (format.sampleRate != new_sample_rate) {
+    //         is_reconfigure_required = true;
+    //       }
+    //     }
+    // #endif
+
+    //     // No configuration required
+    //     if (!is_reconfigure_required) {
+    //       LOGI() << "ReconfigureEngine no configuration required";
+    //       return;
+    //     }
+
+    EngineState shutdown_state = this->engine_state_;
+    shutdown_state.input_enabled = false;
+    shutdown_state.input_running = false;
+    shutdown_state.output_enabled = false;
+    shutdown_state.output_running = false;
+
+    this->SetEngineState([shutdown_state](EngineState state) -> EngineState {
+      return shutdown_state;  // Shutdown engine
+    });
+
+    this->SetEngineState([current_state](EngineState state) -> EngineState {
+      return current_state;  // Recover engine state
+    });
+  }));
 }
 
 bool AudioEngineDevice::IsMicrophonePermissionGranted() {
@@ -1132,6 +1147,15 @@ void AudioEngineDevice::UpdateDeviceEngineState(EngineStateUpdate state) {
        state.IsEngineRecreateRequired())) {
     LOGI() << "Stopping AVAudioEngine...";
     RTC_DCHECK(engine_device_ != nil);
+
+    if (configuration_observer_ != nullptr) {
+      NSNotificationCenter* center = [NSNotificationCenter defaultCenter];
+      [center removeObserver:(__bridge_transfer id)configuration_observer_
+                        name:AVAudioEngineConfigurationChangeNotification
+                      object:engine_device_];
+      configuration_observer_ = nil;
+    }
+
     [engine_device_ stop];
 
     if (observer_ != nullptr) {
@@ -1151,7 +1175,8 @@ void AudioEngineDevice::UpdateDeviceEngineState(EngineStateUpdate state) {
   if (state.next.IsAnyEnabled() &&
       (!state.prev.IsAnyEnabled() || state.IsEngineRecreateRequired())) {
     LOGI() << "Creating AVAudioEngine (device)...";
-    RTC_DCHECK(engine_device_ == nullptr);
+    RTC_DCHECK(engine_device_ == nil);
+
     engine_device_ = [[AVAudioEngine alloc] init];
 
     if (observer_ != nullptr) {
@@ -1480,7 +1505,19 @@ void AudioEngineDevice::UpdateDeviceEngineState(EngineStateUpdate state) {
         }
       }
 
-      if (!start_result) {
+      if (start_result) {
+        RTC_DCHECK(configuration_observer_ == nullptr);
+        // Add observer for configuration changes
+        NSNotificationCenter* center = [NSNotificationCenter defaultCenter];
+        configuration_observer_ = (__bridge_retained void*)[center
+            addObserverForName:AVAudioEngineConfigurationChangeNotification
+                        object:engine_device_
+                         queue:nil
+                    usingBlock:^(NSNotification* notification) {
+                      ReconfigureEngine(true);
+                    }];
+
+      } else {
         LOGE() << "Failed to start engine after " << kStartEngineMaxRetries << " attempts";
         DebugAudioEngine();
       }
@@ -1488,9 +1525,12 @@ void AudioEngineDevice::UpdateDeviceEngineState(EngineStateUpdate state) {
   }
 
   if (state.prev.IsAnyEnabled() && !state.next.IsAnyEnabled()) {
+    RTC_DCHECK(engine_device_ != nullptr);
+
     if (observer_ != nullptr) {
       observer_->OnEngineWillRelease(engine_device_);
     }
+
     LOGI() << "Releasing AVAudioEngine...";
     engine_device_ = nil;
   }
@@ -1620,6 +1660,7 @@ void AudioEngineDevice::DebugAudioEngine() {
 
   std::function<void(AVAudioNode*, int)> print_node;
   print_node = [this, &padded_string, &audio_format](AVAudioNode* node, int base_depth = 0) {
+    RTC_DCHECK_RUN_ON(thread_);
     LOGI() << padded_string(base_depth) << NSStringFromClass([node class]).UTF8String << "."
            << node.hash;
 
