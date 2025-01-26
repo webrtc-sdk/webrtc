@@ -59,6 +59,10 @@ typedef void* AVAudioEngineManualRenderingBlock;
 #include "sdk/objc/base/RTCMacros.h"
 #include "sdk/objc/native/src/audio/audio_session_observer.h"
 
+#if TARGET_OS_OSX
+#import <CoreAudio/CoreAudio.h>
+#endif
+
 RTC_FWD_DECL_OBJC_CLASS(RTC_OBJC_TYPE(RTCNativeAudioSessionDelegateAdapter));
 
 namespace webrtc {
@@ -208,6 +212,9 @@ class AudioEngineDevice : public AudioDeviceModule,
     bool advanced_ducking = true;
     long ducking_level = 0;  // 0 = Default
 
+    uint32_t output_device_id = 0;  // kAudioObjectUnknown
+    uint32_t input_device_id = 0;   // kAudioObjectUnknown
+
     bool operator==(const EngineState& rhs) const {
       return input_enabled == rhs.input_enabled &&
              input_running == rhs.input_running &&
@@ -223,7 +230,9 @@ class AudioEngineDevice : public AudioDeviceModule,
              voice_processing_bypassed == rhs.voice_processing_bypassed &&
              voice_processing_agc_enabled == rhs.voice_processing_agc_enabled &&
              advanced_ducking == rhs.advanced_ducking &&
-             ducking_level == rhs.ducking_level;
+             ducking_level == rhs.ducking_level &&
+             output_device_id == rhs.output_device_id &&
+             input_device_id == rhs.input_device_id;
     }
 
     bool operator!=(const EngineState& rhs) const { return !(*this == rhs); }
@@ -306,6 +315,19 @@ class AudioEngineDevice : public AudioDeviceModule,
              (prev.IsOutputEnabled() != next.IsOutputEnabled());
     }
 
+    bool DidUpdateOutputDevice() const {
+      return prev.output_device_id != next.output_device_id;
+    }
+
+    bool DidUpdateInputDevice() const {
+      return prev.input_device_id != next.input_device_id;
+    }
+
+    bool IsEngineRestartRequired() const {
+      return DidUpdateAudioGraph() || DidUpdateOutputDevice() ||
+             DidUpdateInputDevice();
+    }
+
     // Special case to re-create engine when switching from Speaker & Mic ->
     // Speaker only.
     bool IsEngineRecreateRequired() const {
@@ -336,6 +358,15 @@ class AudioEngineDevice : public AudioDeviceModule,
 
   // AudioEngine observer methods. May be called from any thread.
   void ReconfigureEngine(bool is_required);
+
+// Device related
+#if TARGET_OS_OSX
+  void UpdateDeviceInformation();
+  std::vector<AudioObjectID> input_device_ids_;
+  std::vector<AudioObjectID> output_device_ids_;
+  std::vector<std::string> output_device_labels_;
+  std::vector<std::string> input_device_labels_;
+#endif
 
   void DebugAudioEngine();
 

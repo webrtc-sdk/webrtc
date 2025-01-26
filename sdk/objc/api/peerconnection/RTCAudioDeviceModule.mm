@@ -186,10 +186,7 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
       }
     }
 
-    _native->StopPlayout();
-
-    if (_native->SetPlayoutDevice(index) == 0 && _native->InitPlayout() == 0 &&
-        _native->StartPlayout() == 0) {
+    if (_native->SetPlayoutDevice(index)) {
       return YES;
     }
 
@@ -234,10 +231,7 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
       }
     }
 
-    _native->StopRecording();
-
-    if (_native->SetRecordingDevice(index) == 0 && _native->InitRecording() == 0 &&
-        _native->StartRecording() == 0) {
+    if (_native->SetRecordingDevice(index)) {
       return YES;
     }
 

@@ -383,6 +383,8 @@ rtc_library("audio_device_impl") {
           "mac/audio_device_mac.h",
           "mac/audio_mixer_manager_mac.cc",
           "mac/audio_mixer_manager_mac.h",
+          "mac/audio_device_utils_mac.cc",
+          "mac/audio_device_utils_mac.h",
         ]
         deps += [
           ":audio_device_impl_frameworks",
