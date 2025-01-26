@@ -634,15 +634,15 @@ int32_t AudioEngineDevice::RegisterAudioCallback(AudioTransport* audioCallback) 
 // ----------------------------------------------------------------------------------------------------
 // Misc
 
-bool AudioEngineDevice::BuiltInAECIsAvailable() const { return false; }
+bool AudioEngineDevice::BuiltInAECIsAvailable() const { return true; }
 
-bool AudioEngineDevice::BuiltInAGCIsAvailable() const { return false; }
+bool AudioEngineDevice::BuiltInAGCIsAvailable() const { return true; }
 
 bool AudioEngineDevice::BuiltInNSIsAvailable() const { return false; }
 
-int32_t AudioEngineDevice::EnableBuiltInAEC(bool enable) { return -1; }
+int32_t AudioEngineDevice::EnableBuiltInAEC(bool enable) { return 0; }
 
-int32_t AudioEngineDevice::EnableBuiltInAGC(bool enable) { return -1; }
+int32_t AudioEngineDevice::EnableBuiltInAGC(bool enable) { return 0; }
 
 int32_t AudioEngineDevice::EnableBuiltInNS(bool enable) { return -1; }
 
