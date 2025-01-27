@@ -535,8 +535,6 @@ if (is_ios || is_mac) {
       sources = [
         "objc/native/api/objc_audio_device_module.h",
         "objc/native/api/objc_audio_device_module.mm",
-        "../modules/audio_device/audio_engine_device.h",
-        "../modules/audio_device/audio_engine_device.mm",
       ]
 
       deps = [

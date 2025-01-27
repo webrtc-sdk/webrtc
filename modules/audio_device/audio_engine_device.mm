@@ -32,8 +32,6 @@
 #include "rtc_base/thread_annotations.h"
 #include "rtc_base/time_utils.h"
 
-#import "base/RTCLogging.h"
-
 #if defined(WEBRTC_IOS)
 #import "components/audio/RTCAudioSession+Private.h"
 #import "components/audio/RTCAudioSession.h"
@@ -1781,11 +1779,6 @@ void AudioEngineDevice::UpdateDeviceInformation() {
 
 void AudioEngineDevice::DebugAudioEngine() {
   RTC_DCHECK_RUN_ON(thread_);
-
-#if TARGET_OS_IOS
-  RTC_OBJC_TYPE(RTCAudioSession)* session = [RTC_OBJC_TYPE(RTCAudioSession) sharedInstance];
-  RTCLog(@"RTCAudioSession %@", session);
-#endif
 
   auto padded_string = [](int pad) { return std::string(pad * 2, ' '); };
 
