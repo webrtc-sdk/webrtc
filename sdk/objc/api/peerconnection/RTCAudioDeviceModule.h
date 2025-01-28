@@ -79,7 +79,7 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE(RTCAudioDeviceModuleDelegate)<NSObject>
 - (BOOL)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
                        engine:(AVAudioEngine *)engine
     configureOutputFromSource:(AVAudioNode *)source
-                toDestination:(AVAudioNode *)destination
+                toDestination:(nullable AVAudioNode *)destination
                    withFormat:(AVAudioFormat *)format
     NS_SWIFT_NAME(audioDeviceModule(_:engine:configureOutputFromSource:toDestination:format:));
 
@@ -133,8 +133,8 @@ RTC_OBJC_EXPORT
 
 @property(nonatomic, assign) NSInteger duckingLevel;
 
-@property (nonatomic, assign, getter=isVoiceProcessingBypassed) BOOL voiceProcessingBypassed;
-@property (nonatomic, assign, getter=isVoiceProcessingAGCEnabled) BOOL voiceProcessingAGCEnabled;
+@property(nonatomic, assign, getter=isVoiceProcessingBypassed) BOOL voiceProcessingBypassed;
+@property(nonatomic, assign, getter=isVoiceProcessingAGCEnabled) BOOL voiceProcessingAGCEnabled;
 
 @end
 
