@@ -32,7 +32,7 @@ RTC_OBJC_EXPORT
    renderPreProcessingDelegate: (nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)renderPreProcessingDelegate
    NS_SWIFT_NAME(init(config:capturePostProcessingDelegate:renderPreProcessingDelegate:)) NS_DESIGNATED_INITIALIZER;
 
-- (void)applyConfig:(RTC_OBJC_TYPE(RTCAudioProcessingConfig) *)config;
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCAudioProcessingConfig) * config;
 
 // Dynamically update delegates at runtime
 
