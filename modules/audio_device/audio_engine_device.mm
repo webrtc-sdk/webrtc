@@ -1314,7 +1314,14 @@ void AudioEngineDevice::UpdateDeviceEngineState(EngineStateUpdate state) {
     AVAudioFormat* output_node_format = [this->OutputNode() outputFormatForBus:0];
 
     LOGI() << "Output format sampleRate: " << output_node_format.sampleRate
-           << " channels: " << output_node_format.channelCount;
+           << " channels: " << output_node_format.channelCount
+           << " formatID: " << output_node_format.streamDescription->mFormatID
+           << " formatFlags: " << output_node_format.streamDescription->mFormatFlags
+           << " bytesPerPacket: " << output_node_format.streamDescription->mBytesPerPacket
+           << " framesPerPacket: " << output_node_format.streamDescription->mFramesPerPacket
+           << " bytesPerFrame: " << output_node_format.streamDescription->mBytesPerFrame
+           << " channelsPerFrame: " << output_node_format.streamDescription->mChannelsPerFrame
+           << " bitsPerChannel: " << output_node_format.streamDescription->mBitsPerChannel;
 
     AVAudioFormat* engine_output_format = [[AVAudioFormat alloc]
         initWithCommonFormat:output_node_format.commonFormat  // Usually float32
@@ -1436,8 +1443,15 @@ void AudioEngineDevice::UpdateDeviceEngineState(EngineStateUpdate state) {
     // Example formats:
     // Airpods: 1 ch,  24000 Hz, Float32
     // Mac: 9 ch,  48000 Hz, Float32
-    LOGI() << "Input format, sampleRate: " << input_node_format.sampleRate
-           << " channels: " << input_node_format.channelCount;
+    LOGI() << "Input format sampleRate: " << input_node_format.sampleRate
+           << " channels: " << input_node_format.channelCount
+           << " formatID: " << input_node_format.streamDescription->mFormatID
+           << " formatFlags: " << input_node_format.streamDescription->mFormatFlags
+           << " bytesPerPacket: " << input_node_format.streamDescription->mBytesPerPacket
+           << " framesPerPacket: " << input_node_format.streamDescription->mFramesPerPacket
+           << " bytesPerFrame: " << input_node_format.streamDescription->mBytesPerFrame
+           << " channelsPerFrame: " << input_node_format.streamDescription->mChannelsPerFrame
+           << " bitsPerChannel: " << input_node_format.streamDescription->mBitsPerChannel;
 
     // When VoiceProcessingIO is enabled, channels must be reduced from Mac's default 9 channels
     // to 2 or lower.
@@ -1630,6 +1644,10 @@ void AudioEngineDevice::UpdateDeviceEngineState(EngineStateUpdate state) {
                  << kStartEngineMaxRetries << ")";
           usleep(kStartEngineRetryDelayMs * 1000);
         }
+
+        // Workaround for cases where engine fails to start.
+        [engine_device_ prepare];
+        sleep(1);
 
         start_result = [engine_device_ startAndReturnError:&error];
         if (!start_result) {
