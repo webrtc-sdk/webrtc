@@ -46,8 +46,6 @@ std::optional<uint32_t> GetDeviceSource(AudioObjectID device_id, bool is_input);
 
 std::optional<uint32_t> GetDeviceTransportType(AudioObjectID device_id);
 
-bool IsPrivateAggregateDevice(AudioObjectID device_id);
-
 bool IsInputDevice(AudioObjectID device_id);
 
 bool IsOutputDevice(AudioObjectID device_id);
