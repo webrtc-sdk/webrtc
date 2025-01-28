@@ -83,7 +83,12 @@
 
 #pragma mark - RTCAudioProcessingModule protocol
 
-- (void)applyConfig:(RTC_OBJC_TYPE(RTCAudioProcessingConfig) *)config {
+- (RTC_OBJC_TYPE(RTCAudioProcessingConfig) *)config {
+  webrtc::AudioProcessing::Config nativeConfig = _nativeAudioProcessingModule->GetConfig();
+  return [[RTC_OBJC_TYPE(RTCAudioProcessingConfig) alloc] initWithNativeAudioProcessingConfig: nativeConfig];
+}
+
+- (void)setConfig:(RTC_OBJC_TYPE(RTCAudioProcessingConfig) *)config {
   _nativeAudioProcessingModule->ApplyConfig(config.nativeAudioProcessingConfig);
 }
 
