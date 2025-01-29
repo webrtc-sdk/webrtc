@@ -478,35 +478,14 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
   // Use desktop AEC by default, when not using hardware AEC.
   bool use_mobile_software_aec = false;
 
-#if defined(WEBRTC_IOS) && !TARGET_OS_SIMULATOR
-  if (options.ios_force_software_aec_HACK &&
-      *options.ios_force_software_aec_HACK) {
-    // EC may be forced on for a device known to have non-functioning platform
-    // AEC.
-    options.echo_cancellation = true;
-    RTC_LOG(LS_WARNING)
-        << "Force software AEC on iOS. May conflict with platform AEC.";
-  } else {
-    // On iOS, VPIO provides built-in EC.
-    options.echo_cancellation = false;
-    RTC_LOG(LS_INFO) << "Always disable AEC on iOS. Use built-in instead.";
-  }
-#elif defined(WEBRTC_MAC)
-  // On macOS, VPIO provides built-in EC.
-  options.echo_cancellation = false;
-  RTC_LOG(LS_INFO) << "Always disable AEC on macOS. Use built-in instead.";
-#elif defined(WEBRTC_ANDROID)
+  // Skip AEC AGC NS option manipulation for iOS adn macOS.
+#if !(defined(WEBRTC_IOS) || defined(WEBRTC_MAC))
+
+#if defined(WEBRTC_ANDROID)
   use_mobile_software_aec = true;
 #endif
 
-// Set and adjust gain control options.
-#if (defined(WEBRTC_IOS) && !TARGET_OS_SIMULATOR) || defined(WEBRTC_MAC)
-  // On iOS, VPIO provides built-in AGC.
-  options.auto_gain_control = false;
-  RTC_LOG(LS_INFO) << "Always disable AGC on iOS. Use built-in instead.";
-#endif
-
-#if defined(WEBRTC_IOS) || defined(WEBRTC_ANDROID)
+#if defined(WEBRTC_ANDROID)
   // Turn off the gain control if specified by the field trial.
   // The purpose of the field trial is to reduce the amount of resampling
   // performed inside the audio processing module on mobile platforms by
@@ -572,6 +551,7 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
       }
     }
   }
+#endif
 
   if (options.stereo_swapping) {
     audio_state()->SetStereoChannelSwapping(*options.stereo_swapping);
@@ -605,7 +585,7 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
   if (options.auto_gain_control) {
     const bool enabled = *options.auto_gain_control;
     apm_config.gain_controller1.enabled = enabled;
-#if defined(WEBRTC_IOS) || defined(WEBRTC_ANDROID)
+#if defined(WEBRTC_IOS) || defined(WEBRTC_MAC) || defined(WEBRTC_ANDROID)
     apm_config.gain_controller1.mode =
         apm_config.gain_controller1.kFixedDigital;
 #else
