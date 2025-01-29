@@ -22,6 +22,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface RTC_OBJC_TYPE (RTCAudioProcessingConfig)()
 
+- (instancetype)initWithNativeAudioProcessingConfig:(webrtc::AudioProcessing::Config)config;
+
 @property(nonatomic, readonly) webrtc::AudioProcessing::Config nativeAudioProcessingConfig;
 
 @end

@@ -24,25 +24,72 @@
 
 // config.echo_canceller.enabled
 
-- (BOOL)echoCancellerEnabled {
+- (BOOL)isEchoCancellationEnabled {
   return _config.echo_canceller.enabled;
 }
 
-- (void)setEchoCancellerEnabled:(BOOL)value {
+- (void)setIsEchoCancellationEnabled:(BOOL)value {
   _config.echo_canceller.enabled = value;
 }
 
 // config.echo_canceller.mobile_mode
 
-- (BOOL)echoCancellerMobileMode {
+- (BOOL)isEchoCancellationMobileMode {
   return _config.echo_canceller.mobile_mode;
 }
 
-- (void)setEchoCancellerMobileMode:(BOOL)value {
+- (void)setIsEchoCancellationMobileMode:(BOOL)value {
   _config.echo_canceller.mobile_mode = value;
 }
 
+// config.noise_suppression.enabled
+
+- (BOOL)isNoiseSuppressionEnabled {
+  return _config.noise_suppression.enabled;
+}
+
+- (void)setIsNoiseSuppressionEnabled:(BOOL)value {
+  _config.noise_suppression.enabled = value;
+}
+
+// config.high_pass_filter.enabled
+
+- (BOOL)isHighpassFilterEnabled {
+  return _config.high_pass_filter.enabled;
+}
+
+- (void)setIsHighpassFilterEnabled:(BOOL)value {
+  _config.high_pass_filter.enabled = value;
+}
+
+// config.gain_controller1.enabled
+
+- (BOOL)isAutoGainControl1Enabled {
+  return _config.gain_controller1.enabled;
+}
+
+- (void)setIsAutoGainControl1Enabled:(BOOL)value {
+  _config.gain_controller1.enabled = value;
+}
+
+// config.gain_controller2.enabled
+
+- (BOOL)isAutoGainControl2Enabled {
+  return _config.gain_controller2.enabled;
+}
+
+- (void)setIsAutoGainControl2Enabled:(BOOL)value {
+  _config.gain_controller2.enabled = value;
+}
+
 #pragma mark - Private
+
+- (instancetype)initWithNativeAudioProcessingConfig:(webrtc::AudioProcessing::Config)config {
+  if (self = [super init]) {
+    _config = config;
+  }
+  return self;
+}
 
 - (webrtc::AudioProcessing::Config)nativeAudioProcessingConfig {
   return _config;
