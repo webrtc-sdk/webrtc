@@ -215,6 +215,9 @@ class AudioEngineDevice : public AudioDeviceModule,
     uint32_t output_device_id = 0;  // kAudioObjectUnknown
     uint32_t input_device_id = 0;   // kAudioObjectUnknown
 
+    uint32_t default_output_device_id = 0;  // Track default device
+    uint32_t default_input_device_id = 0;
+
     bool operator==(const EngineState& rhs) const {
       return input_enabled == rhs.input_enabled &&
              input_running == rhs.input_running &&
@@ -232,7 +235,9 @@ class AudioEngineDevice : public AudioDeviceModule,
              advanced_ducking == rhs.advanced_ducking &&
              ducking_level == rhs.ducking_level &&
              output_device_id == rhs.output_device_id &&
-             input_device_id == rhs.input_device_id;
+             input_device_id == rhs.input_device_id &&
+             default_output_device_id == rhs.default_output_device_id &&
+             default_input_device_id == rhs.default_input_device_id;
     }
 
     bool operator!=(const EngineState& rhs) const { return !(*this == rhs); }
@@ -268,6 +273,10 @@ class AudioEngineDevice : public AudioDeviceModule,
       return IsOutputInputLinked() ? input_running
                                    : input_running && output_running;
     }
+
+    bool IsOutputDefaultDevice() const { return output_device_id == 0; }
+
+    bool IsInputDefaultDevice() const { return input_device_id == 0; }
   };
 
   struct EngineStateUpdate {
@@ -323,9 +332,19 @@ class AudioEngineDevice : public AudioDeviceModule,
       return prev.input_device_id != next.input_device_id;
     }
 
+    bool DidUpdateDefaultOutputDevice() const {
+      return prev.default_output_device_id != next.default_output_device_id;
+    }
+
+    bool DidUpdateDefaultInputDevice() const {
+      return prev.default_input_device_id != next.default_input_device_id;
+    }
+
     bool IsEngineRestartRequired() const {
       return DidUpdateAudioGraph() || DidUpdateOutputDevice() ||
-             DidUpdateInputDevice();
+             DidUpdateInputDevice() ||
+             (DidUpdateDefaultOutputDevice() && next.IsOutputDefaultDevice()) ||
+             (DidUpdateDefaultInputDevice() && next.IsInputDefaultDevice());
     }
 
     // Special case to re-create engine when switching from Speaker & Mic ->
@@ -361,7 +380,11 @@ class AudioEngineDevice : public AudioDeviceModule,
 
 // Device related
 #if TARGET_OS_OSX
-  void UpdateDeviceInformation();
+  static OSStatus objectListenerProc(
+      AudioObjectID objectId, UInt32 numberAddresses,
+      const AudioObjectPropertyAddress addresses[], void* clientData);
+  void HandleDeviceListenerEvent(AudioObjectPropertySelector selector);
+  void UpdateAllDeviceIDs();
   std::vector<AudioObjectID> input_device_ids_;
   std::vector<AudioObjectID> output_device_ids_;
   std::vector<std::string> output_device_labels_;

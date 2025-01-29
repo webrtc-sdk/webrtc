@@ -61,8 +61,6 @@ AudioEngineDevice::AudioEngineDevice(bool voice_processing_bypassed)
     : task_queue_factory_(CreateDefaultTaskQueueFactory()), initialized_(false) {
   LOGI() << "voice_processing_bypassed " << voice_processing_bypassed;
 
-  engine_state_.voice_processing_bypassed = voice_processing_bypassed;
-
   thread_ = rtc::Thread::Current();
   audio_device_buffer_.reset(new webrtc::AudioDeviceBuffer(task_queue_factory_.get()));
 
@@ -83,6 +81,20 @@ AudioEngineDevice::AudioEngineDevice(bool voice_processing_bypassed)
                                                                sampleRate:48000
                                                                  channels:1
                                                               interleaved:YES];
+
+#if TARGET_OS_OSX
+  // Initial engine state
+  engine_state_.voice_processing_bypassed = voice_processing_bypassed;
+  std::optional<AudioDeviceID> default_output_device_id =
+      mac_audio_utils::GetDefaultOutputDeviceID();
+  std::optional<AudioDeviceID> default_input_device_id = mac_audio_utils::GetDefaultInputDeviceID();
+  if (default_output_device_id) {
+    engine_state_.default_output_device_id = *default_output_device_id;
+  }
+  if (default_input_device_id) {
+    engine_state_.default_input_device_id = *default_input_device_id;
+  }
+#endif
 }
 
 AudioEngineDevice::~AudioEngineDevice() {
@@ -98,6 +110,86 @@ AudioEngineDevice::~AudioEngineDevice() {
   audio_session_observer_ = nil;
 #endif
 }
+
+#if TARGET_OS_OSX
+OSStatus AudioEngineDevice::objectListenerProc(AudioObjectID objectId, UInt32 numberAddresses,
+                                               const AudioObjectPropertyAddress addresses[],
+                                               void* clientData) {
+  AudioEngineDevice* ptrThis = (AudioEngineDevice*)clientData;
+  RTC_DCHECK(ptrThis != NULL);
+
+  // ptrThis->implObjectListenerProc(objectId, numberAddresses, addresses);
+
+  for (UInt32 i = 0; i < numberAddresses; i++) {
+    ptrThis->HandleDeviceListenerEvent(addresses[i].mSelector);
+  }
+
+  return 0;
+}
+
+void AudioEngineDevice::HandleDeviceListenerEvent(AudioObjectPropertySelector selector) {
+  thread_->PostTask(SafeTask(safety_, [this, selector] {
+    RTC_DCHECK_RUN_ON(thread_);
+
+    if (selector == kAudioHardwarePropertyDevices) {
+      auto old_input_device_ids = input_device_ids_;
+      auto old_output_device_ids = output_device_ids_;
+      UpdateAllDeviceIDs();
+      // Check if device ids updated
+      if (old_output_device_ids != output_device_ids_ ||
+          old_input_device_ids != input_device_ids_) {
+        LOGI() << "Did update devices";
+
+        // Current device
+        if (engine_state_.output_device_id != kAudioObjectUnknown) {
+          bool contains = std::binary_search(output_device_ids_.begin(), output_device_ids_.end(),
+                                             engine_state_.output_device_id);
+          if (!contains) {
+            SetEngineState([](EngineState state) -> EngineState {
+              state.output_device_id = kAudioObjectUnknown;
+              return state;
+            });
+          }
+        }
+
+        if (engine_state_.input_device_id != kAudioObjectUnknown) {
+          bool contains = std::binary_search(input_device_ids_.begin(), input_device_ids_.end(),
+                                             engine_state_.input_device_id);
+          if (!contains) {
+            SetEngineState([](EngineState state) -> EngineState {
+              state.input_device_id = kAudioObjectUnknown;
+              return state;
+            });
+          }
+        }
+
+        if (observer_) {
+          observer_->OnDevicesUpdated();
+        }
+      }
+    } else if (selector == kAudioHardwarePropertyDefaultOutputDevice) {
+      LOGI() << "Did update default output device";
+      std::optional<AudioDeviceID> device_id = mac_audio_utils::GetDefaultOutputDeviceID();
+      if (device_id) {
+        SetEngineState([device_id](EngineState state) -> EngineState {
+          state.default_output_device_id = *device_id;
+          return state;
+        });
+      }
+    } else if (selector == kAudioHardwarePropertyDefaultInputDevice) {
+      LOGI() << "Did update default input device";
+      std::optional<AudioDeviceID> device_id = mac_audio_utils::GetDefaultInputDeviceID();
+      if (device_id) {
+        SetEngineState([device_id](EngineState state) -> EngineState {
+          state.default_input_device_id = *device_id;
+          return state;
+        });
+      }
+    }
+  }));
+}
+
+#endif
 
 // MARK: - Main life cycle
 
@@ -125,11 +217,53 @@ int32_t AudioEngineDevice::Init() {
 #endif
 
 #if TARGET_OS_OSX
-  UpdateDeviceInformation();
-  engine_state_.output_device_id =
-      mac_audio_utils::GetDefaultOutputDeviceID().value_or(kAudioObjectUnknown);
-  engine_state_.input_device_id =
-      mac_audio_utils::GetDefaultInputDeviceID().value_or(kAudioObjectUnknown);
+  // Setting RunLoop to NULL here instructs HAL to manage its own thread for
+  // notifications. This was the default behaviour on OS X 10.5 and earlier,
+  // but now must be explicitly specified. HAL would otherwise try to use the
+  // main thread to issue notifications.
+  AudioObjectPropertyAddress propertyAddress = {kAudioHardwarePropertyRunLoop,
+                                                kAudioObjectPropertyScopeGlobal,
+                                                kAudioObjectPropertyElementMaster};
+
+  CFRunLoopRef runLoop = NULL;
+  UInt32 size = sizeof(CFRunLoopRef);
+  OSStatus err = noErr;
+
+  err = AudioObjectSetPropertyData(kAudioObjectSystemObject, &propertyAddress, 0, NULL, size,
+                                   &runLoop);
+  if (err != noErr) {
+    LOGE() << "AudioObjectSetPropertyData failed with error: " << err;
+    return -1;
+  }
+
+  // Listen for any device changes.
+  propertyAddress.mSelector = kAudioHardwarePropertyDevices;
+  err = AudioObjectAddPropertyListener(kAudioObjectSystemObject, &propertyAddress,
+                                       &objectListenerProc, this);
+  if (err != noErr) {
+    LOGE() << "AudioObjectAddPropertyListener failed with error: " << err;
+    return -1;
+  }
+
+  // Listen for default output device change.
+  propertyAddress.mSelector = kAudioHardwarePropertyDefaultOutputDevice;
+  err = AudioObjectAddPropertyListener(kAudioObjectSystemObject, &propertyAddress,
+                                       &objectListenerProc, this);
+  if (err != noErr) {
+    LOGE() << "AudioObjectAddPropertyListener failed with error: " << err;
+    return -1;
+  }
+
+  // Listen for default input device change.
+  propertyAddress.mSelector = kAudioHardwarePropertyDefaultInputDevice;
+  err = AudioObjectAddPropertyListener(kAudioObjectSystemObject, &propertyAddress,
+                                       &objectListenerProc, this);
+  if (err != noErr) {
+    LOGE() << "AudioObjectAddPropertyListener failed with error: " << err;
+    return -1;
+  }
+
+  UpdateAllDeviceIDs();
 #endif
 
   initialized_ = true;
@@ -142,6 +276,39 @@ int32_t AudioEngineDevice::Terminate() {
   if (!initialized_) {
     return 0;
   }
+
+#if TARGET_OS_OSX
+  // Remove listeners for global scope.
+  AudioObjectPropertyAddress propertyAddress = {
+      kAudioHardwarePropertyDevices,     // selector
+      kAudioObjectPropertyScopeGlobal,   // scope
+      kAudioObjectPropertyElementMaster  // element
+  };
+
+  OSStatus err = noErr;
+  err = AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &propertyAddress,
+                                          &objectListenerProc, this);
+  if (err != noErr) {
+    LOGE() << "AudioObjectRemovePropertyListener failed with error: " << err;
+    return -1;
+  }
+
+  propertyAddress.mSelector = kAudioHardwarePropertyDefaultOutputDevice;
+  err = AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &propertyAddress,
+                                          &objectListenerProc, this);
+  if (err != noErr) {
+    LOGE() << "AudioObjectRemovePropertyListener failed with error: " << err;
+    return -1;
+  }
+
+  propertyAddress.mSelector = kAudioHardwarePropertyDefaultInputDevice;
+  err = AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &propertyAddress,
+                                          &objectListenerProc, this);
+  if (err != noErr) {
+    LOGE() << "AudioObjectRemovePropertyListener failed with error: " << err;
+    return -1;
+  }
+#endif
 
   StopPlayout();
   StopRecording();
@@ -567,16 +734,17 @@ int32_t AudioEngineDevice::PlayoutIsAvailable(bool* available) {
 }
 
 int32_t AudioEngineDevice::SetPlayoutDevice(uint16_t index) {
-  LOGW() << "SetPlayoutDevice value: " << index;
+  LOGI() << "SetPlayoutDevice value: " << index;
   RTC_DCHECK_RUN_ON(thread_);
 
 #if TARGET_OS_OSX
-  if (index > (output_device_ids_.size() - 1)) {
+  if (index > (output_device_ids_.size())) {
     LOGE() << "Device index is out of range: " << index;
     return -1;
   }
 
-  AudioDeviceID output_device_id = output_device_ids_[index];
+  // Set as default device if index == 0
+  AudioDeviceID output_device_id = index == 0 ? kAudioObjectUnknown : output_device_ids_[index - 1];
 
   SetEngineState([output_device_id](EngineState state) -> EngineState {
     state.output_device_id = output_device_id;
@@ -599,7 +767,7 @@ int32_t AudioEngineDevice::PlayoutDeviceName(uint16_t index, char name[kAdmMaxDe
 #if TARGET_OS_OSX
   RTC_DCHECK(output_device_ids_.size() == output_device_labels_.size());
 
-  if ((index > (output_device_ids_.size() - 1)) || (name == NULL)) {
+  if ((index > (output_device_ids_.size())) || (name == NULL)) {
     LOGE() << "Device index is out of range: " << index;
     return -1;
   }
@@ -607,15 +775,35 @@ int32_t AudioEngineDevice::PlayoutDeviceName(uint16_t index, char name[kAdmMaxDe
   memset(name, 0, kAdmMaxDeviceNameSize);
   memset(guid, 0, kAdmMaxGuidSize);
 
+  // Default device
+  if (index == 0) {
+    std::optional<AudioDeviceID> default_device_id = mac_audio_utils::GetDefaultOutputDeviceID();
+    if (!default_device_id) {
+      return -1;
+    }
+
+    std::optional<std::string> label = mac_audio_utils::GetDeviceLabel(*default_device_id, false);
+    std::optional<std::string> device_guid =
+        std::string("default");  // mac_audio_utils::GetDeviceUniqueID(*default_device_id);
+    if (!label || !device_guid) {
+      return -1;
+    }
+
+    strncpy(name, (*label).c_str(), kAdmMaxDeviceNameSize - 1);
+    strncpy(guid, (*device_guid).c_str(), kAdmMaxGuidSize - 1);
+
+    return 0;
+  }
+
   // Get device name
-  strncpy(name, output_device_labels_[index].c_str(), kAdmMaxDeviceNameSize - 1);
+  strncpy(name, output_device_labels_[index - 1].c_str(), kAdmMaxDeviceNameSize - 1);
 
   std::optional<std::string> device_guid =
-      mac_audio_utils::GetDeviceUniqueID(output_device_ids_[index]);
+      mac_audio_utils::GetDeviceUniqueID(output_device_ids_[index - 1]);
   if (device_guid) {
     strncpy(guid, device_guid->c_str(), kAdmMaxGuidSize - 1);
   } else {
-    LOGE() << "Failed to get device unique ID for device: " << output_device_ids_[index];
+    LOGE() << "Failed to get device unique ID for device: " << output_device_ids_[index - 1];
     return -1;
   }
 
@@ -629,7 +817,7 @@ int16_t AudioEngineDevice::PlayoutDevices() {
   RTC_DCHECK_RUN_ON(thread_);
 
 #if TARGET_OS_OSX
-  return output_device_ids_.size();
+  return output_device_ids_.size() + 1;
 #else
   return (int16_t)1;
 #endif
@@ -643,7 +831,7 @@ int32_t AudioEngineDevice::RecordingDeviceName(uint16_t index, char name[kAdmMax
 #if TARGET_OS_OSX
   RTC_DCHECK(input_device_ids_.size() == input_device_labels_.size());
 
-  if ((index > (input_device_ids_.size() - 1)) || (name == NULL)) {
+  if ((index > (input_device_ids_.size())) || (name == NULL)) {
     LOGE() << "Device index is out of range: " << index;
     return -1;
   }
@@ -651,15 +839,35 @@ int32_t AudioEngineDevice::RecordingDeviceName(uint16_t index, char name[kAdmMax
   memset(name, 0, kAdmMaxDeviceNameSize);
   memset(guid, 0, kAdmMaxGuidSize);
 
+  // Default device
+  if (index == 0) {
+    std::optional<AudioDeviceID> default_device_id = mac_audio_utils::GetDefaultInputDeviceID();
+    if (!default_device_id) {
+      return -1;
+    }
+
+    std::optional<std::string> label = mac_audio_utils::GetDeviceLabel(*default_device_id, true);
+    std::optional<std::string> device_guid =
+        std::string("default");  // mac_audio_utils::GetDeviceUniqueID(*default_device_id);
+    if (!label || !device_guid) {
+      return -1;
+    }
+
+    strncpy(name, (*label).c_str(), kAdmMaxDeviceNameSize - 1);
+    strncpy(guid, (*device_guid).c_str(), kAdmMaxGuidSize - 1);
+
+    return 0;
+  }
+
   // Get device name
-  strncpy(name, input_device_labels_[index].c_str(), kAdmMaxDeviceNameSize - 1);
+  strncpy(name, input_device_labels_[index - 1].c_str(), kAdmMaxDeviceNameSize - 1);
 
   std::optional<std::string> device_guid =
-      mac_audio_utils::GetDeviceUniqueID(input_device_ids_[index]);
+      mac_audio_utils::GetDeviceUniqueID(input_device_ids_[index - 1]);
   if (device_guid) {
     strncpy(guid, device_guid->c_str(), kAdmMaxGuidSize - 1);
   } else {
-    LOGE() << "Failed to get device unique ID for device: " << input_device_ids_[index];
+    LOGE() << "Failed to get device unique ID for device: " << input_device_ids_[index - 1];
     return -1;
   }
 
@@ -674,12 +882,13 @@ int32_t AudioEngineDevice::SetRecordingDevice(uint16_t index) {
   RTC_DCHECK_RUN_ON(thread_);
 
 #if TARGET_OS_OSX
-  if (index > (input_device_ids_.size() - 1)) {
+  if (index > (input_device_ids_.size())) {
     RTC_LOG(LS_ERROR) << "Device index is out of range";
     return -1;
   }
 
-  AudioDeviceID input_device_id = input_device_ids_[index];
+  // Set as default device if index == 0
+  AudioDeviceID input_device_id = index == 0 ? kAudioObjectUnknown : input_device_ids_[index - 1];
 
   SetEngineState([input_device_id](EngineState state) -> EngineState {
     state.input_device_id = input_device_id;
@@ -711,7 +920,7 @@ int16_t AudioEngineDevice::RecordingDevices() {
   RTC_DCHECK_RUN_ON(thread_);
 
 #if TARGET_OS_OSX
-  return input_device_ids_.size();
+  return input_device_ids_.size() + 1;
 #else
   return (int16_t)1;
 #endif
@@ -1569,30 +1778,38 @@ void AudioEngineDevice::UpdateDeviceEngineState(EngineStateUpdate state) {
 
   if (state.next.IsAnyEnabled() &&
       (!state.prev.IsAnyEnabled() || state.IsEngineRecreateRequired() ||
-       state.DidUpdateInputDevice() || state.DidUpdateOutputDevice())) {
-    if (state.next.IsInputEnabled() && state.next.input_device_id != 0) {
-      // Input device selection
-      OSStatus err = noErr;
-      uint32_t input_deviceId = state.next.input_device_id;
-      LOGI() << "Setting input device: " << input_deviceId;
+       state.DidUpdateInputDevice() || state.DidUpdateOutputDevice() ||
+       ((state.DidUpdateDefaultOutputDevice() && state.next.IsOutputDefaultDevice()) ||
+        (state.DidUpdateDefaultInputDevice() && state.next.IsInputDefaultDevice())))) {
+    if (state.next.IsInputEnabled()) {
+      uint32_t input_device_id = state.next.input_device_id;
+      if (input_device_id == kAudioObjectUnknown) {
+        input_device_id = state.next.default_input_device_id;
+        LOGI() << "Using default input device: " << input_device_id;
+      }
+
+      LOGI() << "Setting input device: " << input_device_id;
       AudioUnit inputUnit = this->InputNode().audioUnit;
-      err =
-          AudioUnitSetProperty(inputUnit, kAudioOutputUnitProperty_CurrentDevice,
-                               kAudioUnitScope_Global, 1, &input_deviceId, sizeof(input_deviceId));
+      OSStatus err = AudioUnitSetProperty(inputUnit, kAudioOutputUnitProperty_CurrentDevice,
+                                          kAudioUnitScope_Global, 1, &input_device_id,
+                                          sizeof(input_device_id));
       if (err != noErr) {
-        LOGE() << "Failed to set input device: " << input_deviceId;
+        LOGE() << "Failed to set input device: " << input_device_id;
       }
     }
 
-    if (state.next.IsOutputEnabled() && state.next.output_device_id != 0) {
-      // Output device selection
-      OSStatus err = noErr;
+    if (state.next.IsOutputEnabled()) {
       uint32_t output_deviceId = state.next.output_device_id;
+      if (output_deviceId == kAudioObjectUnknown) {
+        output_deviceId = state.next.default_output_device_id;
+        LOGI() << "Using default output device: " << output_deviceId;
+      }
+
       LOGI() << "Setting output device: " << output_deviceId;
       AudioUnit outputUnit = this->OutputNode().audioUnit;
-      err = AudioUnitSetProperty(outputUnit, kAudioOutputUnitProperty_CurrentDevice,
-                                 kAudioUnitScope_Global, 0, &output_deviceId,
-                                 sizeof(output_deviceId));
+      OSStatus err = AudioUnitSetProperty(outputUnit, kAudioOutputUnitProperty_CurrentDevice,
+                                          kAudioUnitScope_Global, 0, &output_deviceId,
+                                          sizeof(output_deviceId));
       if (err != noErr) {
         LOGE() << "Failed to set output device: " << output_deviceId;
       }
@@ -1757,7 +1974,7 @@ AVAudioOutputNode* AudioEngineDevice::OutputNode() {
 
 #if TARGET_OS_OSX
 
-void AudioEngineDevice::UpdateDeviceInformation() {
+void AudioEngineDevice::UpdateAllDeviceIDs() {
   using namespace webrtc::mac_audio_utils;
 
   input_device_ids_.clear();
