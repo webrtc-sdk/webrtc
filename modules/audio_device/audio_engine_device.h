@@ -293,16 +293,12 @@ class AudioEngineDevice : public AudioDeviceModule,
       return !prev.IsInputEnabled() && next.IsInputEnabled();
     }
 
-    bool DidEnableOutputOrInput() const {
-      return DidEnableOutput() || DidEnableInput();
-    }
-
     bool DidDisableOutput() const {
-      return prev.IsOutputEnabled() && next.IsOutputEnabled();
+      return prev.IsOutputEnabled() && !next.IsOutputEnabled();
     }
 
     bool DidDisableInput() const {
-      return prev.IsInputEnabled() && next.IsInputEnabled();
+      return prev.IsInputEnabled() && !next.IsInputEnabled();
     }
 
     bool DidAnyEnable() const { return DidEnableOutput() || DidEnableInput(); }
