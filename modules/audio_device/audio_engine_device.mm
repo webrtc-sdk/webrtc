@@ -1849,7 +1849,6 @@ void AudioEngineDevice::UpdateDeviceEngineState(EngineStateUpdate state) {
       }
 
       LOGI() << "Starting AVAudioEngine...";
-      NSError* error = nil;
       BOOL start_result = false;
       int start_retry_count = 0;
 
@@ -1857,18 +1856,28 @@ void AudioEngineDevice::UpdateDeviceEngineState(EngineStateUpdate state) {
       // .mixWithOthers.
       while (!start_result && start_retry_count < kStartEngineMaxRetries) {
         if (start_retry_count > 0) {
-          LOGW() << "Retrying engine start (attempt " << start_retry_count + 1 << "/"
+          LOGW() << "Retrying engine start (attempt " << (start_retry_count + 1) << "/"
                  << kStartEngineMaxRetries << ")";
           usleep(kStartEngineRetryDelayMs * 1000);
         }
 
-        // Workaround for cases where engine fails to start.
-        [engine_device_ prepare];
-        sleep(1);
+        NSString* error_string = nil;
 
-        start_result = [engine_device_ startAndReturnError:&error];
+        @try {
+          NSError* error = nil;
+          start_result = [engine_device_ startAndReturnError:&error];
+          if (!start_result && error != nil) {
+            error_string = error.localizedDescription;
+          }
+        } @catch (NSException* exception) {
+          start_result = false;
+          error_string = exception.reason ?: @"Unknown exception";
+        }
+
         if (!start_result) {
-          LOGE() << "Failed to start engine: " << error.localizedDescription.UTF8String;
+          if (error_string != nil) {
+            LOGE() << "Failed to start engine: " << error_string.UTF8String;
+          }
           start_retry_count++;
         }
       }
