@@ -28,13 +28,16 @@ typedef NS_ENUM(NSInteger, RTCSpeechActivityEvent) {
   RTCSpeechActivityEventEnded,
 };
 
+RTC_EXTERN NSString *const kRTCAudioEngineInputMixerNodeKey;
+
 @class RTC_OBJC_TYPE(RTCAudioDeviceModule);
 
-RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE(RTCAudioDeviceModuleDelegate)<NSObject>
+RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
+(RTCAudioDeviceModuleDelegate)<NSObject>
 
-- (void)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
-    didReceiveSpeechActivityEvent:(RTCSpeechActivityEvent)speechActivityEvent
-    NS_SWIFT_NAME(audioDeviceModule(_:didReceiveSpeechActivityEvent:));
+    - (void)audioDeviceModule
+    : (RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule didReceiveSpeechActivityEvent
+    : (RTCSpeechActivityEvent)speechActivityEvent NS_SWIFT_NAME(audioDeviceModule(_:didReceiveSpeechActivityEvent:));
 
 // Engine events
 - (void)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
@@ -69,19 +72,21 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE(RTCAudioDeviceModuleDelegate)<NSObject>
         willReleaseEngine:(AVAudioEngine *)engine
     NS_SWIFT_NAME(audioDeviceModule(_:willReleaseEngine:));
 
-- (BOOL)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+- (void)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
                       engine:(AVAudioEngine *)engine
     configureInputFromSource:(nullable AVAudioNode *)source
                toDestination:(AVAudioNode *)destination
                   withFormat:(AVAudioFormat *)format
-    NS_SWIFT_NAME(audioDeviceModule(_:engine:configureInputFromSource:toDestination:format:));
+                     context:(NSDictionary *)context
+    NS_SWIFT_NAME(audioDeviceModule(_:engine:configureInputFromSource:toDestination:format:context:));
 
-- (BOOL)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+- (void)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
                        engine:(AVAudioEngine *)engine
     configureOutputFromSource:(AVAudioNode *)source
                 toDestination:(nullable AVAudioNode *)destination
                    withFormat:(AVAudioFormat *)format
-    NS_SWIFT_NAME(audioDeviceModule(_:engine:configureOutputFromSource:toDestination:format:));
+                      context:(NSDictionary *)context
+    NS_SWIFT_NAME(audioDeviceModule(_:engine:configureOutputFromSource:toDestination:format:context:));
 
 - (void)audioDeviceModuleDidUpdateDevices:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
     NS_SWIFT_NAME(audioDeviceModuleDidUpdateDevices(_:));

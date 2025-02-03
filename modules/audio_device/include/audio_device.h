@@ -23,6 +23,7 @@ RTC_FWD_DECL_OBJC_CLASS(AVAudioFormat);
 RTC_FWD_DECL_OBJC_CLASS(AVAudioNode);
 RTC_FWD_DECL_OBJC_CLASS(AVAudioSourceNode);
 RTC_FWD_DECL_OBJC_CLASS(AVAudioMixerNode);
+RTC_FWD_DECL_OBJC_CLASS(NSDictionary);
 
 namespace webrtc {
 
@@ -45,10 +46,7 @@ class AudioDeviceModule : public rtc::RefCountInterface {
     kDummyAudio,
   };
 
-  enum WindowsDeviceType {
-    kDefaultCommunicationDevice = -1,
-    kDefaultDevice = -2
-  };
+  enum WindowsDeviceType { kDefaultCommunicationDevice = -1, kDefaultDevice = -2 };
 
   enum SpeechActivityEvent {
     kStarted = 0,
@@ -67,9 +65,9 @@ class AudioDeviceModule : public rtc::RefCountInterface {
 
  public:
   // Creates a default ADM for usage in production code.
-  static rtc::scoped_refptr<AudioDeviceModule> Create(
-      AudioLayer audio_layer, TaskQueueFactory* task_queue_factory,
-      bool bypass_voice_processing = false);
+  static rtc::scoped_refptr<AudioDeviceModule> Create(AudioLayer audio_layer,
+                                                      TaskQueueFactory* task_queue_factory,
+                                                      bool bypass_voice_processing = false);
   // Creates an ADM with support for extra test methods. Don't use this factory
   // in production code.
   static rtc::scoped_refptr<AudioDeviceModuleForTest> CreateForTest(
@@ -90,11 +88,9 @@ class AudioDeviceModule : public rtc::RefCountInterface {
   // Device enumeration
   virtual int16_t PlayoutDevices() = 0;
   virtual int16_t RecordingDevices() = 0;
-  virtual int32_t PlayoutDeviceName(uint16_t index,
-                                    char name[kAdmMaxDeviceNameSize],
+  virtual int32_t PlayoutDeviceName(uint16_t index, char name[kAdmMaxDeviceNameSize],
                                     char guid[kAdmMaxGuidSize]) = 0;
-  virtual int32_t RecordingDeviceName(uint16_t index,
-                                      char name[kAdmMaxDeviceNameSize],
+  virtual int32_t RecordingDeviceName(uint16_t index, char name[kAdmMaxDeviceNameSize],
                                       char guid[kAdmMaxGuidSize]) = 0;
 
   // Device selection
@@ -212,8 +208,7 @@ class AudioDeviceObserver {
 
   // input/output devices updated or default device changed
   virtual void OnDevicesUpdated() {}
-  virtual void OnSpeechActivityEvent(
-      AudioDeviceModule::SpeechActivityEvent event) {}
+  virtual void OnSpeechActivityEvent(AudioDeviceModule::SpeechActivityEvent event) {}
 
   // AVAudioEngine lifecycle
   virtual void OnEngineDidCreate(AVAudioEngine* engine) {}
@@ -233,20 +228,12 @@ class AudioDeviceObserver {
   virtual void OnEngineWillRelease(AVAudioEngine* engine) {}
 
   // Override the input node configuration with a custom implementation.
-  // Return true if the original implementation is used.
-  virtual bool OnEngineWillConnectInput(AVAudioEngine* engine, AVAudioNode* src,
-                                        AVAudioNode* dst,
-                                        AVAudioFormat* format) {
-    return false;
-  }
+  virtual void OnEngineWillConnectInput(AVAudioEngine* engine, AVAudioNode* src, AVAudioNode* dst,
+                                        AVAudioFormat* format, NSDictionary* context) = 0;
 
   // Override the input node configuration with a custom implementation.
-  // Return true if the original implementation is used.
-  virtual bool OnEngineWillConnectOutput(AVAudioEngine* engine,
-                                         AVAudioNode* src, AVAudioNode* dst,
-                                         AVAudioFormat* format) {
-    return false;
-  }
+  virtual void OnEngineWillConnectOutput(AVAudioEngine* engine, AVAudioNode* src, AVAudioNode* dst,
+                                         AVAudioFormat* format, NSDictionary* context) = 0;
 };
 
 }  // namespace webrtc

@@ -18,35 +18,6 @@
 #define SDK_OBJC_NATIVE_SRC_AUDIO_AUDIO_DEVICE_AUDIOENGINE_H_
 
 #include <atomic>
-
-#if defined(__OBJC__)
-#import <AVFAudio/AVFAudio.h>
-#else
-// Forward declarations for C++ code
-#ifdef __OBJC__
-@class AVAudioEngine;
-@class AVAudioInputNode;
-@class AVAudioOutputNode;
-@class AVAudioSourceNode;
-@class AVAudioSinkNode;
-@class AVAudioMixerNode;
-@class AVAudioPCMBuffer;
-@class AVAudioFormat;
-typedef void (^AVAudioEngineManualRenderingBlock)(AVAudioFrameCount,
-                                                  AudioBufferList*, OSStatus*);
-#else
-typedef void AVAudioEngine;
-typedef void AVAudioInputNode;
-typedef void AVAudioOutputNode;
-typedef void AVAudioSourceNode;
-typedef void AVAudioSinkNode;
-typedef void AVAudioMixerNode;
-typedef void AVAudioPCMBuffer;
-typedef void AVAudioFormat;
-typedef void* AVAudioEngineManualRenderingBlock;
-#endif
-#endif
-
 #include <memory>
 
 #include "api/scoped_refptr.h"
@@ -62,6 +33,7 @@ typedef void* AVAudioEngineManualRenderingBlock;
 #if TARGET_OS_OSX
 #import <CoreAudio/CoreAudio.h>
 #endif
+#import <AVFAudio/AVFAudio.h>
 
 RTC_FWD_DECL_OBJC_CLASS(RTC_OBJC_TYPE(RTCNativeAudioSessionDelegateAdapter));
 
@@ -69,8 +41,9 @@ namespace webrtc {
 
 class FineAudioBuffer;
 
-class AudioEngineDevice : public AudioDeviceModule,
-                          public AudioSessionObserver {
+extern NSString* const kAudioEngineInputMixerNodeKey;
+
+class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver {
  public:
   explicit AudioEngineDevice(bool voice_processing_bypassed);
   ~AudioEngineDevice() override;
@@ -101,8 +74,7 @@ class AudioEngineDevice : public AudioDeviceModule,
   int GetRecordAudioParameters(AudioParameters* params) const override;
 #endif
 
-  int32_t ActiveAudioLayer(
-      AudioDeviceModule::AudioLayer* audioLayer) const override;
+  int32_t ActiveAudioLayer(AudioDeviceModule::AudioLayer* audioLayer) const override;
   int32_t PlayoutIsAvailable(bool* available) override;
   int32_t RecordingIsAvailable(bool* available) override;
   int16_t PlayoutDevices() override;
@@ -112,11 +84,9 @@ class AudioEngineDevice : public AudioDeviceModule,
   int32_t RecordingDeviceName(uint16_t index, char name[kAdmMaxDeviceNameSize],
                               char guid[kAdmMaxGuidSize]) override;
   int32_t SetPlayoutDevice(uint16_t index) override;
-  int32_t SetPlayoutDevice(
-      AudioDeviceModule::WindowsDeviceType device) override;
+  int32_t SetPlayoutDevice(AudioDeviceModule::WindowsDeviceType device) override;
   int32_t SetRecordingDevice(uint16_t index) override;
-  int32_t SetRecordingDevice(
-      AudioDeviceModule::WindowsDeviceType device) override;
+  int32_t SetRecordingDevice(AudioDeviceModule::WindowsDeviceType device) override;
   int32_t InitSpeaker() override;
   bool SpeakerIsInitialized() const override;
   int32_t InitMicrophone() override;
@@ -219,59 +189,45 @@ class AudioEngineDevice : public AudioDeviceModule,
     uint32_t default_input_device_id = 0;
 
     bool operator==(const EngineState& rhs) const {
-      return input_enabled == rhs.input_enabled &&
-             input_running == rhs.input_running &&
-             output_enabled == rhs.output_enabled &&
-             output_running == rhs.output_running &&
+      return input_enabled == rhs.input_enabled && input_running == rhs.input_running &&
+             output_enabled == rhs.output_enabled && output_running == rhs.output_running &&
              input_follow_mode == rhs.input_follow_mode &&
-             input_enabled_persistent_mode ==
-                 rhs.input_enabled_persistent_mode &&
-             input_muted == rhs.input_muted &&
-             is_interrupted == rhs.is_interrupted &&
+             input_enabled_persistent_mode == rhs.input_enabled_persistent_mode &&
+             input_muted == rhs.input_muted && is_interrupted == rhs.is_interrupted &&
              render_mode == rhs.render_mode &&
              voice_processing_enabled == rhs.voice_processing_enabled &&
              voice_processing_bypassed == rhs.voice_processing_bypassed &&
              voice_processing_agc_enabled == rhs.voice_processing_agc_enabled &&
-             advanced_ducking == rhs.advanced_ducking &&
-             ducking_level == rhs.ducking_level &&
-             output_device_id == rhs.output_device_id &&
-             input_device_id == rhs.input_device_id &&
+             advanced_ducking == rhs.advanced_ducking && ducking_level == rhs.ducking_level &&
+             output_device_id == rhs.output_device_id && input_device_id == rhs.input_device_id &&
              default_output_device_id == rhs.default_output_device_id &&
              default_input_device_id == rhs.default_input_device_id;
     }
 
     bool operator!=(const EngineState& rhs) const { return !(*this == rhs); }
 
-    bool IsOutputInputLinked() const {
-      return input_follow_mode && voice_processing_enabled;
-    }
+    bool IsOutputInputLinked() const { return input_follow_mode && voice_processing_enabled; }
 
     bool IsOutputEnabled() const {
-      return IsOutputInputLinked() ? IsInputEnabled() || output_enabled
-                                   : output_enabled;
+      return IsOutputInputLinked() ? IsInputEnabled() || output_enabled : output_enabled;
     }
 
     bool IsOutputRunning() const {
-      return IsOutputInputLinked() ? input_running || output_running
-                                   : output_running;
+      return IsOutputInputLinked() ? input_running || output_running : output_running;
     }
 
-    bool IsInputEnabled() const {
-      return input_enabled || input_enabled_persistent_mode;
-    }
+    bool IsInputEnabled() const { return input_enabled || input_enabled_persistent_mode; }
     bool IsInputRunning() const { return input_running; }
 
     bool IsAnyEnabled() const { return IsInputEnabled() || output_enabled; }
     bool IsAnyRunning() const { return input_running || output_running; }
 
     bool IsAllEnabled() const {
-      return IsOutputInputLinked() ? IsInputEnabled()
-                                   : IsInputEnabled() && output_enabled;
+      return IsOutputInputLinked() ? IsInputEnabled() : IsInputEnabled() && output_enabled;
     }
 
     bool IsAllRunning() const {
-      return IsOutputInputLinked() ? input_running
-                                   : input_running && output_running;
+      return IsOutputInputLinked() ? input_running : input_running && output_running;
     }
 
     bool IsOutputDefaultDevice() const { return output_device_id == 0; }
@@ -285,48 +241,30 @@ class AudioEngineDevice : public AudioDeviceModule,
 
     bool HasNoChanges() const { return prev == next; }
 
-    bool DidEnableOutput() const {
-      return !prev.IsOutputEnabled() && next.IsOutputEnabled();
-    }
+    bool DidEnableOutput() const { return !prev.IsOutputEnabled() && next.IsOutputEnabled(); }
 
-    bool DidEnableInput() const {
-      return !prev.IsInputEnabled() && next.IsInputEnabled();
-    }
+    bool DidEnableInput() const { return !prev.IsInputEnabled() && next.IsInputEnabled(); }
 
-    bool DidDisableOutput() const {
-      return prev.IsOutputEnabled() && !next.IsOutputEnabled();
-    }
+    bool DidDisableOutput() const { return prev.IsOutputEnabled() && !next.IsOutputEnabled(); }
 
-    bool DidDisableInput() const {
-      return prev.IsInputEnabled() && !next.IsInputEnabled();
-    }
+    bool DidDisableInput() const { return prev.IsInputEnabled() && !next.IsInputEnabled(); }
 
     bool DidAnyEnable() const { return DidEnableOutput() || DidEnableInput(); }
 
-    bool DidAnyDisable() const {
-      return DidDisableOutput() || DidDisableInput();
-    }
+    bool DidAnyDisable() const { return DidDisableOutput() || DidDisableInput(); }
 
-    bool DidBeginInterruption() const {
-      return !prev.is_interrupted && next.is_interrupted;
-    }
+    bool DidBeginInterruption() const { return !prev.is_interrupted && next.is_interrupted; }
 
-    bool DidEndInterruption() const {
-      return prev.is_interrupted && !next.is_interrupted;
-    }
+    bool DidEndInterruption() const { return prev.is_interrupted && !next.is_interrupted; }
 
     bool DidUpdateAudioGraph() const {
       return (prev.IsInputEnabled() != next.IsInputEnabled()) ||
              (prev.IsOutputEnabled() != next.IsOutputEnabled());
     }
 
-    bool DidUpdateOutputDevice() const {
-      return prev.output_device_id != next.output_device_id;
-    }
+    bool DidUpdateOutputDevice() const { return prev.output_device_id != next.output_device_id; }
 
-    bool DidUpdateInputDevice() const {
-      return prev.input_device_id != next.input_device_id;
-    }
+    bool DidUpdateInputDevice() const { return prev.input_device_id != next.input_device_id; }
 
     bool DidUpdateDefaultOutputDevice() const {
       return prev.default_output_device_id != next.default_output_device_id;
@@ -337,8 +275,7 @@ class AudioEngineDevice : public AudioDeviceModule,
     }
 
     bool IsEngineRestartRequired() const {
-      return DidUpdateAudioGraph() || DidUpdateOutputDevice() ||
-             DidUpdateInputDevice() ||
+      return DidUpdateAudioGraph() || DidUpdateOutputDevice() || DidUpdateInputDevice() ||
              (DidUpdateDefaultOutputDevice() && next.IsOutputDefaultDevice()) ||
              (DidUpdateDefaultInputDevice() && next.IsInputDefaultDevice());
     }
@@ -351,13 +288,11 @@ class AudioEngineDevice : public AudioDeviceModule,
     }
 
     bool DidEnableManualRenderingMode() const {
-      return prev.render_mode != RenderMode::Manual &&
-             next.render_mode == RenderMode::Manual;
+      return prev.render_mode != RenderMode::Manual && next.render_mode == RenderMode::Manual;
     }
 
     bool DidEnableDeviceRenderingMode() const {
-      return prev.render_mode != RenderMode::Device &&
-             next.render_mode == RenderMode::Device;
+      return prev.render_mode != RenderMode::Device && next.render_mode == RenderMode::Device;
     }
   };
 
@@ -376,9 +311,9 @@ class AudioEngineDevice : public AudioDeviceModule,
 
 // Device related
 #if TARGET_OS_OSX
-  static OSStatus objectListenerProc(
-      AudioObjectID objectId, UInt32 numberAddresses,
-      const AudioObjectPropertyAddress addresses[], void* clientData);
+  static OSStatus objectListenerProc(AudioObjectID objectId, UInt32 numberAddresses,
+                                     const AudioObjectPropertyAddress addresses[],
+                                     void* clientData);
   void HandleDeviceListenerEvent(AudioObjectPropertySelector selector);
   void UpdateAllDeviceIDs();
   std::vector<AudioObjectID> input_device_ids_;
@@ -416,8 +351,7 @@ class AudioEngineDevice : public AudioDeviceModule,
 #endif
 
   // Avoids running pending task after `this` is Terminated.
-  rtc::scoped_refptr<PendingTaskSafetyFlag> safety_ =
-      PendingTaskSafetyFlag::Create();
+  rtc::scoped_refptr<PendingTaskSafetyFlag> safety_ = PendingTaskSafetyFlag::Create();
 
   // Ratio between mach tick units and nanosecond. Used to change mach tick
   // units to nanoseconds.

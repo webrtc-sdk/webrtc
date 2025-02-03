@@ -45,6 +45,8 @@
 
 namespace webrtc {
 
+NSString* const kAudioEngineInputMixerNodeKey = @"_audio_engine_input_mixer_node_key";
+
 #define LOGI() RTC_LOG(LS_INFO) << "AudioEngineDevice::"
 #define LOGE() RTC_LOG(LS_ERROR) << "AudioEngineDevice::"
 #define LOGW() RTC_LOG(LS_WARNING) << "AudioEngineDevice::"
@@ -1359,11 +1361,11 @@ void AudioEngineDevice::UpdateManualEngineState(EngineStateUpdate state) {
     RTC_DCHECK(audio_device_buffer_ != nullptr);
     fine_audio_buffer_.reset(new FineAudioBuffer(audio_device_buffer_.get()));
 
-    if (!(this->observer_ != nullptr &&
-          this->observer_->OnEngineWillConnectInput(engine_manual_input_, nil,
-                                                    engine_manual_input_.mainMixerNode,
-                                                    manual_render_rtc_format_))) {
-      // No default implementation since device is not used.
+    if (this->observer_ != nullptr) {
+      NSDictionary* context = @{};
+      this->observer_->OnEngineWillConnectInput(engine_manual_input_, nil,
+                                                engine_manual_input_.mainMixerNode,
+                                                manual_render_rtc_format_, context);
     }
 
     [engine_manual_input_ connect:engine_manual_input_.mainMixerNode
@@ -1571,13 +1573,16 @@ void AudioEngineDevice::UpdateDeviceEngineState(EngineStateUpdate state) {
                          to:engine_device_.mainMixerNode
                      format:engine_output_format];
 
-    if (!(this->observer_ != nullptr &&
-          this->observer_->OnEngineWillConnectOutput(engine_device_, engine_device_.mainMixerNode,
-                                                     this->OutputNode(), engine_output_format))) {
-      // Default implementation.
-      [engine_device_ connect:engine_device_.mainMixerNode
-                           to:this->OutputNode()
-                       format:engine_output_format];
+    // mainMixerNode -> outputNode is connected by default by AVAudioEngine, but we connect anyways
+    // with format.
+    [engine_device_ connect:engine_device_.mainMixerNode
+                         to:this->OutputNode()
+                     format:engine_output_format];
+
+    if (this->observer_ != nullptr) {
+      NSDictionary* context = @{};
+      this->observer_->OnEngineWillConnectOutput(engine_device_, engine_device_.mainMixerNode,
+                                                 this->OutputNode(), engine_output_format, context);
     }
 
   } else if ((state.prev.IsOutputEnabled() && !state.next.IsOutputEnabled()) &&
@@ -1695,9 +1700,27 @@ void AudioEngineDevice::UpdateDeviceEngineState(EngineStateUpdate state) {
       return noErr;
     };
 
-    if (!(observer_ != nullptr &&
-          observer_->OnEngineWillConnectInput(engine_device_, this->InputNode(), input_mixer_node_,
-                                              engine_input_format))) {
+    NSMutableArray<AVAudioConnectionPoint*>* input_mixer_connections = [NSMutableArray array];
+
+    if (observer_ != nullptr) {
+      NSDictionary* context = @{
+        kAudioEngineInputMixerNodeKey : input_mixer_node_,
+      };
+      observer_->OnEngineWillConnectInput(engine_device_, this->InputNode(), input_mixer_node_,
+                                          engine_input_format, context);
+
+      for (AVAudioNodeBus bus = 0; bus < input_mixer_node_.numberOfInputs; bus++) {
+        AVAudioConnectionPoint* cp = [engine_device_ inputConnectionPointForNode:input_mixer_node_
+                                                                        inputBus:bus];
+        if (cp) {
+          [input_mixer_connections addObject:cp];
+        }
+      }
+    }
+
+    LOGI() << "input mixer connection count: " << input_mixer_connections.count;
+    if (input_mixer_connections.count == 0) {
+      LOGI() << "Nothing connected to input mixer, connecting input node...";
       // Default implementation.
       [engine_device_ connect:this->InputNode() to:input_mixer_node_ format:engine_input_format];
     }

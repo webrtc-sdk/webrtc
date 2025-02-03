@@ -24,6 +24,8 @@
 #import "modules/audio_device/audio_engine_device.h"
 #import "sdk/objc/native/api/audio_device_module.h"
 
+NSString *const kRTCAudioEngineInputMixerNodeKey = webrtc::kAudioEngineInputMixerNodeKey;
+
 class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
  public:
   AudioDeviceObserver(RTC_OBJC_TYPE(RTCAudioDeviceModule) * adm) { adm_ = adm; }
@@ -75,22 +77,24 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
     [delegate_ audioDeviceModule:adm_ willReleaseEngine:engine];
   }
 
-  bool OnEngineWillConnectInput(AVAudioEngine *engine, AVAudioNode *src, AVAudioNode *dst,
-                                AVAudioFormat *format) override {
-    return [delegate_ audioDeviceModule:adm_
-                                 engine:engine
-               configureInputFromSource:src
-                          toDestination:dst
-                             withFormat:format];
+  void OnEngineWillConnectInput(AVAudioEngine *engine, AVAudioNode *src, AVAudioNode *dst,
+                                AVAudioFormat *format, NSDictionary *context) override {
+    [delegate_ audioDeviceModule:adm_
+                          engine:engine
+        configureInputFromSource:src
+                   toDestination:dst
+                      withFormat:format
+                         context:context];
   }
 
-  bool OnEngineWillConnectOutput(AVAudioEngine *engine, AVAudioNode *src, AVAudioNode *dst,
-                                 AVAudioFormat *format) override {
-    return [delegate_ audioDeviceModule:adm_
-                                 engine:engine
-              configureOutputFromSource:src
-                          toDestination:dst
-                             withFormat:format];
+  void OnEngineWillConnectOutput(AVAudioEngine *engine, AVAudioNode *src, AVAudioNode *dst,
+                                 AVAudioFormat *format, NSDictionary *context) override {
+    [delegate_ audioDeviceModule:adm_
+                           engine:engine
+        configureOutputFromSource:src
+                    toDestination:dst
+                       withFormat:format
+                          context:context];
   }
 
   __weak id<RTC_OBJC_TYPE(RTCAudioDeviceModuleDelegate)> delegate_;
