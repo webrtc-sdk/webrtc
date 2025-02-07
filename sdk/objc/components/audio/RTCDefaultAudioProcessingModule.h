@@ -33,6 +33,7 @@ RTC_OBJC_EXPORT
    NS_SWIFT_NAME(init(config:capturePostProcessingDelegate:renderPreProcessingDelegate:)) NS_DESIGNATED_INITIALIZER;
 
 @property(nonatomic, assign) RTC_OBJC_TYPE(RTCAudioProcessingConfig) * config;
+@property(nonatomic, assign, getter=isMuted) BOOL muted;
 
 // Dynamically update delegates at runtime
 

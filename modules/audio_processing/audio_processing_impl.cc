@@ -1045,6 +1045,11 @@ size_t AudioProcessingImpl::num_output_channels() const {
   return formats_.api_format.output_stream().num_channels();
 }
 
+bool AudioProcessingImpl::get_output_will_be_muted() {
+  MutexLock lock(&mutex_capture_);
+  return !capture_.capture_output_used;
+}
+
 void AudioProcessingImpl::set_output_will_be_muted(bool muted) {
   MutexLock lock(&mutex_capture_);
   HandleCaptureOutputUsedSetting(!muted);
