@@ -135,10 +135,16 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
   bool IsInterrupted();
 
+  enum RenderMode { Device = 0, Manual = 1 };
+  enum MuteMode { VoiceProcessing = 0, RestartEngine = 1 };
+
   int32_t SetObserver(AudioDeviceObserver* observer) override;
 
   int32_t SetManualRenderingMode(bool enable);
   int32_t ManualRenderingMode(bool* enabled);
+
+  int32_t SetMuteMode(MuteMode mode);
+  int32_t GetMuteMode(MuteMode* mode);
 
   int32_t SetAdvancedDucking(bool enable);
   int32_t AdvancedDucking(bool* enabled);
@@ -157,8 +163,6 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
   int32_t InitAndStartRecording();
 
-  enum RenderMode { Device, Manual };
-
  private:
   // Represents the state of the audio engine, including input/output status,
   // rendering mode, and various configuration flags.
@@ -176,6 +180,8 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
     bool is_interrupted = false;
 
     RenderMode render_mode = RenderMode::Device;
+    MuteMode mute_mode = MuteMode::VoiceProcessing;
+
     bool voice_processing_enabled = true;
     bool voice_processing_bypassed = false;
     bool voice_processing_agc_enabled = true;
@@ -194,7 +200,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
              input_follow_mode == rhs.input_follow_mode &&
              input_enabled_persistent_mode == rhs.input_enabled_persistent_mode &&
              input_muted == rhs.input_muted && is_interrupted == rhs.is_interrupted &&
-             render_mode == rhs.render_mode &&
+             render_mode == rhs.render_mode && mute_mode == rhs.mute_mode &&
              voice_processing_enabled == rhs.voice_processing_enabled &&
              voice_processing_bypassed == rhs.voice_processing_bypassed &&
              voice_processing_agc_enabled == rhs.voice_processing_agc_enabled &&
@@ -209,18 +215,24 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
     bool IsOutputInputLinked() const { return input_follow_mode && voice_processing_enabled; }
 
     bool IsOutputEnabled() const {
-      return IsOutputInputLinked() ? IsInputEnabled() || output_enabled : output_enabled;
+      return IsOutputInputLinked() ? (IsInputEnabled() || output_enabled) : output_enabled;
     }
 
     bool IsOutputRunning() const {
-      return IsOutputInputLinked() ? input_running || output_running : output_running;
+      return IsOutputInputLinked() ? (IsInputRunning() || output_running) : output_running;
     }
 
-    bool IsInputEnabled() const { return input_enabled || input_enabled_persistent_mode; }
-    bool IsInputRunning() const { return input_running; }
+    bool IsInputEnabled() const {
+      return !(mute_mode == MuteMode::RestartEngine && input_muted) &&
+             (input_enabled || input_enabled_persistent_mode);
+    }
 
-    bool IsAnyEnabled() const { return IsInputEnabled() || output_enabled; }
-    bool IsAnyRunning() const { return input_running || output_running; }
+    bool IsInputRunning() const {
+      return !(mute_mode == MuteMode::RestartEngine && input_muted) && input_running;
+    }
+
+    bool IsAnyEnabled() const { return IsInputEnabled() || IsOutputEnabled(); }
+    bool IsAnyRunning() const { return IsInputRunning() || IsOutputRunning(); }
 
     bool IsAllEnabled() const {
       return IsOutputInputLinked() ? IsInputEnabled() : IsInputEnabled() && output_enabled;
@@ -274,10 +286,16 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
       return prev.default_input_device_id != next.default_input_device_id;
     }
 
+    bool DidUpdateMuteMode() const { return prev.mute_mode != next.mute_mode; }
+
     bool IsEngineRestartRequired() const {
       return DidUpdateAudioGraph() || DidUpdateOutputDevice() || DidUpdateInputDevice() ||
+             // Handle default device updates
              (DidUpdateDefaultOutputDevice() && next.IsOutputDefaultDevice()) ||
-             (DidUpdateDefaultInputDevice() && next.IsInputDefaultDevice());
+             (DidUpdateDefaultInputDevice() && next.IsInputDefaultDevice()) ||
+             // Handle mute mode update
+             (DidUpdateMuteMode() && next.mute_mode == MuteMode::RestartEngine &&
+              next.IsInputEnabled());
     }
 
     // Special case to re-create engine when switching from Speaker & Mic ->

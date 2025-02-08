@@ -26,6 +26,14 @@
 
 NSString *const kRTCAudioEngineInputMixerNodeKey = webrtc::kAudioEngineInputMixerNodeKey;
 
+inline webrtc::AudioEngineDevice::MuteMode MuteModeToRTC(RTCAudioEngineMuteMode mode) {
+  return static_cast<webrtc::AudioEngineDevice::MuteMode>(mode);
+}
+
+inline RTCAudioEngineMuteMode MuteModeToObjC(webrtc::AudioEngineDevice::MuteMode mode) {
+  return static_cast<RTCAudioEngineMuteMode>(mode);
+}
+
 class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
  public:
   AudioDeviceObserver(RTC_OBJC_TYPE(RTCAudioDeviceModule) * adm) { adm_ = adm; }
@@ -371,6 +379,24 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   if (module == nullptr) return;
 
   _workerThread->BlockingCall([module, value] { return module->SetDuckingLevel(value) == 0; });
+}
+
+- (RTCAudioEngineMuteMode)muteMode {
+  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  if (module == nullptr) return RTCAudioEngineMuteModeUnknown;
+
+  return _workerThread->BlockingCall([module] {
+    webrtc::AudioEngineDevice::MuteMode mode;
+    return module->GetMuteMode(&mode) == 0 ? MuteModeToObjC(mode) : RTCAudioEngineMuteModeUnknown;
+  });
+}
+
+- (void)setMuteMode:(RTCAudioEngineMuteMode)mode {
+  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  if (module == nullptr) return;
+
+  _workerThread->BlockingCall(
+      [module, mode] { return module->SetMuteMode(MuteModeToRTC(mode)) == 0; });
 }
 
 - (BOOL)isVoiceProcessingBypassed {

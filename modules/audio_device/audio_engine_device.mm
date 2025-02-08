@@ -1060,6 +1060,31 @@ int32_t AudioEngineDevice::SetManualRenderingMode(bool enable) {
   return 0;
 }
 
+int32_t AudioEngineDevice::GetMuteMode(MuteMode* mode) {
+  LOGI() << "GetMuteMode";
+  RTC_DCHECK_RUN_ON(thread_);
+
+  if (mode == nullptr) {
+    return -1;
+  }
+
+  *mode = engine_state_.mute_mode;
+
+  return 0;
+}
+
+int32_t AudioEngineDevice::SetMuteMode(MuteMode mode) {
+  RTC_DCHECK_RUN_ON(thread_);
+  LOGI() << "SetMuteMode: " << mode;
+
+  SetEngineState([mode](EngineState state) -> EngineState {
+    state.mute_mode = mode;
+    return state;
+  });
+
+  return 0;
+}
+
 int32_t AudioEngineDevice::InitAndStartRecording() {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "InitAndStartRecording";
@@ -1758,7 +1783,8 @@ void AudioEngineDevice::UpdateDeviceEngineState(EngineStateUpdate state) {
                                   state.next.IsInputEnabled());
   }
 
-  if (state.next.IsInputEnabled() && this->InputNode().voiceProcessingEnabled &&
+  if (state.next.mute_mode == MuteMode::VoiceProcessing && state.next.IsInputEnabled() &&
+      this->InputNode().voiceProcessingEnabled &&
       this->InputNode().voiceProcessingInputMuted != state.next.input_muted) {
     LOGI() << "setVoiceProcessingInputMuted: " << state.next.input_muted;
     this->InputNode().voiceProcessingInputMuted = state.next.input_muted;

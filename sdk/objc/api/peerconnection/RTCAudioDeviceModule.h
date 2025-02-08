@@ -28,6 +28,12 @@ typedef NS_ENUM(NSInteger, RTCSpeechActivityEvent) {
   RTCSpeechActivityEventEnded,
 };
 
+typedef NS_ENUM(NSInteger, RTCAudioEngineMuteMode) {
+  RTCAudioEngineMuteModeUnknown = -1,
+  RTCAudioEngineMuteModeVoiceProcessing = 0,
+  RTCAudioEngineMuteModeRestartEngine = 1,
+};
+
 RTC_EXTERN NSString *const kRTCAudioEngineInputMixerNodeKey;
 
 @class RTC_OBJC_TYPE(RTCAudioDeviceModule);
@@ -77,8 +83,7 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
     configureInputFromSource:(nullable AVAudioNode *)source
                toDestination:(AVAudioNode *)destination
                   withFormat:(AVAudioFormat *)format
-                     context:(NSDictionary *)context
-    NS_SWIFT_NAME(audioDeviceModule(_:engine:configureInputFromSource:toDestination:format:context:));
+                     context:(NSDictionary *)context NS_SWIFT_NAME(audioDeviceModule(_:engine:configureInputFromSource:toDestination:format:context:));
 
 - (void)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
                        engine:(AVAudioEngine *)engine
@@ -137,6 +142,7 @@ RTC_OBJC_EXPORT
 @property(nonatomic, assign, getter=isAdvancedDuckingEnabled) BOOL advancedDuckingEnabled;
 
 @property(nonatomic, assign) NSInteger duckingLevel;
+@property(nonatomic, assign) RTCAudioEngineMuteMode muteMode;
 
 @property(nonatomic, assign, getter=isVoiceProcessingBypassed) BOOL voiceProcessingBypassed;
 @property(nonatomic, assign, getter=isVoiceProcessingAGCEnabled) BOOL voiceProcessingAGCEnabled;
