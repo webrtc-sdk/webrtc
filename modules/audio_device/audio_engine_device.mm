@@ -326,14 +326,14 @@ bool AudioEngineDevice::PlayoutIsInitialized() const {
   LOGI() << "PlayoutIsInitialized";
   RTC_DCHECK_RUN_ON(thread_);
 
-  return engine_state_.IsOutputEnabled();
+  return engine_state_.output_enabled;
 }
 
 bool AudioEngineDevice::Playing() const {
   LOGI() << "Playing";
   RTC_DCHECK_RUN_ON(thread_);
 
-  return engine_state_.IsOutputRunning();
+  return engine_state_.output_running;
 }
 
 int32_t AudioEngineDevice::InitPlayout() {
@@ -381,7 +381,7 @@ bool AudioEngineDevice::RecordingIsInitialized() const {
   LOGI() << "RecordingIsInitialized";
   RTC_DCHECK_RUN_ON(thread_);
 
-  return engine_state_.IsInputEnabled();
+  return engine_state_.input_enabled;
 }
 
 bool AudioEngineDevice::Recording() const {
