@@ -125,10 +125,13 @@ RTC_OBJC_EXPORT
 
 - (BOOL)initAndStartRecording;
 
+// For testing purposes
 @property(nonatomic, readonly) BOOL isPlayoutInitialized;
 @property(nonatomic, readonly) BOOL isRecordingInitialized;
 @property(nonatomic, readonly) BOOL isPlaying;
 @property(nonatomic, readonly) BOOL isRecording;
+@property(nonatomic, readonly) BOOL isEngineRunning;
+@property(nonatomic, assign, getter=isMicrophoneMuted) BOOL microphoneMuted;
 
 @property(nonatomic, getter=isInitRecordingPersistentMode) BOOL initRecordingPersistentMode;
 
@@ -143,7 +146,6 @@ RTC_OBJC_EXPORT
 
 @property(nonatomic, assign) NSInteger duckingLevel;
 @property(nonatomic, assign) RTCAudioEngineMuteMode muteMode;
-@property(nonatomic, readonly) BOOL isEngineRunning;
 
 @property(nonatomic, assign, getter=isVoiceProcessingBypassed) BOOL voiceProcessingBypassed;
 @property(nonatomic, assign, getter=isVoiceProcessingAGCEnabled) BOOL voiceProcessingAGCEnabled;

@@ -308,14 +308,25 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   return _workerThread->BlockingCall([self] { return _native->Recording(); });
 }
 
-#pragma mark - Unique to AudioEngineDevice
-
 - (BOOL)isEngineRunning {
   webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
   if (module == nullptr) return false;
 
   return _workerThread->BlockingCall([module] { return module->IsEngineRunning(); });
 }
+
+- (BOOL)isMicrophoneMuted {
+  return _workerThread->BlockingCall([self] {
+    bool value = false;
+    return _native->MicrophoneMute(&value) == 0 ? value : NO;
+  });
+}
+
+- (void)setMicrophoneMuted:(BOOL)muted {
+  _workerThread->BlockingCall([self, muted] { _native->SetMicrophoneMute(muted); });
+}
+
+#pragma mark - Unique to AudioEngineDevice
 
 - (BOOL)isInitRecordingPersistentMode {
   webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
