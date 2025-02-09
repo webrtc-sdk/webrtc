@@ -143,6 +143,7 @@ RTC_OBJC_EXPORT
 
 @property(nonatomic, assign) NSInteger duckingLevel;
 @property(nonatomic, assign) RTCAudioEngineMuteMode muteMode;
+@property(nonatomic, readonly) BOOL isEngineRunning;
 
 @property(nonatomic, assign, getter=isVoiceProcessingBypassed) BOOL voiceProcessingBypassed;
 @property(nonatomic, assign, getter=isVoiceProcessingAGCEnabled) BOOL voiceProcessingAGCEnabled;

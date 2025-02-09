@@ -973,6 +973,14 @@ int32_t AudioEngineDevice::PlayoutDelay(uint16_t* delayMS) const {
   return 0;
 }
 
+bool AudioEngineDevice::IsEngineRunning() {
+  LOGI() << "IsEngineRunning";
+  RTC_DCHECK_RUN_ON(thread_);
+
+  if (engine_device_ == nil) return false;
+  return engine_device_.running;
+}
+
 int32_t AudioEngineDevice::SetObserver(AudioDeviceObserver* observer) {
   LOGI() << "SetObserver";
   RTC_DCHECK_RUN_ON(thread_);

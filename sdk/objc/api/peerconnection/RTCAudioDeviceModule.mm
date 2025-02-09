@@ -310,6 +310,13 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 
 #pragma mark - Unique to AudioEngineDevice
 
+- (BOOL)isEngineRunning {
+  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  if (module == nullptr) return false;
+
+  return _workerThread->BlockingCall([module] { return module->IsEngineRunning(); });
+}
+
 - (BOOL)isInitRecordingPersistentMode {
   webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
   if (module == nullptr) return NO;

@@ -138,6 +138,8 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   enum RenderMode { Device = 0, Manual = 1 };
   enum MuteMode { VoiceProcessing = 0, RestartEngine = 1 };
 
+  bool IsEngineRunning();
+
   int32_t SetObserver(AudioDeviceObserver* observer) override;
 
   int32_t SetManualRenderingMode(bool enable);
