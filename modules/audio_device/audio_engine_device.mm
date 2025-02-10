@@ -1665,12 +1665,14 @@ void AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       LOGI() << "setVoiceProcessingEnabled (input) result: " << set_vp_result ? "YES" : "NO";
     }
 
-    if (!this->InputNode().isVoiceProcessingAGCEnabled) {
-      LOGW() << "voiceProcessingAGCEnabled (input) is false, ensure AVAudioSession.Mode is "
-                "videoChat or voiceChat.";
-    }
-
     if (this->InputNode().voiceProcessingEnabled) {
+      // Always unmute vp if restart mute mode.
+      if (state.next.mute_mode == MuteMode::RestartEngine &&
+          this->InputNode().voiceProcessingInputMuted) {
+        LOGI() << "setVoiceProcessingInputMuted: un-muting vp for restart mute mode";
+        this->InputNode().voiceProcessingInputMuted = false;
+      }
+
       // Muted talker detection.
       if (@available(iOS 17.0, macCatalyst 17.0, macOS 14.0, tvOS 17.0, visionOS 1.0, *)) {
         auto listener_block = ^(AVAudioVoiceProcessingSpeechActivityEvent event) {
@@ -1809,10 +1811,11 @@ void AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
                                   state.next.IsInputEnabled());
   }
 
+  // Run-time mute toggling if vp mode.
   if (state.next.mute_mode == MuteMode::VoiceProcessing && state.next.IsInputEnabled() &&
       this->InputNode().voiceProcessingEnabled &&
       this->InputNode().voiceProcessingInputMuted != state.next.input_muted) {
-    LOGI() << "setVoiceProcessingInputMuted: " << state.next.input_muted;
+    LOGI() << "setVoiceProcessingInputMuted (runtime): " << state.next.input_muted;
     this->InputNode().voiceProcessingInputMuted = state.next.input_muted;
   }
 
