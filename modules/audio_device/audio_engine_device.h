@@ -292,10 +292,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
       return DidUpdateAudioGraph() || DidUpdateOutputDevice() || DidUpdateInputDevice() ||
              // Handle default device updates
              (DidUpdateDefaultOutputDevice() && next.IsOutputDefaultDevice()) ||
-             (DidUpdateDefaultInputDevice() && next.IsInputDefaultDevice()) ||
-             // Handle mute mode update
-             (DidUpdateMuteMode() && next.mute_mode == MuteMode::RestartEngine &&
-              next.IsInputEnabled());
+             (DidUpdateDefaultInputDevice() && next.IsInputDefaultDevice());
     }
 
     // Special case to re-create engine when switching from Speaker & Mic ->
