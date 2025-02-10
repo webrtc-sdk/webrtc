@@ -45,6 +45,92 @@ extern NSString* const kAudioEngineInputMixerNodeKey;
 
 class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver {
  public:
+  enum RenderMode { Device = 0, Manual = 1 };
+  enum MuteMode { VoiceProcessing = 0, RestartEngine = 1 };
+
+  // Represents the state of the audio engine, including input/output status,
+  // rendering mode, and various configuration flags.
+  struct EngineState {
+    bool input_enabled = false;
+    bool input_running = false;
+    bool output_enabled = false;
+    bool output_running = false;
+
+    // Output will be enabled when input is enabled
+    bool input_follow_mode = true;
+    bool input_enabled_persistent_mode = false;
+
+    bool input_muted = true;
+    bool is_interrupted = false;
+
+    RenderMode render_mode = RenderMode::Device;
+    MuteMode mute_mode = MuteMode::VoiceProcessing;
+
+    bool voice_processing_enabled = true;
+    bool voice_processing_bypassed = false;
+    bool voice_processing_agc_enabled = true;
+    bool advanced_ducking = true;
+    long ducking_level = 0;  // 0 = Default
+
+    uint32_t output_device_id = 0;  // kAudioObjectUnknown
+    uint32_t input_device_id = 0;   // kAudioObjectUnknown
+
+    uint32_t default_output_device_id = 0;  // Track default device
+    uint32_t default_input_device_id = 0;
+
+    bool operator==(const EngineState& rhs) const {
+      return input_enabled == rhs.input_enabled && input_running == rhs.input_running &&
+             output_enabled == rhs.output_enabled && output_running == rhs.output_running &&
+             input_follow_mode == rhs.input_follow_mode &&
+             input_enabled_persistent_mode == rhs.input_enabled_persistent_mode &&
+             input_muted == rhs.input_muted && is_interrupted == rhs.is_interrupted &&
+             render_mode == rhs.render_mode && mute_mode == rhs.mute_mode &&
+             voice_processing_enabled == rhs.voice_processing_enabled &&
+             voice_processing_bypassed == rhs.voice_processing_bypassed &&
+             voice_processing_agc_enabled == rhs.voice_processing_agc_enabled &&
+             advanced_ducking == rhs.advanced_ducking && ducking_level == rhs.ducking_level &&
+             output_device_id == rhs.output_device_id && input_device_id == rhs.input_device_id &&
+             default_output_device_id == rhs.default_output_device_id &&
+             default_input_device_id == rhs.default_input_device_id;
+    }
+
+    bool operator!=(const EngineState& rhs) const { return !(*this == rhs); }
+
+    bool IsOutputInputLinked() const { return input_follow_mode && voice_processing_enabled; }
+
+    bool IsOutputEnabled() const {
+      return IsOutputInputLinked() ? (IsInputEnabled() || output_enabled) : output_enabled;
+    }
+
+    bool IsOutputRunning() const {
+      return IsOutputInputLinked() ? (IsInputRunning() || output_running) : output_running;
+    }
+
+    bool IsInputEnabled() const {
+      return !(mute_mode == MuteMode::RestartEngine && input_muted) &&
+             (input_enabled || input_enabled_persistent_mode);
+    }
+
+    bool IsInputRunning() const {
+      return !(mute_mode == MuteMode::RestartEngine && input_muted) && input_running;
+    }
+
+    bool IsAnyEnabled() const { return IsInputEnabled() || IsOutputEnabled(); }
+    bool IsAnyRunning() const { return IsInputRunning() || IsOutputRunning(); }
+
+    bool IsAllEnabled() const {
+      return IsOutputInputLinked() ? IsInputEnabled() : IsInputEnabled() && output_enabled;
+    }
+
+    bool IsAllRunning() const {
+      return IsOutputInputLinked() ? input_running : input_running && output_running;
+    }
+
+    bool IsOutputDefaultDevice() const { return output_device_id == 0; }
+
+    bool IsInputDefaultDevice() const { return input_device_id == 0; }
+  };
+
   explicit AudioEngineDevice(bool voice_processing_bypassed);
   ~AudioEngineDevice() override;
 
@@ -135,10 +221,10 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
   bool IsInterrupted();
 
-  enum RenderMode { Device = 0, Manual = 1 };
-  enum MuteMode { VoiceProcessing = 0, RestartEngine = 1 };
-
   bool IsEngineRunning();
+
+  int32_t SetEngineState(EngineState enable);
+  int32_t GetEngineState(EngineState* enabled);
 
   int32_t SetObserver(AudioDeviceObserver* observer) override;
 
@@ -166,89 +252,6 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   int32_t InitAndStartRecording();
 
  private:
-  // Represents the state of the audio engine, including input/output status,
-  // rendering mode, and various configuration flags.
-  struct EngineState {
-    bool input_enabled = false;
-    bool input_running = false;
-    bool output_enabled = false;
-    bool output_running = false;
-
-    // Output will be enabled when input is enabled
-    bool input_follow_mode = true;
-    bool input_enabled_persistent_mode = false;
-
-    bool input_muted = true;
-    bool is_interrupted = false;
-
-    RenderMode render_mode = RenderMode::Device;
-    MuteMode mute_mode = MuteMode::VoiceProcessing;
-
-    bool voice_processing_enabled = true;
-    bool voice_processing_bypassed = false;
-    bool voice_processing_agc_enabled = true;
-    bool advanced_ducking = true;
-    long ducking_level = 0;  // 0 = Default
-
-    uint32_t output_device_id = 0;  // kAudioObjectUnknown
-    uint32_t input_device_id = 0;   // kAudioObjectUnknown
-
-    uint32_t default_output_device_id = 0;  // Track default device
-    uint32_t default_input_device_id = 0;
-
-    bool operator==(const EngineState& rhs) const {
-      return input_enabled == rhs.input_enabled && input_running == rhs.input_running &&
-             output_enabled == rhs.output_enabled && output_running == rhs.output_running &&
-             input_follow_mode == rhs.input_follow_mode &&
-             input_enabled_persistent_mode == rhs.input_enabled_persistent_mode &&
-             input_muted == rhs.input_muted && is_interrupted == rhs.is_interrupted &&
-             render_mode == rhs.render_mode && mute_mode == rhs.mute_mode &&
-             voice_processing_enabled == rhs.voice_processing_enabled &&
-             voice_processing_bypassed == rhs.voice_processing_bypassed &&
-             voice_processing_agc_enabled == rhs.voice_processing_agc_enabled &&
-             advanced_ducking == rhs.advanced_ducking && ducking_level == rhs.ducking_level &&
-             output_device_id == rhs.output_device_id && input_device_id == rhs.input_device_id &&
-             default_output_device_id == rhs.default_output_device_id &&
-             default_input_device_id == rhs.default_input_device_id;
-    }
-
-    bool operator!=(const EngineState& rhs) const { return !(*this == rhs); }
-
-    bool IsOutputInputLinked() const { return input_follow_mode && voice_processing_enabled; }
-
-    bool IsOutputEnabled() const {
-      return IsOutputInputLinked() ? (IsInputEnabled() || output_enabled) : output_enabled;
-    }
-
-    bool IsOutputRunning() const {
-      return IsOutputInputLinked() ? (IsInputRunning() || output_running) : output_running;
-    }
-
-    bool IsInputEnabled() const {
-      return !(mute_mode == MuteMode::RestartEngine && input_muted) &&
-             (input_enabled || input_enabled_persistent_mode);
-    }
-
-    bool IsInputRunning() const {
-      return !(mute_mode == MuteMode::RestartEngine && input_muted) && input_running;
-    }
-
-    bool IsAnyEnabled() const { return IsInputEnabled() || IsOutputEnabled(); }
-    bool IsAnyRunning() const { return IsInputRunning() || IsOutputRunning(); }
-
-    bool IsAllEnabled() const {
-      return IsOutputInputLinked() ? IsInputEnabled() : IsInputEnabled() && output_enabled;
-    }
-
-    bool IsAllRunning() const {
-      return IsOutputInputLinked() ? input_running : input_running && output_running;
-    }
-
-    bool IsOutputDefaultDevice() const { return output_device_id == 0; }
-
-    bool IsInputDefaultDevice() const { return input_device_id == 0; }
-  };
-
   struct EngineStateUpdate {
     EngineState prev;
     EngineState next;
@@ -319,9 +322,9 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   AVAudioOutputNode* OutputNode();
 
   bool IsMicrophonePermissionGranted();
-  void SetEngineState(std::function<EngineState(EngineState)> state_transform);
-  void UpdateDeviceEngineState(EngineStateUpdate state);
-  void UpdateManualEngineState(EngineStateUpdate state);
+  void ModifyEngineState(std::function<EngineState(EngineState)> state_transform);
+  void ApplyDeviceEngineState(EngineStateUpdate state);
+  void ApplyManualEngineState(EngineStateUpdate state);
 
   // AudioEngine observer methods. May be called from any thread.
   void ReconfigureEngine(bool is_required);

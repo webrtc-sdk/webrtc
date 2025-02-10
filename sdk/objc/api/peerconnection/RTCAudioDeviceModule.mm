@@ -326,6 +326,42 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   _workerThread->BlockingCall([self, muted] { _native->SetMicrophoneMute(muted); });
 }
 
+- (RTCAudioEngineState)engineState {
+  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  if (module == nullptr) return RTCAudioEngineState();
+
+  return _workerThread->BlockingCall([module] {
+    webrtc::AudioEngineDevice::EngineState state;
+    if (module->GetEngineState(&state) != 0) return RTCAudioEngineState();
+
+    RTCAudioEngineState result;
+    result.outputEnabled = state.output_enabled;
+    result.outputRunning = state.output_running;
+    result.inputEnabled = state.input_enabled;
+    result.inputRunning = state.input_running;
+    result.inputMuted = state.input_muted;
+    result.muteMode = MuteModeToObjC(state.mute_mode);
+    return result;
+  });
+}
+
+- (void)setEngineState:(RTCAudioEngineState)state {
+  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  if (module == nullptr) return;
+
+  _workerThread->BlockingCall([module, state] {
+    webrtc::AudioEngineDevice::EngineState result;
+    result.output_enabled = state.outputEnabled;
+    result.output_running = state.outputRunning;
+    result.input_enabled = state.inputEnabled;
+    result.input_running = state.inputRunning;
+    result.input_muted = state.inputMuted;
+    result.mute_mode = MuteModeToRTC(state.muteMode);
+
+    module->SetEngineState(result);
+  });
+}
+
 #pragma mark - Unique to AudioEngineDevice
 
 - (BOOL)isInitRecordingPersistentMode {

@@ -34,6 +34,15 @@ typedef NS_ENUM(NSInteger, RTCAudioEngineMuteMode) {
   RTCAudioEngineMuteModeRestartEngine = 1,
 };
 
+typedef struct {
+  bool outputEnabled;
+  bool outputRunning;
+  bool inputEnabled;
+  bool inputRunning;
+  bool inputMuted;
+  RTCAudioEngineMuteMode muteMode;
+} RTCAudioEngineState;
+
 RTC_EXTERN NSString *const kRTCAudioEngineInputMixerNodeKey;
 
 @class RTC_OBJC_TYPE(RTCAudioDeviceModule);
@@ -132,6 +141,9 @@ RTC_OBJC_EXPORT
 @property(nonatomic, readonly) BOOL isRecording;
 @property(nonatomic, readonly) BOOL isEngineRunning;
 @property(nonatomic, assign, getter=isMicrophoneMuted) BOOL microphoneMuted;
+
+// Directly get & set engine state.
+@property(nonatomic, assign) RTCAudioEngineState engineState;
 
 @property(nonatomic, getter=isInitRecordingPersistentMode) BOOL initRecordingPersistentMode;
 

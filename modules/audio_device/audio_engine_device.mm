@@ -147,7 +147,7 @@ void AudioEngineDevice::HandleDeviceListenerEvent(AudioObjectPropertySelector se
           bool contains = std::binary_search(output_device_ids_.begin(), output_device_ids_.end(),
                                              engine_state_.output_device_id);
           if (!contains) {
-            SetEngineState([](EngineState state) -> EngineState {
+            ModifyEngineState([](EngineState state) -> EngineState {
               state.output_device_id = kAudioObjectUnknown;
               return state;
             });
@@ -158,7 +158,7 @@ void AudioEngineDevice::HandleDeviceListenerEvent(AudioObjectPropertySelector se
           bool contains = std::binary_search(input_device_ids_.begin(), input_device_ids_.end(),
                                              engine_state_.input_device_id);
           if (!contains) {
-            SetEngineState([](EngineState state) -> EngineState {
+            ModifyEngineState([](EngineState state) -> EngineState {
               state.input_device_id = kAudioObjectUnknown;
               return state;
             });
@@ -173,7 +173,7 @@ void AudioEngineDevice::HandleDeviceListenerEvent(AudioObjectPropertySelector se
       LOGI() << "Did update default output device";
       std::optional<AudioDeviceID> device_id = mac_audio_utils::GetDefaultOutputDeviceID();
       if (device_id) {
-        SetEngineState([device_id](EngineState state) -> EngineState {
+        ModifyEngineState([device_id](EngineState state) -> EngineState {
           state.default_output_device_id = *device_id;
           return state;
         });
@@ -182,7 +182,7 @@ void AudioEngineDevice::HandleDeviceListenerEvent(AudioObjectPropertySelector se
       LOGI() << "Did update default input device";
       std::optional<AudioDeviceID> device_id = mac_audio_utils::GetDefaultInputDeviceID();
       if (device_id) {
-        SetEngineState([device_id](EngineState state) -> EngineState {
+        ModifyEngineState([device_id](EngineState state) -> EngineState {
           state.default_input_device_id = *device_id;
           return state;
         });
@@ -341,7 +341,7 @@ int32_t AudioEngineDevice::InitPlayout() {
   RTC_DCHECK_RUN_ON(thread_);
   RTC_DCHECK(initialized_);
 
-  SetEngineState([](EngineState state) -> EngineState {
+  ModifyEngineState([](EngineState state) -> EngineState {
     state.output_enabled = true;
     return state;
   });
@@ -353,7 +353,7 @@ int32_t AudioEngineDevice::StartPlayout() {
   LOGI() << "StartPlayout";
   RTC_DCHECK_RUN_ON(thread_);
 
-  SetEngineState([](EngineState state) -> EngineState {
+  ModifyEngineState([](EngineState state) -> EngineState {
     state.output_running = true;
     return state;
   });
@@ -365,7 +365,7 @@ int32_t AudioEngineDevice::StopPlayout() {
   LOGI() << "StopPlayout";
   RTC_DCHECK_RUN_ON(thread_);
 
-  SetEngineState([](EngineState state) -> EngineState {
+  ModifyEngineState([](EngineState state) -> EngineState {
     state.output_enabled = false;
     state.output_running = false;
     return state;
@@ -396,7 +396,7 @@ int32_t AudioEngineDevice::InitRecording() {
   RTC_DCHECK_RUN_ON(thread_);
   RTC_DCHECK(initialized_);
 
-  SetEngineState([](EngineState state) -> EngineState {
+  ModifyEngineState([](EngineState state) -> EngineState {
     state.input_enabled = true;
     return state;
   });
@@ -408,7 +408,7 @@ int32_t AudioEngineDevice::StartRecording() {
   LOGI() << "StartRecording";
   RTC_DCHECK_RUN_ON(thread_);
 
-  SetEngineState([](EngineState state) -> EngineState {
+  ModifyEngineState([](EngineState state) -> EngineState {
     state.input_running = true;
     state.input_muted = false;  // Always unmute
     return state;
@@ -421,7 +421,7 @@ int32_t AudioEngineDevice::StopRecording() {
   LOGI() << "StopRecording";
   RTC_DCHECK_RUN_ON(thread_);
 
-  SetEngineState([](EngineState state) -> EngineState {
+  ModifyEngineState([](EngineState state) -> EngineState {
     state.input_enabled = false;
     state.input_running = false;
     return state;
@@ -438,7 +438,7 @@ void AudioEngineDevice::OnInterruptionBegin() {
 
   RTC_DCHECK(thread_);
   thread_->PostTask(SafeTask(safety_, [this] {
-    this->SetEngineState([](EngineState state) -> EngineState {
+    this->ModifyEngineState([](EngineState state) -> EngineState {
       state.is_interrupted = true;
       return state;
     });
@@ -450,7 +450,7 @@ void AudioEngineDevice::OnInterruptionEnd(bool should_resume) {
 
   RTC_DCHECK(thread_);
   thread_->PostTask(SafeTask(safety_, [this] {
-    this->SetEngineState([](EngineState state) -> EngineState {
+    this->ModifyEngineState([](EngineState state) -> EngineState {
       state.is_interrupted = false;
       return state;
     });
@@ -596,7 +596,7 @@ int32_t AudioEngineDevice::SetMicrophoneMute(bool enable) {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "SetMicrophoneMute: " << enable;
 
-  SetEngineState([enable](EngineState state) -> EngineState {
+  ModifyEngineState([enable](EngineState state) -> EngineState {
     state.input_muted = enable;
     return state;
   });
@@ -748,7 +748,7 @@ int32_t AudioEngineDevice::SetPlayoutDevice(uint16_t index) {
   // Set as default device if index == 0
   AudioDeviceID output_device_id = index == 0 ? kAudioObjectUnknown : output_device_ids_[index - 1];
 
-  SetEngineState([output_device_id](EngineState state) -> EngineState {
+  ModifyEngineState([output_device_id](EngineState state) -> EngineState {
     state.output_device_id = output_device_id;
     return state;
   });
@@ -892,7 +892,7 @@ int32_t AudioEngineDevice::SetRecordingDevice(uint16_t index) {
   // Set as default device if index == 0
   AudioDeviceID input_device_id = index == 0 ? kAudioObjectUnknown : input_device_ids_[index - 1];
 
-  SetEngineState([input_device_id](EngineState state) -> EngineState {
+  ModifyEngineState([input_device_id](EngineState state) -> EngineState {
     state.input_device_id = input_device_id;
     return state;
   });
@@ -981,6 +981,24 @@ bool AudioEngineDevice::IsEngineRunning() {
   return engine_device_.running;
 }
 
+int32_t AudioEngineDevice::SetEngineState(EngineState new_state) {
+  LOGI() << "SetEngineState";
+  RTC_DCHECK_RUN_ON(thread_);
+
+  ModifyEngineState([new_state](EngineState state) -> EngineState { return new_state; });
+
+  return 0;
+}
+
+int32_t AudioEngineDevice::GetEngineState(EngineState* state) {
+  LOGI() << "GetEngineState";
+  RTC_DCHECK_RUN_ON(thread_);
+
+  *state = engine_state_;
+
+  return 0;
+}
+
 int32_t AudioEngineDevice::SetObserver(AudioDeviceObserver* observer) {
   LOGI() << "SetObserver";
   RTC_DCHECK_RUN_ON(thread_);
@@ -1010,7 +1028,7 @@ int32_t AudioEngineDevice::SetVoiceProcessingBypassed(bool enable) {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "SetVoiceProcessingBypassed: " << enable;
 
-  SetEngineState([enable](EngineState state) -> EngineState {
+  ModifyEngineState([enable](EngineState state) -> EngineState {
     state.voice_processing_bypassed = enable;
     return state;
   });
@@ -1035,7 +1053,7 @@ int32_t AudioEngineDevice::SetVoiceProcessingAGCEnabled(bool enable) {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "SetVoiceProcessingAGCEnabled: " << enable;
 
-  SetEngineState([enable](EngineState state) -> EngineState {
+  ModifyEngineState([enable](EngineState state) -> EngineState {
     state.voice_processing_agc_enabled = enable;
     return state;
   });
@@ -1060,7 +1078,7 @@ int32_t AudioEngineDevice::SetManualRenderingMode(bool enable) {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "SetManualRenderingMode: " << enable;
 
-  SetEngineState([enable](EngineState state) -> EngineState {
+  ModifyEngineState([enable](EngineState state) -> EngineState {
     state.render_mode = enable ? RenderMode::Manual : RenderMode::Device;
     return state;
   });
@@ -1085,7 +1103,7 @@ int32_t AudioEngineDevice::SetMuteMode(MuteMode mode) {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "SetMuteMode: " << mode;
 
-  SetEngineState([mode](EngineState state) -> EngineState {
+  ModifyEngineState([mode](EngineState state) -> EngineState {
     state.mute_mode = mode;
     return state;
   });
@@ -1097,7 +1115,7 @@ int32_t AudioEngineDevice::InitAndStartRecording() {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "InitAndStartRecording";
 
-  SetEngineState([](EngineState state) -> EngineState {
+  ModifyEngineState([](EngineState state) -> EngineState {
     state.input_enabled = true;
     state.input_running = true;
     state.input_muted = false;  // Always unmute
@@ -1111,7 +1129,7 @@ int32_t AudioEngineDevice::SetAdvancedDucking(bool enable) {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "SetAdvancedDucking: " << enable;
 
-  SetEngineState([enable](EngineState state) -> EngineState {
+  ModifyEngineState([enable](EngineState state) -> EngineState {
     state.advanced_ducking = enable;
     return state;
   });
@@ -1136,7 +1154,7 @@ int32_t AudioEngineDevice::SetDuckingLevel(long level) {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "SetDuckingLevel: " << level;
 
-  SetEngineState([level](EngineState state) -> EngineState {
+  ModifyEngineState([level](EngineState state) -> EngineState {
     state.ducking_level = level;
     return state;
   });
@@ -1162,7 +1180,7 @@ int32_t AudioEngineDevice::SetInitRecordingPersistentMode(bool enable) {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "SetInitRecordingPersistentMode: " << enable;
 
-  SetEngineState([enable](EngineState state) -> EngineState {
+  ModifyEngineState([enable](EngineState state) -> EngineState {
     state.input_enabled_persistent_mode = enable;
     return state;
   });
@@ -1226,11 +1244,11 @@ void AudioEngineDevice::ReconfigureEngine(bool is_required) {
     shutdown_state.output_enabled = false;
     shutdown_state.output_running = false;
 
-    this->SetEngineState([shutdown_state](EngineState state) -> EngineState {
+    this->ModifyEngineState([shutdown_state](EngineState state) -> EngineState {
       return shutdown_state;  // Shutdown engine
     });
 
-    this->SetEngineState([current_state](EngineState state) -> EngineState {
+    this->ModifyEngineState([current_state](EngineState state) -> EngineState {
       return current_state;  // Recover engine state
     });
   }));
@@ -1241,7 +1259,7 @@ bool AudioEngineDevice::IsMicrophonePermissionGranted() {
   return status == AVAuthorizationStatusAuthorized;
 }
 
-void AudioEngineDevice::SetEngineState(std::function<EngineState(EngineState)> state_transform) {
+void AudioEngineDevice::ModifyEngineState(std::function<EngineState(EngineState)> state_transform) {
   RTC_DCHECK_RUN_ON(thread_);
 
   EngineState old_state = engine_state_;
@@ -1249,7 +1267,7 @@ void AudioEngineDevice::SetEngineState(std::function<EngineState(EngineState)> s
   EngineStateUpdate state = {old_state, new_state};
 
   if (state.HasNoChanges()) {
-    LOGI() << "SetEngineState: Nothing to state";
+    LOGI() << "ModifyEngineState: Nothing updated";
     return;
   }
 
@@ -1270,21 +1288,21 @@ void AudioEngineDevice::SetEngineState(std::function<EngineState(EngineState)> s
   if (state.DidEnableManualRenderingMode()) {
     EngineStateUpdate shutdown_state = state;  // Copy current state
     shutdown_state.next = {};                  // Reset next state to default
-    UpdateDeviceEngineState(shutdown_state);   // Shutdown device rendering
+    ApplyDeviceEngineState(shutdown_state);    // Shutdown device rendering
     EngineStateUpdate startup_state = state;   // Copy current state
     shutdown_state.prev = {};                  //
-    UpdateManualEngineState(startup_state);    // Start manual mode
+    ApplyManualEngineState(startup_state);     // Start manual mode
   } else if (state.DidEnableDeviceRenderingMode()) {
     EngineStateUpdate shutdown_state = state;
     shutdown_state.next = {};                 // Reset next state to default
-    UpdateManualEngineState(shutdown_state);  // Shutdown manual rendering
+    ApplyManualEngineState(shutdown_state);   // Shutdown manual rendering
     EngineStateUpdate startup_state = state;  // Copy current state
     shutdown_state.prev = {};                 //
-    UpdateDeviceEngineState(startup_state);   // Start device mode
+    ApplyDeviceEngineState(startup_state);    // Start device mode
   } else if (new_state.render_mode == RenderMode::Device) {
-    UpdateDeviceEngineState(state);
+    ApplyDeviceEngineState(state);
   } else if (new_state.render_mode == RenderMode::Manual) {
-    UpdateManualEngineState(state);
+    ApplyManualEngineState(state);
   }
 
   // Buffer should be playing if output is running.
@@ -1302,7 +1320,7 @@ void AudioEngineDevice::SetEngineState(std::function<EngineState(EngineState)> s
   }
 }
 
-void AudioEngineDevice::UpdateManualEngineState(EngineStateUpdate state) {
+void AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
   RTC_DCHECK_RUN_ON(thread_);
   RTC_DCHECK(engine_device_ == nullptr);
 
@@ -1479,7 +1497,7 @@ void AudioEngineDevice::UpdateManualEngineState(EngineStateUpdate state) {
   }
 }
 
-void AudioEngineDevice::UpdateDeviceEngineState(EngineStateUpdate state) {
+void AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   RTC_DCHECK_RUN_ON(thread_);
   RTC_DCHECK(engine_manual_input_ == nullptr);
 
