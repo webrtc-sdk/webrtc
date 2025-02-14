@@ -1761,13 +1761,13 @@ void AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       };
       observer_->OnEngineWillConnectInput(engine_device_, this->InputNode(), input_mixer_node_,
                                           engine_input_format, context);
+    }
 
-      for (AVAudioNodeBus bus = 0; bus < input_mixer_node_.numberOfInputs; bus++) {
-        AVAudioConnectionPoint* cp = [engine_device_ inputConnectionPointForNode:input_mixer_node_
-                                                                        inputBus:bus];
-        if (cp) {
-          [input_mixer_connections addObject:cp];
-        }
+    for (AVAudioNodeBus bus = 0; bus < input_mixer_node_.numberOfInputs; bus++) {
+      AVAudioConnectionPoint* cp = [engine_device_ inputConnectionPointForNode:input_mixer_node_
+                                                                      inputBus:bus];
+      if (cp) {
+        [input_mixer_connections addObject:cp];
       }
     }
 
