@@ -1728,16 +1728,16 @@ void AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
                     channels:1
                  interleaved:input_node_format.interleaved];
 
-    audio_device_buffer_->SetRecordingSampleRate(engine_input_format.sampleRate);
-    audio_device_buffer_->SetRecordingChannels(engine_input_format.channelCount);
-    RTC_DCHECK(audio_device_buffer_ != nullptr);
-    fine_audio_buffer_.reset(new FineAudioBuffer(audio_device_buffer_.get()));
-
     AVAudioFormat* rtc_input_format =
         [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatInt16
                                          sampleRate:engine_input_format.sampleRate
                                            channels:1
                                         interleaved:YES];
+
+    audio_device_buffer_->SetRecordingSampleRate(rtc_input_format.sampleRate);
+    audio_device_buffer_->SetRecordingChannels(rtc_input_format.channelCount);
+    RTC_DCHECK(audio_device_buffer_ != nullptr);
+    fine_audio_buffer_.reset(new FineAudioBuffer(audio_device_buffer_.get()));
 
     AVAudioSinkNodeReceiverBlock sink_block = ^OSStatus(const AudioTimeStamp* timestamp,
                                                         AVAudioFrameCount frameCount,
