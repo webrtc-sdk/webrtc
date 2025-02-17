@@ -34,6 +34,7 @@
 #import <CoreAudio/CoreAudio.h>
 #endif
 #import <AVFAudio/AVFAudio.h>
+#import <AudioToolbox/AudioToolbox.h>
 
 RTC_FWD_DECL_OBJC_CLASS(RTC_OBJC_TYPE(RTCNativeAudioSessionDelegateAdapter));
 
@@ -390,6 +391,10 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   // Input related nodes
   AVAudioSinkNode* sink_node_ RTC_GUARDED_BY(thread_);
   AVAudioMixerNode* input_mixer_node_ RTC_GUARDED_BY(thread_);
+
+  // Float32 -> Int16 converter.
+  AudioConverterRef converter_ref_;
+  AVAudioPCMBuffer* converter_buffer_;
 
   void* configuration_observer_ RTC_GUARDED_BY(thread_);
 };

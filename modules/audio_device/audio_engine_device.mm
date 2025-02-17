@@ -1739,13 +1739,40 @@ void AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     RTC_DCHECK(audio_device_buffer_ != nullptr);
     fine_audio_buffer_.reset(new FineAudioBuffer(audio_device_buffer_.get()));
 
+    // Prepare Float32 -> Int16 converter.
+    RTC_DCHECK(converter_ref_ == nullptr);
+    OSStatus err = AudioConverterNew(engine_input_format.streamDescription,
+                                     rtc_input_format.streamDescription, &converter_ref_);
+    RTC_DCHECK(err == noErr);
+
+    // Prepare buffer for Int16 converter.
+    RTC_DCHECK(converter_buffer_ == nil);
+    converter_buffer_ = [[AVAudioPCMBuffer alloc] initWithPCMFormat:rtc_input_format
+                                                      frameCapacity:kMaximumFramesPerBuffer];
+
+    // Convert to Int16 buffers within the sink block.
     AVAudioSinkNodeReceiverBlock sink_block = ^OSStatus(const AudioTimeStamp* timestamp,
                                                         AVAudioFrameCount frameCount,
                                                         const AudioBufferList* inputData) {
       RTC_DCHECK(inputData->mNumberBuffers == 1);
 
+      AudioBufferList* converter_buffer_abl =
+          const_cast<AudioBufferList*>(converter_buffer_.audioBufferList);
+      RTC_DCHECK(converter_buffer_abl->mNumberBuffers == inputData->mNumberBuffers);
+
+      // Fails for conversions where there is a variation between the input and output data buffer
+      // sizes.
+      converter_buffer_abl->mBuffers[0].mDataByteSize = inputData->mBuffers[0].mDataByteSize;
+
+      RTC_DCHECK(converter_buffer_abl->mBuffers[0].mDataByteSize ==
+                 inputData->mBuffers[0].mDataByteSize);
+
+      OSStatus err = AudioConverterConvertComplexBuffer(converter_ref_, frameCount, inputData,
+                                                        converter_buffer_abl);
+      RTC_DCHECK(err == noErr);
+
+      const int16_t* rtc_buffer = (int16_t*)converter_buffer_abl->mBuffers[0].mData;  // Float32
       const int64_t capture_time_ns = timestamp->mHostTime * machTickUnitsToNanoseconds_;
-      const int16_t* rtc_buffer = (int16_t*)inputData->mBuffers[0].mData;
 
       fine_audio_buffer_->DeliverRecordedData(rtc::ArrayView<const int16_t>(rtc_buffer, frameCount),
                                               kFixedRecordDelayEstimate, capture_time_ns);
@@ -1781,8 +1808,7 @@ void AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     sink_node_ = [[AVAudioSinkNode alloc] initWithReceiverBlock:sink_block];
     [engine_device_ attachNode:sink_node_];
 
-    // Convert to RTC's internal format before passing buffers to SinkNode.
-    [engine_device_ connect:input_mixer_node_ to:sink_node_ format:rtc_input_format];
+    [engine_device_ connect:input_mixer_node_ to:sink_node_ format:engine_input_format];
 
   } else if ((state.prev.IsInputEnabled() && !state.next.IsInputEnabled()) &&
              !state.IsEngineRecreateRequired()) {
@@ -1804,6 +1830,16 @@ void AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       [engine_device_ detachNode:sink_node_];
       sink_node_ = nil;
     }
+
+    // Dispose Float32 -> Int16 converter.
+    RTC_DCHECK(converter_ref_ != nullptr);
+    OSStatus err = AudioConverterDispose(converter_ref_);
+    RTC_DCHECK(err == noErr);
+    converter_ref_ = nullptr;
+
+    // Release buffer for Int16 converter.
+    RTC_DCHECK(converter_buffer_ != nil);
+    converter_buffer_ = nil;
   }
 
   if (state.DidAnyDisable() && observer_ != nullptr) {
