@@ -159,7 +159,16 @@ RTC_OBJC_EXPORT
 @property(nonatomic, assign) NSInteger duckingLevel;
 @property(nonatomic, assign) RTCAudioEngineMuteMode muteMode;
 
+/// Indicates whether Voice-Processing I/O is enabled. Requires restarting the Audio Engine to
+/// toggle. Defaults to true.
+@property(nonatomic, assign, getter=isVoiceProcessingEnabled) BOOL voiceProcessingEnabled;
+
+/// Temporarily bypasses Voice-Processing I/O. Can be toggled at runtime without restarting the
+/// Audio Engine. Defaults to false.
 @property(nonatomic, assign, getter=isVoiceProcessingBypassed) BOOL voiceProcessingBypassed;
+
+/// Indicates whether Automatic Gain Control (AGC) is enabled. Requires Voice-Processing I/O to be
+/// enabled. Enabled by default when VPIO is enabled.
 @property(nonatomic, assign, getter=isVoiceProcessingAGCEnabled) BOOL voiceProcessingAGCEnabled;
 
 @end

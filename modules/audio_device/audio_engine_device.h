@@ -244,6 +244,9 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   int32_t SetInitRecordingPersistentMode(bool enable);
   int32_t InitRecordingPersistentMode(bool* enabled);
 
+  int32_t SetVoiceProcessingEnabled(bool enable);
+  int32_t VoiceProcessingEnabled(bool* enabled);
+
   int32_t SetVoiceProcessingBypassed(bool enable);
   int32_t VoiceProcessingBypassed(bool* enabled);
 
@@ -280,6 +283,10 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
              (prev.IsOutputEnabled() != next.IsOutputEnabled());
     }
 
+    bool DidUpdateVoiceProcessingEnabled() const {
+      return prev.voice_processing_enabled != next.voice_processing_enabled;
+    }
+
     bool DidUpdateOutputDevice() const { return prev.output_device_id != next.output_device_id; }
 
     bool DidUpdateInputDevice() const { return prev.input_device_id != next.input_device_id; }
@@ -296,6 +303,8 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
     bool IsEngineRestartRequired() const {
       return DidUpdateAudioGraph() || DidUpdateOutputDevice() || DidUpdateInputDevice() ||
+             // Voice processing enable state updates
+             DidUpdateVoiceProcessingEnabled() ||
              // Handle default device updates
              (DidUpdateDefaultOutputDevice() && next.IsOutputDefaultDevice()) ||
              (DidUpdateDefaultInputDevice() && next.IsInputDefaultDevice());

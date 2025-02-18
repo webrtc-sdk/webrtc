@@ -1024,6 +1024,31 @@ int32_t AudioEngineDevice::VoiceProcessingBypassed(bool* enabled) {
   return 0;
 }
 
+int32_t AudioEngineDevice::SetVoiceProcessingEnabled(bool enable) {
+  RTC_DCHECK_RUN_ON(thread_);
+  LOGI() << "SetVoiceProcessingEnabled: " << enable;
+
+  ModifyEngineState([enable](EngineState state) -> EngineState {
+    state.voice_processing_enabled = enable;
+    return state;
+  });
+
+  return 0;
+}
+
+int32_t AudioEngineDevice::VoiceProcessingEnabled(bool* enabled) {
+  LOGI() << "VoiceProcessingEnabled";
+  RTC_DCHECK_RUN_ON(thread_);
+
+  if (enabled == nullptr) {
+    return -1;
+  }
+
+  *enabled = engine_state_.voice_processing_enabled;
+
+  return 0;
+}
+
 int32_t AudioEngineDevice::SetVoiceProcessingBypassed(bool enable) {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "SetVoiceProcessingBypassed: " << enable;
@@ -1568,6 +1593,60 @@ void AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
                                   state.next.IsInputEnabled());
   }
 
+  // Configure Voice-Processing I/O since it affects outputNode also.
+  if (state.next.IsInputEnabled() &&
+      this->InputNode().voiceProcessingEnabled != state.next.voice_processing_enabled) {
+    LOGI() << "setVoiceProcessingEnabled (input): " << state.next.voice_processing_enabled ? "YES"
+                                                                                           : "NO";
+    NSError* error = nil;
+    BOOL set_vp_result =
+        [this->InputNode() setVoiceProcessingEnabled:state.next.voice_processing_enabled
+                                               error:&error];
+    if (!set_vp_result) {
+      NSLog(@"AudioEngineDevice setVoiceProcessingEnabled error: %@", error.localizedDescription);
+      RTC_DCHECK(set_vp_result);
+    }
+    LOGI() << "setVoiceProcessingEnabled (input) result: " << set_vp_result ? "YES" : "NO";
+
+    if (this->InputNode().voiceProcessingEnabled) {
+      // Always unmute vp if restart mute mode.
+      if (state.next.mute_mode == MuteMode::RestartEngine &&
+          this->InputNode().voiceProcessingInputMuted) {
+        LOGI() << "setVoiceProcessingInputMuted: un-muting vp for restart mute mode";
+        this->InputNode().voiceProcessingInputMuted = false;
+      }
+
+      // Muted talker detection.
+      if (@available(iOS 17.0, macCatalyst 17.0, macOS 14.0, tvOS 17.0, visionOS 1.0, *)) {
+        auto listener_block = ^(AVAudioVoiceProcessingSpeechActivityEvent event) {
+          LOGI() << "AVAudioVoiceProcessingSpeechActivityEvent: " << event;
+          RTC_DCHECK(event == AVAudioVoiceProcessingSpeechActivityStarted ||
+                     event == AVAudioVoiceProcessingSpeechActivityEnded);
+          AudioDeviceModule::SpeechActivityEvent rtc_event =
+              (event == AVAudioVoiceProcessingSpeechActivityStarted
+                   ? AudioDeviceModule::SpeechActivityEvent::kStarted
+                   : AudioDeviceModule::SpeechActivityEvent::kEnded);
+
+          thread_->PostTask(SafeTask(safety_, [this, rtc_event] {
+            RTC_DCHECK_RUN_ON(thread_);  // Silence warning.
+            if (this->observer_ != nullptr) {
+              this->observer_->OnSpeechActivityEvent(rtc_event);
+            }
+          }));
+        };
+
+        BOOL set_listener_result =
+            [this->InputNode() setMutedSpeechActivityEventListener:listener_block];
+        if (set_listener_result) {
+          LOGI() << "setMutedSpeechActivityEventListener success";
+        } else {
+          LOGW() << "setMutedSpeechActivityEventListener failed, ensure AVAudioSession.Mode is "
+                    "videoChat or voiceChat.";
+        }
+      }
+    }
+  }
+
   if (state.next.IsOutputEnabled() &&
       (!state.prev.IsOutputEnabled() || state.IsEngineRecreateRequired())) {
     LOGI() << "Enabling output for AVAudioEngine...";
@@ -1654,54 +1733,6 @@ void AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       (!state.prev.IsInputEnabled() || state.IsEngineRecreateRequired())) {
     LOGI() << "Enabling input for AVAudioEngine...";
     RTC_DCHECK(!engine_device_.running);
-
-    if (!this->InputNode().voiceProcessingEnabled) {
-      NSError* error = nil;
-      BOOL set_vp_result = [this->InputNode() setVoiceProcessingEnabled:YES error:&error];
-      if (!set_vp_result) {
-        NSLog(@"AudioEngineDevice setVoiceProcessingEnabled error: %@", error.localizedDescription);
-        RTC_DCHECK(set_vp_result);
-      }
-      LOGI() << "setVoiceProcessingEnabled (input) result: " << set_vp_result ? "YES" : "NO";
-    }
-
-    if (this->InputNode().voiceProcessingEnabled) {
-      // Always unmute vp if restart mute mode.
-      if (state.next.mute_mode == MuteMode::RestartEngine &&
-          this->InputNode().voiceProcessingInputMuted) {
-        LOGI() << "setVoiceProcessingInputMuted: un-muting vp for restart mute mode";
-        this->InputNode().voiceProcessingInputMuted = false;
-      }
-
-      // Muted talker detection.
-      if (@available(iOS 17.0, macCatalyst 17.0, macOS 14.0, tvOS 17.0, visionOS 1.0, *)) {
-        auto listener_block = ^(AVAudioVoiceProcessingSpeechActivityEvent event) {
-          LOGI() << "AVAudioVoiceProcessingSpeechActivityEvent: " << event;
-          RTC_DCHECK(event == AVAudioVoiceProcessingSpeechActivityStarted ||
-                     event == AVAudioVoiceProcessingSpeechActivityEnded);
-          AudioDeviceModule::SpeechActivityEvent rtc_event =
-              (event == AVAudioVoiceProcessingSpeechActivityStarted
-                   ? AudioDeviceModule::SpeechActivityEvent::kStarted
-                   : AudioDeviceModule::SpeechActivityEvent::kEnded);
-
-          thread_->PostTask(SafeTask(safety_, [this, rtc_event] {
-            RTC_DCHECK_RUN_ON(thread_);  // Silence warning.
-            if (this->observer_ != nullptr) {
-              this->observer_->OnSpeechActivityEvent(rtc_event);
-            }
-          }));
-        };
-
-        BOOL set_listener_result =
-            [this->InputNode() setMutedSpeechActivityEventListener:listener_block];
-        if (set_listener_result) {
-          LOGI() << "setMutedSpeechActivityEventListener success";
-        } else {
-          LOGW() << "setMutedSpeechActivityEventListener failed, ensure AVAudioSession.Mode is "
-                    "videoChat or voiceChat.";
-        }
-      }
-    }
 
     input_mixer_node_ = [[AVAudioMixerNode alloc] init];
     [engine_device_ attachNode:input_mixer_node_];
