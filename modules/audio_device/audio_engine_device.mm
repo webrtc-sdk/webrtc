@@ -1400,7 +1400,7 @@ int32_t AudioEngineDevice::ModifyEngineState(
   int32_t return_result = shutdown_result != 0 ? shutdown_result : startup_result;
 
   // Additional checks for buffer state.
-  if (return_result != 0) {
+  if (return_result == 0) {
     // Buffer should be playing if output is running.
     if (new_state.IsOutputEnabled()) {
       RTC_DCHECK(audio_device_buffer_->IsPlaying());
