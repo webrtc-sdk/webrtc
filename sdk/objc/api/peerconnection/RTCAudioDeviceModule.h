@@ -55,51 +55,52 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
     : (RTCSpeechActivityEvent)speechActivityEvent NS_SWIFT_NAME(audioDeviceModule(_:didReceiveSpeechActivityEvent:));
 
 // Engine events
-- (void)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
-          didCreateEngine:(AVAudioEngine *)engine
+- (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+               didCreateEngine:(AVAudioEngine *)engine
     NS_SWIFT_NAME(audioDeviceModule(_:didCreateEngine:));
 
-- (void)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
-         willEnableEngine:(AVAudioEngine *)engine
-         isPlayoutEnabled:(BOOL)isPlayoutEnabled
-       isRecordingEnabled:(BOOL)isRecordingEnabled
+- (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+              willEnableEngine:(AVAudioEngine *)engine
+              isPlayoutEnabled:(BOOL)isPlayoutEnabled
+            isRecordingEnabled:(BOOL)isRecordingEnabled
     NS_SWIFT_NAME(audioDeviceModule(_:willEnableEngine:isPlayoutEnabled:isRecordingEnabled:));
 
-- (void)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
-          willStartEngine:(AVAudioEngine *)engine
-         isPlayoutEnabled:(BOOL)isPlayoutEnabled
-       isRecordingEnabled:(BOOL)isRecordingEnabled
+- (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+               willStartEngine:(AVAudioEngine *)engine
+              isPlayoutEnabled:(BOOL)isPlayoutEnabled
+            isRecordingEnabled:(BOOL)isRecordingEnabled
     NS_SWIFT_NAME(audioDeviceModule(_:willStartEngine:isPlayoutEnabled:isRecordingEnabled:));
 
-- (void)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
-            didStopEngine:(AVAudioEngine *)engine
-         isPlayoutEnabled:(BOOL)isPlayoutEnabled
-       isRecordingEnabled:(BOOL)isRecordingEnabled
+- (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+                 didStopEngine:(AVAudioEngine *)engine
+              isPlayoutEnabled:(BOOL)isPlayoutEnabled
+            isRecordingEnabled:(BOOL)isRecordingEnabled
     NS_SWIFT_NAME(audioDeviceModule(_:didStopEngine:isPlayoutEnabled:isRecordingEnabled:));
 
-- (void)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
-         didDisableEngine:(AVAudioEngine *)engine
-         isPlayoutEnabled:(BOOL)isPlayoutEnabled
-       isRecordingEnabled:(BOOL)isRecordingEnabled
+- (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+              didDisableEngine:(AVAudioEngine *)engine
+              isPlayoutEnabled:(BOOL)isPlayoutEnabled
+            isRecordingEnabled:(BOOL)isRecordingEnabled
     NS_SWIFT_NAME(audioDeviceModule(_:didDisableEngine:isPlayoutEnabled:isRecordingEnabled:));
 
-- (void)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
-        willReleaseEngine:(AVAudioEngine *)engine
+- (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+             willReleaseEngine:(AVAudioEngine *)engine
     NS_SWIFT_NAME(audioDeviceModule(_:willReleaseEngine:));
 
-- (void)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
-                      engine:(AVAudioEngine *)engine
-    configureInputFromSource:(nullable AVAudioNode *)source
-               toDestination:(AVAudioNode *)destination
-                  withFormat:(AVAudioFormat *)format
-                     context:(NSDictionary *)context NS_SWIFT_NAME(audioDeviceModule(_:engine:configureInputFromSource:toDestination:format:context:));
+- (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+                        engine:(AVAudioEngine *)engine
+      configureInputFromSource:(nullable AVAudioNode *)source
+                 toDestination:(AVAudioNode *)destination
+                    withFormat:(AVAudioFormat *)format
+                       context:(NSDictionary *)context
+    NS_SWIFT_NAME(audioDeviceModule(_:engine:configureInputFromSource:toDestination:format:context:));
 
-- (void)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
-                       engine:(AVAudioEngine *)engine
-    configureOutputFromSource:(AVAudioNode *)source
-                toDestination:(nullable AVAudioNode *)destination
-                   withFormat:(AVAudioFormat *)format
-                      context:(NSDictionary *)context
+- (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+                        engine:(AVAudioEngine *)engine
+     configureOutputFromSource:(AVAudioNode *)source
+                 toDestination:(nullable AVAudioNode *)destination
+                    withFormat:(AVAudioFormat *)format
+                       context:(NSDictionary *)context
     NS_SWIFT_NAME(audioDeviceModule(_:engine:configureOutputFromSource:toDestination:format:context:));
 
 - (void)audioDeviceModuleDidUpdateDevices:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule

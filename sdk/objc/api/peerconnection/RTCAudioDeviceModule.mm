@@ -45,64 +45,72 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
         didReceiveSpeechActivityEvent:ConvertSpeechActivityEvent(event)];
   }
 
-  void OnEngineDidCreate(AVAudioEngine *engine) override {
-    [delegate_ audioDeviceModule:adm_ didCreateEngine:engine];
+  int32_t OnEngineDidCreate(AVAudioEngine *engine) override {
+    if (delegate_ == nil) return 0;
+    return [delegate_ audioDeviceModule:adm_ didCreateEngine:engine];
   }
 
-  void OnEngineWillEnable(AVAudioEngine *engine, bool playout_enabled,
+  int32_t OnEngineWillEnable(AVAudioEngine *engine, bool playout_enabled,
+                             bool recording_enabled) override {
+    if (delegate_ == nil) return 0;
+    return [delegate_ audioDeviceModule:adm_
+                       willEnableEngine:engine
+                       isPlayoutEnabled:playout_enabled
+                     isRecordingEnabled:recording_enabled];
+  }
+
+  int32_t OnEngineWillStart(AVAudioEngine *engine, bool playout_enabled,
+                            bool recording_enabled) override {
+    if (delegate_ == nil) return 0;
+    return [delegate_ audioDeviceModule:adm_
+                        willStartEngine:engine
+                       isPlayoutEnabled:playout_enabled
+                     isRecordingEnabled:recording_enabled];
+  }
+
+  int32_t OnEngineDidStop(AVAudioEngine *engine, bool playout_enabled,
                           bool recording_enabled) override {
-    [delegate_ audioDeviceModule:adm_
-                willEnableEngine:engine
-                isPlayoutEnabled:playout_enabled
-              isRecordingEnabled:recording_enabled];
+    if (delegate_ == nil) return 0;
+    return [delegate_ audioDeviceModule:adm_
+                          didStopEngine:engine
+                       isPlayoutEnabled:playout_enabled
+                     isRecordingEnabled:recording_enabled];
   }
 
-  void OnEngineWillStart(AVAudioEngine *engine, bool playout_enabled,
-                         bool recording_enabled) override {
-    [delegate_ audioDeviceModule:adm_
-                 willStartEngine:engine
-                isPlayoutEnabled:playout_enabled
-              isRecordingEnabled:recording_enabled];
+  int32_t OnEngineDidDisable(AVAudioEngine *engine, bool playout_enabled,
+                             bool recording_enabled) override {
+    if (delegate_ == nil) return 0;
+    return [delegate_ audioDeviceModule:adm_
+                       didDisableEngine:engine
+                       isPlayoutEnabled:playout_enabled
+                     isRecordingEnabled:recording_enabled];
   }
 
-  void OnEngineDidStop(AVAudioEngine *engine, bool playout_enabled,
-                       bool recording_enabled) override {
-    [delegate_ audioDeviceModule:adm_
-                   didStopEngine:engine
-                isPlayoutEnabled:playout_enabled
-              isRecordingEnabled:recording_enabled];
+  int32_t OnEngineWillRelease(AVAudioEngine *engine) override {
+    if (delegate_ == nil) return 0;
+    return [delegate_ audioDeviceModule:adm_ willReleaseEngine:engine];
   }
 
-  void OnEngineDidDisable(AVAudioEngine *engine, bool playout_enabled,
-                          bool recording_enabled) override {
-    [delegate_ audioDeviceModule:adm_
-                didDisableEngine:engine
-                isPlayoutEnabled:playout_enabled
-              isRecordingEnabled:recording_enabled];
+  int32_t OnEngineWillConnectInput(AVAudioEngine *engine, AVAudioNode *src, AVAudioNode *dst,
+                                   AVAudioFormat *format, NSDictionary *context) override {
+    if (delegate_ == nil) return 0;
+    return [delegate_ audioDeviceModule:adm_
+                                 engine:engine
+               configureInputFromSource:src
+                          toDestination:dst
+                             withFormat:format
+                                context:context];
   }
 
-  void OnEngineWillRelease(AVAudioEngine *engine) override {
-    [delegate_ audioDeviceModule:adm_ willReleaseEngine:engine];
-  }
-
-  void OnEngineWillConnectInput(AVAudioEngine *engine, AVAudioNode *src, AVAudioNode *dst,
-                                AVAudioFormat *format, NSDictionary *context) override {
-    [delegate_ audioDeviceModule:adm_
-                          engine:engine
-        configureInputFromSource:src
-                   toDestination:dst
-                      withFormat:format
-                         context:context];
-  }
-
-  void OnEngineWillConnectOutput(AVAudioEngine *engine, AVAudioNode *src, AVAudioNode *dst,
-                                 AVAudioFormat *format, NSDictionary *context) override {
-    [delegate_ audioDeviceModule:adm_
-                           engine:engine
-        configureOutputFromSource:src
-                    toDestination:dst
-                       withFormat:format
-                          context:context];
+  int32_t OnEngineWillConnectOutput(AVAudioEngine *engine, AVAudioNode *src, AVAudioNode *dst,
+                                    AVAudioFormat *format, NSDictionary *context) override {
+    if (delegate_ == nil) return 0;
+    return [delegate_ audioDeviceModule:adm_
+                                 engine:engine
+              configureOutputFromSource:src
+                          toDestination:dst
+                             withFormat:format
+                                context:context];
   }
 
   __weak id<RTC_OBJC_TYPE(RTCAudioDeviceModuleDelegate)> delegate_;

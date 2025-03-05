@@ -211,29 +211,43 @@ class AudioDeviceObserver {
   virtual void OnSpeechActivityEvent(AudioDeviceModule::SpeechActivityEvent event) {}
 
   // AVAudioEngine lifecycle
-  virtual void OnEngineDidCreate(AVAudioEngine* engine) {}
+  virtual int32_t OnEngineDidCreate(AVAudioEngine* engine) { return 0; }
 
-  virtual void OnEngineWillEnable(AVAudioEngine* engine, bool playout_enabled,
-                                  bool recording_enabled) {}
+  virtual int32_t OnEngineWillEnable(AVAudioEngine* engine, bool playout_enabled,
+                                     bool recording_enabled) {
+    return 0;
+  }
 
-  virtual void OnEngineWillStart(AVAudioEngine* engine, bool playout_enabled,
-                                 bool recording_enabled) {}
+  virtual int32_t OnEngineWillStart(AVAudioEngine* engine, bool playout_enabled,
+                                    bool recording_enabled) {
+    return 0;
+  }
 
-  virtual void OnEngineDidStop(AVAudioEngine* engine, bool playout_enabled,
-                               bool recording_enabled) {}
+  virtual int32_t OnEngineDidStop(AVAudioEngine* engine, bool playout_enabled,
+                                  bool recording_enabled) {
+    return 0;
+  }
 
-  virtual void OnEngineDidDisable(AVAudioEngine* engine, bool playout_enabled,
-                                  bool recording_enabled) {}
+  virtual int32_t OnEngineDidDisable(AVAudioEngine* engine, bool playout_enabled,
+                                     bool recording_enabled) {
+    return 0;
+  }
 
-  virtual void OnEngineWillRelease(AVAudioEngine* engine) {}
+  virtual int32_t OnEngineWillRelease(AVAudioEngine* engine) { return 0; }
 
   // Override the input node configuration with a custom implementation.
-  virtual void OnEngineWillConnectInput(AVAudioEngine* engine, AVAudioNode* src, AVAudioNode* dst,
-                                        AVAudioFormat* format, NSDictionary* context) = 0;
+  virtual int32_t OnEngineWillConnectInput(AVAudioEngine* engine, AVAudioNode* src,
+                                           AVAudioNode* dst, AVAudioFormat* format,
+                                           NSDictionary* context) {
+    return 0;
+  }
 
   // Override the input node configuration with a custom implementation.
-  virtual void OnEngineWillConnectOutput(AVAudioEngine* engine, AVAudioNode* src, AVAudioNode* dst,
-                                         AVAudioFormat* format, NSDictionary* context) = 0;
+  virtual int32_t OnEngineWillConnectOutput(AVAudioEngine* engine, AVAudioNode* src,
+                                            AVAudioNode* dst, AVAudioFormat* format,
+                                            NSDictionary* context) {
+    return 0;
+  }
 };
 
 }  // namespace webrtc
