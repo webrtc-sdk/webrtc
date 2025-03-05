@@ -40,6 +40,63 @@ RTC_FWD_DECL_OBJC_CLASS(RTC_OBJC_TYPE(RTCNativeAudioSessionDelegateAdapter));
 
 namespace webrtc {
 
+// Error codes for AudioEngineDevice.
+// Apple recommends that you use values in the range -1000 through -9999 inclusive. Values outside
+// of this range are reserved by Apple for internal use.
+enum AudioEngineErrorCode {
+  // Success (no error)
+  kAudioEngineNoError = 0,
+
+  // General errors
+  kAudioEngineUnknownError = -1000,
+  kAudioEngineInitError = -1001,
+  kAudioEngineTerminateError = -1002,
+  kAudioEngineNotInitializedError = -1003,
+  kAudioEngineAlreadyInitializedError = -1004,
+
+  // Device errors
+  kAudioEngineDeviceNotFoundError = -2000,
+  kAudioEngineDeviceUnavailableError = -2001,
+  kAudioEngineDeviceDisconnectedError = -2002,
+  kAudioEngineDeviceUnauthorizedError = -2003,
+  kAudioEngineDeviceInUseError = -2004,
+  kAudioEngineDeviceFormatError = -2005,
+
+  // Playback errors
+  kAudioEnginePlayoutInitError = -3000,
+  kAudioEnginePlayoutStartError = -3001,
+  kAudioEnginePlayoutStopError = -3002,
+  kAudioEnginePlayoutAlreadyInitializedError = -3003,
+  kAudioEnginePlayoutNotInitializedError = -3004,
+  kAudioEnginePlayoutDeviceNotAvailableError = -3010,
+
+  // Recording errors
+  kAudioEngineRecordingInitError = -4000,
+  kAudioEngineRecordingStartError = -4001,
+  kAudioEngineRecordingStopError = -4002,
+  kAudioEngineRecordingAlreadyInitializedError = -4003,
+  kAudioEngineRecordingNotInitializedError = -4004,
+  kAudioEngineRecordingPermissionDeniedError = -4005,
+  kAudioEngineRecordingDeviceNotAvailableError = -4010,
+
+  // Engine state errors
+  kAudioEngineInvalidStateError = -5000,
+  kAudioEngineStateTransitionError = -5001,
+  kAudioEngineInterruptionError = -5002,
+
+  // Resource errors
+  kAudioEngineOutOfMemoryError = -6000,
+  kAudioEngineResourceLimitError = -6001,
+
+  // Render mode errors
+  kAudioEngineRenderModeError = -7000,
+  kAudioEngineManualRenderingError = -7001,
+
+  // Voice processing errors
+  kAudioEngineVoiceProcessingError = -8000,
+  kAudioEngineAGCError = -8001
+};
+
 class FineAudioBuffer;
 
 extern NSString* const kAudioEngineInputMixerNodeKey;
@@ -332,9 +389,9 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   AVAudioOutputNode* OutputNode();
 
   bool IsMicrophonePermissionGranted();
-  void ModifyEngineState(std::function<EngineState(EngineState)> state_transform);
-  void ApplyDeviceEngineState(EngineStateUpdate state);
-  void ApplyManualEngineState(EngineStateUpdate state);
+  int32_t ModifyEngineState(std::function<EngineState(EngineState)> state_transform);
+  int32_t ApplyDeviceEngineState(EngineStateUpdate state);
+  int32_t ApplyManualEngineState(EngineStateUpdate state);
 
   // AudioEngine observer methods. May be called from any thread.
   void ReconfigureEngine(bool is_required);
