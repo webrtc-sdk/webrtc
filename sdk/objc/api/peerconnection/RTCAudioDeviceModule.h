@@ -126,14 +126,14 @@ RTC_OBJC_EXPORT
 - (BOOL)trySetOutputDevice:(nullable RTC_OBJC_TYPE(RTCIODevice) *)device;
 - (BOOL)trySetInputDevice:(nullable RTC_OBJC_TYPE(RTCIODevice) *)device;
 
-- (BOOL)startPlayout;
-- (BOOL)stopPlayout;
-- (BOOL)initPlayout;
-- (BOOL)startRecording;
-- (BOOL)stopRecording;
-- (BOOL)initRecording;
+- (NSInteger)startPlayout;
+- (NSInteger)stopPlayout;
+- (NSInteger)initPlayout;
+- (NSInteger)startRecording;
+- (NSInteger)stopRecording;
+- (NSInteger)initRecording;
 
-- (BOOL)initAndStartRecording;
+- (NSInteger)initAndStartRecording;
 
 // For testing purposes
 @property(nonatomic, readonly) BOOL isPlayoutInitialized;
@@ -146,23 +146,29 @@ RTC_OBJC_EXPORT
 // Directly get & set engine state.
 @property(nonatomic, assign) RTCAudioEngineState engineState;
 
-@property(nonatomic, getter=isInitRecordingPersistentMode) BOOL initRecordingPersistentMode;
+@property(nonatomic, readonly, getter=isRecordingAlwaysPreparedMode)
+    BOOL recordingAlwaysPreparedMode;
+- (NSInteger)setRecordingAlwaysPreparedMode:(BOOL)enabled;
 
 @property(nonatomic, weak, nullable) id<RTC_OBJC_TYPE(RTCAudioDeviceModuleDelegate)> observer;
 
 // Manual rendering.
 @property(nonatomic, readonly, getter=isManualRenderingMode) BOOL manualRenderingMode;
-- (BOOL)setManualRenderingMode:(BOOL)enabled;
+- (NSInteger)setManualRenderingMode:(BOOL)enabled;
 
 // Advanced other audio ducking.
 @property(nonatomic, assign, getter=isAdvancedDuckingEnabled) BOOL advancedDuckingEnabled;
 
+// Audio ducking level. See `AVAudioVoiceProcessingOtherAudioDuckingLevel` enum for valid values.
 @property(nonatomic, assign) NSInteger duckingLevel;
-@property(nonatomic, assign) RTCAudioEngineMuteMode muteMode;
+
+@property(nonatomic, readonly) RTCAudioEngineMuteMode muteMode;
+- (NSInteger)setMuteMode:(RTCAudioEngineMuteMode)mode;
 
 /// Indicates whether Voice-Processing I/O is enabled. Requires restarting the Audio Engine to
 /// toggle. Defaults to true.
-@property(nonatomic, assign, getter=isVoiceProcessingEnabled) BOOL voiceProcessingEnabled;
+@property(nonatomic, readonly, getter=isVoiceProcessingEnabled) BOOL voiceProcessingEnabled;
+- (NSInteger)setVoiceProcessingEnabled:(BOOL)enabled;
 
 /// Temporarily bypasses Voice-Processing I/O. Can be toggled at runtime without restarting the
 /// Audio Engine. Defaults to false.

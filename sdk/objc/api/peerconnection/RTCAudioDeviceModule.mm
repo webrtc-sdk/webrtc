@@ -269,35 +269,35 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 
 #pragma mark - Low-level access
 
-- (BOOL)startPlayout {
-  return _workerThread->BlockingCall([self] { return _native->StartPlayout() == 0; });
+- (NSInteger)startPlayout {
+  return _workerThread->BlockingCall([self] { return _native->StartPlayout(); });
 }
 
-- (BOOL)stopPlayout {
-  return _workerThread->BlockingCall([self] { return _native->StopPlayout() == 0; });
+- (NSInteger)stopPlayout {
+  return _workerThread->BlockingCall([self] { return _native->StopPlayout(); });
 }
 
-- (BOOL)initPlayout {
-  return _workerThread->BlockingCall([self] { return _native->InitPlayout() == 0; });
+- (NSInteger)initPlayout {
+  return _workerThread->BlockingCall([self] { return _native->InitPlayout(); });
 }
 
-- (BOOL)startRecording {
-  return _workerThread->BlockingCall([self] { return _native->StartRecording() == 0; });
+- (NSInteger)startRecording {
+  return _workerThread->BlockingCall([self] { return _native->StartRecording(); });
 }
 
-- (BOOL)stopRecording {
-  return _workerThread->BlockingCall([self] { return _native->StopRecording() == 0; });
+- (NSInteger)stopRecording {
+  return _workerThread->BlockingCall([self] { return _native->StopRecording(); });
 }
 
-- (BOOL)initRecording {
-  return _workerThread->BlockingCall([self] { return _native->InitRecording() == 0; });
+- (NSInteger)initRecording {
+  return _workerThread->BlockingCall([self] { return _native->InitRecording(); });
 }
 
-- (BOOL)initAndStartRecording {
+- (NSInteger)initAndStartRecording {
   webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
-  if (module == nullptr) return NO;
+  if (module == nullptr) return -1;
 
-  return _workerThread->BlockingCall([module] { return module->InitAndStartRecording() == 0; });
+  return _workerThread->BlockingCall([module] { return module->InitAndStartRecording(); });
 }
 
 - (BOOL)isPlayoutInitialized {
@@ -372,7 +372,7 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 
 #pragma mark - Unique to AudioEngineDevice
 
-- (BOOL)isInitRecordingPersistentMode {
+- (BOOL)isRecordingAlwaysPreparedMode {
   webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
   if (module == nullptr) return NO;
 
@@ -382,11 +382,11 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   });
 }
 
-- (void)setInitRecordingPersistentMode:(BOOL)enabled {
+- (NSInteger)setRecordingAlwaysPreparedMode:(BOOL)enabled {
   webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
-  if (module == nullptr) return;
+  if (module == nullptr) return -1;
 
-  _workerThread->BlockingCall(
+  return _workerThread->BlockingCall(
       [module, enabled] { return module->SetInitRecordingPersistentMode(enabled); });
 }
 
@@ -400,12 +400,12 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   });
 }
 
-- (BOOL)setManualRenderingMode:(BOOL)enabled {
+- (NSInteger)setManualRenderingMode:(BOOL)enabled {
   webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
-  if (module == nullptr) return NO;
+  if (module == nullptr) return -1;
 
   return _workerThread->BlockingCall(
-      [module, enabled] { return module->SetManualRenderingMode(enabled) == 0; });
+      [module, enabled] { return module->SetManualRenderingMode(enabled); });
 }
 
 - (BOOL)isAdvancedDuckingEnabled {
@@ -453,12 +453,12 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   });
 }
 
-- (void)setMuteMode:(RTCAudioEngineMuteMode)mode {
+- (NSInteger)setMuteMode:(RTCAudioEngineMuteMode)mode {
   webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
-  if (module == nullptr) return;
+  if (module == nullptr) return -1;
 
-  _workerThread->BlockingCall(
-      [module, mode] { return module->SetMuteMode(MuteModeToRTC(mode)) == 0; });
+  return _workerThread->BlockingCall(
+      [module, mode] { return module->SetMuteMode(MuteModeToRTC(mode)); });
 }
 
 - (BOOL)isVoiceProcessingEnabled {
@@ -471,12 +471,12 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   });
 }
 
-- (void)setVoiceProcessingEnabled:(BOOL)enabled {
+- (NSInteger)setVoiceProcessingEnabled:(BOOL)enabled {
   webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
-  if (module == nullptr) return;
+  if (module == nullptr) return -1;
 
-  _workerThread->BlockingCall(
-      [module, enabled] { return module->SetVoiceProcessingEnabled(enabled) == 0; });
+  return _workerThread->BlockingCall(
+      [module, enabled] { return module->SetVoiceProcessingEnabled(enabled); });
 }
 
 - (BOOL)isVoiceProcessingBypassed {
