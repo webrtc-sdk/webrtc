@@ -15,16 +15,34 @@
  */
 
 #import "RTCAudioDeviceModule.h"
+#import "modules/audio_device/audio_engine_device.h"
 #import "sdk/objc/native/api/audio_device_module.h"
 
 #include "rtc_base/thread.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface RTC_OBJC_TYPE(RTCAudioDeviceModule) ()
+@interface RTC_OBJC_TYPE (RTCAudioDeviceModule)
+()
 
-- (instancetype)initWithNativeModule:(rtc::scoped_refptr<webrtc::AudioDeviceModule> )module
-                        workerThread:(rtc::Thread *)workerThread;
+    - (instancetype)initWithNativeModule
+    : (rtc::scoped_refptr<webrtc::AudioDeviceModule>)module workerThread
+    : (rtc::Thread *)workerThread;
+
+@end
+
+@interface RTC_OBJC_TYPE (RTCAudioEngineState)
+()
+
+    - (instancetype)initWithRTCType : (webrtc::AudioEngineDevice::EngineState)state;
+
+@end
+
+@interface RTC_OBJC_TYPE (RTCAudioEngineStateTransition)
+()
+
+    - (instancetype)initWithStateTransition
+    : (webrtc::AudioEngineDevice::EngineStateTransition)state_transition;
 
 @end
 

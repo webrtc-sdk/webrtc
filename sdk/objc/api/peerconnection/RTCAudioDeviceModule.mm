@@ -34,82 +34,167 @@ inline RTCAudioEngineMuteMode MuteModeToObjC(webrtc::AudioEngineDevice::MuteMode
   return static_cast<RTCAudioEngineMuteMode>(mode);
 }
 
-class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
+@implementation RTC_OBJC_TYPE (RTCAudioEngineState) {
+  webrtc::AudioEngineDevice::EngineState _state;
+}
+
+- (instancetype)initWithRTCType:(webrtc::AudioEngineDevice::EngineState)state {
+  self = [super init];
+  if (self) {
+    _state = state;
+  }
+  return self;
+}
+
+- (BOOL)isOutputEnabled {
+  return _state.IsOutputEnabled();
+}
+
+- (BOOL)isOutputRunning {
+  return _state.IsOutputRunning();
+}
+
+- (BOOL)isInputEnabled {
+  return _state.IsInputEnabled();
+}
+
+- (BOOL)isInputRunning {
+  return _state.IsInputRunning();
+}
+
+- (BOOL)isInputMuted {
+  return _state.input_muted;
+}
+
+- (RTCAudioEngineMuteMode)muteMode {
+  return MuteModeToObjC(_state.mute_mode);
+}
+
+@end
+
+@implementation RTC_OBJC_TYPE (RTCAudioEngineStateTransition) {
+  webrtc::AudioEngineDevice::EngineStateTransition _state_transition;
+}
+
+- (instancetype)initWithStateTransition:
+    (webrtc::AudioEngineDevice::EngineStateTransition)state_transition {
+  self = [super init];
+  if (self) {
+    _state_transition = state_transition;
+  }
+  return self;
+}
+
+- (RTC_OBJC_TYPE(RTCAudioEngineState) *)prev {
+  return [[RTC_OBJC_TYPE(RTCAudioEngineState) alloc] initWithRTCType:_state_transition.prev];
+}
+
+- (RTC_OBJC_TYPE(RTCAudioEngineState) *)next {
+  return [[RTC_OBJC_TYPE(RTCAudioEngineState) alloc] initWithRTCType:_state_transition.next];
+}
+
+@end
+
+class AudioDeviceObserver : public webrtc::AudioDeviceObserver,
+                            public webrtc::AudioEngineDevice::EngineObserver {
  public:
   AudioDeviceObserver(RTC_OBJC_TYPE(RTCAudioDeviceModule) * adm) { adm_ = adm; }
 
   void OnDevicesUpdated() override { [delegate_ audioDeviceModuleDidUpdateDevices:adm_]; }
 
-  void OnSpeechActivityEvent(webrtc::AudioDeviceModule::SpeechActivityEvent event) override {
+  void OnEngineDidReceiveMutedSpeechActivityEvent(
+      webrtc::AudioEngineDevice::SpeechActivityEvent event) override {
     [delegate_ audioDeviceModule:adm_
-        didReceiveSpeechActivityEvent:ConvertSpeechActivityEvent(event)];
+        didReceiveMutedSpeechActivityEvent:ConvertSpeechActivityEvent(event)];
   }
 
-  int32_t OnEngineDidCreate(AVAudioEngine *engine) override {
+  int32_t OnEngineDidCreate(
+      AVAudioEngine *engine,
+      webrtc::AudioEngineDevice::EngineStateTransition state_transition) override {
     if (delegate_ == nil) return 0;
-    return [delegate_ audioDeviceModule:adm_ didCreateEngine:engine];
+    return [delegate_ audioDeviceModule:adm_
+                        didCreateEngine:engine
+                        stateTransition:[[RTC_OBJC_TYPE(RTCAudioEngineStateTransition) alloc]
+                                            initWithStateTransition:state_transition]];
   }
 
-  int32_t OnEngineWillEnable(AVAudioEngine *engine, bool playout_enabled,
-                             bool recording_enabled) override {
+  int32_t OnEngineWillEnable(
+      AVAudioEngine *engine,
+      webrtc::AudioEngineDevice::EngineStateTransition state_transition) override {
     if (delegate_ == nil) return 0;
     return [delegate_ audioDeviceModule:adm_
                        willEnableEngine:engine
-                       isPlayoutEnabled:playout_enabled
-                     isRecordingEnabled:recording_enabled];
+                        stateTransition:[[RTC_OBJC_TYPE(RTCAudioEngineStateTransition) alloc]
+                                            initWithStateTransition:state_transition]];
   }
 
-  int32_t OnEngineWillStart(AVAudioEngine *engine, bool playout_enabled,
-                            bool recording_enabled) override {
+  int32_t OnEngineWillStart(
+      AVAudioEngine *engine,
+      webrtc::AudioEngineDevice::EngineStateTransition state_transition) override {
     if (delegate_ == nil) return 0;
     return [delegate_ audioDeviceModule:adm_
                         willStartEngine:engine
-                       isPlayoutEnabled:playout_enabled
-                     isRecordingEnabled:recording_enabled];
+                        stateTransition:[[RTC_OBJC_TYPE(RTCAudioEngineStateTransition) alloc]
+                                            initWithStateTransition:state_transition]];
   }
 
-  int32_t OnEngineDidStop(AVAudioEngine *engine, bool playout_enabled,
-                          bool recording_enabled) override {
+  int32_t OnEngineDidStop(
+      AVAudioEngine *engine,
+      webrtc::AudioEngineDevice::EngineStateTransition state_transition) override {
     if (delegate_ == nil) return 0;
     return [delegate_ audioDeviceModule:adm_
                           didStopEngine:engine
-                       isPlayoutEnabled:playout_enabled
-                     isRecordingEnabled:recording_enabled];
+                        stateTransition:[[RTC_OBJC_TYPE(RTCAudioEngineStateTransition) alloc]
+                                            initWithStateTransition:state_transition]];
   }
 
-  int32_t OnEngineDidDisable(AVAudioEngine *engine, bool playout_enabled,
-                             bool recording_enabled) override {
+  int32_t OnEngineDidDisable(
+      AVAudioEngine *engine,
+      webrtc::AudioEngineDevice::EngineStateTransition state_transition) override {
     if (delegate_ == nil) return 0;
     return [delegate_ audioDeviceModule:adm_
                        didDisableEngine:engine
-                       isPlayoutEnabled:playout_enabled
-                     isRecordingEnabled:recording_enabled];
+                        stateTransition:[[RTC_OBJC_TYPE(RTCAudioEngineStateTransition) alloc]
+                                            initWithStateTransition:state_transition]];
   }
 
-  int32_t OnEngineWillRelease(AVAudioEngine *engine) override {
+  int32_t OnEngineWillRelease(
+      AVAudioEngine *engine,
+      webrtc::AudioEngineDevice::EngineStateTransition state_transition) override {
     if (delegate_ == nil) return 0;
-    return [delegate_ audioDeviceModule:adm_ willReleaseEngine:engine];
+    return [delegate_ audioDeviceModule:adm_
+                      willReleaseEngine:engine
+                        stateTransition:[[RTC_OBJC_TYPE(RTCAudioEngineStateTransition) alloc]
+                                            initWithStateTransition:state_transition]];
   }
 
-  int32_t OnEngineWillConnectInput(AVAudioEngine *engine, AVAudioNode *src, AVAudioNode *dst,
-                                   AVAudioFormat *format, NSDictionary *context) override {
+  int32_t OnEngineWillConnectInput(
+      AVAudioEngine *engine, AVAudioNode *src, AVAudioNode *dst, AVAudioFormat *format,
+      webrtc::AudioEngineDevice::EngineStateTransition state_transition,
+      NSDictionary *context) override {
     if (delegate_ == nil) return 0;
     return [delegate_ audioDeviceModule:adm_
                                  engine:engine
                configureInputFromSource:src
                           toDestination:dst
                              withFormat:format
+                        stateTransition:[[RTC_OBJC_TYPE(RTCAudioEngineStateTransition) alloc]
+                                            initWithStateTransition:state_transition]
                                 context:context];
   }
 
-  int32_t OnEngineWillConnectOutput(AVAudioEngine *engine, AVAudioNode *src, AVAudioNode *dst,
-                                    AVAudioFormat *format, NSDictionary *context) override {
+  int32_t OnEngineWillConnectOutput(
+      AVAudioEngine *engine, AVAudioNode *src, AVAudioNode *dst, AVAudioFormat *format,
+      webrtc::AudioEngineDevice::EngineStateTransition state_transition,
+      NSDictionary *context) override {
     if (delegate_ == nil) return 0;
     return [delegate_ audioDeviceModule:adm_
                                  engine:engine
               configureOutputFromSource:src
                           toDestination:dst
                              withFormat:format
+                        stateTransition:[[RTC_OBJC_TYPE(RTCAudioEngineStateTransition) alloc]
+                                            initWithStateTransition:state_transition]
                                 context:context];
   }
 
@@ -119,11 +204,11 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   __weak RTC_OBJC_TYPE(RTCAudioDeviceModule) * adm_;
 
   RTCSpeechActivityEvent ConvertSpeechActivityEvent(
-      webrtc::AudioDeviceModule::SpeechActivityEvent event) {
+      webrtc::AudioEngineDevice::SpeechActivityEvent event) {
     switch (event) {
-      case webrtc::AudioDeviceModule::SpeechActivityEvent::kStarted:
+      case webrtc::AudioEngineDevice::SpeechActivityEvent::kStarted:
         return RTCSpeechActivityEvent::RTCSpeechActivityEventStarted;
-      case webrtc::AudioDeviceModule::SpeechActivityEvent::kEnded:
+      case webrtc::AudioEngineDevice::SpeechActivityEvent::kEnded:
         return RTCSpeechActivityEvent::RTCSpeechActivityEventEnded;
       default:
         return RTCSpeechActivityEvent::RTCSpeechActivityEventEnded;
@@ -142,9 +227,13 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (void)setObserver:(id<RTC_OBJC_TYPE(RTCAudioDeviceModuleDelegate)>)observer {
-  _workerThread->BlockingCall([self, observer] {
+  webrtc::AudioEngineDevice *engine_device =
+      dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+
+  _workerThread->BlockingCall([self, observer, engine_device] {
     _observer->delegate_ = observer;
     _native->SetObserver(observer != nil ? _observer : nullptr);
+    engine_device->SetEngineObserver(observer != nil ? _observer : nullptr);
   });
 }
 
@@ -334,39 +423,16 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   _workerThread->BlockingCall([self, muted] { _native->SetMicrophoneMute(muted); });
 }
 
-- (RTCAudioEngineState)engineState {
+- (RTC_OBJC_TYPE(RTCAudioEngineState) *)engineState {
   webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
-  if (module == nullptr) return RTCAudioEngineState();
+  if (module == nullptr) return [[RTC_OBJC_TYPE(RTCAudioEngineState) alloc] init];
 
   return _workerThread->BlockingCall([module] {
     webrtc::AudioEngineDevice::EngineState state;
-    if (module->GetEngineState(&state) != 0) return RTCAudioEngineState();
+    if (module->GetEngineState(&state) != 0)
+      return [[RTC_OBJC_TYPE(RTCAudioEngineState) alloc] init];
 
-    RTCAudioEngineState result;
-    result.outputEnabled = state.output_enabled;
-    result.outputRunning = state.output_running;
-    result.inputEnabled = state.input_enabled;
-    result.inputRunning = state.input_running;
-    result.inputMuted = state.input_muted;
-    result.muteMode = MuteModeToObjC(state.mute_mode);
-    return result;
-  });
-}
-
-- (void)setEngineState:(RTCAudioEngineState)state {
-  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
-  if (module == nullptr) return;
-
-  _workerThread->BlockingCall([module, state] {
-    webrtc::AudioEngineDevice::EngineState result;
-    result.output_enabled = state.outputEnabled;
-    result.output_running = state.outputRunning;
-    result.input_enabled = state.inputEnabled;
-    result.input_running = state.inputRunning;
-    result.input_muted = state.inputMuted;
-    result.mute_mode = MuteModeToRTC(state.muteMode);
-
-    module->SetEngineState(result);
+    return [[RTC_OBJC_TYPE(RTCAudioEngineState) alloc] initWithRTCType:state];
   });
 }
 

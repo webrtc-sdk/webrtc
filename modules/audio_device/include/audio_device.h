@@ -48,11 +48,6 @@ class AudioDeviceModule : public rtc::RefCountInterface {
 
   enum WindowsDeviceType { kDefaultCommunicationDevice = -1, kDefaultDevice = -2 };
 
-  enum SpeechActivityEvent {
-    kStarted = 0,
-    kEnded,
-  };
-
   struct Stats {
     // The fields below correspond to similarly-named fields in the WebRTC stats
     // spec. https://w3c.github.io/webrtc-stats/#playoutstats-dict*
@@ -208,46 +203,6 @@ class AudioDeviceObserver {
 
   // input/output devices updated or default device changed
   virtual void OnDevicesUpdated() {}
-  virtual void OnSpeechActivityEvent(AudioDeviceModule::SpeechActivityEvent event) {}
-
-  // AVAudioEngine lifecycle
-  virtual int32_t OnEngineDidCreate(AVAudioEngine* engine) { return 0; }
-
-  virtual int32_t OnEngineWillEnable(AVAudioEngine* engine, bool playout_enabled,
-                                     bool recording_enabled) {
-    return 0;
-  }
-
-  virtual int32_t OnEngineWillStart(AVAudioEngine* engine, bool playout_enabled,
-                                    bool recording_enabled) {
-    return 0;
-  }
-
-  virtual int32_t OnEngineDidStop(AVAudioEngine* engine, bool playout_enabled,
-                                  bool recording_enabled) {
-    return 0;
-  }
-
-  virtual int32_t OnEngineDidDisable(AVAudioEngine* engine, bool playout_enabled,
-                                     bool recording_enabled) {
-    return 0;
-  }
-
-  virtual int32_t OnEngineWillRelease(AVAudioEngine* engine) { return 0; }
-
-  // Override the input node configuration with a custom implementation.
-  virtual int32_t OnEngineWillConnectInput(AVAudioEngine* engine, AVAudioNode* src,
-                                           AVAudioNode* dst, AVAudioFormat* format,
-                                           NSDictionary* context) {
-    return 0;
-  }
-
-  // Override the input node configuration with a custom implementation.
-  virtual int32_t OnEngineWillConnectOutput(AVAudioEngine* engine, AVAudioNode* src,
-                                            AVAudioNode* dst, AVAudioFormat* format,
-                                            NSDictionary* context) {
-    return 0;
-  }
 };
 
 }  // namespace webrtc
