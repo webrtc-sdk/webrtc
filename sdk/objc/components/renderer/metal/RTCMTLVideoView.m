@@ -129,13 +129,25 @@
 }
 #endif
 
+- (CGFloat)currentScaleFactor {
+  CGFloat scale = 1.0;
+#if TARGET_OS_IPHONE
+  scale = [UIScreen mainScreen].scale;
+#elif TARGET_OS_OSX
+  scale = [NSScreen mainScreen].backingScaleFactor;
+#endif
+  return MAX(scale, 1.0);
+}
+
 - (void)performLayout {
   CGRect bounds = self.bounds;
   self.metalView.frame = bounds;
   if (!CGSizeEqualToSize(self.videoFrameSize, CGSizeZero)) {
     self.metalView.drawableSize = [self drawableSize];
   } else {
-    self.metalView.drawableSize = bounds.size;
+    // Apply scale factor for default size as well (when videoFrameSize is zero)
+    CGFloat scale = [self currentScaleFactor];
+    self.metalView.drawableSize = CGSizeMake(bounds.size.width * scale, bounds.size.height * scale);
   }
 }
 
@@ -233,11 +245,16 @@
   BOOL sizeIsLandscape = (self.videoFrame.rotation == RTCVideoRotation_0) ||
       (self.videoFrame.rotation == RTCVideoRotation_180);
 
+  CGSize size;
   if (useLandscape == sizeIsLandscape) {
-    return videoFrameSize;
+    size = videoFrameSize;
   } else {
-    return CGSizeMake(videoFrameSize.height, videoFrameSize.width);
+    size = CGSizeMake(videoFrameSize.height, videoFrameSize.width);
   }
+  
+  // Apply scale factor for retina displays
+  CGFloat scale = [self currentScaleFactor];
+  return CGSizeMake(size.width * scale, size.height * scale);
 }
 
 #pragma mark - RTC_OBJC_TYPE(RTCVideoRenderer)
