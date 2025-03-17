@@ -275,7 +275,7 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
       final WebRtcAudioRecord audioInput = new WebRtcAudioRecord(context, executor, audioManager,
           audioSource, audioFormat, audioRecordErrorCallback, audioRecordStateCallback,
           samplesReadyCallback, audioBufferCallback, useHardwareAcousticEchoCanceler,
-          useHardwareNoiseSuppressor);
+          useHardwareNoiseSuppressor, inputSampleRate, useStereoInput ? 2 : 1);
       final WebRtcAudioTrack audioOutput =
           new WebRtcAudioTrack(context, audioManager, audioAttributes, audioTrackErrorCallback,
               audioTrackStateCallback, playbackSamplesReadyCallback, useLowLatency, enableVolumeLogger);
@@ -455,6 +455,21 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
 
   public void setAudioRecordEnabled(boolean enable) {
     audioInput.setUseAudioRecord(enable);
+  }
+
+  public void prewarmRecording(){
+    audioInput.initRecordingIfNeeded();
+    audioInput.prewarmRecordingIfNeeded();
+  }
+
+  public void requestStartRecording() {
+    audioInput.initRecordingIfNeeded();
+    audioInput.startRecordingIfNeeded();
+  }
+
+  public void requestStopRecording() {
+    audioInput.initRecordingIfNeeded();
+    audioInput.stopRecordingIfNeeded();
   }
 
   @Override
