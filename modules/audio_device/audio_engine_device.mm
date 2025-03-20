@@ -1012,7 +1012,6 @@ int32_t AudioEngineDevice::SetEngineState(EngineState new_state) {
 }
 
 int32_t AudioEngineDevice::GetEngineState(EngineState* state) {
-  LOGI() << "GetEngineState";
   RTC_DCHECK_RUN_ON(thread_);
 
   *state = engine_state_;
@@ -1340,19 +1339,15 @@ int32_t AudioEngineDevice::ModifyEngineState(
   }
 
   // Check input should be enabled if running.
-  if (new_state.IsInputRunning()) {
-    if (!new_state.IsInputEnabled()) {
-      LOGE() << "ModifyEngineState: Input must be enabled if running";
-      return -1;
-    }
+  if (new_state.input_running && !new_state.input_enabled) {
+    LOGE() << "ModifyEngineState: Input must be enabled if running";
+    return -1;
   }
 
   // Check output should be enabled if running.
-  if (new_state.IsOutputRunning()) {
-    if (!new_state.IsOutputEnabled()) {
-      LOGE() << "ModifyEngineState: Output must be enabled if running";
-      return -1;
-    }
+  if (new_state.output_running && !new_state.output_enabled) {
+    LOGE() << "ModifyEngineState: Output must be enabled if running";
+    return -1;
   }
 
   // Save new state
