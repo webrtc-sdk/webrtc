@@ -1332,7 +1332,6 @@ int32_t AudioEngineDevice::ModifyEngineState(
 
   // Check input should be enabled if running.
   if (new_state.IsInputRunning()) {
-    RTC_DCHECK(new_state.IsInputEnabled());
     if (!new_state.IsInputEnabled()) {
       LOGE() << "ModifyEngineState: Input must be enabled if running";
       return -1;
@@ -1341,7 +1340,6 @@ int32_t AudioEngineDevice::ModifyEngineState(
 
   // Check output should be enabled if running.
   if (new_state.IsOutputRunning()) {
-    RTC_DCHECK(new_state.IsOutputEnabled());
     if (!new_state.IsOutputEnabled()) {
       LOGE() << "ModifyEngineState: Output must be enabled if running";
       return -1;
