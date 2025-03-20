@@ -152,7 +152,8 @@ RTC_OBJC_EXPORT
 @property(nonatomic, readonly) BOOL isPlaying;
 @property(nonatomic, readonly) BOOL isRecording;
 @property(nonatomic, readonly) BOOL isEngineRunning;
-@property(nonatomic, assign, getter=isMicrophoneMuted) BOOL microphoneMuted;
+@property(nonatomic, readonly) BOOL isMicrophoneMuted;
+- (NSInteger)setMicrophoneMuted:(BOOL)muted;
 
 // Directly get & set engine state.
 @property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioEngineState) * engineState;

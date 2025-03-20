@@ -419,8 +419,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver,
   });
 }
 
-- (void)setMicrophoneMuted:(BOOL)muted {
-  _workerThread->BlockingCall([self, muted] { _native->SetMicrophoneMute(muted); });
+- (NSInteger)setMicrophoneMuted:(BOOL)muted {
+  return _workerThread->BlockingCall([self, muted] { return _native->SetMicrophoneMute(muted); });
 }
 
 - (RTC_OBJC_TYPE(RTCAudioEngineState) *)engineState {

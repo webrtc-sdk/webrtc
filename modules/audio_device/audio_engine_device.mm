@@ -1341,7 +1341,6 @@ int32_t AudioEngineDevice::ModifyEngineState(
 
   // Check input should be enabled if running.
   if (new_state.IsInputRunning()) {
-    RTC_DCHECK(new_state.IsInputEnabled());
     if (!new_state.IsInputEnabled()) {
       LOGE() << "ModifyEngineState: Input must be enabled if running";
       return -1;
@@ -1350,7 +1349,6 @@ int32_t AudioEngineDevice::ModifyEngineState(
 
   // Check output should be enabled if running.
   if (new_state.IsOutputRunning()) {
-    RTC_DCHECK(new_state.IsOutputEnabled());
     if (!new_state.IsOutputEnabled()) {
       LOGE() << "ModifyEngineState: Output must be enabled if running";
       return -1;
@@ -1865,11 +1863,17 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateTransition state) {
     LOGI() << "Disabling output for AVAudioEngine...";
     RTC_DCHECK(!engine_device_.running);
 
-    // Disconnect
+    // Detach source node
     if (source_node_ != nil) {
-      [engine_device_ disconnectNodeInput:source_node_];
-      [engine_device_ disconnectNodeOutput:source_node_];
-      [engine_device_ detachNode:source_node_];
+      if (![engine_device_.attachedNodes containsObject:source_node_]) {
+        LOGW() << "Attempted to detach a node that wasn't attached to the engine";
+      } else {
+        @try {
+          [engine_device_ detachNode:source_node_];
+        } @catch (NSException* exception) {
+          LOGW() << "Failed to detach node: " << exception.reason.UTF8String;
+        }
+      }
       source_node_ = nil;
     }
   }
@@ -2011,20 +2015,32 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateTransition state) {
     LOGI() << "Disabling input for AVAudioEngine...";
     RTC_DCHECK(!engine_device_.running);
 
-    // InputMixerNode
+    // Detach input mixer node
     if (input_mixer_node_ != nil) {
-      [engine_device_ disconnectNodeInput:input_mixer_node_];
-      [engine_device_ disconnectNodeOutput:input_mixer_node_];
-      [engine_device_ detachNode:input_mixer_node_];
-      input_mixer_node_ = nil;
+      if (![engine_device_.attachedNodes containsObject:input_mixer_node_]) {
+        LOGW() << "Attempted to detach a node that wasn't attached to the engine";
+      } else {
+        @try {
+          [engine_device_ detachNode:input_mixer_node_];
+        } @catch (NSException* exception) {
+          LOGW() << "Failed to detach node: " << exception.reason.UTF8String;
+        }
+        input_mixer_node_ = nil;
+      }
     }
 
-    // SinkNode
+    // Detach sink node
     if (sink_node_ != nil) {
-      [engine_device_ disconnectNodeInput:sink_node_];
-      [engine_device_ disconnectNodeOutput:sink_node_];
-      [engine_device_ detachNode:sink_node_];
-      sink_node_ = nil;
+      if (![engine_device_.attachedNodes containsObject:sink_node_]) {
+        LOGW() << "Attempted to detach a node that wasn't attached to the engine";
+      } else {
+        @try {
+          [engine_device_ detachNode:sink_node_];
+        } @catch (NSException* exception) {
+          LOGW() << "Failed to detach node: " << exception.reason.UTF8String;
+        }
+        sink_node_ = nil;
+      }
     }
 
     // Dispose Float32 -> Int16 converter.
