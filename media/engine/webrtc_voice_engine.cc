@@ -921,7 +921,7 @@ class WebRtcVoiceSendChannel::WebRtcAudioSendStream : public AudioSource::Sink {
     muted_ = muted;
   }
 
-  bool muted() const {
+  bool IsMuted() const {
     RTC_DCHECK_RUN_ON(&worker_thread_checker_);
     return muted_;
   }
@@ -946,6 +946,11 @@ class WebRtcVoiceSendChannel::WebRtcAudioSendStream : public AudioSource::Sink {
     source->SetSink(this);
     source_ = source;
     UpdateSendState();
+  }
+
+  bool HasSource() const {
+    RTC_DCHECK_RUN_ON(&worker_thread_checker_);
+    return source_ != nullptr;
   }
 
   // Stops sending by setting the sink of the AudioSource to nullptr. No data
@@ -1668,18 +1673,35 @@ bool WebRtcVoiceSendChannel::MuteStream(uint32_t ssrc, bool muted) {
   // This implementation is not ideal, instead we should signal the AGC when
   // the mic channel is muted/unmuted. We can't do it today because there
   // is no good way to know which stream is mapping to the mic channel.
-  bool all_muted = muted;
-  for (const auto& kv : send_streams_) {
-    all_muted = all_muted && kv.second->muted();
-  }
-  webrtc::AudioProcessing* ap = engine()->apm();
-  if (ap) {
-    ap->set_output_will_be_muted(all_muted);
-  }
+  if (send_streams_.size() > 0) {
+    // This will be true if MuteStream is called from
+    // AudioRtpSender::ClearSend().
+    bool is_all_no_source =
+        std::none_of(send_streams_.begin(), send_streams_.end(),
+                     [](const auto& kv) { return kv.second->HasSource(); });
 
-  webrtc::AudioDeviceModule* adm = engine()->adm();
-  if (adm) {
-    adm->SetMicrophoneMute(all_muted);
+    bool is_all_muted =
+        std::all_of(send_streams_.begin(), send_streams_.end(),
+                    [](const auto& kv) { return kv.second->IsMuted(); });
+
+    // Only mute the microphone if we're not in cleanup state
+    // (i.e. if we have active send streams)
+    webrtc::AudioProcessing* ap = engine()->apm();
+    if (ap) {
+      bool v = !is_all_no_source && is_all_muted;
+      RTC_LOG(LS_INFO) << "WebRtcVoiceSendChannel::MuteStream: APM:" << v;
+      ap->set_output_will_be_muted(v);
+    }
+
+    if (!is_all_no_source) {
+      // We don't mute when ClearSend() is called.
+      webrtc::AudioDeviceModule* adm = engine()->adm();
+      if (adm) {
+        RTC_LOG(LS_INFO) << "WebRtcVoiceSendChannel::MuteStream: ADM:"
+                         << is_all_muted;
+        adm->SetMicrophoneMute(is_all_muted);
+      }
+    }
   }
 
   return true;
