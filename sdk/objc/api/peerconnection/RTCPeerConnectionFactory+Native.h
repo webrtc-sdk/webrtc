@@ -9,6 +9,7 @@
  */
 
 #import "RTCPeerConnectionFactory.h"
+#import "RTCAudioDeviceModule.h"
 
 #include "api/scoped_refptr.h"
 
@@ -54,6 +55,7 @@ NS_ASSUME_NONNULL_BEGIN
                          networkControllerFactory:
                              (std::unique_ptr<webrtc::NetworkControllerFactoryInterface>)
                                  networkControllerFactory
+                            audioDeviceModuleType:(RTCAudioDeviceModuleType)audioDeviceModuleType
                             bypassVoiceProcessing:(BOOL)bypassVoiceProcessing;
 
 - (instancetype)

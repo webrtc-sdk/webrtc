@@ -23,6 +23,11 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+typedef NS_ENUM(NSInteger, RTCAudioDeviceModuleType) {
+  RTCAudioDeviceModuleTypePlatformDefault,
+  RTCAudioDeviceModuleTypeAudioEngine,
+};
+
 typedef NS_ENUM(NSInteger, RTCSpeechActivityEvent) {
   RTCSpeechActivityEventStarted,
   RTCSpeechActivityEventEnded,

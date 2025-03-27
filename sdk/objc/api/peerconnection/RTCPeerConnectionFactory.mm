@@ -87,6 +87,7 @@
                       audioDeviceModule:nullptr
                   audioProcessingModule:nullptr
                networkControllerFactory:nullptr
+                  audioDeviceModuleType:RTCAudioDeviceModuleTypePlatformDefault
                   bypassVoiceProcessing:NO];
 }
 
@@ -124,6 +125,7 @@
                                audioDeviceModule:audio_device_module
                            audioProcessingModule:nullptr
                         networkControllerFactory:nullptr
+                           audioDeviceModuleType:RTCAudioDeviceModuleTypePlatformDefault
                            bypassVoiceProcessing:NO];
 #endif
 }
@@ -143,7 +145,8 @@
 }
 
 - (instancetype)
-    initWithBypassVoiceProcessing:(BOOL)bypassVoiceProcessing
+    initWithAudioDeviceModuleType:(RTCAudioDeviceModuleType)audioDeviceModuleType
+            bypassVoiceProcessing:(BOOL)bypassVoiceProcessing
                    encoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoEncoderFactory)>)encoderFactory
                    decoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoDecoderFactory)>)decoderFactory
             audioProcessingModule:
@@ -174,6 +177,7 @@
                       audioDeviceModule:nullptr
                   audioProcessingModule:_defaultAudioProcessingModule.nativeAudioProcessingModule
                networkControllerFactory:nullptr
+                  audioDeviceModuleType:audioDeviceModuleType
                   bypassVoiceProcessing:bypassVoiceProcessing];
 #endif
 }
@@ -227,6 +231,7 @@
                          networkControllerFactory:
                              (std::unique_ptr<webrtc::NetworkControllerFactoryInterface>)
                                  networkControllerFactory
+                            audioDeviceModuleType:(RTCAudioDeviceModuleType)audioDeviceModuleType
                             bypassVoiceProcessing:(BOOL)bypassVoiceProcessing {
   if (self = [self initNative]) {
     webrtc::PeerConnectionFactoryDependencies dependencies;
@@ -240,11 +245,17 @@
 
     if (audioDeviceModule != nullptr) {
       _nativeAudioDeviceModule = audioDeviceModule;
-    } else {
-      // always create ADM on worker thread
+    } else if (audioDeviceModuleType == RTCAudioDeviceModuleTypeAudioEngine) {
       _nativeAudioDeviceModule = _workerThread->BlockingCall([&bypassVoiceProcessing]() {
         return rtc::make_ref_counted<webrtc::AudioEngineDevice>(bypassVoiceProcessing == YES);
       });
+    } else {
+      _nativeAudioDeviceModule =
+          _workerThread->BlockingCall([&bypassVoiceProcessing, &dependencies]() {
+            return webrtc::AudioDeviceModule::Create(
+                webrtc::AudioDeviceModule::AudioLayer::kPlatformDefaultAudio,
+                dependencies.task_queue_factory.get(), bypassVoiceProcessing == YES);
+          });
     }
 
     _audioDeviceModule = [[RTC_OBJC_TYPE(RTCAudioDeviceModule) alloc] initWithNativeModule: _nativeAudioDeviceModule

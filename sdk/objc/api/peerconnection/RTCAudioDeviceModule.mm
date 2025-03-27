@@ -294,10 +294,16 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (NSInteger)initAndStartRecording {
-  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
-  if (module == nullptr) return -1;
-
-  return _workerThread->BlockingCall([module] { return module->InitAndStartRecording(); });
+  return _workerThread->BlockingCall([self] {
+    webrtc::AudioEngineDevice *engine_device =
+        dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+    if (engine_device != nullptr) {
+      return engine_device->InitAndStartRecording();
+    } else {
+      _native->InitRecording();
+      return _native->StartRecording();
+    }
+  });
 }
 
 - (BOOL)isPlayoutInitialized {
