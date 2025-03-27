@@ -86,6 +86,7 @@
                                             RTCVideoDecoderFactoryH264) alloc] init])
                       audioDeviceModule:nullptr
                   audioProcessingModule:nullptr
+               networkControllerFactory:nullptr
                   bypassVoiceProcessing:NO];
 }
 
@@ -122,6 +123,7 @@
                        nativeVideoDecoderFactory:std::move(native_decoder_factory)
                                audioDeviceModule:audio_device_module
                            audioProcessingModule:nullptr
+                        networkControllerFactory:nullptr
                            bypassVoiceProcessing:NO];
 #endif
 }
@@ -164,13 +166,15 @@
     _defaultAudioProcessingModule = [[RTC_OBJC_TYPE(RTCDefaultAudioProcessingModule) alloc] init];
   }
 
-  return [self initWithNativeAudioEncoderFactory:webrtc::CreateBuiltinAudioEncoderFactory()
-                       nativeAudioDecoderFactory:webrtc::CreateBuiltinAudioDecoderFactory()
-                       nativeVideoEncoderFactory:std::move(native_encoder_factory)
-                       nativeVideoDecoderFactory:std::move(native_decoder_factory)
-                               audioDeviceModule:nullptr
-                           audioProcessingModule:_defaultAudioProcessingModule.nativeAudioProcessingModule
-                           bypassVoiceProcessing:bypassVoiceProcessing];
+  return [self
+      initWithNativeAudioEncoderFactory:webrtc::CreateBuiltinAudioEncoderFactory()
+              nativeAudioDecoderFactory:webrtc::CreateBuiltinAudioDecoderFactory()
+              nativeVideoEncoderFactory:std::move(native_encoder_factory)
+              nativeVideoDecoderFactory:std::move(native_decoder_factory)
+                      audioDeviceModule:nullptr
+                  audioProcessingModule:_defaultAudioProcessingModule.nativeAudioProcessingModule
+               networkControllerFactory:nullptr
+                  bypassVoiceProcessing:bypassVoiceProcessing];
 #endif
 }
 
@@ -216,28 +220,8 @@
                             (std::unique_ptr<webrtc::VideoEncoderFactory>)videoEncoderFactory
                         nativeVideoDecoderFactory:
                             (std::unique_ptr<webrtc::VideoDecoderFactory>)videoDecoderFactory
-                                audioDeviceModule:(rtc::scoped_refptr<webrtc::AudioDeviceModule>)audioDeviceModule
-                            audioProcessingModule:
-                                (rtc::scoped_refptr<webrtc::AudioProcessing>)audioProcessingModule
-                            bypassVoiceProcessing:(BOOL)bypassVoiceProcessing {
-  return [self initWithNativeAudioEncoderFactory:audioEncoderFactory
-                       nativeAudioDecoderFactory:audioDecoderFactory
-                       nativeVideoEncoderFactory:std::move(videoEncoderFactory)
-                       nativeVideoDecoderFactory:std::move(videoDecoderFactory)
-                               audioDeviceModule:audioDeviceModule
-                           audioProcessingModule:audioProcessingModule
-                        networkControllerFactory:nullptr
-                           bypassVoiceProcessing:bypassVoiceProcessing];
-}
-- (instancetype)initWithNativeAudioEncoderFactory:
-                    (rtc::scoped_refptr<webrtc::AudioEncoderFactory>)audioEncoderFactory
-                        nativeAudioDecoderFactory:
-                            (rtc::scoped_refptr<webrtc::AudioDecoderFactory>)audioDecoderFactory
-                        nativeVideoEncoderFactory:
-                            (std::unique_ptr<webrtc::VideoEncoderFactory>)videoEncoderFactory
-                        nativeVideoDecoderFactory:
-                            (std::unique_ptr<webrtc::VideoDecoderFactory>)videoDecoderFactory
-                                audioDeviceModule:(rtc::scoped_refptr<webrtc::AudioDeviceModule>)audioDeviceModule
+                                audioDeviceModule:
+                                    (rtc::scoped_refptr<webrtc::AudioDeviceModule>)audioDeviceModule
                             audioProcessingModule:
                                 (rtc::scoped_refptr<webrtc::AudioProcessing>)audioProcessingModule
                          networkControllerFactory:
