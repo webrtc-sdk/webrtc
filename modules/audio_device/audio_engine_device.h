@@ -385,9 +385,6 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
   EngineState engine_state_ RTC_GUARDED_BY(thread_);
 
-  AVAudioInputNode* InputNode();
-  AVAudioOutputNode* OutputNode();
-
   bool IsMicrophonePermissionGranted();
   int32_t ModifyEngineState(std::function<EngineState(EngineState)> state_transform);
   int32_t ApplyDeviceEngineState(EngineStateUpdate state);
