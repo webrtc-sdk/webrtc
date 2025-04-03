@@ -2026,6 +2026,12 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     LOGI() << "Disabling input for AVAudioEngine...";
     RTC_DCHECK(!engine_device_.running);
 
+    // If disabling input, always unmute the voice-processing input mute.
+    if (inputNode().voiceProcessingEnabled && inputNode().voiceProcessingInputMuted) {
+      LOGI() << "setVoiceProcessingInputMuted (stop-recording): " << 0;
+      inputNode().voiceProcessingInputMuted = false;
+    }
+
     // Detach input mixer node
     if (input_mixer_node_ != nil) {
       if (![engine_device_.attachedNodes containsObject:input_mixer_node_]) {
@@ -2080,13 +2086,6 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       inputNode().voiceProcessingInputMuted != state.next.input_muted) {
     LOGI() << "setVoiceProcessingInputMuted (runtime): " << state.next.input_muted;
     inputNode().voiceProcessingInputMuted = state.next.input_muted;
-  }
-
-  // If disabling input, always unmute the input.
-  if (state.prev.mute_mode == MuteMode::VoiceProcessing && state.DidDisableInput() &&
-      inputNode().voiceProcessingEnabled && inputNode().voiceProcessingInputMuted) {
-    LOGI() << "setVoiceProcessingInputMuted (stop-recording): " << 0;
-    inputNode().voiceProcessingInputMuted = false;
   }
 
 #if !TARGET_OS_TV
