@@ -105,10 +105,6 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
  public:
   enum RenderMode { Device = 0, Manual = 1 };
   enum MuteMode { VoiceProcessing = 0, RestartEngine = 1 };
-  enum SpeechActivityEvent {
-    kStarted = 0,
-    kEnded,
-  };
 
   // Represents the state of the audio engine, including input/output status,
   // rendering mode, and various configuration flags.
@@ -191,129 +187,6 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
     bool IsOutputDefaultDevice() const { return output_device_id == 0; }
 
     bool IsInputDefaultDevice() const { return input_device_id == 0; }
-  };
-
-  struct EngineStateTransition {
-    EngineState prev;
-    EngineState next;
-
-    bool HasNoChanges() const { return prev == next; }
-
-    bool DidEnableOutput() const { return !prev.IsOutputEnabled() && next.IsOutputEnabled(); }
-
-    bool DidEnableInput() const { return !prev.IsInputEnabled() && next.IsInputEnabled(); }
-
-    bool DidDisableOutput() const { return prev.IsOutputEnabled() && !next.IsOutputEnabled(); }
-
-    bool DidDisableInput() const { return prev.IsInputEnabled() && !next.IsInputEnabled(); }
-
-    bool DidAnyEnable() const { return DidEnableOutput() || DidEnableInput(); }
-
-    bool DidAnyDisable() const { return DidDisableOutput() || DidDisableInput(); }
-
-    bool DidBeginInterruption() const { return !prev.is_interrupted && next.is_interrupted; }
-
-    bool DidEndInterruption() const { return prev.is_interrupted && !next.is_interrupted; }
-
-    bool DidUpdateAudioGraph() const {
-      return (prev.IsInputEnabled() != next.IsInputEnabled()) ||
-             (prev.IsOutputEnabled() != next.IsOutputEnabled());
-    }
-
-    bool DidUpdateVoiceProcessingEnabled() const {
-      return prev.voice_processing_enabled != next.voice_processing_enabled;
-    }
-
-    bool DidUpdateOutputDevice() const { return prev.output_device_id != next.output_device_id; }
-
-    bool DidUpdateInputDevice() const { return prev.input_device_id != next.input_device_id; }
-
-    bool DidUpdateDefaultOutputDevice() const {
-      return prev.default_output_device_id != next.default_output_device_id;
-    }
-
-    bool DidUpdateDefaultInputDevice() const {
-      return prev.default_input_device_id != next.default_input_device_id;
-    }
-
-    bool DidUpdateMuteMode() const { return prev.mute_mode != next.mute_mode; }
-
-    bool IsEngineRestartRequired() const {
-      return DidUpdateAudioGraph() || DidUpdateOutputDevice() || DidUpdateInputDevice() ||
-             // Voice processing enable state updates
-             DidUpdateVoiceProcessingEnabled() ||
-             // Handle default device updates
-             (DidUpdateDefaultOutputDevice() && next.IsOutputDefaultDevice()) ||
-             (DidUpdateDefaultInputDevice() && next.IsInputDefaultDevice());
-    }
-
-    // Special case to re-create engine when switching from Speaker & Mic ->
-    // Speaker only.
-    bool IsEngineRecreateRequired() const {
-      return (prev.IsOutputEnabled() && next.IsOutputEnabled()) &&
-             (prev.IsInputEnabled() && !next.IsInputEnabled());
-    }
-
-    bool DidEnableManualRenderingMode() const {
-      return prev.render_mode != RenderMode::Manual && next.render_mode == RenderMode::Manual;
-    }
-
-    bool DidEnableDeviceRenderingMode() const {
-      return prev.render_mode != RenderMode::Device && next.render_mode == RenderMode::Device;
-    }
-  };
-
-  class EngineObserver {
-   public:
-    virtual ~EngineObserver() = default;
-
-    virtual void OnEngineDidReceiveMutedSpeechActivityEvent(SpeechActivityEvent event) {}
-
-    // AVAudioEngine lifecycle
-    virtual int32_t OnEngineDidCreate(AVAudioEngine* engine,
-                                      EngineStateTransition state_transition) {
-      return 0;
-    }
-
-    virtual int32_t OnEngineWillEnable(AVAudioEngine* engine,
-                                       EngineStateTransition state_transition) {
-      return 0;
-    }
-
-    virtual int32_t OnEngineWillStart(AVAudioEngine* engine,
-                                      EngineStateTransition state_transition) {
-      return 0;
-    }
-
-    virtual int32_t OnEngineDidStop(AVAudioEngine* engine, EngineStateTransition state_transition) {
-      return 0;
-    }
-
-    virtual int32_t OnEngineDidDisable(AVAudioEngine* engine,
-                                       EngineStateTransition state_transition) {
-      return 0;
-    }
-
-    virtual int32_t OnEngineWillRelease(AVAudioEngine* engine,
-                                        EngineStateTransition state_transition) {
-      return 0;
-    }
-
-    // Override the input node configuration with a custom implementation.
-    virtual int32_t OnEngineWillConnectInput(AVAudioEngine* engine, AVAudioNode* src,
-                                             AVAudioNode* dst, AVAudioFormat* format,
-                                             EngineStateTransition state_transition,
-                                             NSDictionary* context) {
-      return 0;
-    }
-
-    // Override the input node configuration with a custom implementation.
-    virtual int32_t OnEngineWillConnectOutput(AVAudioEngine* engine, AVAudioNode* src,
-                                              AVAudioNode* dst, AVAudioFormat* format,
-                                              EngineStateTransition state_transition,
-                                              NSDictionary* context) {
-      return 0;
-    }
   };
 
   explicit AudioEngineDevice(bool voice_processing_bypassed);
@@ -408,12 +281,10 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
   bool IsEngineRunning();
 
-  int32_t SetEngineState(EngineState new_state);
-  int32_t GetEngineState(EngineState* state);
+  int32_t SetEngineState(EngineState enable);
+  int32_t GetEngineState(EngineState* enabled);
 
   int32_t SetObserver(AudioDeviceObserver* observer) override;
-
-  int32_t SetEngineObserver(EngineObserver* observer);
 
   int32_t SetManualRenderingMode(bool enable);
   int32_t ManualRenderingMode(bool* enabled);
@@ -442,6 +313,76 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   int32_t InitAndStartRecording();
 
  private:
+  struct EngineStateUpdate {
+    EngineState prev;
+    EngineState next;
+
+    bool HasNoChanges() const { return prev == next; }
+
+    bool DidEnableOutput() const { return !prev.IsOutputEnabled() && next.IsOutputEnabled(); }
+
+    bool DidEnableInput() const { return !prev.IsInputEnabled() && next.IsInputEnabled(); }
+
+    bool DidDisableOutput() const { return prev.IsOutputEnabled() && !next.IsOutputEnabled(); }
+
+    bool DidDisableInput() const { return prev.IsInputEnabled() && !next.IsInputEnabled(); }
+
+    bool DidAnyEnable() const { return DidEnableOutput() || DidEnableInput(); }
+
+    bool DidAnyDisable() const { return DidDisableOutput() || DidDisableInput(); }
+
+    bool DidBeginInterruption() const { return !prev.is_interrupted && next.is_interrupted; }
+
+    bool DidEndInterruption() const { return prev.is_interrupted && !next.is_interrupted; }
+
+    bool DidUpdateAudioGraph() const {
+      return (prev.IsInputEnabled() != next.IsInputEnabled()) ||
+             (prev.IsOutputEnabled() != next.IsOutputEnabled());
+    }
+
+    bool DidUpdateVoiceProcessingEnabled() const {
+      return prev.voice_processing_enabled != next.voice_processing_enabled;
+    }
+
+    bool DidUpdateOutputDevice() const { return prev.output_device_id != next.output_device_id; }
+
+    bool DidUpdateInputDevice() const { return prev.input_device_id != next.input_device_id; }
+
+    bool DidUpdateDefaultOutputDevice() const {
+      return prev.default_output_device_id != next.default_output_device_id;
+    }
+
+    bool DidUpdateDefaultInputDevice() const {
+      return prev.default_input_device_id != next.default_input_device_id;
+    }
+
+    bool DidUpdateMuteMode() const { return prev.mute_mode != next.mute_mode; }
+
+    bool IsEngineRestartRequired() const {
+      return DidUpdateAudioGraph() || DidUpdateOutputDevice() || DidUpdateInputDevice() ||
+             // Voice processing enable state updates
+             DidUpdateVoiceProcessingEnabled() ||
+             // Handle default device updates
+             (DidUpdateDefaultOutputDevice() && next.IsOutputDefaultDevice()) ||
+             (DidUpdateDefaultInputDevice() && next.IsInputDefaultDevice());
+    }
+
+    // Special case to re-create engine when switching from Speaker & Mic ->
+    // Speaker only.
+    bool IsEngineRecreateRequired() const {
+      return (prev.IsOutputEnabled() && next.IsOutputEnabled()) &&
+             (prev.IsInputEnabled() && !next.IsInputEnabled());
+    }
+
+    bool DidEnableManualRenderingMode() const {
+      return prev.render_mode != RenderMode::Manual && next.render_mode == RenderMode::Manual;
+    }
+
+    bool DidEnableDeviceRenderingMode() const {
+      return prev.render_mode != RenderMode::Device && next.render_mode == RenderMode::Device;
+    }
+  };
+
   EngineState engine_state_ RTC_GUARDED_BY(thread_);
 
   AVAudioInputNode* InputNode();
@@ -449,8 +390,8 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
   bool IsMicrophonePermissionGranted();
   int32_t ModifyEngineState(std::function<EngineState(EngineState)> state_transform);
-  int32_t ApplyDeviceEngineState(EngineStateTransition state);
-  int32_t ApplyManualEngineState(EngineStateTransition state);
+  int32_t ApplyDeviceEngineState(EngineStateUpdate state);
+  int32_t ApplyManualEngineState(EngineStateUpdate state);
 
   // AudioEngine observer methods. May be called from any thread.
   void ReconfigureEngine(bool is_required);
@@ -489,7 +430,6 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   bool initialized_ RTC_GUARDED_BY(thread_);
 
   AudioDeviceObserver* observer_ RTC_GUARDED_BY(thread_);
-  EngineObserver* engine_observer_ RTC_GUARDED_BY(thread_);
 
 #if defined(WEBRTC_IOS)
   // Audio interruption observer instance.

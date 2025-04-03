@@ -1028,15 +1028,6 @@ int32_t AudioEngineDevice::SetObserver(AudioDeviceObserver* observer) {
   return 0;
 }
 
-int32_t AudioEngineDevice::SetEngineObserver(EngineObserver* observer) {
-  LOGI() << "SetEngineObserver";
-  RTC_DCHECK_RUN_ON(thread_);
-
-  engine_observer_ = observer;
-
-  return 0;
-}
-
 // ----------------------------------------------------------------------------------------------------
 // Unique methods to AudioEngineDevice
 
@@ -1331,7 +1322,7 @@ int32_t AudioEngineDevice::ModifyEngineState(
 
   EngineState old_state = engine_state_;
   EngineState new_state = state_transform(old_state);
-  EngineStateTransition state = {old_state, new_state};
+  EngineStateUpdate state = {old_state, new_state};
 
   // No changes, return immediately.
   if (state.HasNoChanges()) {
@@ -1358,28 +1349,28 @@ int32_t AudioEngineDevice::ModifyEngineState(
 
   // Did switch Device -> Manual rendering
   if (state.DidEnableManualRenderingMode()) {
-    EngineStateTransition shutdown_state = state;              // Copy current state
+    EngineStateUpdate shutdown_state = state;                  // Copy current state
     shutdown_state.next = {};                                  // Reset next state to default
     shutdown_result = ApplyDeviceEngineState(shutdown_state);  // Shutdown device rendering
     if (shutdown_result != 0) {
       LOGE() << "ModifyEngineState: Failed to shutdown device rendering, error: "
              << shutdown_result;
     }
-    EngineStateTransition startup_state = state;             // Copy current state
+    EngineStateUpdate startup_state = state;                 // Copy current state
     shutdown_state.prev = {};                                //
     startup_result = ApplyManualEngineState(startup_state);  // Start manual mode
     if (startup_result != 0) {
       LOGE() << "ModifyEngineState: Failed to start manual mode, error: " << startup_result;
     }
   } else if (state.DidEnableDeviceRenderingMode()) {
-    EngineStateTransition shutdown_state = state;
+    EngineStateUpdate shutdown_state = state;
     shutdown_state.next = {};                                  // Reset next state to default
     shutdown_result = ApplyManualEngineState(shutdown_state);  // Shutdown manual rendering
     if (shutdown_result != 0) {
       LOGE() << "ModifyEngineState: Failed to shutdown manual rendering, error: "
              << shutdown_result;
     }
-    EngineStateTransition startup_state = state;             // Copy current state
+    EngineStateUpdate startup_state = state;                 // Copy current state
     shutdown_state.prev = {};                                //
     startup_result = ApplyDeviceEngineState(startup_state);  // Start device mode
     if (startup_result != 0) {
@@ -1433,7 +1424,7 @@ int32_t AudioEngineDevice::ModifyEngineState(
   return return_result;
 }
 
-int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateTransition state) {
+int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
   RTC_DCHECK_RUN_ON(thread_);
   RTC_DCHECK(engine_device_ == nullptr);
 
@@ -1451,8 +1442,9 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateTransition state) {
     RTC_DCHECK(render_buffer_ != nullptr);
     render_buffer_ = nullptr;
 
-    if (engine_observer_ != nullptr) {
-      int32_t result = engine_observer_->OnEngineDidStop(engine_manual_input_, state);
+    if (observer_ != nullptr) {
+      int32_t result = observer_->OnEngineDidStop(
+          engine_manual_input_, state.next.IsOutputEnabled(), state.next.IsInputEnabled());
       if (result != 0) {
         LOGE() << "Call to OnEngineDidStop returned error: " << result;
         return result;
@@ -1475,8 +1467,8 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateTransition state) {
       LOGE() << "Failed to set manual rendering mode: " << error.localizedDescription.UTF8String;
     }
 
-    if (engine_observer_ != nullptr) {
-      int32_t result = engine_observer_->OnEngineDidCreate(engine_manual_input_, state);
+    if (observer_ != nullptr) {
+      int32_t result = observer_->OnEngineDidCreate(engine_manual_input_);
       if (result != 0) {
         LOGE() << "Call to OnEngineDidCreate returned error: " << result;
         return result;
@@ -1502,10 +1494,11 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateTransition state) {
     audio_device_buffer_->StopRecording();
   }
 
-  if (state.DidAnyEnable() && engine_observer_ != nullptr) {
+  if (state.DidAnyEnable() && observer_ != nullptr) {
     // Invoke here before configuring nodes. In iOS, session configuration is required before
     // enabling AGC, muted talker etc.
-    int32_t result = engine_observer_->OnEngineWillEnable(engine_manual_input_, state);
+    int32_t result = observer_->OnEngineWillEnable(
+        engine_manual_input_, state.next.IsOutputEnabled(), state.next.IsInputEnabled());
     if (result != 0) {
       LOGE() << "Call to OnEngineWillEnable returned error: " << result;
       return result;
@@ -1535,11 +1528,11 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateTransition state) {
     RTC_DCHECK(audio_device_buffer_ != nullptr);
     fine_audio_buffer_.reset(new FineAudioBuffer(audio_device_buffer_.get()));
 
-    if (this->engine_observer_ != nullptr) {
+    if (this->observer_ != nullptr) {
       NSDictionary* context = @{};
-      int32_t result = this->engine_observer_->OnEngineWillConnectInput(
+      int32_t result = this->observer_->OnEngineWillConnectInput(
           engine_manual_input_, nil, engine_manual_input_.mainMixerNode, manual_render_rtc_format_,
-          state, context);
+          context);
       if (result != 0) {
         LOGE() << "Call to OnEngineWillConnectInput returned error: " << result;
         return result;
@@ -1555,8 +1548,9 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateTransition state) {
     RTC_DCHECK(!engine_manual_input_.running);
   }
 
-  if (state.DidAnyDisable() && engine_observer_ != nullptr) {
-    int32_t result = engine_observer_->OnEngineDidDisable(engine_manual_input_, state);
+  if (state.DidAnyDisable() && observer_ != nullptr) {
+    int32_t result = observer_->OnEngineDidDisable(
+        engine_manual_input_, state.next.IsOutputEnabled(), state.next.IsInputEnabled());
     if (result != 0) {
       LOGE() << "Call to OnEngineDidDisable returned error: " << result;
       return result;
@@ -1586,8 +1580,9 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateTransition state) {
   }
 
   if (state.next.IsAnyRunning() && !state.prev.IsAnyRunning()) {
-    if (engine_observer_ != nullptr) {
-      int32_t result = engine_observer_->OnEngineWillStart(engine_manual_input_, state);
+    if (observer_ != nullptr) {
+      int32_t result = observer_->OnEngineWillStart(
+          engine_manual_input_, state.next.IsOutputEnabled(), state.next.IsInputEnabled());
       if (result != 0) {
         LOGE() << "Call to OnEngineWillStart returned error: " << result;
         return result;
@@ -1622,8 +1617,8 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateTransition state) {
   }
 
   if (state.prev.IsAnyEnabled() && !state.next.IsAnyEnabled()) {
-    if (engine_observer_ != nullptr) {
-      int32_t result = engine_observer_->OnEngineWillRelease(engine_manual_input_, state);
+    if (observer_ != nullptr) {
+      int32_t result = observer_->OnEngineWillRelease(engine_manual_input_);
       if (result != 0) {
         LOGE() << "Call to OnEngineWillRelease returned error: " << result;
         return result;
@@ -1636,7 +1631,7 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateTransition state) {
   return 0;
 }
 
-int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateTransition state) {
+int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   RTC_DCHECK_RUN_ON(thread_);
   RTC_DCHECK(engine_manual_input_ == nullptr);
 
@@ -1656,8 +1651,9 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateTransition state) {
 
     [engine_device_ stop];
 
-    if (engine_observer_ != nullptr) {
-      int32_t result = engine_observer_->OnEngineDidStop(engine_device_, state);
+    if (observer_ != nullptr) {
+      int32_t result = observer_->OnEngineDidStop(engine_device_, state.next.IsOutputEnabled(),
+                                                  state.next.IsInputEnabled());
       if (result != 0) {
         LOGE() << "Call to OnEngineDidStop returned error: " << result;
         return result;
@@ -1667,8 +1663,8 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateTransition state) {
 
   if (state.IsEngineRecreateRequired()) {
     LOGI() << "Recreate required, releasing AVAudioEngine...";
-    if (engine_observer_ != nullptr) {
-      int32_t result = engine_observer_->OnEngineWillRelease(engine_device_, state);
+    if (observer_ != nullptr) {
+      int32_t result = observer_->OnEngineWillRelease(engine_device_);
       if (result != 0) {
         LOGE() << "Call to OnEngineWillRelease returned error: " << result;
         return result;
@@ -1684,8 +1680,8 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateTransition state) {
 
     engine_device_ = [[AVAudioEngine alloc] init];
 
-    if (engine_observer_ != nullptr) {
-      int32_t result = engine_observer_->OnEngineDidCreate(engine_device_, state);
+    if (observer_ != nullptr) {
+      int32_t result = observer_->OnEngineDidCreate(engine_device_);
       if (result != 0) {
         LOGE() << "Call to OnEngineDidCreate returned error: " << result;
         return result;
@@ -1711,10 +1707,11 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateTransition state) {
     audio_device_buffer_->StopRecording();
   }
 
-  if (state.DidAnyEnable() && engine_observer_ != nullptr) {
+  if (state.DidAnyEnable() && observer_ != nullptr) {
     // Invoke here before configuring nodes. In iOS, session configuration is required before
     // enabling AGC, muted talker etc.
-    int32_t result = engine_observer_->OnEngineWillEnable(engine_device_, state);
+    int32_t result = observer_->OnEngineWillEnable(engine_device_, state.next.IsOutputEnabled(),
+                                                   state.next.IsInputEnabled());
     if (result != 0) {
       LOGE() << "Call to OnEngineWillEnable returned error: " << result;
       return result;
@@ -1750,14 +1747,15 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateTransition state) {
           LOGI() << "AVAudioVoiceProcessingSpeechActivityEvent: " << event;
           RTC_DCHECK(event == AVAudioVoiceProcessingSpeechActivityStarted ||
                      event == AVAudioVoiceProcessingSpeechActivityEnded);
-          SpeechActivityEvent rtc_event =
-              (event == AVAudioVoiceProcessingSpeechActivityStarted ? SpeechActivityEvent::kStarted
-                                                                    : SpeechActivityEvent::kEnded);
+          AudioDeviceModule::SpeechActivityEvent rtc_event =
+              (event == AVAudioVoiceProcessingSpeechActivityStarted
+                   ? AudioDeviceModule::SpeechActivityEvent::kStarted
+                   : AudioDeviceModule::SpeechActivityEvent::kEnded);
 
           thread_->PostTask(SafeTask(safety_, [this, rtc_event] {
             RTC_DCHECK_RUN_ON(thread_);  // Silence warning.
-            if (this->engine_observer_ != nullptr) {
-              this->engine_observer_->OnEngineDidReceiveMutedSpeechActivityEvent(rtc_event);
+            if (this->observer_ != nullptr) {
+              this->observer_->OnSpeechActivityEvent(rtc_event);
             }
           }));
         };
@@ -1842,11 +1840,11 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateTransition state) {
                          to:this->OutputNode()
                      format:engine_output_format];
 
-    if (this->engine_observer_ != nullptr) {
+    if (this->observer_ != nullptr) {
       NSDictionary* context = @{};
-      int32_t result = this->engine_observer_->OnEngineWillConnectOutput(
+      int32_t result = this->observer_->OnEngineWillConnectOutput(
           engine_device_, engine_device_.mainMixerNode, this->OutputNode(), engine_output_format,
-          state, context);
+          context);
       if (result != 0) {
         LOGE() << "Call to OnEngineWillConnectOutput returned error: " << result;
         return result;
@@ -1972,13 +1970,12 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateTransition state) {
 
     NSMutableArray<AVAudioConnectionPoint*>* input_mixer_connections = [NSMutableArray array];
 
-    if (engine_observer_ != nullptr) {
+    if (observer_ != nullptr) {
       NSDictionary* context = @{
         kAudioEngineInputMixerNodeKey : input_mixer_node_,
       };
-      int32_t result = engine_observer_->OnEngineWillConnectInput(
-          engine_device_, this->InputNode(), input_mixer_node_, engine_input_format, state,
-          context);
+      int32_t result = observer_->OnEngineWillConnectInput(
+          engine_device_, this->InputNode(), input_mixer_node_, engine_input_format, context);
       if (result != 0) {
         LOGE() << "Call to OnEngineWillConnectInput returned error: " << result;
         return result;
@@ -2049,8 +2046,9 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateTransition state) {
     converter_buffer_ = nil;
   }
 
-  if (state.DidAnyDisable() && engine_observer_ != nullptr) {
-    int32_t result = engine_observer_->OnEngineDidDisable(engine_device_, state);
+  if (state.DidAnyDisable() && observer_ != nullptr) {
+    int32_t result = observer_->OnEngineDidDisable(engine_device_, state.next.IsOutputEnabled(),
+                                                   state.next.IsInputEnabled());
     if (result != 0) {
       LOGE() << "Call to OnEngineDidDisable returned error: " << result;
       return result;
@@ -2167,8 +2165,9 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateTransition state) {
   if (state.next.IsAnyRunning()) {
     if (!state.prev.IsAnyRunning() || state.DidEndInterruption() ||
         state.IsEngineRestartRequired() || state.IsEngineRecreateRequired()) {
-      if (engine_observer_ != nullptr) {
-        int32_t result = engine_observer_->OnEngineWillStart(engine_device_, state);
+      if (observer_ != nullptr) {
+        int32_t result = observer_->OnEngineWillStart(engine_device_, state.next.IsOutputEnabled(),
+                                                      state.next.IsInputEnabled());
         if (result != 0) {
           LOGE() << "Call to OnEngineWillStart returned error: " << result;
           return result;
@@ -2231,8 +2230,8 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateTransition state) {
   if (state.prev.IsAnyEnabled() && !state.next.IsAnyEnabled()) {
     RTC_DCHECK(engine_device_ != nullptr);
 
-    if (engine_observer_ != nullptr) {
-      int32_t result = engine_observer_->OnEngineWillRelease(engine_device_, state);
+    if (observer_ != nullptr) {
+      int32_t result = observer_->OnEngineWillRelease(engine_device_);
       if (result != 0) {
         LOGE() << "Call to OnEngineWillRelease returned error: " << result;
         return result;

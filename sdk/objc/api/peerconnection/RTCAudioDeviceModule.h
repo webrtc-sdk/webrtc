@@ -34,25 +34,14 @@ typedef NS_ENUM(NSInteger, RTCAudioEngineMuteMode) {
   RTCAudioEngineMuteModeRestartEngine = 1,
 };
 
-RTC_OBJC_EXPORT
-@interface RTC_OBJC_TYPE (RTCAudioEngineState) : NSObject
-
-@property(nonatomic, readonly) BOOL isOutputEnabled;
-@property(nonatomic, readonly) BOOL isOutputRunning;
-@property(nonatomic, readonly) BOOL isInputEnabled;
-@property(nonatomic, readonly) BOOL isInputRunning;
-@property(nonatomic, readonly) BOOL isInputMuted;
-@property(nonatomic, readonly) RTCAudioEngineMuteMode muteMode;
-
-@end
-
-RTC_OBJC_EXPORT
-@interface RTC_OBJC_TYPE (RTCAudioEngineStateTransition) : NSObject
-
-@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioEngineState) * prev;
-@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioEngineState) * next;
-
-@end
+typedef struct {
+  bool outputEnabled;
+  bool outputRunning;
+  bool inputEnabled;
+  bool inputRunning;
+  bool inputMuted;
+  RTCAudioEngineMuteMode muteMode;
+} RTCAudioEngineState;
 
 RTC_EXTERN NSString *const kRTCAudioEngineInputMixerNodeKey;
 
@@ -62,57 +51,57 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
 (RTCAudioDeviceModuleDelegate)<NSObject>
 
     - (void)audioDeviceModule
-    : (RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule didReceiveMutedSpeechActivityEvent
-    : (RTCSpeechActivityEvent)speechActivityEvent NS_SWIFT_NAME(audioDeviceModule(_:didReceiveMutedSpeechActivityEvent:));
+    : (RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule didReceiveSpeechActivityEvent
+    : (RTCSpeechActivityEvent)speechActivityEvent NS_SWIFT_NAME(audioDeviceModule(_:didReceiveSpeechActivityEvent:));
 
 // Engine events
 - (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
                didCreateEngine:(AVAudioEngine *)engine
-               stateTransition:(RTC_OBJC_TYPE(RTCAudioEngineStateTransition) *)stateTransition
-    NS_SWIFT_NAME(audioDeviceModule(_:didCreateEngine:stateTransition:));
+    NS_SWIFT_NAME(audioDeviceModule(_:didCreateEngine:));
 
 - (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
               willEnableEngine:(AVAudioEngine *)engine
-               stateTransition:(RTC_OBJC_TYPE(RTCAudioEngineStateTransition) *)stateTransition
-    NS_SWIFT_NAME(audioDeviceModule(_:willEnableEngine:stateTransition:));
+              isPlayoutEnabled:(BOOL)isPlayoutEnabled
+            isRecordingEnabled:(BOOL)isRecordingEnabled
+    NS_SWIFT_NAME(audioDeviceModule(_:willEnableEngine:isPlayoutEnabled:isRecordingEnabled:));
 
 - (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
                willStartEngine:(AVAudioEngine *)engine
-               stateTransition:(RTC_OBJC_TYPE(RTCAudioEngineStateTransition) *)stateTransition
-    NS_SWIFT_NAME(audioDeviceModule(_:willStartEngine:stateTransition:));
+              isPlayoutEnabled:(BOOL)isPlayoutEnabled
+            isRecordingEnabled:(BOOL)isRecordingEnabled
+    NS_SWIFT_NAME(audioDeviceModule(_:willStartEngine:isPlayoutEnabled:isRecordingEnabled:));
 
 - (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
                  didStopEngine:(AVAudioEngine *)engine
-               stateTransition:(RTC_OBJC_TYPE(RTCAudioEngineStateTransition) *)stateTransition
-    NS_SWIFT_NAME(audioDeviceModule(_:didStopEngine:stateTransition:));
+              isPlayoutEnabled:(BOOL)isPlayoutEnabled
+            isRecordingEnabled:(BOOL)isRecordingEnabled
+    NS_SWIFT_NAME(audioDeviceModule(_:didStopEngine:isPlayoutEnabled:isRecordingEnabled:));
 
 - (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
               didDisableEngine:(AVAudioEngine *)engine
-               stateTransition:(RTC_OBJC_TYPE(RTCAudioEngineStateTransition) *)stateTransition
-    NS_SWIFT_NAME(audioDeviceModule(_:didDisableEngine:stateTransition:));
+              isPlayoutEnabled:(BOOL)isPlayoutEnabled
+            isRecordingEnabled:(BOOL)isRecordingEnabled
+    NS_SWIFT_NAME(audioDeviceModule(_:didDisableEngine:isPlayoutEnabled:isRecordingEnabled:));
 
 - (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
              willReleaseEngine:(AVAudioEngine *)engine
-               stateTransition:(RTC_OBJC_TYPE(RTCAudioEngineStateTransition) *)stateTransition
-    NS_SWIFT_NAME(audioDeviceModule(_:willReleaseEngine:stateTransition:));
+    NS_SWIFT_NAME(audioDeviceModule(_:willReleaseEngine:));
 
 - (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
                         engine:(AVAudioEngine *)engine
       configureInputFromSource:(nullable AVAudioNode *)source
                  toDestination:(AVAudioNode *)destination
                     withFormat:(AVAudioFormat *)format
-               stateTransition:(RTC_OBJC_TYPE(RTCAudioEngineStateTransition) *)stateTransition
                        context:(NSDictionary *)context
-    NS_SWIFT_NAME(audioDeviceModule(_:engine:configureInputFromSource:toDestination:format:stateTransition:context:));
+    NS_SWIFT_NAME(audioDeviceModule(_:engine:configureInputFromSource:toDestination:format:context:));
 
 - (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
                         engine:(AVAudioEngine *)engine
      configureOutputFromSource:(AVAudioNode *)source
                  toDestination:(nullable AVAudioNode *)destination
                     withFormat:(AVAudioFormat *)format
-               stateTransition:(RTC_OBJC_TYPE(RTCAudioEngineStateTransition) *)stateTransition
                        context:(NSDictionary *)context
-    NS_SWIFT_NAME(audioDeviceModule(_:engine:configureOutputFromSource:toDestination:format:stateTransition:context:));
+    NS_SWIFT_NAME(audioDeviceModule(_:engine:configureOutputFromSource:toDestination:format:context:));
 
 - (void)audioDeviceModuleDidUpdateDevices:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
     NS_SWIFT_NAME(audioDeviceModuleDidUpdateDevices(_:));
@@ -156,7 +145,7 @@ RTC_OBJC_EXPORT
 - (NSInteger)setMicrophoneMuted:(BOOL)muted;
 
 // Directly get & set engine state.
-@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioEngineState) * engineState;
+@property(nonatomic, assign) RTCAudioEngineState engineState;
 
 @property(nonatomic, readonly, getter=isRecordingAlwaysPreparedMode)
     BOOL recordingAlwaysPreparedMode;
