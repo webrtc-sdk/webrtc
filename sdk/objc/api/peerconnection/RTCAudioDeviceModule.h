@@ -37,6 +37,7 @@ typedef NS_ENUM(NSInteger, RTCAudioEngineMuteMode) {
   RTCAudioEngineMuteModeUnknown = -1,
   RTCAudioEngineMuteModeVoiceProcessing = 0,
   RTCAudioEngineMuteModeRestartEngine = 1,
+  RTCAudioEngineMuteModeInputMixer = 2,
 };
 
 typedef struct {

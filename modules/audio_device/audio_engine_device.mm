@@ -1757,7 +1757,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       // Always unmute vp if restart mute mode.
       if (state.next.mute_mode == MuteMode::RestartEngine &&
           inputNode().voiceProcessingInputMuted) {
-        LOGI() << "setVoiceProcessingInputMuted: un-muting vp for restart mute mode";
+        LOGI() << "Update mute (voice processing) unmuting vp for restart engine mode";
         inputNode().voiceProcessingInputMuted = false;
       }
 
@@ -2028,7 +2028,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
 
     // If disabling input, always unmute the voice-processing input mute.
     if (inputNode().voiceProcessingEnabled && inputNode().voiceProcessingInputMuted) {
-      LOGI() << "setVoiceProcessingInputMuted (stop-recording): " << 0;
+      LOGI() << "Update mute (voice processing) unmuting vp for stop-recording";
       inputNode().voiceProcessingInputMuted = false;
     }
 
@@ -2084,8 +2084,19 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   if (state.next.mute_mode == MuteMode::VoiceProcessing && state.next.IsInputEnabled() &&
       inputNode().voiceProcessingEnabled &&
       inputNode().voiceProcessingInputMuted != state.next.input_muted) {
-    LOGI() << "setVoiceProcessingInputMuted (runtime): " << state.next.input_muted;
+    LOGI() << "Update mute (voice processing) runtime update" << state.next.input_muted;
     inputNode().voiceProcessingInputMuted = state.next.input_muted;
+  }
+
+  // Run-time mute toggling if mixer mute mode.
+  if (state.next.mute_mode == MuteMode::InputMixer && state.next.IsInputEnabled() &&
+      input_mixer_node_ != nil) {
+    // Only update if the volume has changed.
+    float mixer_volume = state.next.input_muted ? 0.0f : 1.0f;
+    if (input_mixer_node_.outputVolume != mixer_volume) {
+      LOGI() << "Update mute (input mixer) runtime update" << state.next.input_muted;
+      input_mixer_node_.outputVolume = mixer_volume;
+    }
   }
 
 #if !TARGET_OS_TV

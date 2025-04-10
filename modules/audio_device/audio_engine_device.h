@@ -104,7 +104,14 @@ extern NSString* const kAudioEngineInputMixerNodeKey;
 class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver {
  public:
   enum RenderMode { Device = 0, Manual = 1 };
-  enum MuteMode { VoiceProcessing = 0, RestartEngine = 1 };
+  enum MuteMode {
+    // Mute input using voice processing
+    VoiceProcessing = 0,
+    // Mute by restarting engine
+    RestartEngine = 1,
+    // Mute input by muting the input mixer node
+    InputMixer = 2,
+  };
 
   // Represents the state of the audio engine, including input/output status,
   // rendering mode, and various configuration flags.
