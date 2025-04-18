@@ -141,6 +141,7 @@ rtc_library("gain_controller2") {
     "../../rtc_base:logging",
     "../../rtc_base:stringutils",
     "../../system_wrappers:field_trial",
+    "../../api/audio:aec3_factory",
     "agc2:adaptive_digital_gain_controller",
     "agc2:common",
     "agc2:cpu_features",
@@ -154,9 +155,10 @@ rtc_library("gain_controller2") {
   ]
 }
 
-rtc_library("audio_processing") {
+rtc_shared_library("audio_processing") {
   visibility = [ "*" ]
   configs += [ ":apm_debug_dump" ]
+  configs += [ "//.:library_impl_config" ]
   sources = [
     "audio_processing_builder_impl.cc",
     "audio_processing_impl.cc",
@@ -218,8 +220,6 @@ rtc_library("audio_processing") {
     "ns",
     "transient:transient_suppressor_api",
     "vad",
-  ]
-  absl_deps = [
     "//third_party/abseil-cpp/absl/base:nullability",
     "//third_party/abseil-cpp/absl/strings",
     "//third_party/abseil-cpp/absl/types:optional",
