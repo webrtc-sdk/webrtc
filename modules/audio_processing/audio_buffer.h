@@ -19,6 +19,7 @@
 
 #include "common_audio/channel_buffer.h"
 #include "modules/audio_processing/include/audio_processing.h"
+#include "rtc_base/system/rtc_export.h"
 
 namespace webrtc {
 
@@ -29,7 +30,7 @@ enum Band { kBand0To8kHz = 0, kBand8To16kHz = 1, kBand16To24kHz = 2 };
 
 // Stores any audio data in a way that allows the audio processing module to
 // operate on it in a controlled manner.
-class AudioBuffer {
+class RTC_EXPORT AudioBuffer {
  public:
   static const int kSplitBandSize = 160;
   static const int kMaxSampleRate = 384000;
