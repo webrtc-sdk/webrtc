@@ -1416,10 +1416,10 @@ int32_t AudioEngineDevice::ModifyEngineState(
         LOGE() << "ModifyEngineState: Buffer should not be recording when input is disabled";
       }
     }
-  }
 
-  // Update engine state
-  engine_state_ = new_state;
+    // Update engine state if no error
+    engine_state_ = new_state;
+  }
 
   return return_result;
 }
