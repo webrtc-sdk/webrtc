@@ -1774,51 +1774,6 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   }
 
   // --------------------------------------------------------------------------------------------
-  // Step: Configure device (macOS only)
-  //
-#if TARGET_OS_OSX
-  if (state.next.IsAnyEnabled() &&
-      (!state.prev.IsAnyEnabled() || state.IsEngineRecreateRequired() ||
-       state.DidUpdateInputDevice() || state.DidUpdateOutputDevice() ||
-       ((state.DidUpdateDefaultOutputDevice() && state.next.IsOutputDefaultDevice()) ||
-        (state.DidUpdateDefaultInputDevice() && state.next.IsInputDefaultDevice())))) {
-    if (state.next.IsInputEnabled()) {
-      uint32_t input_device_id = state.next.input_device_id;
-      if (input_device_id == kAudioObjectUnknown) {
-        input_device_id = state.next.default_input_device_id;
-        LOGI() << "Using default input device: " << input_device_id;
-      }
-
-      LOGI() << "Setting input device: " << input_device_id;
-      AudioUnit inputUnit = inputNode().audioUnit;
-      OSStatus err = AudioUnitSetProperty(inputUnit, kAudioOutputUnitProperty_CurrentDevice,
-                                          kAudioUnitScope_Global, 1, &input_device_id,
-                                          sizeof(input_device_id));
-      if (err != noErr) {
-        LOGE() << "Failed to set input device: " << input_device_id;
-      }
-    }
-
-    if (state.next.IsOutputEnabled()) {
-      uint32_t output_deviceId = state.next.output_device_id;
-      if (output_deviceId == kAudioObjectUnknown) {
-        output_deviceId = state.next.default_output_device_id;
-        LOGI() << "Using default output device: " << output_deviceId;
-      }
-
-      LOGI() << "Setting output device: " << output_deviceId;
-      AudioUnit outputUnit = outputNode().audioUnit;
-      OSStatus err = AudioUnitSetProperty(outputUnit, kAudioOutputUnitProperty_CurrentDevice,
-                                          kAudioUnitScope_Global, 0, &output_deviceId,
-                                          sizeof(output_deviceId));
-      if (err != noErr) {
-        LOGE() << "Failed to set output device: " << output_deviceId;
-      }
-    }
-  }
-#endif
-
-  // --------------------------------------------------------------------------------------------
   // Step: Configure Voice-Processing I/O
   //
   if (state.next.IsInputEnabled() &&
@@ -2232,6 +2187,51 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     LOGI() << "setting voiceProcessingAGCEnabled: " << state.next.voice_processing_agc_enabled;
     inputNode().voiceProcessingAGCEnabled = state.next.voice_processing_agc_enabled;
   }
+
+  // --------------------------------------------------------------------------------------------
+  // Step: Configure device (macOS only)
+  //
+#if TARGET_OS_OSX
+  if (state.next.IsAnyEnabled() &&
+      (!state.prev.IsAnyEnabled() || state.IsEngineRecreateRequired() ||
+       state.DidUpdateInputDevice() || state.DidUpdateOutputDevice() ||
+       ((state.DidUpdateDefaultOutputDevice() && state.next.IsOutputDefaultDevice()) ||
+        (state.DidUpdateDefaultInputDevice() && state.next.IsInputDefaultDevice())))) {
+    if (state.next.IsInputEnabled()) {
+      uint32_t input_device_id = state.next.input_device_id;
+      if (input_device_id == kAudioObjectUnknown) {
+        input_device_id = state.next.default_input_device_id;
+        LOGI() << "Using default input device: " << input_device_id;
+      }
+
+      LOGI() << "Setting input device: " << input_device_id;
+      AudioUnit inputUnit = inputNode().audioUnit;
+      OSStatus err = AudioUnitSetProperty(inputUnit, kAudioOutputUnitProperty_CurrentDevice,
+                                          kAudioUnitScope_Global, 1, &input_device_id,
+                                          sizeof(input_device_id));
+      if (err != noErr) {
+        LOGE() << "Failed to set input device: " << input_device_id;
+      }
+    }
+
+    if (state.next.IsOutputEnabled()) {
+      uint32_t output_deviceId = state.next.output_device_id;
+      if (output_deviceId == kAudioObjectUnknown) {
+        output_deviceId = state.next.default_output_device_id;
+        LOGI() << "Using default output device: " << output_deviceId;
+      }
+
+      LOGI() << "Setting output device: " << output_deviceId;
+      AudioUnit outputUnit = outputNode().audioUnit;
+      OSStatus err = AudioUnitSetProperty(outputUnit, kAudioOutputUnitProperty_CurrentDevice,
+                                          kAudioUnitScope_Global, 0, &output_deviceId,
+                                          sizeof(output_deviceId));
+      if (err != noErr) {
+        LOGE() << "Failed to set output device: " << output_deviceId;
+      }
+    }
+  }
+#endif
 
   // --------------------------------------------------------------------------------------------
   // Step: Start playout buffer
