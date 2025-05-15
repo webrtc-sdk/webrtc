@@ -37,6 +37,8 @@ std::vector<AudioObjectID> GetRelatedDeviceIDs(AudioObjectID device_id);
 
 std::optional<std::string> GetDeviceUniqueID(AudioObjectID device_id);
 
+std::optional<std::string> GetDeviceName(AudioObjectID device_id);
+
 std::optional<std::string> GetDeviceLabel(AudioObjectID device_id,
                                           bool is_input);
 

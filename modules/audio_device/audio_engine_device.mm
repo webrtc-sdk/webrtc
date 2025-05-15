@@ -84,25 +84,17 @@ AudioEngineDevice::AudioEngineDevice(bool voice_processing_bypassed)
                                                                  channels:1
                                                               interleaved:YES];
 
-#if TARGET_OS_OSX
   // Initial engine state
   engine_state_.voice_processing_bypassed = voice_processing_bypassed;
-  std::optional<AudioDeviceID> default_output_device_id =
-      mac_audio_utils::GetDefaultOutputDeviceID();
-  std::optional<AudioDeviceID> default_input_device_id = mac_audio_utils::GetDefaultInputDeviceID();
-  if (default_output_device_id) {
-    engine_state_.default_output_device_id = *default_output_device_id;
-  }
-  if (default_input_device_id) {
-    engine_state_.default_input_device_id = *default_input_device_id;
-  }
-#endif
 }
 
 AudioEngineDevice::~AudioEngineDevice() {
   RTC_DCHECK_RUN_ON(thread_);
 
   safety_->SetNotAlive();
+#if TARGET_OS_OSX
+  default_device_update_safety_->SetNotAlive();
+#endif
 
   Terminate();
 
@@ -175,30 +167,43 @@ void AudioEngineDevice::HandleDeviceListenerEvent(AudioObjectPropertySelector se
           observer_->OnDevicesUpdated();
         }
       }
-    } else if (selector == kAudioHardwarePropertyDefaultOutputDevice) {
-      LOGI() << "Did update default output device";
-      std::optional<AudioDeviceID> device_id = mac_audio_utils::GetDefaultOutputDeviceID();
-      if (device_id) {
-        int32_t result = ModifyEngineState([device_id](EngineState state) -> EngineState {
-          state.default_output_device_id = *device_id;
-          return state;
-        });
-        if (result != 0) {
-          LOGE() << "Failed to update default output device ID, error: " << result;
-        }
-      }
-    } else if (selector == kAudioHardwarePropertyDefaultInputDevice) {
-      LOGI() << "Did update default input device";
-      std::optional<AudioDeviceID> device_id = mac_audio_utils::GetDefaultInputDeviceID();
-      if (device_id) {
-        int32_t result = ModifyEngineState([device_id](EngineState state) -> EngineState {
-          state.default_input_device_id = *device_id;
-          return state;
-        });
-        if (result != 0) {
-          LOGE() << "Failed to update default input device ID, error: " << result;
-        }
-      }
+    } else if (selector == kAudioHardwarePropertyDefaultOutputDevice ||
+               selector == kAudioHardwarePropertyDefaultInputDevice) {
+      // Cancel any pending updates
+      default_device_update_safety_->SetNotAlive();
+      default_device_update_safety_ = PendingTaskSafetyFlag::Create();
+
+      // Schedule a new debounced update
+      thread_->PostDelayedTask(
+          SafeTask(default_device_update_safety_,
+                   [this, selector] {
+                     RTC_DCHECK_RUN_ON(thread_);
+                     LOGI() << "Processing debounced default device update for selector: "
+                            << selector;
+
+                     if (selector == kAudioHardwarePropertyDefaultOutputDevice) {
+                       LOGI() << "Did update default output device";
+                       int32_t result = ModifyEngineState([](EngineState state) -> EngineState {
+                         state.default_output_device_update_count++;
+                         return state;
+                       });
+                       if (result != 0) {
+                         LOGE() << "Failed to update default output device update count, error: "
+                                << result;
+                       }
+                     } else if (selector == kAudioHardwarePropertyDefaultInputDevice) {
+                       LOGI() << "Did update default input device";
+                       int32_t result = ModifyEngineState([](EngineState state) -> EngineState {
+                         state.default_input_device_update_count++;
+                         return state;
+                       });
+                       if (result != 0) {
+                         LOGE() << "Failed to update default input device update count, error: "
+                                << result;
+                       }
+                     }
+                   }),
+          TimeDelta::Millis(kDefaultDeviceUpdateDebounceMs));
     }
   }));
 }
@@ -1250,8 +1255,8 @@ int32_t AudioEngineDevice::InitRecordingPersistentMode(bool* enabled) {
 // ----------------------------------------------------------------------------------------------------
 // Private - Engine Related
 
-void AudioEngineDevice::ReconfigureEngine(bool is_required) {
-  LOGI() << "ReconfigureEngine is_required: " << is_required;
+void AudioEngineDevice::ReconfigureEngine() {
+  LOGI() << "ReconfigureEngine";
 
   // TODO: More optimizations
   // We only need to re-attach the input / output nodes with updated sample rate etc.
@@ -1263,25 +1268,6 @@ void AudioEngineDevice::ReconfigureEngine(bool is_required) {
 
     // Re-configure is only for device mode
     if (current_state.render_mode != RenderMode::Device) return;
-
-    //     bool is_reconfigure_required = is_required;
-
-    // #if defined(WEBRTC_IOS)
-    //     RTC_OBJC_TYPE(RTCAudioSession)* session = [RTC_OBJC_TYPE(RTCAudioSession)
-    //     sharedInstance]; const double new_sample_rate = session.sampleRate; if
-    //     (!is_reconfigure_required && current_state.output_enabled) {
-    //       AVAudioFormat* format = [thisoutputNode() outputFormatForBus:0];
-    //       if (format.sampleRate != new_sample_rate) {
-    //         is_reconfigure_required = true;
-    //       }
-    //     }
-    // #endif
-
-    //     // No configuration required
-    //     if (!is_reconfigure_required) {
-    //       LOGI() << "ReconfigureEngine no configuration required";
-    //       return;
-    //     }
 
     EngineState shutdown_state = this->engine_state_;
     shutdown_state.input_enabled = false;
@@ -2193,41 +2179,40 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   //
 #if TARGET_OS_OSX
   if (state.next.IsAnyEnabled() &&
-      (!state.prev.IsAnyEnabled() || state.IsEngineRecreateRequired() ||
-       state.DidUpdateInputDevice() || state.DidUpdateOutputDevice() ||
-       ((state.DidUpdateDefaultOutputDevice() && state.next.IsOutputDefaultDevice()) ||
-        (state.DidUpdateDefaultInputDevice() && state.next.IsInputDefaultDevice())))) {
+      (!state.prev.IsAnyEnabled() || state.IsEngineRecreateRequired())) {
     if (state.next.IsInputEnabled()) {
       uint32_t input_device_id = state.next.input_device_id;
       if (input_device_id == kAudioObjectUnknown) {
-        input_device_id = state.next.default_input_device_id;
-        LOGI() << "Using default input device: " << input_device_id;
-      }
-
-      LOGI() << "Setting input device: " << input_device_id;
-      AudioUnit inputUnit = inputNode().audioUnit;
-      OSStatus err = AudioUnitSetProperty(inputUnit, kAudioOutputUnitProperty_CurrentDevice,
-                                          kAudioUnitScope_Global, 1, &input_device_id,
-                                          sizeof(input_device_id));
-      if (err != noErr) {
-        LOGE() << "Failed to set input device: " << input_device_id;
+        LOGI() << "Using default input device";
+      } else {
+        auto input_device_name = mac_audio_utils::GetDeviceName(input_device_id);
+        LOGI() << "Setting input device: " << input_device_name.value_or("Unknown") << " ("
+               << input_device_id << ")";
+        AudioUnit inputUnit = inputNode().audioUnit;
+        OSStatus err = AudioUnitSetProperty(inputUnit, kAudioOutputUnitProperty_CurrentDevice,
+                                            kAudioUnitScope_Global, 1, &input_device_id,
+                                            sizeof(input_device_id));
+        if (err != noErr) {
+          LOGE() << "Failed to set input device: " << input_device_id;
+        }
       }
     }
 
     if (state.next.IsOutputEnabled()) {
       uint32_t output_deviceId = state.next.output_device_id;
       if (output_deviceId == kAudioObjectUnknown) {
-        output_deviceId = state.next.default_output_device_id;
-        LOGI() << "Using default output device: " << output_deviceId;
-      }
-
-      LOGI() << "Setting output device: " << output_deviceId;
-      AudioUnit outputUnit = outputNode().audioUnit;
-      OSStatus err = AudioUnitSetProperty(outputUnit, kAudioOutputUnitProperty_CurrentDevice,
-                                          kAudioUnitScope_Global, 0, &output_deviceId,
-                                          sizeof(output_deviceId));
-      if (err != noErr) {
-        LOGE() << "Failed to set output device: " << output_deviceId;
+        LOGI() << "Using default output device";
+      } else {
+        auto output_device_name = mac_audio_utils::GetDeviceName(output_deviceId);
+        LOGI() << "Setting output device: " << output_device_name.value_or("Unknown") << " ("
+               << output_deviceId << ")";
+        AudioUnit outputUnit = outputNode().audioUnit;
+        OSStatus err = AudioUnitSetProperty(outputUnit, kAudioOutputUnitProperty_CurrentDevice,
+                                            kAudioUnitScope_Global, 0, &output_deviceId,
+                                            sizeof(output_deviceId));
+        if (err != noErr) {
+          LOGE() << "Failed to set output device: " << output_deviceId;
+        }
       }
     }
   }
@@ -2290,6 +2275,13 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
         NSString* error_string = nil;
 
         @try {
+#if TARGET_OS_OSX
+          // Workaround for engine not starting in some cases when other apps are using voice
+          // processing already.
+          [engine_device_ prepare];
+          usleep(1000);
+#endif
+
           NSError* error = nil;
           start_result = [engine_device_ startAndReturnError:&error];
           if (!start_result && error != nil) {
@@ -2317,7 +2309,12 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
                         object:engine_device_
                          queue:nil
                     usingBlock:^(NSNotification* notification) {
-                      ReconfigureEngine(true);
+                      LOGI() << "AVAudioEngineConfigurationChangeNotification engineIsRunning: "
+                             << engine_device_.running;
+                      // Only re-configure if engine stopped.
+                      if (!engine_device_.running) {
+                        ReconfigureEngine();
+                      }
                     }];
 
       } else {

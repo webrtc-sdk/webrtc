@@ -167,10 +167,6 @@ std::vector<AudioObjectID> GetAudioObjectIDs(
   return device_ids;
 }
 
-std::optional<std::string> GetDeviceName(AudioObjectID device_id) {
-  return GetDeviceStringProperty(device_id, kAudioObjectPropertyName);
-}
-
 std::optional<std::string> TranslateDeviceSource(AudioObjectID device_id,
                                                  UInt32 source_id,
                                                  bool is_input) {
@@ -248,6 +244,10 @@ std::optional<std::string> GetDeviceUniqueID(AudioObjectID device_id) {
   return GetDeviceStringProperty(device_id, kAudioDevicePropertyDeviceUID);
 }
 
+std::optional<std::string> GetDeviceName(AudioObjectID device_id) {
+  return GetDeviceStringProperty(device_id, kAudioObjectPropertyName);
+}
+
 std::optional<std::string> GetDeviceLabel(AudioObjectID device_id,
                                           bool is_input) {
   std::optional<std::string> device_label;
@@ -281,7 +281,6 @@ std::optional<uint32_t> GetDeviceTransportType(AudioObjectID device_id) {
                                  kAudioObjectPropertyScopeGlobal);
 }
 
-
 bool IsInputDevice(AudioObjectID device_id) {
   auto type = GetDeviceTransportType(device_id);
   if (type && (*type == kAudioDeviceTransportTypeAggregate ||
@@ -289,7 +288,7 @@ bool IsInputDevice(AudioObjectID device_id) {
                *type == kAudioDeviceTransportTypeUnknown)) {
     return false;
   }
-  
+
   std::vector<AudioObjectID> streams =
       GetAudioObjectIDs(device_id, kAudioDevicePropertyStreams);
 

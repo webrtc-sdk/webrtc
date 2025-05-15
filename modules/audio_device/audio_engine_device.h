@@ -140,8 +140,8 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
     uint32_t output_device_id = 0;  // kAudioObjectUnknown
     uint32_t input_device_id = 0;   // kAudioObjectUnknown
 
-    uint32_t default_output_device_id = 0;  // Track default device
-    uint32_t default_input_device_id = 0;
+    uint32_t default_output_device_update_count = 0;  // Track default switch count
+    uint32_t default_input_device_update_count = 0;
 
     bool operator==(const EngineState& rhs) const {
       return input_enabled == rhs.input_enabled && input_running == rhs.input_running &&
@@ -155,8 +155,8 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
              voice_processing_agc_enabled == rhs.voice_processing_agc_enabled &&
              advanced_ducking == rhs.advanced_ducking && ducking_level == rhs.ducking_level &&
              output_device_id == rhs.output_device_id && input_device_id == rhs.input_device_id &&
-             default_output_device_id == rhs.default_output_device_id &&
-             default_input_device_id == rhs.default_input_device_id;
+             default_output_device_update_count == rhs.default_output_device_update_count &&
+             default_input_device_update_count == rhs.default_input_device_update_count;
     }
 
     bool operator!=(const EngineState& rhs) const { return !(*this == rhs); }
@@ -191,9 +191,21 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
       return IsOutputInputLinked() ? input_running : input_running && output_running;
     }
 
-    bool IsOutputDefaultDevice() const { return output_device_id == 0; }
+    bool IsOutputDefaultDevice() const {
+#if TARGET_OS_OSX
+      return output_device_id == kAudioObjectUnknown;
+#else
+      return output_device_id == 0;
+#endif
+    }
 
-    bool IsInputDefaultDevice() const { return input_device_id == 0; }
+    bool IsInputDefaultDevice() const {
+#if TARGET_OS_OSX
+      return input_device_id == kAudioObjectUnknown;
+#else
+      return input_device_id == 0;
+#endif
+    }
   };
 
   explicit AudioEngineDevice(bool voice_processing_bypassed);
@@ -356,29 +368,35 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
     bool DidUpdateInputDevice() const { return prev.input_device_id != next.input_device_id; }
 
     bool DidUpdateDefaultOutputDevice() const {
-      return prev.default_output_device_id != next.default_output_device_id;
+      return prev.default_output_device_update_count != next.default_output_device_update_count;
     }
 
     bool DidUpdateDefaultInputDevice() const {
-      return prev.default_input_device_id != next.default_input_device_id;
+      return prev.default_input_device_update_count != next.default_input_device_update_count;
     }
 
     bool DidUpdateMuteMode() const { return prev.mute_mode != next.mute_mode; }
 
     bool IsEngineRestartRequired() const {
-      return DidUpdateAudioGraph() || DidUpdateOutputDevice() || DidUpdateInputDevice() ||
+      return DidUpdateAudioGraph() ||
              // Voice processing enable state updates
-             DidUpdateVoiceProcessingEnabled() ||
-             // Handle default device updates
-             (DidUpdateDefaultOutputDevice() && next.IsOutputDefaultDevice()) ||
-             (DidUpdateDefaultInputDevice() && next.IsInputDefaultDevice());
+             DidUpdateVoiceProcessingEnabled();
     }
 
-    // Special case to re-create engine when switching from Speaker & Mic ->
-    // Speaker only.
     bool IsEngineRecreateRequired() const {
-      return (prev.IsOutputEnabled() && next.IsOutputEnabled()) &&
-             (prev.IsInputEnabled() && !next.IsInputEnabled());
+      // Device id specified
+      bool device = DidUpdateOutputDevice() || DidUpdateInputDevice();
+
+      // Default device updated
+      bool default_device = (DidUpdateDefaultOutputDevice() && next.IsOutputDefaultDevice()) ||
+                            (DidUpdateDefaultInputDevice() && next.IsInputDefaultDevice());
+
+      // Special case to re-create engine when switching from Speaker & Mic ->
+      // Speaker only.
+      bool special_case = (prev.IsOutputEnabled() && next.IsOutputEnabled()) &&
+                          (prev.IsInputEnabled() && !next.IsInputEnabled());
+
+      return device || default_device || special_case;
     }
 
     bool DidEnableManualRenderingMode() const {
@@ -398,7 +416,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   int32_t ApplyManualEngineState(EngineStateUpdate state);
 
   // AudioEngine observer methods. May be called from any thread.
-  void ReconfigureEngine(bool is_required);
+  void ReconfigureEngine();
 
 // Device related
 #if TARGET_OS_OSX
@@ -407,6 +425,12 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
                                      void* clientData);
   void HandleDeviceListenerEvent(AudioObjectPropertySelector selector);
   void UpdateAllDeviceIDs();
+
+  // Debounce flags for device updates
+  rtc::scoped_refptr<PendingTaskSafetyFlag> default_device_update_safety_ =
+      PendingTaskSafetyFlag::Create();
+  const int kDefaultDeviceUpdateDebounceMs = 500;  // Debounce delay in milliseconds
+
   std::vector<AudioObjectID> input_device_ids_;
   std::vector<AudioObjectID> output_device_ids_;
   std::vector<std::string> output_device_labels_;
