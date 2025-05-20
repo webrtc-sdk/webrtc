@@ -17,7 +17,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 /** Represents the media type of the RtpReceiver. */
-typedef NS_ENUM(NSInteger, RTCRtpMediaType) {
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCRtpMediaType)) {
   RTCRtpMediaTypeAudio,
   RTCRtpMediaTypeVideo,
   RTCRtpMediaTypeData,

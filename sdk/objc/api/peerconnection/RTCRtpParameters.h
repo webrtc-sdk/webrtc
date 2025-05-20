@@ -19,7 +19,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 /** Corresponds to webrtc::DegradationPreference. */
-typedef NS_ENUM(NSInteger, RTCDegradationPreference) {
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCDegradationPreference)) {
   RTCDegradationPreferenceDisabled,
   RTCDegradationPreferenceMaintainFramerate,
   RTCDegradationPreferenceMaintainResolution,

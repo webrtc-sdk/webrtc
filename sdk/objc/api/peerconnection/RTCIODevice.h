@@ -20,7 +20,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-typedef NS_ENUM(NSInteger, RTCIODeviceType) {
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCIODeviceType)) {
   RTCIODeviceTypeOutput,
   RTCIODeviceTypeInput,
 };
@@ -28,11 +28,11 @@ typedef NS_ENUM(NSInteger, RTCIODeviceType) {
 RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE(RTCIODevice) : NSObject
 
-+ (instancetype)defaultDeviceWithType: (RTCIODeviceType)type;
++ (instancetype)defaultDeviceWithType: (RTC_OBJC_TYPE(RTCIODeviceType))type;
 - (instancetype)init NS_UNAVAILABLE;
 
 @property(nonatomic, readonly) BOOL isDefault;
-@property(nonatomic, readonly) RTCIODeviceType type;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCIODeviceType) type;
 @property(nonatomic, copy, readonly) NSString *deviceId;
 @property(nonatomic, copy, readonly) NSString *name;
 

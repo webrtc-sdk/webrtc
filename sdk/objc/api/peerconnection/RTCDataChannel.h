@@ -54,7 +54,7 @@ RTC_OBJC_EXPORT
 @end
 
 /** Represents the state of the data channel. */
-typedef NS_ENUM(NSInteger, RTCDataChannelState) {
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCDataChannelState)) {
   RTCDataChannelStateConnecting,
   RTCDataChannelStateOpen,
   RTCDataChannelStateClosing,
@@ -108,7 +108,7 @@ RTC_OBJC_EXPORT
 @property(nonatomic, readonly) int channelId;
 
 /** The state of the data channel. */
-@property(nonatomic, readonly) RTCDataChannelState readyState;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCDataChannelState) readyState;
 
 /**
  * The number of bytes of application data that have been queued using

@@ -15,7 +15,7 @@
 /**
  * Represents the state of the track. This exposes the same states in C++.
  */
-typedef NS_ENUM(NSInteger, RTCMediaStreamTrackState) {
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCMediaStreamTrackState)) {
   RTCMediaStreamTrackStateLive,
   RTCMediaStreamTrackStateEnded
 };
@@ -41,7 +41,7 @@ RTC_OBJC_EXPORT
 @property(nonatomic, assign) BOOL isEnabled;
 
 /** The state of the track. */
-@property(nonatomic, readonly) RTCMediaStreamTrackState readyState;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCMediaStreamTrackState) readyState;
 
 - (instancetype)init NS_UNAVAILABLE;
 

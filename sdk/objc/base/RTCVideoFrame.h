@@ -15,7 +15,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-typedef NS_ENUM(NSInteger, RTCVideoRotation) {
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCVideoRotation)) {
   RTCVideoRotation_0 = 0,
   RTCVideoRotation_90 = 90,
   RTCVideoRotation_180 = 180,

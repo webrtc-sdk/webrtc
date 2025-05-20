@@ -20,7 +20,7 @@
  * Represents the ice transport policy. This exposes the same states in C++,
  * which include one more state than what exists in the W3C spec.
  */
-typedef NS_ENUM(NSInteger, RTCIceTransportPolicy) {
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCIceTransportPolicy)) {
   RTCIceTransportPolicyNone,
   RTCIceTransportPolicyRelay,
   RTCIceTransportPolicyNoHost,
@@ -28,41 +28,41 @@ typedef NS_ENUM(NSInteger, RTCIceTransportPolicy) {
 };
 
 /** Represents the bundle policy. */
-typedef NS_ENUM(NSInteger, RTCBundlePolicy) {
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCBundlePolicy)) {
   RTCBundlePolicyBalanced,
   RTCBundlePolicyMaxCompat,
   RTCBundlePolicyMaxBundle
 };
 
 /** Represents the rtcp mux policy. */
-typedef NS_ENUM(NSInteger, RTCRtcpMuxPolicy) { RTCRtcpMuxPolicyNegotiate, RTCRtcpMuxPolicyRequire };
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCRtcpMuxPolicy)) { RTCRtcpMuxPolicyNegotiate, RTCRtcpMuxPolicyRequire };
 
 /** Represents the tcp candidate policy. */
-typedef NS_ENUM(NSInteger, RTCTcpCandidatePolicy) {
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCTcpCandidatePolicy)) {
   RTCTcpCandidatePolicyEnabled,
   RTCTcpCandidatePolicyDisabled
 };
 
 /** Represents the candidate network policy. */
-typedef NS_ENUM(NSInteger, RTCCandidateNetworkPolicy) {
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCCandidateNetworkPolicy)) {
   RTCCandidateNetworkPolicyAll,
   RTCCandidateNetworkPolicyLowCost
 };
 
 /** Represents the continual gathering policy. */
-typedef NS_ENUM(NSInteger, RTCContinualGatheringPolicy) {
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCContinualGatheringPolicy)) {
   RTCContinualGatheringPolicyGatherOnce,
   RTCContinualGatheringPolicyGatherContinually
 };
 
 /** Represents the encryption key type. */
-typedef NS_ENUM(NSInteger, RTCEncryptionKeyType) {
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCEncryptionKeyType)) {
   RTCEncryptionKeyTypeRSA,
   RTCEncryptionKeyTypeECDSA,
 };
 
 /** Represents the chosen SDP semantics for the RTCPeerConnection. */
-typedef NS_ENUM(NSInteger, RTCSdpSemantics) {
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCSdpSemantics)) {
   // TODO(https://crbug.com/webrtc/13528): Remove support for Plan B.
   RTCSdpSemanticsPlanB,
   RTCSdpSemanticsUnifiedPlan,
@@ -86,16 +86,16 @@ RTC_OBJC_EXPORT
 
 /** Which candidates the ICE agent is allowed to use. The W3C calls it
  * `iceTransportPolicy`, while in C++ it is called `type`. */
-@property(nonatomic, assign) RTCIceTransportPolicy iceTransportPolicy;
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCIceTransportPolicy) iceTransportPolicy;
 
 /** The media-bundling policy to use when gathering ICE candidates. */
-@property(nonatomic, assign) RTCBundlePolicy bundlePolicy;
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCBundlePolicy) bundlePolicy;
 
 /** The rtcp-mux policy to use when gathering ICE candidates. */
-@property(nonatomic, assign) RTCRtcpMuxPolicy rtcpMuxPolicy;
-@property(nonatomic, assign) RTCTcpCandidatePolicy tcpCandidatePolicy;
-@property(nonatomic, assign) RTCCandidateNetworkPolicy candidateNetworkPolicy;
-@property(nonatomic, assign) RTCContinualGatheringPolicy continualGatheringPolicy;
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCRtcpMuxPolicy) rtcpMuxPolicy;
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCTcpCandidatePolicy) tcpCandidatePolicy;
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCCandidateNetworkPolicy) candidateNetworkPolicy;
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCContinualGatheringPolicy) continualGatheringPolicy;
 
 /** If set to YES, don't gather IPv6 ICE candidates on Wi-Fi.
  *  Only intended to be used on specific devices. Certain phones disable IPv6
@@ -125,7 +125,7 @@ RTC_OBJC_EXPORT
 @property(nonatomic, assign) int iceBackupCandidatePairPingInterval;
 
 /** Key type used to generate SSL identity. Default is ECDSA. */
-@property(nonatomic, assign) RTCEncryptionKeyType keyType;
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCEncryptionKeyType) keyType;
 
 /** ICE candidate pool size as defined in JSEP. Default is 0. */
 @property(nonatomic, assign) int iceCandidatePoolSize;
@@ -176,7 +176,7 @@ RTC_OBJC_EXPORT
  * the section. This will also cause RTCPeerConnection to ignore all but the
  * first m= section of the same media type.
  */
-@property(nonatomic, assign) RTCSdpSemantics sdpSemantics;
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCSdpSemantics) sdpSemantics;
 
 /** Actively reset the SRTP parameters when the DTLS transports underneath are
  *  changed after offer/answer negotiation. This is only intended to be a

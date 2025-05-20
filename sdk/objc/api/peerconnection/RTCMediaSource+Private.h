@@ -16,7 +16,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @class RTC_OBJC_TYPE(RTCPeerConnectionFactory);
 
-typedef NS_ENUM(NSInteger, RTCMediaSourceType) {
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCMediaSourceType)) {
   RTCMediaSourceTypeAudio,
   RTCMediaSourceTypeVideo,
 };

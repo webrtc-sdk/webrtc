@@ -15,7 +15,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 /** Corresponds to webrtc::Priority. */
-typedef NS_ENUM(NSInteger, RTCPriority) {
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCPriority)) {
   RTCPriorityVeryLow,
   RTCPriorityLow,
   RTCPriorityMedium,
@@ -63,7 +63,7 @@ RTC_OBJC_EXPORT
 @property(nonatomic, assign) double bitratePriority;
 
 /** The relative DiffServ Code Point priority. */
-@property(nonatomic, assign) RTCPriority networkPriority;
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCPriority) networkPriority;
 
 /** Allow dynamic frame length changes for audio:
  https://w3c.github.io/webrtc-extensions/#dom-rtcrtpencodingparameters-adaptiveptime */

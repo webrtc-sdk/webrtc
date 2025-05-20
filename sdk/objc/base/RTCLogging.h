@@ -13,7 +13,7 @@
 #import "RTCMacros.h"
 
 // Subset of rtc::LoggingSeverity.
-typedef NS_ENUM(NSInteger, RTCLoggingSeverity) {
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCLoggingSeverity)) {
   RTCLoggingSeverityVerbose,
   RTCLoggingSeverityInfo,
   RTCLoggingSeverityWarning,

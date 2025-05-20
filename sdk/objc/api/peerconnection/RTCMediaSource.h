@@ -12,7 +12,7 @@
 
 #import "RTCMacros.h"
 
-typedef NS_ENUM(NSInteger, RTCSourceState) {
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCSourceState)) {
   RTCSourceStateInitializing,
   RTCSourceStateLive,
   RTCSourceStateEnded,
