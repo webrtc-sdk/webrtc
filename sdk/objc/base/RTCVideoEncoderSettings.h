@@ -14,7 +14,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-typedef NS_ENUM(NSUInteger, RTCVideoCodecMode) {
+typedef NS_ENUM(NSUInteger, RTC_OBJC_TYPE(RTCVideoCodecMode)) {
   RTCVideoCodecModeRealtimeVideo,
   RTCVideoCodecModeScreensharing,
 };
@@ -35,7 +35,7 @@ RTC_OBJC_EXPORT
 @property(nonatomic, assign) uint32_t maxFramerate;
 
 @property(nonatomic, assign) unsigned int qpMax;
-@property(nonatomic, assign) RTCVideoCodecMode mode;
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCVideoCodecMode) mode;
 
 @end
 

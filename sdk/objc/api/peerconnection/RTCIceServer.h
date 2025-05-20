@@ -12,7 +12,7 @@
 
 #import "RTCMacros.h"
 
-typedef NS_ENUM(NSUInteger, RTCTlsCertPolicy) {
+typedef NS_ENUM(NSUInteger, RTC_OBJC_TYPE(RTCTlsCertPolicy)) {
   RTCTlsCertPolicySecure,
   RTCTlsCertPolicyInsecureNoCheck
 };
@@ -34,7 +34,7 @@ RTC_OBJC_EXPORT
 /**
  * TLS certificate policy to use if this RTCIceServer object is a TURN server.
  */
-@property(nonatomic, readonly) RTCTlsCertPolicy tlsCertPolicy;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCTlsCertPolicy) tlsCertPolicy;
 
 /**
   If the URIs in `urls` only contain IP addresses, this field can be used
@@ -72,7 +72,7 @@ RTC_OBJC_EXPORT
 - (instancetype)initWithURLStrings:(NSArray<NSString *> *)urlStrings
                           username:(nullable NSString *)username
                         credential:(nullable NSString *)credential
-                     tlsCertPolicy:(RTCTlsCertPolicy)tlsCertPolicy;
+                     tlsCertPolicy:(RTC_OBJC_TYPE(RTCTlsCertPolicy))tlsCertPolicy;
 
 /**
  * Initialize an RTCIceServer with its associated URLs, optional username,
@@ -81,7 +81,7 @@ RTC_OBJC_EXPORT
 - (instancetype)initWithURLStrings:(NSArray<NSString *> *)urlStrings
                           username:(nullable NSString *)username
                         credential:(nullable NSString *)credential
-                     tlsCertPolicy:(RTCTlsCertPolicy)tlsCertPolicy
+                     tlsCertPolicy:(RTC_OBJC_TYPE(RTCTlsCertPolicy))tlsCertPolicy
                           hostname:(nullable NSString *)hostname;
 
 /**
@@ -91,7 +91,7 @@ RTC_OBJC_EXPORT
 - (instancetype)initWithURLStrings:(NSArray<NSString *> *)urlStrings
                           username:(nullable NSString *)username
                         credential:(nullable NSString *)credential
-                     tlsCertPolicy:(RTCTlsCertPolicy)tlsCertPolicy
+                     tlsCertPolicy:(RTC_OBJC_TYPE(RTCTlsCertPolicy))tlsCertPolicy
                           hostname:(nullable NSString *)hostname
                   tlsAlpnProtocols:(NSArray<NSString *> *)tlsAlpnProtocols;
 
@@ -103,7 +103,7 @@ RTC_OBJC_EXPORT
 - (instancetype)initWithURLStrings:(NSArray<NSString *> *)urlStrings
                           username:(nullable NSString *)username
                         credential:(nullable NSString *)credential
-                     tlsCertPolicy:(RTCTlsCertPolicy)tlsCertPolicy
+                     tlsCertPolicy:(RTC_OBJC_TYPE(RTCTlsCertPolicy))tlsCertPolicy
                           hostname:(nullable NSString *)hostname
                   tlsAlpnProtocols:(nullable NSArray<NSString *> *)tlsAlpnProtocols
                  tlsEllipticCurves:(nullable NSArray<NSString *> *)tlsEllipticCurves

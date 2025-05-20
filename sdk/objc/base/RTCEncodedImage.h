@@ -16,7 +16,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 /** Represents an encoded frame's type. */
-typedef NS_ENUM(NSUInteger, RTCFrameType) {
+typedef NS_ENUM(NSUInteger, RTC_OBJC_TYPE(RTCFrameType)) {
   RTCFrameTypeEmptyFrame = 0,
   RTCFrameTypeAudioFrameSpeech = 1,
   RTCFrameTypeAudioFrameCN = 2,
@@ -24,7 +24,7 @@ typedef NS_ENUM(NSUInteger, RTCFrameType) {
   RTCFrameTypeVideoFrameDelta = 4,
 };
 
-typedef NS_ENUM(NSUInteger, RTCVideoContentType) {
+typedef NS_ENUM(NSUInteger, RTC_OBJC_TYPE(RTCVideoContentType)) {
   RTCVideoContentTypeUnspecified,
   RTCVideoContentTypeScreenshare,
 };
@@ -42,10 +42,10 @@ RTC_OBJC_EXPORT
 @property(nonatomic, assign) uint8_t flags;
 @property(nonatomic, assign) int64_t encodeStartMs;
 @property(nonatomic, assign) int64_t encodeFinishMs;
-@property(nonatomic, assign) RTCFrameType frameType;
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCFrameType) frameType;
 @property(nonatomic, assign) RTCVideoRotation rotation;
 @property(nonatomic, strong) NSNumber *qp;
-@property(nonatomic, assign) RTCVideoContentType contentType;
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCVideoContentType) contentType;
 
 @end
 

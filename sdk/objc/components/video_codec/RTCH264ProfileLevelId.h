@@ -19,7 +19,7 @@ RTC_OBJC_EXPORT extern NSString *const kRTCMaxSupportedH264ProfileLevelConstrain
 RTC_OBJC_EXPORT extern NSString *const kRTCMaxSupportedH264ProfileLevelConstrainedBaseline;
 
 /** H264 Profiles and levels. */
-typedef NS_ENUM(NSUInteger, RTCH264Profile) {
+typedef NS_ENUM(NSUInteger, RTC_OBJC_TYPE(RTCH264Profile)) {
   RTCH264ProfileConstrainedBaseline,
   RTCH264ProfileBaseline,
   RTCH264ProfileMain,
@@ -27,7 +27,7 @@ typedef NS_ENUM(NSUInteger, RTCH264Profile) {
   RTCH264ProfileHigh,
 };
 
-typedef NS_ENUM(NSUInteger, RTCH264Level) {
+typedef NS_ENUM(NSUInteger, RTC_OBJC_TYPE(RTCH264Level)) {
   RTCH264Level1_b = 0,
   RTCH264Level1 = 10,
   RTCH264Level1_1 = 11,
@@ -50,11 +50,11 @@ typedef NS_ENUM(NSUInteger, RTCH264Level) {
 RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCH264ProfileLevelId) : NSObject
 
-@property(nonatomic, readonly) RTCH264Profile profile;
-@property(nonatomic, readonly) RTCH264Level level;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCH264Profile) profile;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCH264Level) level;
 @property(nonatomic, readonly) NSString *hexString;
 
 - (instancetype)initWithHexString:(NSString *)hexString;
-- (instancetype)initWithProfile:(RTCH264Profile)profile level:(RTCH264Level)level;
+- (instancetype)initWithProfile:(RTC_OBJC_TYPE(RTCH264Profile))profile level:(RTC_OBJC_TYPE(RTCH264Level))level;
 
 @end
