@@ -38,48 +38,48 @@ extern int const kRTCSessionDescriptionErrorCode;
 
 /** Represents the signaling state of the peer connection. */
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCSignalingState)) {
-  RTCSignalingStateStable,
-  RTCSignalingStateHaveLocalOffer,
-  RTCSignalingStateHaveLocalPrAnswer,
-  RTCSignalingStateHaveRemoteOffer,
-  RTCSignalingStateHaveRemotePrAnswer,
+  RTC_OBJC_TYPE(RTCSignalingStateStable),
+  RTC_OBJC_TYPE(RTCSignalingStateHaveLocalOffer),
+  RTC_OBJC_TYPE(RTCSignalingStateHaveLocalPrAnswer),
+  RTC_OBJC_TYPE(RTCSignalingStateHaveRemoteOffer),
+  RTC_OBJC_TYPE(RTCSignalingStateHaveRemotePrAnswer),
   // Not an actual state, represents the total number of states.
-  RTCSignalingStateClosed,
+  RTC_OBJC_TYPE(RTCSignalingStateClosed),
 };
 
 /** Represents the ice connection state of the peer connection. */
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCIceConnectionState)) {
-  RTCIceConnectionStateNew,
-  RTCIceConnectionStateChecking,
-  RTCIceConnectionStateConnected,
-  RTCIceConnectionStateCompleted,
-  RTCIceConnectionStateFailed,
-  RTCIceConnectionStateDisconnected,
-  RTCIceConnectionStateClosed,
-  RTCIceConnectionStateCount,
+  RTC_OBJC_TYPE(RTCIceConnectionStateNew),
+  RTC_OBJC_TYPE(RTCIceConnectionStateChecking),
+  RTC_OBJC_TYPE(RTCIceConnectionStateConnected),
+  RTC_OBJC_TYPE(RTCIceConnectionStateCompleted),
+  RTC_OBJC_TYPE(RTCIceConnectionStateFailed),
+  RTC_OBJC_TYPE(RTCIceConnectionStateDisconnected),
+  RTC_OBJC_TYPE(RTCIceConnectionStateClosed),
+  RTC_OBJC_TYPE(RTCIceConnectionStateCount),
 };
 
 /** Represents the combined ice+dtls connection state of the peer connection. */
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCPeerConnectionState)) {
-  RTCPeerConnectionStateNew,
-  RTCPeerConnectionStateConnecting,
-  RTCPeerConnectionStateConnected,
-  RTCPeerConnectionStateDisconnected,
-  RTCPeerConnectionStateFailed,
-  RTCPeerConnectionStateClosed,
+  RTC_OBJC_TYPE(RTCPeerConnectionStateNew),
+  RTC_OBJC_TYPE(RTCPeerConnectionStateConnecting),
+  RTC_OBJC_TYPE(RTCPeerConnectionStateConnected),
+  RTC_OBJC_TYPE(RTCPeerConnectionStateDisconnected),
+  RTC_OBJC_TYPE(RTCPeerConnectionStateFailed),
+  RTC_OBJC_TYPE(RTCPeerConnectionStateClosed),
 };
 
 /** Represents the ice gathering state of the peer connection. */
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCIceGatheringState)) {
-  RTCIceGatheringStateNew,
-  RTCIceGatheringStateGathering,
-  RTCIceGatheringStateComplete,
+  RTC_OBJC_TYPE(RTCIceGatheringStateNew),
+  RTC_OBJC_TYPE(RTCIceGatheringStateGathering),
+  RTC_OBJC_TYPE(RTCIceGatheringStateComplete),
 };
 
 /** Represents the stats output level. */
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCStatsOutputLevel)) {
-  RTCStatsOutputLevelStandard,
-  RTCStatsOutputLevelDebug,
+  RTC_OBJC_TYPE(RTCStatsOutputLevelStandard),
+  RTC_OBJC_TYPE(RTCStatsOutputLevelDebug),
 };
 
 typedef void (^RTCCreateSessionDescriptionCompletionHandler)(

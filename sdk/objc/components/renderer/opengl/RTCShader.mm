@@ -150,16 +150,16 @@ void RTCSetVertexData(RTCVideoRotation rotation) {
   // Rotate the UV coordinates.
   int rotation_offset;
   switch (rotation) {
-    case RTCVideoRotation_0:
+    case RTC_OBJC_TYPE(RTCVideoRotation_0):
       rotation_offset = 0;
       break;
-    case RTCVideoRotation_90:
+    case RTC_OBJC_TYPE(RTCVideoRotation_90):
       rotation_offset = 1;
       break;
-    case RTCVideoRotation_180:
+    case RTC_OBJC_TYPE(RTCVideoRotation_180):
       rotation_offset = 2;
       break;
-    case RTCVideoRotation_270:
+    case RTC_OBJC_TYPE(RTCVideoRotation_270):
       rotation_offset = 3;
       break;
   }

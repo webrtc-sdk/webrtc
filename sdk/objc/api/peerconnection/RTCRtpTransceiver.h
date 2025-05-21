@@ -22,11 +22,11 @@ extern NSString *const kRTCRtpTransceiverErrorDomain;
 
 /** https://w3c.github.io/webrtc-pc/#dom-rtcrtptransceiverdirection */
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCRtpTransceiverDirection)) {
-  RTCRtpTransceiverDirectionSendRecv,
-  RTCRtpTransceiverDirectionSendOnly,
-  RTCRtpTransceiverDirectionRecvOnly,
-  RTCRtpTransceiverDirectionInactive,
-  RTCRtpTransceiverDirectionStopped
+  RTC_OBJC_TYPE(RTCRtpTransceiverDirectionSendRecv),
+  RTC_OBJC_TYPE(RTCRtpTransceiverDirectionSendOnly),
+  RTC_OBJC_TYPE(RTCRtpTransceiverDirectionRecvOnly),
+  RTC_OBJC_TYPE(RTCRtpTransceiverDirectionInactive),
+  RTC_OBJC_TYPE(RTCRtpTransceiverDirectionStopped)
 };
 
 /** Structure for initializing an RTCRtpTransceiver in a call to

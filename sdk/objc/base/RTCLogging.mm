@@ -12,29 +12,29 @@
 
 #include "rtc_base/logging.h"
 
-rtc::LoggingSeverity RTCGetNativeLoggingSeverity(RTCLoggingSeverity severity) {
+rtc::LoggingSeverity RTCGetNativeLoggingSeverity(RTC_OBJC_TYPE(RTCLoggingSeverity) severity) {
   switch (severity) {
-    case RTCLoggingSeverityVerbose:
+    case RTC_OBJC_TYPE(RTCLoggingSeverityVerbose):
       return rtc::LS_VERBOSE;
-    case RTCLoggingSeverityInfo:
+    case RTC_OBJC_TYPE(RTCLoggingSeverityInfo):
       return rtc::LS_INFO;
-    case RTCLoggingSeverityWarning:
+    case RTC_OBJC_TYPE(RTCLoggingSeverityWarning):
       return rtc::LS_WARNING;
-    case RTCLoggingSeverityError:
+    case RTC_OBJC_TYPE(RTCLoggingSeverityError):
       return rtc::LS_ERROR;
-    case RTCLoggingSeverityNone:
+    case RTC_OBJC_TYPE(RTCLoggingSeverityNone):
       return rtc::LS_NONE;
   }
 }
 
-void RTCLogEx(RTCLoggingSeverity severity, NSString* log_string) {
+void RTCLogEx(RTC_OBJC_TYPE(RTCLoggingSeverity) severity, NSString* log_string) {
   if (log_string.length) {
     const char* utf8_string = log_string.UTF8String;
     RTC_LOG_V(RTCGetNativeLoggingSeverity(severity)) << utf8_string;
   }
 }
 
-void RTCSetMinDebugLogLevel(RTCLoggingSeverity severity) {
+void RTCSetMinDebugLogLevel(RTC_OBJC_TYPE(RTCLoggingSeverity) severity) {
   rtc::LogMessage::LogToDebug(RTCGetNativeLoggingSeverity(severity));
 }
 

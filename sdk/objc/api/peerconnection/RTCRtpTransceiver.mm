@@ -32,7 +32,7 @@ NSString *const kRTCRtpTransceiverErrorDomain = @"org.webrtc.RTCRtpTranceiver";
 
 - (instancetype)init {
   if (self = [super init]) {
-    _direction = RTCRtpTransceiverDirectionSendRecv;
+    _direction = RTC_OBJC_TYPE(RTCRtpTransceiverDirectionSendRecv);
   }
   return self;
 }
@@ -57,7 +57,7 @@ NSString *const kRTCRtpTransceiverErrorDomain = @"org.webrtc.RTCRtpTranceiver";
   rtc::scoped_refptr<webrtc::RtpTransceiverInterface> _nativeRtpTransceiver;
 }
 
-- (RTCRtpMediaType)mediaType {
+- (RTC_OBJC_TYPE(RTCRtpMediaType))mediaType {
   return [RTC_OBJC_TYPE(RTCRtpReceiver)
       mediaTypeForNativeMediaType:_nativeRtpTransceiver->media_type()];
 }
@@ -91,12 +91,12 @@ NSString *const kRTCRtpTransceiverErrorDomain = @"org.webrtc.RTCRtpTranceiver";
   return _nativeRtpTransceiver->stopped();
 }
 
-- (RTCRtpTransceiverDirection)direction {
+- (RTC_OBJC_TYPE(RTCRtpTransceiverDirection))direction {
   return [RTC_OBJC_TYPE(RTCRtpTransceiver)
       rtpTransceiverDirectionFromNativeDirection:_nativeRtpTransceiver->direction()];
 }
 
-- (void)setDirection:(RTCRtpTransceiverDirection)direction error:(NSError **)error {
+- (void)setDirection:(RTC_OBJC_TYPE(RTCRtpTransceiverDirection))direction error:(NSError **)error {
   webrtc::RTCError nativeError = _nativeRtpTransceiver->SetDirectionWithError(
       [RTC_OBJC_TYPE(RTCRtpTransceiver) nativeRtpTransceiverDirectionFromDirection:direction]);
 
@@ -110,7 +110,7 @@ NSString *const kRTCRtpTransceiverErrorDomain = @"org.webrtc.RTCRtpTranceiver";
   }
 }
 
-- (BOOL)currentDirection:(RTCRtpTransceiverDirection *)currentDirectionOut {
+- (BOOL)currentDirection:(RTC_OBJC_TYPE(RTCRtpTransceiverDirection) *)currentDirectionOut {
   if (_nativeRtpTransceiver->current_direction()) {
     *currentDirectionOut = [RTC_OBJC_TYPE(RTCRtpTransceiver)
         rtpTransceiverDirectionFromNativeDirection:*_nativeRtpTransceiver->current_direction()];
@@ -183,34 +183,34 @@ NSString *const kRTCRtpTransceiverErrorDomain = @"org.webrtc.RTCRtpTranceiver";
 }
 
 + (webrtc::RtpTransceiverDirection)nativeRtpTransceiverDirectionFromDirection:
-        (RTCRtpTransceiverDirection)direction {
+        (RTC_OBJC_TYPE(RTCRtpTransceiverDirection))direction {
   switch (direction) {
-    case RTCRtpTransceiverDirectionSendRecv:
+    case RTC_OBJC_TYPE(RTCRtpTransceiverDirectionSendRecv):
       return webrtc::RtpTransceiverDirection::kSendRecv;
-    case RTCRtpTransceiverDirectionSendOnly:
+    case RTC_OBJC_TYPE(RTCRtpTransceiverDirectionSendOnly):
       return webrtc::RtpTransceiverDirection::kSendOnly;
-    case RTCRtpTransceiverDirectionRecvOnly:
+    case RTC_OBJC_TYPE(RTCRtpTransceiverDirectionRecvOnly):
       return webrtc::RtpTransceiverDirection::kRecvOnly;
-    case RTCRtpTransceiverDirectionInactive:
+    case RTC_OBJC_TYPE(RTCRtpTransceiverDirectionInactive):
       return webrtc::RtpTransceiverDirection::kInactive;
-    case RTCRtpTransceiverDirectionStopped:
+    case RTC_OBJC_TYPE(RTCRtpTransceiverDirectionStopped):
       return webrtc::RtpTransceiverDirection::kStopped;
   }
 }
 
-+ (RTCRtpTransceiverDirection)rtpTransceiverDirectionFromNativeDirection:
++ (RTC_OBJC_TYPE(RTCRtpTransceiverDirection))rtpTransceiverDirectionFromNativeDirection:
         (webrtc::RtpTransceiverDirection)nativeDirection {
   switch (nativeDirection) {
     case webrtc::RtpTransceiverDirection::kSendRecv:
-      return RTCRtpTransceiverDirectionSendRecv;
+      return RTC_OBJC_TYPE(RTCRtpTransceiverDirectionSendRecv);
     case webrtc::RtpTransceiverDirection::kSendOnly:
-      return RTCRtpTransceiverDirectionSendOnly;
+      return RTC_OBJC_TYPE(RTCRtpTransceiverDirectionSendOnly);
     case webrtc::RtpTransceiverDirection::kRecvOnly:
-      return RTCRtpTransceiverDirectionRecvOnly;
+      return RTC_OBJC_TYPE(RTCRtpTransceiverDirectionRecvOnly);
     case webrtc::RtpTransceiverDirection::kInactive:
-      return RTCRtpTransceiverDirectionInactive;
+      return RTC_OBJC_TYPE(RTCRtpTransceiverDirectionInactive);
     case webrtc::RtpTransceiverDirection::kStopped:
-      return RTCRtpTransceiverDirectionStopped;
+      return RTC_OBJC_TYPE(RTCRtpTransceiverDirectionStopped);
   }
 }
 

@@ -55,10 +55,10 @@ RTC_OBJC_EXPORT
 
 /** Represents the state of the data channel. */
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCDataChannelState)) {
-  RTCDataChannelStateConnecting,
-  RTCDataChannelStateOpen,
-  RTCDataChannelStateClosing,
-  RTCDataChannelStateClosed,
+  RTC_OBJC_TYPE(RTCDataChannelStateConnecting),
+  RTC_OBJC_TYPE(RTCDataChannelStateOpen),
+  RTC_OBJC_TYPE(RTCDataChannelStateClosing),
+  RTC_OBJC_TYPE(RTCDataChannelStateClosed),
 };
 
 RTC_OBJC_EXPORT

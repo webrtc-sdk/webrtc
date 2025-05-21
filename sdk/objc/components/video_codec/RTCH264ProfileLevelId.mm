@@ -77,8 +77,8 @@ NSString *MaxSupportedProfileLevelConstrainedHigh() {
 @interface RTC_OBJC_TYPE (RTCH264ProfileLevelId)
 ()
 
-    @property(nonatomic, assign) RTCH264Profile profile;
-@property(nonatomic, assign) RTCH264Level level;
+    @property(nonatomic, assign) RTC_OBJC_TYPE(RTCH264Profile) profile;
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCH264Level) level;
 @property(nonatomic, strong) NSString *hexString;
 
 @end
@@ -96,14 +96,14 @@ NSString *MaxSupportedProfileLevelConstrainedHigh() {
     absl::optional<webrtc::H264ProfileLevelId> profile_level_id =
         webrtc::ParseH264ProfileLevelId([hexString cStringUsingEncoding:NSUTF8StringEncoding]);
     if (profile_level_id.has_value()) {
-      self.profile = static_cast<RTCH264Profile>(profile_level_id->profile);
-      self.level = static_cast<RTCH264Level>(profile_level_id->level);
+      self.profile = static_cast<RTC_OBJC_TYPE(RTCH264Profile)>(profile_level_id->profile);
+      self.level = static_cast<RTC_OBJC_TYPE(RTCH264Level)>(profile_level_id->level);
     }
   }
   return self;
 }
 
-- (instancetype)initWithProfile:(RTCH264Profile)profile level:(RTCH264Level)level {
+- (instancetype)initWithProfile:(RTC_OBJC_TYPE(RTCH264Profile))profile level:(RTC_OBJC_TYPE(RTCH264Level))level {
   if (self = [super init]) {
     self.profile = profile;
     self.level = level;

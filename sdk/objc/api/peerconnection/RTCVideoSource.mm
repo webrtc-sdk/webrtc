@@ -35,7 +35,7 @@ static webrtc::ObjCVideoTrackSource *getObjCVideoSource(
   RTC_DCHECK(nativeVideoSource);
   if (self = [super initWithFactory:factory
                   nativeMediaSource:nativeVideoSource
-                               type:RTCMediaSourceTypeVideo]) {
+                               type:RTC_OBJC_TYPE(RTCMediaSourceTypeVideo)]) {
     _nativeVideoSource = nativeVideoSource;
   }
   return self;
@@ -43,7 +43,7 @@ static webrtc::ObjCVideoTrackSource *getObjCVideoSource(
 
 - (instancetype)initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
               nativeMediaSource:(rtc::scoped_refptr<webrtc::MediaSourceInterface>)nativeMediaSource
-                           type:(RTCMediaSourceType)type {
+                           type:(RTC_OBJC_TYPE(RTCMediaSourceType))type {
   RTC_DCHECK_NOTREACHED();
   return nil;
 }

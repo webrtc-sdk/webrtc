@@ -21,8 +21,8 @@
 NS_ASSUME_NONNULL_BEGIN
 
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCIODeviceType)) {
-  RTCIODeviceTypeOutput,
-  RTCIODeviceTypeInput,
+  RTC_OBJC_TYPE(RTCIODeviceTypeOutput),
+  RTC_OBJC_TYPE(RTCIODeviceTypeInput),
 };
 
 RTC_OBJC_EXPORT

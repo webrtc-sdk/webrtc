@@ -15,8 +15,8 @@
 NS_ASSUME_NONNULL_BEGIN
 
 typedef NS_ENUM(NSUInteger, RTC_OBJC_TYPE(RTCVideoCodecMode)) {
-  RTCVideoCodecModeRealtimeVideo,
-  RTCVideoCodecModeScreensharing,
+  RTC_OBJC_TYPE(RTCVideoCodecModeRealtimeVideo),
+  RTC_OBJC_TYPE(RTCVideoCodecModeScreensharing),
 };
 
 /** Settings for encoder. Corresponds to webrtc::VideoCodec. */

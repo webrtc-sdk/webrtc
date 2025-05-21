@@ -27,17 +27,17 @@ NS_ASSUME_NONNULL_BEGIN
 @class RTC_OBJC_TYPE(RTCPeerConnectionFactory);
 
 typedef NS_ENUM(NSUInteger, RTC_OBJC_TYPE(RTCCryptorAlgorithm)) {
-  RTCCryptorAlgorithmAesGcm = 0,
+  RTC_OBJC_TYPE(RTCCryptorAlgorithmAesGcm) = 0,
 };
 
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(FrameCryptionState)) {
-  FrameCryptionStateNew = 0,
-  FrameCryptionStateOk,
-  FrameCryptionStateEncryptionFailed,
-  FrameCryptionStateDecryptionFailed,
-  FrameCryptionStateMissingKey,
-  FrameCryptionStateKeyRatcheted,
-  FrameCryptionStateInternalError,
+  RTC_OBJC_TYPE(FrameCryptionStateNew) = 0,
+  RTC_OBJC_TYPE(FrameCryptionStateOk),
+  RTC_OBJC_TYPE(FrameCryptionStateEncryptionFailed),
+  RTC_OBJC_TYPE(FrameCryptionStateDecryptionFailed),
+  RTC_OBJC_TYPE(FrameCryptionStateMissingKey),
+  RTC_OBJC_TYPE(FrameCryptionStateKeyRatcheted),
+  RTC_OBJC_TYPE(FrameCryptionStateInternalError),
 };
 
 RTC_OBJC_EXPORT

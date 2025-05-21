@@ -126,7 +126,7 @@ PeerConnectionDelegateAdapter::~PeerConnectionDelegateAdapter() {
 
 void PeerConnectionDelegateAdapter::OnSignalingChange(
     PeerConnectionInterface::SignalingState new_state) {
-  RTCSignalingState state =
+  RTC_OBJC_TYPE(RTCSignalingState) state =
       [[RTC_OBJC_TYPE(RTCPeerConnection) class] signalingStateForNativeState:new_state];
   RTC_OBJC_TYPE(RTCPeerConnection) *peer_connection = peer_connection_;
   [peer_connection.delegate peerConnection:peer_connection
@@ -184,7 +184,7 @@ void PeerConnectionDelegateAdapter::OnRenegotiationNeeded() {
 
 void PeerConnectionDelegateAdapter::OnIceConnectionChange(
     PeerConnectionInterface::IceConnectionState new_state) {
-  RTCIceConnectionState state =
+  RTC_OBJC_TYPE(RTCIceConnectionState) state =
       [RTC_OBJC_TYPE(RTCPeerConnection) iceConnectionStateForNativeState:new_state];
   [peer_connection_.delegate peerConnection:peer_connection_ didChangeIceConnectionState:state];
 }
@@ -193,7 +193,7 @@ void PeerConnectionDelegateAdapter::OnStandardizedIceConnectionChange(
     PeerConnectionInterface::IceConnectionState new_state) {
   if ([peer_connection_.delegate
           respondsToSelector:@selector(peerConnection:didChangeStandardizedIceConnectionState:)]) {
-    RTCIceConnectionState state =
+    RTC_OBJC_TYPE(RTCIceConnectionState) state =
         [RTC_OBJC_TYPE(RTCPeerConnection) iceConnectionStateForNativeState:new_state];
     [peer_connection_.delegate peerConnection:peer_connection_
         didChangeStandardizedIceConnectionState:state];
@@ -204,7 +204,7 @@ void PeerConnectionDelegateAdapter::OnConnectionChange(
     PeerConnectionInterface::PeerConnectionState new_state) {
   if ([peer_connection_.delegate
           respondsToSelector:@selector(peerConnection:didChangeConnectionState:)]) {
-    RTCPeerConnectionState state =
+    RTC_OBJC_TYPE(RTCPeerConnectionState) state =
         [RTC_OBJC_TYPE(RTCPeerConnection) connectionStateForNativeState:new_state];
     [peer_connection_.delegate peerConnection:peer_connection_ didChangeConnectionState:state];
   }
@@ -212,7 +212,7 @@ void PeerConnectionDelegateAdapter::OnConnectionChange(
 
 void PeerConnectionDelegateAdapter::OnIceGatheringChange(
     PeerConnectionInterface::IceGatheringState new_state) {
-  RTCIceGatheringState state =
+  RTC_OBJC_TYPE(RTCIceGatheringState) state =
       [[RTC_OBJC_TYPE(RTCPeerConnection) class] iceGatheringStateForNativeState:new_state];
   RTC_OBJC_TYPE(RTCPeerConnection) *peer_connection = peer_connection_;
   [peer_connection.delegate peerConnection:peer_connection
@@ -409,23 +409,22 @@ void PeerConnectionDelegateAdapter::OnRemoveTrack(
   });
 }
 
-- (RTCSignalingState)signalingState {
+- (RTC_OBJC_TYPE(RTCSignalingState))signalingState {
+  return [[self class] signalingStateForNativeState:self.nativePeerConnection->signaling_state()];
+}
+
+- (RTC_OBJC_TYPE(RTCIceConnectionState))iceConnectionState {
   return [[self class]
-      signalingStateForNativeState:_peerConnection->signaling_state()];
+      iceConnectionStateForNativeState:self.nativePeerConnection->ice_connection_state()];
 }
 
-- (RTCIceConnectionState)iceConnectionState {
-  return [[self class] iceConnectionStateForNativeState:
-      _peerConnection->ice_connection_state()];
+- (RTC_OBJC_TYPE(RTCPeerConnectionState))connectionState {
+  return [[self class] connectionStateForNativeState:self.nativePeerConnection->peer_connection_state()];
 }
 
-- (RTCPeerConnectionState)connectionState {
-  return [[self class] connectionStateForNativeState:_peerConnection->peer_connection_state()];
-}
-
-- (RTCIceGatheringState)iceGatheringState {
-  return [[self class] iceGatheringStateForNativeState:
-      _peerConnection->ice_gathering_state()];
+- (RTC_OBJC_TYPE(RTCIceGatheringState))iceGatheringState {
+  return [[self class]
+      iceGatheringStateForNativeState:self.nativePeerConnection->ice_gathering_state()];
 }
 
 - (BOOL)setConfiguration:(RTC_OBJC_TYPE(RTCConfiguration) *)configuration {
@@ -544,13 +543,14 @@ void PeerConnectionDelegateAdapter::OnRemoveTrack(
       nativeRtpTransceiver:nativeTransceiverOrError.MoveValue()];
 }
 
-- (nullable RTC_OBJC_TYPE(RTCRtpTransceiver) *)addTransceiverOfType:(RTCRtpMediaType)mediaType {
+- (nullable RTC_OBJC_TYPE(RTCRtpTransceiver) *)addTransceiverOfType:
+    (RTC_OBJC_TYPE(RTCRtpMediaType))mediaType {
   return [self addTransceiverOfType:mediaType
                                init:[[RTC_OBJC_TYPE(RTCRtpTransceiverInit) alloc] init]];
 }
 
 - (nullable RTC_OBJC_TYPE(RTCRtpTransceiver) *)
-    addTransceiverOfType:(RTCRtpMediaType)mediaType
+    addTransceiverOfType:(RTC_OBJC_TYPE(RTCRtpMediaType))mediaType
                     init:(RTC_OBJC_TYPE(RTCRtpTransceiverInit) *)init {
   webrtc::RTCErrorOr<rtc::scoped_refptr<webrtc::RtpTransceiverInterface>> nativeTransceiverOrError =
       _peerConnection->AddTransceiver(
@@ -712,217 +712,221 @@ void PeerConnectionDelegateAdapter::OnRemoveTrack(
 #pragma mark - Private
 
 + (webrtc::PeerConnectionInterface::SignalingState)nativeSignalingStateForState:
-    (RTCSignalingState)state {
+    (RTC_OBJC_TYPE(RTCSignalingState))state {
   switch (state) {
-    case RTCSignalingStateStable:
+    case RTC_OBJC_TYPE(RTCSignalingStateStable):
       return webrtc::PeerConnectionInterface::kStable;
-    case RTCSignalingStateHaveLocalOffer:
+    case RTC_OBJC_TYPE(RTCSignalingStateHaveLocalOffer):
       return webrtc::PeerConnectionInterface::kHaveLocalOffer;
-    case RTCSignalingStateHaveLocalPrAnswer:
+    case RTC_OBJC_TYPE(RTCSignalingStateHaveLocalPrAnswer):
       return webrtc::PeerConnectionInterface::kHaveLocalPrAnswer;
-    case RTCSignalingStateHaveRemoteOffer:
+    case RTC_OBJC_TYPE(RTCSignalingStateHaveRemoteOffer):
       return webrtc::PeerConnectionInterface::kHaveRemoteOffer;
-    case RTCSignalingStateHaveRemotePrAnswer:
+    case RTC_OBJC_TYPE(RTCSignalingStateHaveRemotePrAnswer):
       return webrtc::PeerConnectionInterface::kHaveRemotePrAnswer;
-    case RTCSignalingStateClosed:
+    case RTC_OBJC_TYPE(RTCSignalingStateClosed):
       return webrtc::PeerConnectionInterface::kClosed;
   }
 }
 
-+ (RTCSignalingState)signalingStateForNativeState:
++ (RTC_OBJC_TYPE(RTCSignalingState))signalingStateForNativeState:
     (webrtc::PeerConnectionInterface::SignalingState)nativeState {
   switch (nativeState) {
     case webrtc::PeerConnectionInterface::kStable:
-      return RTCSignalingStateStable;
+      return RTC_OBJC_TYPE(RTCSignalingStateStable);
     case webrtc::PeerConnectionInterface::kHaveLocalOffer:
-      return RTCSignalingStateHaveLocalOffer;
+      return RTC_OBJC_TYPE(RTCSignalingStateHaveLocalOffer);
     case webrtc::PeerConnectionInterface::kHaveLocalPrAnswer:
-      return RTCSignalingStateHaveLocalPrAnswer;
+      return RTC_OBJC_TYPE(RTCSignalingStateHaveLocalPrAnswer);
     case webrtc::PeerConnectionInterface::kHaveRemoteOffer:
-      return RTCSignalingStateHaveRemoteOffer;
+      return RTC_OBJC_TYPE(RTCSignalingStateHaveRemoteOffer);
     case webrtc::PeerConnectionInterface::kHaveRemotePrAnswer:
-      return RTCSignalingStateHaveRemotePrAnswer;
+      return RTC_OBJC_TYPE(RTCSignalingStateHaveRemotePrAnswer);
     case webrtc::PeerConnectionInterface::kClosed:
-      return RTCSignalingStateClosed;
+      return RTC_OBJC_TYPE(RTCSignalingStateClosed);
   }
 }
 
-+ (NSString *)stringForSignalingState:(RTCSignalingState)state {
++ (NSString *)stringForSignalingState:(RTC_OBJC_TYPE(RTCSignalingState))state {
   switch (state) {
-    case RTCSignalingStateStable:
-      return @"STABLE";
-    case RTCSignalingStateHaveLocalOffer:
-      return @"HAVE_LOCAL_OFFER";
-    case RTCSignalingStateHaveLocalPrAnswer:
-      return @"HAVE_LOCAL_PRANSWER";
-    case RTCSignalingStateHaveRemoteOffer:
-      return @"HAVE_REMOTE_OFFER";
-    case RTCSignalingStateHaveRemotePrAnswer:
-      return @"HAVE_REMOTE_PRANSWER";
-    case RTCSignalingStateClosed:
-      return @"CLOSED";
+    case RTC_OBJC_TYPE(RTCSignalingStateStable):
+      return @"RTCSignalingStateStable";
+    case RTC_OBJC_TYPE(RTCSignalingStateHaveLocalOffer):
+      return @"RTCSignalingStateHaveLocalOffer";
+    case RTC_OBJC_TYPE(RTCSignalingStateHaveLocalPrAnswer):
+      return @"RTCSignalingStateHaveLocalPrAnswer";
+    case RTC_OBJC_TYPE(RTCSignalingStateHaveRemoteOffer):
+      return @"RTCSignalingStateHaveRemoteOffer";
+    case RTC_OBJC_TYPE(RTCSignalingStateHaveRemotePrAnswer):
+      return @"RTCSignalingStateHaveRemotePrAnswer";
+    case RTC_OBJC_TYPE(RTCSignalingStateClosed):
+      return @"RTCSignalingStateClosed";
   }
 }
 
 + (webrtc::PeerConnectionInterface::PeerConnectionState)nativeConnectionStateForState:
-        (RTCPeerConnectionState)state {
+        (RTC_OBJC_TYPE(RTCPeerConnectionState))state {
   switch (state) {
-    case RTCPeerConnectionStateNew:
+    case RTC_OBJC_TYPE(RTCPeerConnectionStateNew):
       return webrtc::PeerConnectionInterface::PeerConnectionState::kNew;
-    case RTCPeerConnectionStateConnecting:
+    case RTC_OBJC_TYPE(RTCPeerConnectionStateConnecting):
       return webrtc::PeerConnectionInterface::PeerConnectionState::kConnecting;
-    case RTCPeerConnectionStateConnected:
+    case RTC_OBJC_TYPE(RTCPeerConnectionStateConnected):
       return webrtc::PeerConnectionInterface::PeerConnectionState::kConnected;
-    case RTCPeerConnectionStateFailed:
+    case RTC_OBJC_TYPE(RTCPeerConnectionStateFailed):
       return webrtc::PeerConnectionInterface::PeerConnectionState::kFailed;
-    case RTCPeerConnectionStateDisconnected:
+    case RTC_OBJC_TYPE(RTCPeerConnectionStateDisconnected):
       return webrtc::PeerConnectionInterface::PeerConnectionState::kDisconnected;
-    case RTCPeerConnectionStateClosed:
+    case RTC_OBJC_TYPE(RTCPeerConnectionStateClosed):
       return webrtc::PeerConnectionInterface::PeerConnectionState::kClosed;
   }
 }
 
-+ (RTCPeerConnectionState)connectionStateForNativeState:
++ (RTC_OBJC_TYPE(RTCPeerConnectionState))connectionStateForNativeState:
         (webrtc::PeerConnectionInterface::PeerConnectionState)nativeState {
   switch (nativeState) {
     case webrtc::PeerConnectionInterface::PeerConnectionState::kNew:
-      return RTCPeerConnectionStateNew;
+      return RTC_OBJC_TYPE(RTCPeerConnectionStateNew);
     case webrtc::PeerConnectionInterface::PeerConnectionState::kConnecting:
-      return RTCPeerConnectionStateConnecting;
+      return RTC_OBJC_TYPE(RTCPeerConnectionStateConnecting);
     case webrtc::PeerConnectionInterface::PeerConnectionState::kConnected:
-      return RTCPeerConnectionStateConnected;
+      return RTC_OBJC_TYPE(RTCPeerConnectionStateConnected);
     case webrtc::PeerConnectionInterface::PeerConnectionState::kFailed:
-      return RTCPeerConnectionStateFailed;
+      return RTC_OBJC_TYPE(RTCPeerConnectionStateFailed);
     case webrtc::PeerConnectionInterface::PeerConnectionState::kDisconnected:
-      return RTCPeerConnectionStateDisconnected;
+      return RTC_OBJC_TYPE(RTCPeerConnectionStateDisconnected);
     case webrtc::PeerConnectionInterface::PeerConnectionState::kClosed:
-      return RTCPeerConnectionStateClosed;
+      return RTC_OBJC_TYPE(RTCPeerConnectionStateClosed);
   }
 }
 
-+ (NSString *)stringForConnectionState:(RTCPeerConnectionState)state {
++ (NSString *)stringForConnectionState:(RTC_OBJC_TYPE(RTCPeerConnectionState))state {
   switch (state) {
-    case RTCPeerConnectionStateNew:
-      return @"NEW";
-    case RTCPeerConnectionStateConnecting:
-      return @"CONNECTING";
-    case RTCPeerConnectionStateConnected:
-      return @"CONNECTED";
-    case RTCPeerConnectionStateFailed:
-      return @"FAILED";
-    case RTCPeerConnectionStateDisconnected:
-      return @"DISCONNECTED";
-    case RTCPeerConnectionStateClosed:
-      return @"CLOSED";
+    case RTC_OBJC_TYPE(RTCPeerConnectionStateNew):
+      return @"RTCPeerConnectionStateNew";
+    case RTC_OBJC_TYPE(RTCPeerConnectionStateConnecting):
+      return @"RTCPeerConnectionStateConnecting";
+    case RTC_OBJC_TYPE(RTCPeerConnectionStateConnected):
+      return @"RTCPeerConnectionStateConnected";
+    case RTC_OBJC_TYPE(RTCPeerConnectionStateFailed):
+      return @"RTCPeerConnectionStateFailed";
+    case RTC_OBJC_TYPE(RTCPeerConnectionStateDisconnected):
+      return @"RTCPeerConnectionStateDisconnected";
+    case RTC_OBJC_TYPE(RTCPeerConnectionStateClosed):
+      return @"RTCPeerConnectionStateClosed";
   }
 }
 
 + (webrtc::PeerConnectionInterface::IceConnectionState)
-    nativeIceConnectionStateForState:(RTCIceConnectionState)state {
+    nativeIceConnectionStateForState:(RTC_OBJC_TYPE(RTCIceConnectionState))state {
   switch (state) {
-    case RTCIceConnectionStateNew:
+    case RTC_OBJC_TYPE(RTCIceConnectionStateNew):
       return webrtc::PeerConnectionInterface::kIceConnectionNew;
-    case RTCIceConnectionStateChecking:
+    case RTC_OBJC_TYPE(RTCIceConnectionStateChecking):
       return webrtc::PeerConnectionInterface::kIceConnectionChecking;
-    case RTCIceConnectionStateConnected:
+    case RTC_OBJC_TYPE(RTCIceConnectionStateConnected):
       return webrtc::PeerConnectionInterface::kIceConnectionConnected;
-    case RTCIceConnectionStateCompleted:
+    case RTC_OBJC_TYPE(RTCIceConnectionStateCompleted):
       return webrtc::PeerConnectionInterface::kIceConnectionCompleted;
-    case RTCIceConnectionStateFailed:
+    case RTC_OBJC_TYPE(RTCIceConnectionStateFailed):
       return webrtc::PeerConnectionInterface::kIceConnectionFailed;
-    case RTCIceConnectionStateDisconnected:
+    case RTC_OBJC_TYPE(RTCIceConnectionStateDisconnected):
       return webrtc::PeerConnectionInterface::kIceConnectionDisconnected;
-    case RTCIceConnectionStateClosed:
+    case RTC_OBJC_TYPE(RTCIceConnectionStateClosed):
       return webrtc::PeerConnectionInterface::kIceConnectionClosed;
-    case RTCIceConnectionStateCount:
-      return webrtc::PeerConnectionInterface::kIceConnectionMax;
+    case RTC_OBJC_TYPE(RTCIceConnectionStateCount):
+      // This is not a real state, just used for counting.
+      RTCLogError(@"Attempting to convert RTCIceConnectionStateCount to native state");
+      return webrtc::PeerConnectionInterface::kIceConnectionNew;
   }
 }
 
-+ (RTCIceConnectionState)iceConnectionStateForNativeState:
++ (RTC_OBJC_TYPE(RTCIceConnectionState))iceConnectionStateForNativeState:
     (webrtc::PeerConnectionInterface::IceConnectionState)nativeState {
   switch (nativeState) {
     case webrtc::PeerConnectionInterface::kIceConnectionNew:
-      return RTCIceConnectionStateNew;
+      return RTC_OBJC_TYPE(RTCIceConnectionStateNew);
     case webrtc::PeerConnectionInterface::kIceConnectionChecking:
-      return RTCIceConnectionStateChecking;
+      return RTC_OBJC_TYPE(RTCIceConnectionStateChecking);
     case webrtc::PeerConnectionInterface::kIceConnectionConnected:
-      return RTCIceConnectionStateConnected;
+      return RTC_OBJC_TYPE(RTCIceConnectionStateConnected);
     case webrtc::PeerConnectionInterface::kIceConnectionCompleted:
-      return RTCIceConnectionStateCompleted;
+      return RTC_OBJC_TYPE(RTCIceConnectionStateCompleted);
     case webrtc::PeerConnectionInterface::kIceConnectionFailed:
-      return RTCIceConnectionStateFailed;
+      return RTC_OBJC_TYPE(RTCIceConnectionStateFailed);
     case webrtc::PeerConnectionInterface::kIceConnectionDisconnected:
-      return RTCIceConnectionStateDisconnected;
+      return RTC_OBJC_TYPE(RTCIceConnectionStateDisconnected);
     case webrtc::PeerConnectionInterface::kIceConnectionClosed:
-      return RTCIceConnectionStateClosed;
+      return RTC_OBJC_TYPE(RTCIceConnectionStateClosed);
     case webrtc::PeerConnectionInterface::kIceConnectionMax:
-      return RTCIceConnectionStateCount;
+      // This is not a real state, just used for counting.
+      RTCLogError(@"Attempting to convert kIceConnectionMax to RTCIceConnectionState");
+      return RTC_OBJC_TYPE(RTCIceConnectionStateCount);
   }
 }
 
-+ (NSString *)stringForIceConnectionState:(RTCIceConnectionState)state {
++ (NSString *)stringForIceConnectionState:(RTC_OBJC_TYPE(RTCIceConnectionState))state {
   switch (state) {
-    case RTCIceConnectionStateNew:
-      return @"NEW";
-    case RTCIceConnectionStateChecking:
-      return @"CHECKING";
-    case RTCIceConnectionStateConnected:
-      return @"CONNECTED";
-    case RTCIceConnectionStateCompleted:
-      return @"COMPLETED";
-    case RTCIceConnectionStateFailed:
-      return @"FAILED";
-    case RTCIceConnectionStateDisconnected:
-      return @"DISCONNECTED";
-    case RTCIceConnectionStateClosed:
-      return @"CLOSED";
-    case RTCIceConnectionStateCount:
-      return @"COUNT";
+    case RTC_OBJC_TYPE(RTCIceConnectionStateNew):
+      return @"RTCIceConnectionStateNew";
+    case RTC_OBJC_TYPE(RTCIceConnectionStateChecking):
+      return @"RTCIceConnectionStateChecking";
+    case RTC_OBJC_TYPE(RTCIceConnectionStateConnected):
+      return @"RTCIceConnectionStateConnected";
+    case RTC_OBJC_TYPE(RTCIceConnectionStateCompleted):
+      return @"RTCIceConnectionStateCompleted";
+    case RTC_OBJC_TYPE(RTCIceConnectionStateFailed):
+      return @"RTCIceConnectionStateFailed";
+    case RTC_OBJC_TYPE(RTCIceConnectionStateDisconnected):
+      return @"RTCIceConnectionStateDisconnected";
+    case RTC_OBJC_TYPE(RTCIceConnectionStateClosed):
+      return @"RTCIceConnectionStateClosed";
+    case RTC_OBJC_TYPE(RTCIceConnectionStateCount):
+      return @"RTCIceConnectionStateCount";
   }
 }
 
 + (webrtc::PeerConnectionInterface::IceGatheringState)
-    nativeIceGatheringStateForState:(RTCIceGatheringState)state {
+    nativeIceGatheringStateForState:(RTC_OBJC_TYPE(RTCIceGatheringState))state {
   switch (state) {
-    case RTCIceGatheringStateNew:
+    case RTC_OBJC_TYPE(RTCIceGatheringStateNew):
       return webrtc::PeerConnectionInterface::kIceGatheringNew;
-    case RTCIceGatheringStateGathering:
+    case RTC_OBJC_TYPE(RTCIceGatheringStateGathering):
       return webrtc::PeerConnectionInterface::kIceGatheringGathering;
-    case RTCIceGatheringStateComplete:
+    case RTC_OBJC_TYPE(RTCIceGatheringStateComplete):
       return webrtc::PeerConnectionInterface::kIceGatheringComplete;
   }
 }
 
-+ (RTCIceGatheringState)iceGatheringStateForNativeState:
++ (RTC_OBJC_TYPE(RTCIceGatheringState))iceGatheringStateForNativeState:
     (webrtc::PeerConnectionInterface::IceGatheringState)nativeState {
   switch (nativeState) {
     case webrtc::PeerConnectionInterface::kIceGatheringNew:
-      return RTCIceGatheringStateNew;
+      return RTC_OBJC_TYPE(RTCIceGatheringStateNew);
     case webrtc::PeerConnectionInterface::kIceGatheringGathering:
-      return RTCIceGatheringStateGathering;
+      return RTC_OBJC_TYPE(RTCIceGatheringStateGathering);
     case webrtc::PeerConnectionInterface::kIceGatheringComplete:
-      return RTCIceGatheringStateComplete;
+      return RTC_OBJC_TYPE(RTCIceGatheringStateComplete);
   }
 }
 
-+ (NSString *)stringForIceGatheringState:(RTCIceGatheringState)state {
++ (NSString *)stringForIceGatheringState:(RTC_OBJC_TYPE(RTCIceGatheringState))state {
   switch (state) {
-    case RTCIceGatheringStateNew:
-      return @"NEW";
-    case RTCIceGatheringStateGathering:
-      return @"GATHERING";
-    case RTCIceGatheringStateComplete:
-      return @"COMPLETE";
+    case RTC_OBJC_TYPE(RTCIceGatheringStateNew):
+      return @"RTCIceGatheringStateNew";
+    case RTC_OBJC_TYPE(RTCIceGatheringStateGathering):
+      return @"RTCIceGatheringStateGathering";
+    case RTC_OBJC_TYPE(RTCIceGatheringStateComplete):
+      return @"RTCIceGatheringStateComplete";
   }
 }
 
 + (webrtc::PeerConnectionInterface::StatsOutputLevel)
-    nativeStatsOutputLevelForLevel:(RTCStatsOutputLevel)level {
+    nativeStatsOutputLevelForLevel:(RTC_OBJC_TYPE(RTCStatsOutputLevel))level {
   switch (level) {
-    case RTCStatsOutputLevelStandard:
+    case RTC_OBJC_TYPE(RTCStatsOutputLevelStandard):
       return webrtc::PeerConnectionInterface::kStatsOutputLevelStandard;
-    case RTCStatsOutputLevelDebug:
+    case RTC_OBJC_TYPE(RTCStatsOutputLevelDebug):
       return webrtc::PeerConnectionInterface::kStatsOutputLevelDebug;
   }
 }

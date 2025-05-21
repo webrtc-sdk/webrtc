@@ -21,51 +21,54 @@
  * which include one more state than what exists in the W3C spec.
  */
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCIceTransportPolicy)) {
-  RTCIceTransportPolicyNone,
-  RTCIceTransportPolicyRelay,
-  RTCIceTransportPolicyNoHost,
-  RTCIceTransportPolicyAll
+  RTC_OBJC_TYPE(RTCIceTransportPolicyNone),
+  RTC_OBJC_TYPE(RTCIceTransportPolicyRelay),
+  RTC_OBJC_TYPE(RTCIceTransportPolicyNoHost),
+  RTC_OBJC_TYPE(RTCIceTransportPolicyAll)
 };
 
 /** Represents the bundle policy. */
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCBundlePolicy)) {
-  RTCBundlePolicyBalanced,
-  RTCBundlePolicyMaxCompat,
-  RTCBundlePolicyMaxBundle
+  RTC_OBJC_TYPE(RTCBundlePolicyBalanced),
+  RTC_OBJC_TYPE(RTCBundlePolicyMaxCompat),
+  RTC_OBJC_TYPE(RTCBundlePolicyMaxBundle)
 };
 
 /** Represents the rtcp mux policy. */
-typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCRtcpMuxPolicy)) { RTCRtcpMuxPolicyNegotiate, RTCRtcpMuxPolicyRequire };
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCRtcpMuxPolicy)) {
+  RTC_OBJC_TYPE(RTCRtcpMuxPolicyNegotiate),
+  RTC_OBJC_TYPE(RTCRtcpMuxPolicyRequire)
+};
 
 /** Represents the tcp candidate policy. */
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCTcpCandidatePolicy)) {
-  RTCTcpCandidatePolicyEnabled,
-  RTCTcpCandidatePolicyDisabled
+  RTC_OBJC_TYPE(RTCTcpCandidatePolicyEnabled),
+  RTC_OBJC_TYPE(RTCTcpCandidatePolicyDisabled)
 };
 
 /** Represents the candidate network policy. */
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCCandidateNetworkPolicy)) {
-  RTCCandidateNetworkPolicyAll,
-  RTCCandidateNetworkPolicyLowCost
+  RTC_OBJC_TYPE(RTCCandidateNetworkPolicyAll),
+  RTC_OBJC_TYPE(RTCCandidateNetworkPolicyLowCost)
 };
 
 /** Represents the continual gathering policy. */
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCContinualGatheringPolicy)) {
-  RTCContinualGatheringPolicyGatherOnce,
-  RTCContinualGatheringPolicyGatherContinually
+  RTC_OBJC_TYPE(RTCContinualGatheringPolicyGatherOnce),
+  RTC_OBJC_TYPE(RTCContinualGatheringPolicyGatherContinually)
 };
 
 /** Represents the encryption key type. */
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCEncryptionKeyType)) {
-  RTCEncryptionKeyTypeRSA,
-  RTCEncryptionKeyTypeECDSA,
+  RTC_OBJC_TYPE(RTCEncryptionKeyTypeRSA),
+  RTC_OBJC_TYPE(RTCEncryptionKeyTypeECDSA),
 };
 
 /** Represents the chosen SDP semantics for the RTCPeerConnection. */
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCSdpSemantics)) {
   // TODO(https://crbug.com/webrtc/13528): Remove support for Plan B.
-  RTCSdpSemanticsPlanB,
-  RTCSdpSemanticsUnifiedPlan,
+  RTC_OBJC_TYPE(RTCSdpSemanticsPlanB),
+  RTC_OBJC_TYPE(RTCSdpSemanticsUnifiedPlan),
 };
 
 NS_ASSUME_NONNULL_BEGIN

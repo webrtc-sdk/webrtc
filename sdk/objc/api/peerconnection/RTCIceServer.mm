@@ -12,7 +12,7 @@
 
 #import "helpers/NSString+StdString.h"
 
-@implementation RTC_OBJC_TYPE (RTCIceServer)
+@implementation RTC_OBJC_TYPE(RTCIceServer)
 
 @synthesize urlStrings = _urlStrings;
 @synthesize username = _username;
@@ -34,13 +34,13 @@
   return [self initWithURLStrings:urlStrings
                          username:username
                        credential:credential
-                    tlsCertPolicy:RTCTlsCertPolicySecure];
+                    tlsCertPolicy:RTC_OBJC_TYPE(RTCTlsCertPolicySecure)];
 }
 
 - (instancetype)initWithURLStrings:(NSArray<NSString *> *)urlStrings
                           username:(NSString *)username
                         credential:(NSString *)credential
-                     tlsCertPolicy:(RTCTlsCertPolicy)tlsCertPolicy {
+                     tlsCertPolicy:(RTC_OBJC_TYPE(RTCTlsCertPolicy))tlsCertPolicy {
   return [self initWithURLStrings:urlStrings
                          username:username
                        credential:credential
@@ -51,8 +51,8 @@
 - (instancetype)initWithURLStrings:(NSArray<NSString *> *)urlStrings
                           username:(NSString *)username
                         credential:(NSString *)credential
-                     tlsCertPolicy:(RTCTlsCertPolicy)tlsCertPolicy
-                          hostname:(NSString *)hostname {
+                     tlsCertPolicy:(RTC_OBJC_TYPE(RTCTlsCertPolicy))tlsCertPolicy
+                         hostname:(NSString *)hostname {
   return [self initWithURLStrings:urlStrings
                          username:username
                        credential:credential
@@ -64,9 +64,10 @@
 - (instancetype)initWithURLStrings:(NSArray<NSString *> *)urlStrings
                           username:(NSString *)username
                         credential:(NSString *)credential
-                     tlsCertPolicy:(RTCTlsCertPolicy)tlsCertPolicy
+                     tlsCertPolicy:(RTC_OBJC_TYPE(RTCTlsCertPolicy))tlsCertPolicy
                           hostname:(NSString *)hostname
                   tlsAlpnProtocols:(NSArray<NSString *> *)tlsAlpnProtocols {
+
   return [self initWithURLStrings:urlStrings
                          username:username
                        credential:credential
@@ -79,10 +80,11 @@
 - (instancetype)initWithURLStrings:(NSArray<NSString *> *)urlStrings
                           username:(NSString *)username
                         credential:(NSString *)credential
-                     tlsCertPolicy:(RTCTlsCertPolicy)tlsCertPolicy
+                     tlsCertPolicy:(RTC_OBJC_TYPE(RTCTlsCertPolicy))tlsCertPolicy 
                           hostname:(NSString *)hostname
                   tlsAlpnProtocols:(NSArray<NSString *> *)tlsAlpnProtocols
                  tlsEllipticCurves:(NSArray<NSString *> *)tlsEllipticCurves {
+
   NSParameterAssert(urlStrings.count);
   if (self = [super init]) {
     _urlStrings = [[NSArray alloc] initWithArray:urlStrings copyItems:YES];
@@ -109,12 +111,12 @@
 
 #pragma mark - Private
 
-- (NSString *)stringForTlsCertPolicy:(RTCTlsCertPolicy)tlsCertPolicy {
+- (NSString *)stringForTlsCertPolicy:(RTC_OBJC_TYPE(RTCTlsCertPolicy))tlsCertPolicy {
   switch (tlsCertPolicy) {
-    case RTCTlsCertPolicySecure:
-      return @"RTCTlsCertPolicySecure";
-    case RTCTlsCertPolicyInsecureNoCheck:
-      return @"RTCTlsCertPolicyInsecureNoCheck";
+    case RTC_OBJC_TYPE(RTCTlsCertPolicySecure):
+      return @"TLS Secure Policy";
+    case RTC_OBJC_TYPE(RTCTlsCertPolicyInsecureNoCheck):
+      return @"TLS Insecure No Check Policy";
   }
 }
 
@@ -140,11 +142,11 @@
   }];
 
   switch (_tlsCertPolicy) {
-    case RTCTlsCertPolicySecure:
+    case RTC_OBJC_TYPE(RTCTlsCertPolicySecure):
       iceServer.tls_cert_policy =
           webrtc::PeerConnectionInterface::kTlsCertPolicySecure;
       break;
-    case RTCTlsCertPolicyInsecureNoCheck:
+    case RTC_OBJC_TYPE(RTCTlsCertPolicyInsecureNoCheck):
       iceServer.tls_cert_policy =
           webrtc::PeerConnectionInterface::kTlsCertPolicyInsecureNoCheck;
       break;
@@ -172,14 +174,14 @@
   for (auto const &curve : nativeServer.tls_elliptic_curves) {
     [tlsEllipticCurves addObject:[NSString stringForStdString:curve]];
   }
-  RTCTlsCertPolicy tlsCertPolicy;
+  RTC_OBJC_TYPE(RTCTlsCertPolicy) tlsCertPolicy;
 
   switch (nativeServer.tls_cert_policy) {
     case webrtc::PeerConnectionInterface::kTlsCertPolicySecure:
-      tlsCertPolicy = RTCTlsCertPolicySecure;
+      tlsCertPolicy = RTC_OBJC_TYPE(RTCTlsCertPolicySecure);
       break;
     case webrtc::PeerConnectionInterface::kTlsCertPolicyInsecureNoCheck:
-      tlsCertPolicy = RTCTlsCertPolicyInsecureNoCheck;
+      tlsCertPolicy = RTC_OBJC_TYPE(RTCTlsCertPolicyInsecureNoCheck);
       break;
   }
 

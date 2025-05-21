@@ -106,29 +106,29 @@
   return parameters;
 }
 
-+ (webrtc::Priority)nativePriorityFromPriority:(RTCPriority)networkPriority {
++ (webrtc::Priority)nativePriorityFromPriority:(RTC_OBJC_TYPE(RTCPriority))networkPriority {
   switch (networkPriority) {
-    case RTCPriorityVeryLow:
+    case RTC_OBJC_TYPE(RTCPriorityVeryLow):
       return webrtc::Priority::kVeryLow;
-    case RTCPriorityLow:
+    case RTC_OBJC_TYPE(RTCPriorityLow):
       return webrtc::Priority::kLow;
-    case RTCPriorityMedium:
+    case RTC_OBJC_TYPE(RTCPriorityMedium):
       return webrtc::Priority::kMedium;
-    case RTCPriorityHigh:
+    case RTC_OBJC_TYPE(RTCPriorityHigh):
       return webrtc::Priority::kHigh;
   }
 }
 
-+ (RTCPriority)priorityFromNativePriority:(webrtc::Priority)nativePriority {
++ (RTC_OBJC_TYPE(RTCPriority))priorityFromNativePriority:(webrtc::Priority)nativePriority {
   switch (nativePriority) {
     case webrtc::Priority::kVeryLow:
-      return RTCPriorityVeryLow;
+      return RTC_OBJC_TYPE(RTCPriorityVeryLow);
     case webrtc::Priority::kLow:
-      return RTCPriorityLow;
+      return RTC_OBJC_TYPE(RTCPriorityLow);
     case webrtc::Priority::kMedium:
-      return RTCPriorityMedium;
+      return RTC_OBJC_TYPE(RTCPriorityMedium);
     case webrtc::Priority::kHigh:
-      return RTCPriorityHigh;
+      return RTC_OBJC_TYPE(RTCPriorityHigh);
   }
 }
 

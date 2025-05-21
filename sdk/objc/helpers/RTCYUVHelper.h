@@ -32,7 +32,7 @@ RTC_OBJC_EXPORT
         dstStrideV:(int)dstStrideV
              width:(int)width
              height:(int)height
-              mode:(RTCVideoRotation)mode;
+              mode:(RTC_OBJC_TYPE(RTCVideoRotation))mode;
 
 + (int)I420ToNV12:(const uint8_t*)srcY
        srcStrideY:(int)srcStrideY

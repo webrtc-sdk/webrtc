@@ -19,7 +19,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface RTC_OBJC_TYPE(RTCIODevice) ()
 
-- (instancetype)initWithType:(RTCIODeviceType)type
+- (instancetype)initWithType:(RTC_OBJC_TYPE(RTCIODeviceType))type
                     deviceId:(NSString *)deviceId
                         name:(NSString* )name;
 

@@ -11,6 +11,7 @@
 #import <Foundation/Foundation.h>
 
 #import "RTCMacros.h"
+#import "RTCAudioDeviceModule.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -61,7 +62,8 @@ RTC_OBJC_EXPORT
 
 /* Initialize object with bypass voice processing */
 - (instancetype)
-    initWithBypassVoiceProcessing:(BOOL)bypassVoiceProcessing
+    initWithAudioDeviceModuleType:(RTC_OBJC_TYPE(RTCAudioDeviceModuleType))audioDeviceModuleType
+            bypassVoiceProcessing:(BOOL)bypassVoiceProcessing
                    encoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoEncoderFactory)>)encoderFactory
                    decoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoDecoderFactory)>)decoderFactory
             audioProcessingModule:

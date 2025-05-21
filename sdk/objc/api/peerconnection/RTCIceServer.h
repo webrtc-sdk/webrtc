@@ -13,8 +13,8 @@
 #import "RTCMacros.h"
 
 typedef NS_ENUM(NSUInteger, RTC_OBJC_TYPE(RTCTlsCertPolicy)) {
-  RTCTlsCertPolicySecure,
-  RTCTlsCertPolicyInsecureNoCheck
+  RTC_OBJC_TYPE(RTCTlsCertPolicySecure),
+  RTC_OBJC_TYPE(RTCTlsCertPolicyInsecureNoCheck)
 };
 
 NS_ASSUME_NONNULL_BEGIN

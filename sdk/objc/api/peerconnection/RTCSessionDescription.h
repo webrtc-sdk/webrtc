@@ -17,10 +17,10 @@
  * in C++, which doesn't include the rollback type that is in the W3C spec.
  */
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCSdpType)) {
-  RTCSdpTypeOffer,
-  RTCSdpTypePrAnswer,
-  RTCSdpTypeAnswer,
-  RTCSdpTypeRollback,
+  RTC_OBJC_TYPE(RTCSdpTypeOffer),
+  RTC_OBJC_TYPE(RTCSdpTypePrAnswer),
+  RTC_OBJC_TYPE(RTCSdpTypeAnswer),
+  RTC_OBJC_TYPE(RTCSdpTypeRollback),
 };
 
 NS_ASSUME_NONNULL_BEGIN

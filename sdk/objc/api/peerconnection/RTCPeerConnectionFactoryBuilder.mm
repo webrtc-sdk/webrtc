@@ -13,6 +13,7 @@
 
 #include "api/audio_codecs/audio_decoder_factory.h"
 #include "api/audio_codecs/audio_encoder_factory.h"
+#include "api/transport/network_control.h"
 #include "api/video_codecs/video_decoder_factory.h"
 #include "api/video_codecs/video_encoder_factory.h"
 #include "modules/audio_device/include/audio_device.h"
@@ -38,8 +39,10 @@
                           nativeAudioDecoderFactory:_audioDecoderFactory
                           nativeVideoEncoderFactory:std::move(_videoEncoderFactory)
                           nativeVideoDecoderFactory:std::move(_videoDecoderFactory)
-                                  audioDeviceModule:_audioDeviceModule.get()
+                                  audioDeviceModule:_audioDeviceModule
                               audioProcessingModule:_audioProcessingModule
+                           networkControllerFactory:nullptr
+                           audioDeviceModuleType:RTC_OBJC_TYPE(RTCAudioDeviceModuleTypePlatformDefault)
                               bypassVoiceProcessing:NO];
 }
 

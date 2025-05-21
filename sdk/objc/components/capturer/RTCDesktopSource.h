@@ -20,8 +20,8 @@
 #import "RTCMacros.h"
 
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCDesktopSourceType)) {
-  RTCDesktopSourceTypeScreen,
-  RTCDesktopSourceTypeWindow,
+  RTC_OBJC_TYPE(RTCDesktopSourceTypeScreen),
+  RTC_OBJC_TYPE(RTCDesktopSourceTypeWindow),
 };
 
 RTC_OBJC_EXPORT

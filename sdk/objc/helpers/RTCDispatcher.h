@@ -14,14 +14,14 @@
 
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCDispatcherQueueType)) {
   // Main dispatcher queue.
-  RTCDispatcherTypeMain,
+  RTC_OBJC_TYPE(RTCDispatcherTypeMain),
   // Used for starting/stopping AVCaptureSession, and assigning
   // capture session to AVCaptureVideoPreviewLayer.
-  RTCDispatcherTypeCaptureSession,
+  RTC_OBJC_TYPE(RTCDispatcherTypeCaptureSession),
   // Used for operations on AVAudioSession.
-  RTCDispatcherTypeAudioSession,
+  RTC_OBJC_TYPE(RTCDispatcherTypeAudioSession),
   // Used for operations on NWPathMonitor.
-  RTCDispatcherTypeNetworkMonitor,
+  RTC_OBJC_TYPE(RTCDispatcherTypeNetworkMonitor),
 };
 
 /** Dispatcher that asynchronously dispatches blocks to a specific

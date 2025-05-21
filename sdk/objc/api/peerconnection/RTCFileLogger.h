@@ -13,15 +13,15 @@
 #import "RTCMacros.h"
 
 typedef NS_ENUM(NSUInteger, RTC_OBJC_TYPE(RTCFileLoggerSeverity)) {
-  RTCFileLoggerSeverityVerbose,
-  RTCFileLoggerSeverityInfo,
-  RTCFileLoggerSeverityWarning,
-  RTCFileLoggerSeverityError
+  RTC_OBJC_TYPE(RTCFileLoggerSeverityVerbose),
+  RTC_OBJC_TYPE(RTCFileLoggerSeverityInfo),
+  RTC_OBJC_TYPE(RTCFileLoggerSeverityWarning),
+  RTC_OBJC_TYPE(RTCFileLoggerSeverityError)
 };
 
 typedef NS_ENUM(NSUInteger, RTC_OBJC_TYPE(RTCFileLoggerRotationType)) {
-  RTCFileLoggerTypeCall,
-  RTCFileLoggerTypeApp,
+  RTC_OBJC_TYPE(RTCFileLoggerTypeCall),
+  RTC_OBJC_TYPE(RTCFileLoggerTypeApp),
 };
 
 NS_ASSUME_NONNULL_BEGIN

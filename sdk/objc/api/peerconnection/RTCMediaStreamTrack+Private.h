@@ -13,8 +13,8 @@
 #include "api/media_stream_interface.h"
 
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCMediaStreamTrackType)) {
-  RTCMediaStreamTrackTypeAudio,
-  RTCMediaStreamTrackTypeVideo,
+  RTC_OBJC_TYPE(RTCMediaStreamTrackTypeAudio),
+  RTC_OBJC_TYPE(RTCMediaStreamTrackTypeVideo),
 };
 
 NS_ASSUME_NONNULL_BEGIN

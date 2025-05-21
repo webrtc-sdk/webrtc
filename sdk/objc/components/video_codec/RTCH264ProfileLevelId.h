@@ -20,31 +20,31 @@ RTC_OBJC_EXPORT extern NSString *const kRTCMaxSupportedH264ProfileLevelConstrain
 
 /** H264 Profiles and levels. */
 typedef NS_ENUM(NSUInteger, RTC_OBJC_TYPE(RTCH264Profile)) {
-  RTCH264ProfileConstrainedBaseline,
-  RTCH264ProfileBaseline,
-  RTCH264ProfileMain,
-  RTCH264ProfileConstrainedHigh,
-  RTCH264ProfileHigh,
+  RTC_OBJC_TYPE(RTCH264ProfileConstrainedBaseline),
+  RTC_OBJC_TYPE(RTCH264ProfileBaseline),
+  RTC_OBJC_TYPE(RTCH264ProfileMain),
+  RTC_OBJC_TYPE(RTCH264ProfileConstrainedHigh),
+  RTC_OBJC_TYPE(RTCH264ProfileHigh),
 };
 
 typedef NS_ENUM(NSUInteger, RTC_OBJC_TYPE(RTCH264Level)) {
-  RTCH264Level1_b = 0,
-  RTCH264Level1 = 10,
-  RTCH264Level1_1 = 11,
-  RTCH264Level1_2 = 12,
-  RTCH264Level1_3 = 13,
-  RTCH264Level2 = 20,
-  RTCH264Level2_1 = 21,
-  RTCH264Level2_2 = 22,
-  RTCH264Level3 = 30,
-  RTCH264Level3_1 = 31,
-  RTCH264Level3_2 = 32,
-  RTCH264Level4 = 40,
-  RTCH264Level4_1 = 41,
-  RTCH264Level4_2 = 42,
-  RTCH264Level5 = 50,
-  RTCH264Level5_1 = 51,
-  RTCH264Level5_2 = 52
+  RTC_OBJC_TYPE(RTCH264Level1_b) = 0,
+  RTC_OBJC_TYPE(RTCH264Level1) = 10,
+  RTC_OBJC_TYPE(RTCH264Level1_1) = 11,
+  RTC_OBJC_TYPE(RTCH264Level1_2) = 12,
+  RTC_OBJC_TYPE(RTCH264Level1_3) = 13,
+  RTC_OBJC_TYPE(RTCH264Level2) = 20,
+  RTC_OBJC_TYPE(RTCH264Level2_1) = 21,
+  RTC_OBJC_TYPE(RTCH264Level2_2) = 22,
+  RTC_OBJC_TYPE(RTCH264Level3) = 30,
+  RTC_OBJC_TYPE(RTCH264Level3_1) = 31,
+  RTC_OBJC_TYPE(RTCH264Level3_2) = 32,
+  RTC_OBJC_TYPE(RTCH264Level4) = 40,
+  RTC_OBJC_TYPE(RTCH264Level4_1) = 41,
+  RTC_OBJC_TYPE(RTCH264Level4_2) = 42,
+  RTC_OBJC_TYPE(RTCH264Level5) = 50,
+  RTC_OBJC_TYPE(RTCH264Level5_1) = 51,
+  RTC_OBJC_TYPE(RTCH264Level5_2) = 52
 };
 
 RTC_OBJC_EXPORT

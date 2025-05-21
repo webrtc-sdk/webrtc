@@ -16,8 +16,8 @@
  * Represents the state of the track. This exposes the same states in C++.
  */
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCMediaStreamTrackState)) {
-  RTCMediaStreamTrackStateLive,
-  RTCMediaStreamTrackStateEnded
+  RTC_OBJC_TYPE(RTCMediaStreamTrackStateLive),
+  RTC_OBJC_TYPE(RTCMediaStreamTrackStateEnded)
 };
 
 NS_ASSUME_NONNULL_BEGIN

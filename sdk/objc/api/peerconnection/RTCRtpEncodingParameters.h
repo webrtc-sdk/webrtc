@@ -16,10 +16,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 /** Corresponds to webrtc::Priority. */
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCPriority)) {
-  RTCPriorityVeryLow,
-  RTCPriorityLow,
-  RTCPriorityMedium,
-  RTCPriorityHigh
+  RTC_OBJC_TYPE(RTCPriorityVeryLow),
+  RTC_OBJC_TYPE(RTCPriorityLow),
+  RTC_OBJC_TYPE(RTCPriorityMedium),
+  RTC_OBJC_TYPE(RTCPriorityHigh)
 };
 
 RTC_OBJC_EXPORT
