@@ -30,14 +30,14 @@ typedef NS_ENUM(NSUInteger, RTC_OBJC_TYPE(RTCCryptorAlgorithm)) {
   RTC_OBJC_TYPE(RTCCryptorAlgorithmAesGcm) = 0,
 };
 
-typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(FrameCryptionState)) {
-  RTC_OBJC_TYPE(FrameCryptionStateNew) = 0,
-  RTC_OBJC_TYPE(FrameCryptionStateOk),
-  RTC_OBJC_TYPE(FrameCryptionStateEncryptionFailed),
-  RTC_OBJC_TYPE(FrameCryptionStateDecryptionFailed),
-  RTC_OBJC_TYPE(FrameCryptionStateMissingKey),
-  RTC_OBJC_TYPE(FrameCryptionStateKeyRatcheted),
-  RTC_OBJC_TYPE(FrameCryptionStateInternalError),
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCFrameCryptorState)) {
+  RTC_OBJC_TYPE(RTCFrameCryptorStateNew) = 0,
+  RTC_OBJC_TYPE(RTCFrameCryptorStateOk),
+  RTC_OBJC_TYPE(RTCFrameCryptorStateEncryptionFailed),
+  RTC_OBJC_TYPE(RTCFrameCryptorStateDecryptionFailed),
+  RTC_OBJC_TYPE(RTCFrameCryptorStateMissingKey),
+  RTC_OBJC_TYPE(RTCFrameCryptorStateKeyRatcheted),
+  RTC_OBJC_TYPE(RTCFrameCryptorStateInternalError),
 };
 
 RTC_OBJC_EXPORT
@@ -46,7 +46,7 @@ RTC_OBJC_EXPORT
     /** Called when the RTCFrameCryptor got errors. */
     - (void)frameCryptor
     : (RTC_OBJC_TYPE(RTCFrameCryptor) *)frameCryptor didStateChangeWithParticipantId
-    : (NSString *)participantId withState : (RTC_OBJC_TYPE(FrameCryptionState))stateChanged;
+    : (NSString *)participantId withState : (RTC_OBJC_TYPE(RTCFrameCryptorState))stateChanged;
 @end
 
 RTC_OBJC_EXPORT

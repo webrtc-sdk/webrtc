@@ -54,37 +54,37 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
       case FrameCryptionState::kNew:
         [frameCryptor.delegate frameCryptor:frameCryptor
             didStateChangeWithParticipantId:[NSString stringForStdString:participant_id]
-                                  withState:RTC_OBJC_TYPE(FrameCryptionStateNew)];
+                                  withState:RTC_OBJC_TYPE(RTCFrameCryptorStateNew)];
         break;
       case FrameCryptionState::kOk:
         [frameCryptor.delegate frameCryptor:frameCryptor
             didStateChangeWithParticipantId:[NSString stringForStdString:participant_id]
-                                  withState:RTC_OBJC_TYPE(FrameCryptionStateOk)];
+                                  withState:RTC_OBJC_TYPE(RTCFrameCryptorStateOk)];
         break;
       case FrameCryptionState::kEncryptionFailed:
         [frameCryptor.delegate frameCryptor:frameCryptor
             didStateChangeWithParticipantId:[NSString stringForStdString:participant_id]
-                                  withState:RTC_OBJC_TYPE(FrameCryptionStateEncryptionFailed)];
+                                  withState:RTC_OBJC_TYPE(RTCFrameCryptorStateEncryptionFailed)];
         break;
       case FrameCryptionState::kDecryptionFailed:
         [frameCryptor.delegate frameCryptor:frameCryptor
             didStateChangeWithParticipantId:[NSString stringForStdString:participant_id]
-                                  withState:RTC_OBJC_TYPE(FrameCryptionStateDecryptionFailed)];
+                                  withState:RTC_OBJC_TYPE(RTCFrameCryptorStateDecryptionFailed)];
         break;
       case FrameCryptionState::kMissingKey:
         [frameCryptor.delegate frameCryptor:frameCryptor
             didStateChangeWithParticipantId:[NSString stringForStdString:participant_id]
-                                  withState:RTC_OBJC_TYPE(FrameCryptionStateMissingKey)];
+                                  withState:RTC_OBJC_TYPE(RTCFrameCryptorStateMissingKey)];
         break;
       case FrameCryptionState::kKeyRatcheted:
         [frameCryptor.delegate frameCryptor:frameCryptor
             didStateChangeWithParticipantId:[NSString stringForStdString:participant_id]
-                                  withState:RTC_OBJC_TYPE(FrameCryptionStateKeyRatcheted)];
+                                  withState:RTC_OBJC_TYPE(RTCFrameCryptorStateKeyRatcheted)];
         break;
       case FrameCryptionState::kInternalError:
         [frameCryptor.delegate frameCryptor:frameCryptor
             didStateChangeWithParticipantId:[NSString stringForStdString:participant_id]
-                                  withState:RTC_OBJC_TYPE(FrameCryptionStateInternalError)];
+                                  withState:RTC_OBJC_TYPE(RTCFrameCryptorStateInternalError)];
         break;
     }
   }
