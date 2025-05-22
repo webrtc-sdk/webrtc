@@ -26,8 +26,7 @@ NS_ASSUME_NONNULL_BEGIN
 @class RTC_OBJC_TYPE(RTCDesktopCapturer);
 
 RTC_OBJC_EXPORT
-@protocol RTC_OBJC_TYPE
-(RTCDesktopCapturerDelegate)<NSObject>
+@protocol RTC_OBJC_TYPE(RTCDesktopCapturerDelegate)<NSObject>
 -(void)didSourceCaptureStart:(RTC_OBJC_TYPE(RTCDesktopCapturer) *) capturer;
 
 -(void)didSourceCapturePaused:(RTC_OBJC_TYPE(RTCDesktopCapturer) *) capturer;
