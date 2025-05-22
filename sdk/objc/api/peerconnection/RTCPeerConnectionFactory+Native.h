@@ -9,7 +9,6 @@
  */
 
 #import "RTCPeerConnectionFactory.h"
-#import "RTCAudioDeviceModule.h"
 
 #include "api/scoped_refptr.h"
 
@@ -49,14 +48,26 @@ NS_ASSUME_NONNULL_BEGIN
                         nativeVideoDecoderFactory:
                             (std::unique_ptr<webrtc::VideoDecoderFactory>)videoDecoderFactory
                                 audioDeviceModule:
-                                    (rtc::scoped_refptr<webrtc::AudioDeviceModule>)audioDeviceModule
+                                    (nullable webrtc::AudioDeviceModule *)audioDeviceModule
                             audioProcessingModule:
                                 (rtc::scoped_refptr<webrtc::AudioProcessing>)audioProcessingModule
-                         networkControllerFactory:
-                             (std::unique_ptr<webrtc::NetworkControllerFactoryInterface>)
-                                 networkControllerFactory
-                            audioDeviceModuleType:(RTC_OBJC_TYPE(RTCAudioDeviceModuleType))audioDeviceModuleType
                             bypassVoiceProcessing:(BOOL)bypassVoiceProcessing;
+
+- (instancetype)
+    initWithNativeAudioEncoderFactory:
+        (rtc::scoped_refptr<webrtc::AudioEncoderFactory>)audioEncoderFactory
+            nativeAudioDecoderFactory:
+                (rtc::scoped_refptr<webrtc::AudioDecoderFactory>)audioDecoderFactory
+            nativeVideoEncoderFactory:
+                (std::unique_ptr<webrtc::VideoEncoderFactory>)videoEncoderFactory
+            nativeVideoDecoderFactory:
+                (std::unique_ptr<webrtc::VideoDecoderFactory>)videoDecoderFactory
+                    audioDeviceModule:(nullable webrtc::AudioDeviceModule *)audioDeviceModule
+                audioProcessingModule:
+                    (rtc::scoped_refptr<webrtc::AudioProcessing>)audioProcessingModule
+             networkControllerFactory:(std::unique_ptr<webrtc::NetworkControllerFactoryInterface>)
+                                          networkControllerFactory
+                bypassVoiceProcessing:(BOOL)bypassVoiceProcessing;
 
 - (instancetype)
     initWithEncoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoEncoderFactory)>)encoderFactory

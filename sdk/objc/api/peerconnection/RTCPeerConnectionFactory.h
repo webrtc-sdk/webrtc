@@ -11,7 +11,6 @@
 #import <Foundation/Foundation.h>
 
 #import "RTCMacros.h"
-#import "RTCAudioDeviceModule.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -28,7 +27,7 @@ NS_ASSUME_NONNULL_BEGIN
 @class RTC_OBJC_TYPE(RTCAudioDeviceModule);
 @class RTC_OBJC_TYPE(RTCRtpCapabilities);
 
-typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCRtpMediaType));
+typedef NS_ENUM(NSInteger, RTCRtpMediaType);
 
 @protocol RTC_OBJC_TYPE
 (RTCPeerConnectionDelegate);
@@ -62,8 +61,7 @@ RTC_OBJC_EXPORT
 
 /* Initialize object with bypass voice processing */
 - (instancetype)
-    initWithAudioDeviceModuleType:(RTC_OBJC_TYPE(RTCAudioDeviceModuleType))audioDeviceModuleType
-            bypassVoiceProcessing:(BOOL)bypassVoiceProcessing
+    initWithBypassVoiceProcessing:(BOOL)bypassVoiceProcessing
                    encoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoEncoderFactory)>)encoderFactory
                    decoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoDecoderFactory)>)decoderFactory
             audioProcessingModule:
