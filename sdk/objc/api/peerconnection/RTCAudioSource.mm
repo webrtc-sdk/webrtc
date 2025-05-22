@@ -23,6 +23,7 @@
                   (rtc::scoped_refptr<webrtc::AudioSourceInterface>)nativeAudioSource {
   RTC_DCHECK(factory);
   RTC_DCHECK(nativeAudioSource);
+
   if (self = [super initWithFactory:factory
                   nativeMediaSource:nativeAudioSource
                                type:RTC_OBJC_TYPE(RTCMediaSourceTypeAudio)]) {

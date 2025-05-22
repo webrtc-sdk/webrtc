@@ -52,7 +52,7 @@
                           username:(NSString *)username
                         credential:(NSString *)credential
                      tlsCertPolicy:(RTC_OBJC_TYPE(RTCTlsCertPolicy))tlsCertPolicy
-                         hostname:(NSString *)hostname {
+                          hostname:(NSString *)hostname {
   return [self initWithURLStrings:urlStrings
                          username:username
                        credential:credential
@@ -67,7 +67,6 @@
                      tlsCertPolicy:(RTC_OBJC_TYPE(RTCTlsCertPolicy))tlsCertPolicy
                           hostname:(NSString *)hostname
                   tlsAlpnProtocols:(NSArray<NSString *> *)tlsAlpnProtocols {
-
   return [self initWithURLStrings:urlStrings
                          username:username
                        credential:credential
@@ -84,7 +83,6 @@
                           hostname:(NSString *)hostname
                   tlsAlpnProtocols:(NSArray<NSString *> *)tlsAlpnProtocols
                  tlsEllipticCurves:(NSArray<NSString *> *)tlsEllipticCurves {
-
   NSParameterAssert(urlStrings.count);
   if (self = [super init]) {
     _urlStrings = [[NSArray alloc] initWithArray:urlStrings copyItems:YES];
@@ -114,9 +112,9 @@
 - (NSString *)stringForTlsCertPolicy:(RTC_OBJC_TYPE(RTCTlsCertPolicy))tlsCertPolicy {
   switch (tlsCertPolicy) {
     case RTC_OBJC_TYPE(RTCTlsCertPolicySecure):
-      return @"TLS Secure Policy";
+      return @"RTCTlsCertPolicySecure";
     case RTC_OBJC_TYPE(RTCTlsCertPolicyInsecureNoCheck):
-      return @"TLS Insecure No Check Policy";
+      return @"RTCTlsCertPolicyInsecureNoCheck";
   }
 }
 

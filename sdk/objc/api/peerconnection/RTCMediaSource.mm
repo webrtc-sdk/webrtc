@@ -25,6 +25,7 @@
   RTC_DCHECK(factory);
   RTC_DCHECK(nativeMediaSource);
   if (self = [super init]) {
+    _factory = factory;
     _nativeMediaSource = nativeMediaSource;
     _type = type;
   }

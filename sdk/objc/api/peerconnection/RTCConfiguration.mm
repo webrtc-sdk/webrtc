@@ -355,10 +355,10 @@
   switch (policy) {
     case RTC_OBJC_TYPE(RTCBundlePolicyBalanced):
       return webrtc::PeerConnectionInterface::kBundlePolicyBalanced;
-    case RTC_OBJC_TYPE(RTCBundlePolicyMaxBundle):
-      return webrtc::PeerConnectionInterface::kBundlePolicyMaxBundle;
     case RTC_OBJC_TYPE(RTCBundlePolicyMaxCompat):
       return webrtc::PeerConnectionInterface::kBundlePolicyMaxCompat;
+    case RTC_OBJC_TYPE(RTCBundlePolicyMaxBundle):
+      return webrtc::PeerConnectionInterface::kBundlePolicyMaxBundle;
   }
 }
 
@@ -367,10 +367,10 @@
   switch (nativePolicy) {
     case webrtc::PeerConnectionInterface::kBundlePolicyBalanced:
       return RTC_OBJC_TYPE(RTCBundlePolicyBalanced);
-    case webrtc::PeerConnectionInterface::kBundlePolicyMaxBundle:
-      return RTC_OBJC_TYPE(RTCBundlePolicyMaxBundle);
     case webrtc::PeerConnectionInterface::kBundlePolicyMaxCompat:
       return RTC_OBJC_TYPE(RTCBundlePolicyMaxCompat);
+    case webrtc::PeerConnectionInterface::kBundlePolicyMaxBundle:
+      return RTC_OBJC_TYPE(RTCBundlePolicyMaxBundle);
   }
 }
 
