@@ -30,12 +30,12 @@ rtc::LoggingSeverity RTC_OBJC_TYPE(RTCGetNativeLoggingSeverity)(RTC_OBJC_TYPE(RT
 void RTC_OBJC_TYPE(RTCLogEx)(RTC_OBJC_TYPE(RTCLoggingSeverity) severity, NSString* log_string) {
   if (log_string.length) {
     const char* utf8_string = log_string.UTF8String;
-    RTC_LOG_V(RTCGetNativeLoggingSeverity(severity)) << utf8_string;
+    RTC_LOG_V(RTC_OBJC_TYPE(RTCGetNativeLoggingSeverity)(severity)) << utf8_string;
   }
 }
 
 void RTC_OBJC_TYPE(RTCSetMinDebugLogLevel)(RTC_OBJC_TYPE(RTCLoggingSeverity) severity) {
-  rtc::LogMessage::LogToDebug(RTCGetNativeLoggingSeverity(severity));
+  rtc::LogMessage::LogToDebug(RTC_OBJC_TYPE(RTCGetNativeLoggingSeverity)(severity));
 }
 
 NSString* RTC_OBJC_TYPE(RTCFileName)(const char* file_path) {

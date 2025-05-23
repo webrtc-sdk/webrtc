@@ -34,17 +34,17 @@ RTC_EXTERN NSString* RTC_OBJC_TYPE(RTCFileName)(const char* filePath);
 
 // Some convenience macros.
 
-#define RTCLogString(format, ...)                    \
-  [NSString stringWithFormat:@"(%@:%d %s): " format, \
-                             RTCFileName(__FILE__),  \
-                             __LINE__,               \
-                             __FUNCTION__,           \
+#define RTCLogString(format, ...)                                  \
+  [NSString stringWithFormat:@"(%@:%d %s): " format,               \
+                             RTC_OBJC_TYPE(RTCFileName)(__FILE__), \
+                             __LINE__,                             \
+                             __FUNCTION__,                         \
                              ##__VA_ARGS__]
 
 #define RTCLogFormat(severity, format, ...)                     \
   do {                                                          \
     NSString* log_string = RTCLogString(format, ##__VA_ARGS__); \
-    RTCLogEx(severity, log_string);                             \
+    RTC_OBJC_TYPE(RTCLogEx)(severity, log_string);              \
   } while (false)
 
 #define RTCLogVerbose(format, ...) RTCLogFormat(RTC_OBJC_TYPE(RTCLoggingSeverityVerbose), format, ##__VA_ARGS__)
