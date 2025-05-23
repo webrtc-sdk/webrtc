@@ -23,14 +23,14 @@ typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCLoggingSeverity)) {
 
 // Wrapper for C++ RTC_LOG(sev) macros.
 // Logs the log string to the webrtc logstream for the given severity.
-RTC_EXTERN void RTCLogEx(RTC_OBJC_TYPE(RTCLoggingSeverity) severity, NSString* log_string);
+RTC_EXTERN void RTC_OBJC_TYPE(RTCLogEx)(RTC_OBJC_TYPE(RTCLoggingSeverity) severity, NSString* log_string);
 
 // Wrapper for rtc::LogMessage::LogToDebug.
 // Sets the minimum severity to be logged to console.
-RTC_EXTERN void RTCSetMinDebugLogLevel(RTC_OBJC_TYPE(RTCLoggingSeverity) severity);
+RTC_EXTERN void RTC_OBJC_TYPE(RTCSetMinDebugLogLevel)(RTC_OBJC_TYPE(RTCLoggingSeverity) severity);
 
 // Returns the filename with the path prefix removed.
-RTC_EXTERN NSString* RTCFileName(const char* filePath);
+RTC_EXTERN NSString* RTC_OBJC_TYPE(RTCFileName)(const char* filePath);
 
 // Some convenience macros.
 

@@ -12,7 +12,7 @@
 
 #include "rtc_base/logging.h"
 
-rtc::LoggingSeverity RTCGetNativeLoggingSeverity(RTC_OBJC_TYPE(RTCLoggingSeverity) severity) {
+rtc::LoggingSeverity RTC_OBJC_TYPE(RTCGetNativeLoggingSeverity)(RTC_OBJC_TYPE(RTCLoggingSeverity) severity) {
   switch (severity) {
     case RTC_OBJC_TYPE(RTCLoggingSeverityVerbose):
       return rtc::LS_VERBOSE;
@@ -27,18 +27,18 @@ rtc::LoggingSeverity RTCGetNativeLoggingSeverity(RTC_OBJC_TYPE(RTCLoggingSeverit
   }
 }
 
-void RTCLogEx(RTC_OBJC_TYPE(RTCLoggingSeverity) severity, NSString* log_string) {
+void RTC_OBJC_TYPE(RTCLogEx)(RTC_OBJC_TYPE(RTCLoggingSeverity) severity, NSString* log_string) {
   if (log_string.length) {
     const char* utf8_string = log_string.UTF8String;
     RTC_LOG_V(RTCGetNativeLoggingSeverity(severity)) << utf8_string;
   }
 }
 
-void RTCSetMinDebugLogLevel(RTC_OBJC_TYPE(RTCLoggingSeverity) severity) {
+void RTC_OBJC_TYPE(RTCSetMinDebugLogLevel)(RTC_OBJC_TYPE(RTCLoggingSeverity) severity) {
   rtc::LogMessage::LogToDebug(RTCGetNativeLoggingSeverity(severity));
 }
 
-NSString* RTCFileName(const char* file_path) {
+NSString* RTC_OBJC_TYPE(RTCFileName)(const char* file_path) {
   NSString* ns_file_path =
       [[NSString alloc] initWithBytesNoCopy:const_cast<char*>(file_path)
                                      length:strlen(file_path)
