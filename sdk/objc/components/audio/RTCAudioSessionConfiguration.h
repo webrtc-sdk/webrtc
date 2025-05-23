@@ -15,9 +15,9 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-RTC_EXTERN const int kRTCAudioSessionPreferredNumberOfChannels;
-RTC_EXTERN const double kRTCAudioSessionHighPerformanceSampleRate;
-RTC_EXTERN const double kRTCAudioSessionHighPerformanceIOBufferDuration;
+RTC_EXTERN const int RTC_CONSTANT_TYPE(RTCAudioSessionPreferredNumberOfChannels);
+RTC_EXTERN const double RTC_CONSTANT_TYPE(RTCAudioSessionHighPerformanceSampleRate);
+RTC_EXTERN const double RTC_CONSTANT_TYPE(RTCAudioSessionHighPerformanceIOBufferDuration);
 
 // Struct to hold configuration values.
 RTC_OBJC_EXPORT

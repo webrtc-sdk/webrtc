@@ -19,7 +19,7 @@
 
 NSString *const kDefaultLogDirName = @"webrtc_logs";
 NSUInteger const kDefaultMaxFileSize = 10 * 1024 * 1024; // 10MB.
-const char *kRTCFileLoggerRotatingLogPrefix = "rotating_log";
+const char * RTC_CONSTANT_TYPE(RTCFileLoggerRotatingLogPrefix) = "rotating_log";
 
 @implementation RTC_OBJC_TYPE (RTCFileLogger) {
   BOOL _hasStarted;
@@ -90,7 +90,7 @@ const char *kRTCFileLoggerRotatingLogPrefix = "rotating_log";
     case RTC_OBJC_TYPE(RTCFileLoggerTypeApp):
       _logSink.reset(
           new rtc::FileRotatingLogSink(_dirPath.UTF8String,
-                                       kRTCFileLoggerRotatingLogPrefix,
+                                       RTC_CONSTANT_TYPE(RTCFileLoggerRotatingLogPrefix),
                                        _maxFileSize,
                                        _maxFileSize / 10));
       break;
@@ -133,7 +133,7 @@ const char *kRTCFileLoggerRotatingLogPrefix = "rotating_log";
   switch(_rotationType) {
     case RTC_OBJC_TYPE(RTCFileLoggerTypeApp):
       stream = std::make_unique<rtc::FileRotatingStreamReader>(_dirPath.UTF8String,
-                                                               kRTCFileLoggerRotatingLogPrefix);
+                                                               RTC_CONSTANT_TYPE(RTCFileLoggerRotatingLogPrefix));
       break;
     case RTC_OBJC_TYPE(RTCFileLoggerTypeCall):
       stream = std::make_unique<rtc::CallSessionFileRotatingStreamReader>(_dirPath.UTF8String);

@@ -15,11 +15,11 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-extern NSString *const kRTCAudioSessionErrorDomain;
+extern NSString *const RTC_CONSTANT_TYPE(RTCAudioSessionErrorDomain);
 /** Method that requires lock was called without lock. */
-extern NSInteger const kRTCAudioSessionErrorLockRequired;
+extern NSInteger const RTC_CONSTANT_TYPE(RTCAudioSessionErrorLockRequired);
 /** Unknown configuration error occurred. */
-extern NSInteger const kRTCAudioSessionErrorConfiguration;
+extern NSInteger const RTC_CONSTANT_TYPE(RTCAudioSessionErrorConfiguration);
 
 @class RTC_OBJC_TYPE(RTCAudioSession);
 @class RTC_OBJC_TYPE(RTCAudioSessionConfiguration);

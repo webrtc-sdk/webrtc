@@ -15,7 +15,7 @@
 #import "components/video_frame_buffer/RTCCVPixelBuffer.h"
 #include "rtc_base/system/gcd_helpers.h"
 
-NSString *const kRTCFileVideoCapturerErrorDomain =
+NSString *const RTC_CONSTANT_TYPE(RTCFileVideoCapturerErrorDomain) =
     @"org.webrtc.RTC_OBJC_TYPE(RTCFileVideoCapturer)";
 
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCFileVideoCapturerErrorCode)) {
@@ -48,7 +48,7 @@ typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCFileVideoCapturerStatus)) {
                             onError:(RTCFileVideoCapturerErrorBlock)errorBlock {
   if (_status == RTC_OBJC_TYPE(RTCFileVideoCapturerStatusStarted)) {
     NSError *error =
-        [NSError errorWithDomain:kRTCFileVideoCapturerErrorDomain
+        [NSError errorWithDomain:RTC_CONSTANT_TYPE(RTCFileVideoCapturerErrorDomain)
                             code:RTC_OBJC_TYPE(RTCFileVideoCapturerErrorCode_CapturerRunning)
                         userInfo:@{NSUnderlyingErrorKey : @"Capturer has been started."}];
 
@@ -63,7 +63,7 @@ typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCFileVideoCapturerStatus)) {
     if (!pathForFile) {
       NSString *errorString =
           [NSString stringWithFormat:@"File %@ not found in bundle", nameOfFile];
-      NSError *error = [NSError errorWithDomain:kRTCFileVideoCapturerErrorDomain
+      NSError *error = [NSError errorWithDomain:RTC_CONSTANT_TYPE(RTCFileVideoCapturerErrorDomain)
                                            code:RTC_OBJC_TYPE(RTCFileVideoCapturerErrorCode_FileNotFound)
                                        userInfo:@{NSUnderlyingErrorKey : errorString}];
       errorBlock(error);

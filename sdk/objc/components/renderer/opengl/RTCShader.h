@@ -10,7 +10,7 @@
 
 #import "base/RTCVideoFrame.h"
 
-RTC_EXTERN const char kRTCVertexShaderSource[];
+RTC_EXTERN const char RTC_CONSTANT_TYPE(RTCVertexShaderSource)[];
 
 RTC_EXTERN GLuint RTC_OBJC_TYPE(RTCCreateShader)(GLenum type, const GLchar* source);
 RTC_EXTERN GLuint RTC_OBJC_TYPE(RTCCreateProgram)(GLuint vertexShader, GLuint fragmentShader);

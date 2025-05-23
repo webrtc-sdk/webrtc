@@ -26,12 +26,12 @@ NSString *MaxSupportedProfileLevelConstrainedBaseline();
 
 }  // namespace
 
-NSString *const kRTCVideoCodecH264Name = @(cricket::kH264CodecName);
-NSString *const kRTCLevel31ConstrainedHigh = @"640c1f";
-NSString *const kRTCLevel31ConstrainedBaseline = @"42e01f";
-NSString *const kRTCMaxSupportedH264ProfileLevelConstrainedHigh =
+NSString *const RTC_CONSTANT_TYPE(RTCVideoCodecH264Name) = @(cricket::kH264CodecName);
+NSString *const RTC_CONSTANT_TYPE(RTCLevel31ConstrainedHigh) = @"640c1f";
+NSString *const RTC_CONSTANT_TYPE(RTCLevel31ConstrainedBaseline) = @"42e01f";
+NSString *const RTC_CONSTANT_TYPE(RTCMaxSupportedH264ProfileLevelConstrainedHigh) =
     MaxSupportedProfileLevelConstrainedHigh();
-NSString *const kRTCMaxSupportedH264ProfileLevelConstrainedBaseline =
+NSString *const RTC_CONSTANT_TYPE(RTCMaxSupportedH264ProfileLevelConstrainedBaseline) =
     MaxSupportedProfileLevelConstrainedBaseline();
 
 namespace {
@@ -59,7 +59,7 @@ NSString *MaxSupportedProfileLevelConstrainedBaseline() {
     return profile;
   }
 #endif
-  return kRTCLevel31ConstrainedBaseline;
+  return RTC_CONSTANT_TYPE(RTCLevel31ConstrainedBaseline);
 }
 
 NSString *MaxSupportedProfileLevelConstrainedHigh() {
@@ -69,7 +69,7 @@ NSString *MaxSupportedProfileLevelConstrainedHigh() {
     return profile;
   }
 #endif
-  return kRTCLevel31ConstrainedHigh;
+  return RTC_CONSTANT_TYPE(RTCLevel31ConstrainedHigh);
 }
 
 }  // namespace

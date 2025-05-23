@@ -36,8 +36,8 @@
 #include "rtc_base/numerics/safe_conversions.h"
 #include "sdk/objc/native/api/ssl_certificate_verifier.h"
 
-NSString *const kRTCPeerConnectionErrorDomain = @"org.webrtc.RTC_OBJC_TYPE(RTCPeerConnection)";
-int const kRTCPeerConnnectionSessionDescriptionError = -1;
+NSString *const RTC_CONSTANT_TYPE(RTCPeerConnectionErrorDomain) = @"org.webrtc.RTC_OBJC_TYPE(RTCPeerConnection)";
+int const RTC_CONSTANT_TYPE(RTCPeerConnnectionSessionDescriptionError) = -1;
 
 namespace {
 
@@ -64,8 +64,8 @@ class SetSessionDescriptionObserver : public webrtc::SetLocalDescriptionObserver
     } else {
       // TODO(hta): Add handling of error.type()
       NSString *str = [NSString stringForStdString:error.message()];
-      NSError *err = [NSError errorWithDomain:kRTCPeerConnectionErrorDomain
-                                         code:kRTCPeerConnnectionSessionDescriptionError
+      NSError *err = [NSError errorWithDomain:RTC_CONSTANT_TYPE(RTCPeerConnectionErrorDomain)
+                                         code:RTC_CONSTANT_TYPE(RTCPeerConnnectionSessionDescriptionError)
                                      userInfo:@{NSLocalizedDescriptionKey : str}];
       completion_handler_(err);
     }
@@ -103,8 +103,8 @@ class CreateSessionDescriptionObserverAdapter
     // TODO(hta): Add handling of error.type()
     NSString *str = [NSString stringForStdString:error.message()];
     NSError* err =
-        [NSError errorWithDomain:kRTCPeerConnectionErrorDomain
-                            code:kRTCPeerConnnectionSessionDescriptionError
+        [NSError errorWithDomain:RTC_CONSTANT_TYPE(RTCPeerConnectionErrorDomain)
+                            code:RTC_CONSTANT_TYPE(RTCPeerConnnectionSessionDescriptionError)
                         userInfo:@{ NSLocalizedDescriptionKey : str }];
     completion_handler_(nil, err);
     completion_handler_ = nil;
@@ -460,7 +460,7 @@ void PeerConnectionDelegateAdapter::OnRemoveTrack(
           completionHandler(nil);
         } else {
           NSString *str = [NSString stringForStdString:error.message()];
-          NSError *err = [NSError errorWithDomain:kRTCPeerConnectionErrorDomain
+          NSError *err = [NSError errorWithDomain:RTC_CONSTANT_TYPE(RTCPeerConnectionErrorDomain)
                                              code:static_cast<NSInteger>(error.type())
                                          userInfo:@{NSLocalizedDescriptionKey : str}];
           completionHandler(err);

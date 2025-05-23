@@ -392,7 +392,7 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
     RTC_LOG(LS_INFO) << "Using profile "
                      << CFStringToString(ExtractProfile(
                             *_profile_level_id, _codecMode == RTC_OBJC_TYPE(RTCVideoCodecModeScreensharing)));
-    RTC_CHECK([codecInfo.name isEqualToString:kRTCVideoCodecH264Name]);
+    RTC_CHECK([codecInfo.name isEqualToString:RTC_CONSTANT_TYPE(RTCVideoCodecH264Name)]);
   }
   return self;
 }
@@ -404,7 +404,7 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
 - (NSInteger)startEncodeWithSettings:(RTC_OBJC_TYPE(RTCVideoEncoderSettings) *)settings
                        numberOfCores:(int)numberOfCores {
   RTC_DCHECK(settings);
-  RTC_DCHECK([settings.name isEqualToString:kRTCVideoCodecH264Name]);
+  RTC_DCHECK([settings.name isEqualToString:RTC_CONSTANT_TYPE(RTCVideoCodecH264Name)]);
 
   _width = settings.width;
   _height = settings.height;

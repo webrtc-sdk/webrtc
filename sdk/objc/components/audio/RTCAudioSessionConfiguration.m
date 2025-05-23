@@ -22,13 +22,13 @@
 // audio unit. Hence, we will not hit a RTC_CHECK in
 // VerifyAudioParametersForActiveAudioSession() for a mismatch between the
 // preferred number of channels and the actual number of channels.
-const int kRTCAudioSessionPreferredNumberOfChannels = 1;
+const int RTC_CONSTANT_TYPE(RTCAudioSessionPreferredNumberOfChannels) = 1;
 
 // Preferred hardware sample rate (unit is in Hertz). The client sample rate
 // will be set to this value as well to avoid resampling the the audio unit's
 // format converter. Note that, some devices, e.g. BT headsets, only supports
 // 8000Hz as native sample rate.
-const double kRTCAudioSessionHighPerformanceSampleRate = 48000.0;
+const double RTC_CONSTANT_TYPE(RTCAudioSessionHighPerformanceSampleRate) = 48000.0;
 
 // Use a hardware I/O buffer size (unit is in seconds) that matches the 10ms
 // size used by WebRTC. The exact actual size will differ between devices.
@@ -38,7 +38,7 @@ const double kRTCAudioSessionHighPerformanceSampleRate = 48000.0;
 // buffers used by WebRTC. It is beneficial for the performance if the native
 // size is as an even multiple of 10ms as possible since it results in "clean"
 // callback sequence without bursts of callbacks back to back.
-const double kRTCAudioSessionHighPerformanceIOBufferDuration = 0.02;
+const double RTC_CONSTANT_TYPE(RTCAudioSessionHighPerformanceIOBufferDuration) = 0.02;
 
 static RTC_OBJC_TYPE(RTCAudioSessionConfiguration) *gWebRTCConfiguration = nil;
 
@@ -68,15 +68,15 @@ static RTC_OBJC_TYPE(RTCAudioSessionConfiguration) *gWebRTCConfiguration = nil;
 
     // Use best sample rate and buffer duration if the CPU has more than one
     // core.
-    _sampleRate = kRTCAudioSessionHighPerformanceSampleRate;
-    _ioBufferDuration = kRTCAudioSessionHighPerformanceIOBufferDuration;
+    _sampleRate = RTC_CONSTANT_TYPE(RTCAudioSessionHighPerformanceSampleRate);
+    _ioBufferDuration = RTC_CONSTANT_TYPE(RTCAudioSessionHighPerformanceIOBufferDuration);
 
     // We try to use mono in both directions to save resources and format
     // conversions in the audio unit. Some devices does only support stereo;
     // e.g. wired headset on iPhone 6.
     // TODO(henrika): add support for stereo if needed.
-    _inputNumberOfChannels = kRTCAudioSessionPreferredNumberOfChannels;
-    _outputNumberOfChannels = kRTCAudioSessionPreferredNumberOfChannels;
+    _inputNumberOfChannels = RTC_CONSTANT_TYPE(RTCAudioSessionPreferredNumberOfChannels);
+    _outputNumberOfChannels = RTC_CONSTANT_TYPE(RTCAudioSessionPreferredNumberOfChannels);
   }
   return self;
 }

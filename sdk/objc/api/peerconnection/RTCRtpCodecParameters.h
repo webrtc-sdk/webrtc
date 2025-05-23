@@ -14,23 +14,23 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-RTC_EXTERN const NSString *const kRTCRtxCodecName;
-RTC_EXTERN const NSString *const kRTCRedCodecName;
-RTC_EXTERN const NSString *const kRTCUlpfecCodecName;
-RTC_EXTERN const NSString *const kRTCFlexfecCodecName;
-RTC_EXTERN const NSString *const kRTCOpusCodecName;
-RTC_EXTERN const NSString *const kRTCIsacCodecName;
-RTC_EXTERN const NSString *const kRTCL16CodecName;
-RTC_EXTERN const NSString *const kRTCG722CodecName;
-RTC_EXTERN const NSString *const kRTCIlbcCodecName;
-RTC_EXTERN const NSString *const kRTCPcmuCodecName;
-RTC_EXTERN const NSString *const kRTCPcmaCodecName;
-RTC_EXTERN const NSString *const kRTCDtmfCodecName;
-RTC_EXTERN const NSString *const kRTCComfortNoiseCodecName;
-RTC_EXTERN const NSString *const kRTCVp8CodecName;
-RTC_EXTERN const NSString *const kRTCVp9CodecName;
-RTC_EXTERN const NSString *const kRTCH264CodecName;
-RTC_EXTERN const NSString *const kRTCAv1CodecName;
+RTC_EXTERN const NSString *const RTC_CONSTANT_TYPE(RTCRtxCodecName);
+RTC_EXTERN const NSString *const RTC_CONSTANT_TYPE(RTCRedCodecName);
+RTC_EXTERN const NSString *const RTC_CONSTANT_TYPE(RTCUlpfecCodecName);
+RTC_EXTERN const NSString *const RTC_CONSTANT_TYPE(RTCFlexfecCodecName);
+RTC_EXTERN const NSString *const RTC_CONSTANT_TYPE(RTCOpusCodecName);
+RTC_EXTERN const NSString *const RTC_CONSTANT_TYPE(RTCIsacCodecName);
+RTC_EXTERN const NSString *const RTC_CONSTANT_TYPE(RTCL16CodecName);
+RTC_EXTERN const NSString *const RTC_CONSTANT_TYPE(RTCG722CodecName);
+RTC_EXTERN const NSString *const RTC_CONSTANT_TYPE(RTCIlbcCodecName);
+RTC_EXTERN const NSString *const RTC_CONSTANT_TYPE(RTCPcmuCodecName);
+RTC_EXTERN const NSString *const RTC_CONSTANT_TYPE(RTCPcmaCodecName);
+RTC_EXTERN const NSString *const RTC_CONSTANT_TYPE(RTCDtmfCodecName);
+RTC_EXTERN const NSString *const RTC_CONSTANT_TYPE(RTCComfortNoiseCodecName);
+RTC_EXTERN const NSString *const RTC_CONSTANT_TYPE(RTCVp8CodecName);
+RTC_EXTERN const NSString *const RTC_CONSTANT_TYPE(RTCVp9CodecName);
+RTC_EXTERN const NSString *const RTC_CONSTANT_TYPE(RTCH264CodecName);
+RTC_EXTERN const NSString *const RTC_CONSTANT_TYPE(RTCAv1CodecName);
 
 /** Defined in https://www.w3.org/TR/webrtc/#idl-def-rtcrtpcodecparameters */
 RTC_OBJC_EXPORT

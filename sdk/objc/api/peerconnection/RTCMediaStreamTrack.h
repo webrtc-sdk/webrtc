@@ -22,8 +22,8 @@ typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCMediaStreamTrackState)) {
 
 NS_ASSUME_NONNULL_BEGIN
 
-RTC_EXTERN NSString *const kRTCMediaStreamTrackKindAudio;
-RTC_EXTERN NSString *const kRTCMediaStreamTrackKindVideo;
+RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCMediaStreamTrackKindAudio);
+RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCMediaStreamTrackKindVideo);
 
 RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCMediaStreamTrack) : NSObject

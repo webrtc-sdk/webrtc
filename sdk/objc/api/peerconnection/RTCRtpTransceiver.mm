@@ -22,7 +22,7 @@
 
 #include "api/rtp_parameters.h"
 
-NSString *const kRTCRtpTransceiverErrorDomain = @"org.webrtc.RTCRtpTranceiver";
+NSString *const RTC_CONSTANT_TYPE(RTCRtpTransceiverErrorDomain) = @"org.webrtc.RTCRtpTranceiver";
 
 @implementation RTC_OBJC_TYPE (RTCRtpTransceiverInit)
 
@@ -101,7 +101,7 @@ NSString *const kRTCRtpTransceiverErrorDomain = @"org.webrtc.RTCRtpTranceiver";
       [RTC_OBJC_TYPE(RTCRtpTransceiver) nativeRtpTransceiverDirectionFromDirection:direction]);
 
   if (!nativeError.ok() && error) {
-    *error = [NSError errorWithDomain:kRTCRtpTransceiverErrorDomain
+    *error = [NSError errorWithDomain:RTC_CONSTANT_TYPE(RTCRtpTransceiverErrorDomain)
                                  code:static_cast<int>(nativeError.type())
                              userInfo:@{
                                @"message" : [NSString stringWithCString:nativeError.message()

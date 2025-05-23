@@ -18,7 +18,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-extern NSString *const kRTCRtpTransceiverErrorDomain;
+extern NSString *const RTC_CONSTANT_TYPE(RTCRtpTransceiverErrorDomain);
 
 /** https://w3c.github.io/webrtc-pc/#dom-rtcrtptransceiverdirection */
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCRtpTransceiverDirection)) {

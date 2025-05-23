@@ -22,7 +22,7 @@
 #include "rtc_base/logging.h"
 
 // Vertex shader doesn't do anything except pass coordinates through.
-const char kRTCVertexShaderSource[] =
+const char RTC_CONSTANT_TYPE(RTCVertexShaderSource)[] =
   SHADER_VERSION
   VERTEX_SHADER_IN " vec2 position;\n"
   VERTEX_SHADER_IN " vec2 texcoord;\n"
@@ -84,7 +84,7 @@ GLuint RTC_OBJC_TYPE(RTCCreateProgram)(GLuint vertexShader, GLuint fragmentShade
 // Creates and links a shader program with the given fragment shader source and
 // a plain vertex shader. Returns the program handle or 0 on error.
 GLuint RTC_OBJC_TYPE(RTCCreateProgramFromFragmentSource)(const char fragmentShaderSource[]) {
-  GLuint vertexShader = RTCCreateShader(GL_VERTEX_SHADER, kRTCVertexShaderSource);
+  GLuint vertexShader = RTCCreateShader(GL_VERTEX_SHADER, RTC_CONSTANT_TYPE(RTCVertexShaderSource));
   RTC_CHECK(vertexShader) << "failed to create vertex shader";
   GLuint fragmentShader =
       RTCCreateShader(GL_FRAGMENT_SHADER, fragmentShaderSource);

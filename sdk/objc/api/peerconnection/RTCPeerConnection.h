@@ -33,8 +33,8 @@ typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCRtpMediaType));
 
 NS_ASSUME_NONNULL_BEGIN
 
-extern NSString *const kRTCPeerConnectionErrorDomain;
-extern int const kRTCSessionDescriptionErrorCode;
+extern NSString *const RTC_CONSTANT_TYPE(RTCPeerConnectionErrorDomain);
+extern int const RTC_CONSTANT_TYPE(RTCSessionDescriptionErrorCode);
 
 /** Represents the signaling state of the peer connection. */
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCSignalingState)) {

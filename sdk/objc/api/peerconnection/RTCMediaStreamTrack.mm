@@ -14,9 +14,9 @@
 
 #import "helpers/NSString+StdString.h"
 
-NSString * const kRTCMediaStreamTrackKindAudio =
+NSString * const RTC_CONSTANT_TYPE(RTCMediaStreamTrackKindAudio) =
     @(webrtc::MediaStreamTrackInterface::kAudioKind);
-NSString * const kRTCMediaStreamTrackKindVideo =
+NSString * const RTC_CONSTANT_TYPE(RTCMediaStreamTrackKindVideo) =
     @(webrtc::MediaStreamTrackInterface::kVideoKind);
 
 @implementation RTC_OBJC_TYPE(RTCMediaStreamTrack) {

@@ -441,9 +441,9 @@
 #pragma mark - Private
 
 + (cricket::MediaType)mediaTypeForKind:(NSString *)kind {
-  if (kind == kRTCMediaStreamTrackKindAudio) {
+  if (kind == RTC_CONSTANT_TYPE(RTCMediaStreamTrackKindAudio)) {
     return cricket::MEDIA_TYPE_AUDIO;
-  } else if (kind == kRTCMediaStreamTrackKindVideo) {
+  } else if (kind == RTC_CONSTANT_TYPE(RTCMediaStreamTrackKindVideo)) {
     return cricket::MEDIA_TYPE_VIDEO;
   } else {
     RTC_DCHECK_NOTREACHED();
