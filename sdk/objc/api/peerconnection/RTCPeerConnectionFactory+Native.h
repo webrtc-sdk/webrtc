@@ -55,7 +55,7 @@ NS_ASSUME_NONNULL_BEGIN
                          networkControllerFactory:
                              (std::unique_ptr<webrtc::NetworkControllerFactoryInterface>)
                                  networkControllerFactory
-                            audioDeviceModuleType:(RTCAudioDeviceModuleType)audioDeviceModuleType
+                            audioDeviceModuleType:(RTC_OBJC_TYPE(RTCAudioDeviceModuleType))audioDeviceModuleType
                             bypassVoiceProcessing:(BOOL)bypassVoiceProcessing;
 
 - (instancetype)

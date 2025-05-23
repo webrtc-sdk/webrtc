@@ -42,7 +42,7 @@
                                   audioDeviceModule:_audioDeviceModule
                               audioProcessingModule:_audioProcessingModule
                            networkControllerFactory:nullptr
-                           audioDeviceModuleType:RTCAudioDeviceModuleTypePlatformDefault
+                           audioDeviceModuleType:RTC_OBJC_TYPE(RTCAudioDeviceModuleTypePlatformDefault)
                               bypassVoiceProcessing:NO];
 }
 

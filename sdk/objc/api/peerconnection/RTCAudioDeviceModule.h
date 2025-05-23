@@ -23,21 +23,21 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-typedef NS_ENUM(NSInteger, RTCAudioDeviceModuleType) {
-  RTCAudioDeviceModuleTypePlatformDefault,
-  RTCAudioDeviceModuleTypeAudioEngine,
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCAudioDeviceModuleType)) {
+  RTC_OBJC_TYPE(RTCAudioDeviceModuleTypePlatformDefault),
+  RTC_OBJC_TYPE(RTCAudioDeviceModuleTypeAudioEngine),
 };
 
-typedef NS_ENUM(NSInteger, RTCSpeechActivityEvent) {
-  RTCSpeechActivityEventStarted,
-  RTCSpeechActivityEventEnded,
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCSpeechActivityEvent)) {
+  RTC_OBJC_TYPE(RTCSpeechActivityEventStarted),
+  RTC_OBJC_TYPE(RTCSpeechActivityEventEnded),
 };
 
-typedef NS_ENUM(NSInteger, RTCAudioEngineMuteMode) {
-  RTCAudioEngineMuteModeUnknown = -1,
-  RTCAudioEngineMuteModeVoiceProcessing = 0,
-  RTCAudioEngineMuteModeRestartEngine = 1,
-  RTCAudioEngineMuteModeInputMixer = 2,
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCAudioEngineMuteMode)) {
+  RTC_OBJC_TYPE(RTCAudioEngineMuteModeUnknown) = -1,
+  RTC_OBJC_TYPE(RTCAudioEngineMuteModeVoiceProcessing) = 0,
+  RTC_OBJC_TYPE(RTCAudioEngineMuteModeRestartEngine) = 1,
+  RTC_OBJC_TYPE(RTCAudioEngineMuteModeInputMixer) = 2,
 };
 
 typedef struct {
@@ -46,10 +46,10 @@ typedef struct {
   bool inputEnabled;
   bool inputRunning;
   bool inputMuted;
-  RTCAudioEngineMuteMode muteMode;
-} RTCAudioEngineState;
+  RTC_OBJC_TYPE(RTCAudioEngineMuteMode) muteMode;
+} RTC_OBJC_TYPE(RTCAudioEngineState);
 
-RTC_EXTERN NSString *const kRTCAudioEngineInputMixerNodeKey;
+RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCAudioEngineInputMixerNodeKey);
 
 @class RTC_OBJC_TYPE(RTCAudioDeviceModule);
 
@@ -58,7 +58,7 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
 
     - (void)audioDeviceModule
     : (RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule didReceiveSpeechActivityEvent
-    : (RTCSpeechActivityEvent)speechActivityEvent NS_SWIFT_NAME(audioDeviceModule(_:didReceiveSpeechActivityEvent:));
+    : (RTC_OBJC_TYPE(RTCSpeechActivityEvent))speechActivityEvent NS_SWIFT_NAME(audioDeviceModule(_:didReceiveSpeechActivityEvent:));
 
 // Engine events
 - (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
@@ -151,7 +151,7 @@ RTC_OBJC_EXPORT
 - (NSInteger)setMicrophoneMuted:(BOOL)muted;
 
 // Directly get & set engine state.
-@property(nonatomic, assign) RTCAudioEngineState engineState;
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCAudioEngineState) engineState;
 
 @property(nonatomic, readonly, getter=isRecordingAlwaysPreparedMode)
     BOOL recordingAlwaysPreparedMode;
@@ -169,8 +169,8 @@ RTC_OBJC_EXPORT
 // Audio ducking level. See `AVAudioVoiceProcessingOtherAudioDuckingLevel` enum for valid values.
 @property(nonatomic, assign) NSInteger duckingLevel;
 
-@property(nonatomic, readonly) RTCAudioEngineMuteMode muteMode;
-- (NSInteger)setMuteMode:(RTCAudioEngineMuteMode)mode;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioEngineMuteMode) muteMode;
+- (NSInteger)setMuteMode:(RTC_OBJC_TYPE(RTCAudioEngineMuteMode))mode;
 
 /// Indicates whether Voice-Processing I/O is enabled. Requires restarting the Audio Engine to
 /// toggle. Defaults to true.

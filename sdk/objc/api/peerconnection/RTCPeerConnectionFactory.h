@@ -62,7 +62,7 @@ RTC_OBJC_EXPORT
 
 /* Initialize object with bypass voice processing */
 - (instancetype)
-    initWithAudioDeviceModuleType:(RTCAudioDeviceModuleType)audioDeviceModuleType
+    initWithAudioDeviceModuleType:(RTC_OBJC_TYPE(RTCAudioDeviceModuleType))audioDeviceModuleType
             bypassVoiceProcessing:(BOOL)bypassVoiceProcessing
                    encoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoEncoderFactory)>)encoderFactory
                    decoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoDecoderFactory)>)decoderFactory
