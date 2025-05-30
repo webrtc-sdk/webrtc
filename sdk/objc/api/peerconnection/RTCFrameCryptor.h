@@ -26,18 +26,18 @@ NS_ASSUME_NONNULL_BEGIN
 @class RTC_OBJC_TYPE(RTCFrameCryptor);
 @class RTC_OBJC_TYPE(RTCPeerConnectionFactory);
 
-typedef NS_ENUM(NSUInteger, RTCCryptorAlgorithm) {
-  RTCCryptorAlgorithmAesGcm = 0,
+typedef NS_ENUM(NSUInteger, RTC_OBJC_TYPE(RTCCryptorAlgorithm)) {
+  RTC_OBJC_TYPE(RTCCryptorAlgorithmAesGcm) = 0,
 };
 
-typedef NS_ENUM(NSInteger, FrameCryptionState) {
-  FrameCryptionStateNew = 0,
-  FrameCryptionStateOk,
-  FrameCryptionStateEncryptionFailed,
-  FrameCryptionStateDecryptionFailed,
-  FrameCryptionStateMissingKey,
-  FrameCryptionStateKeyRatcheted,
-  FrameCryptionStateInternalError,
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCFrameCryptorState)) {
+  RTC_OBJC_TYPE(RTCFrameCryptorStateNew) = 0,
+  RTC_OBJC_TYPE(RTCFrameCryptorStateOk),
+  RTC_OBJC_TYPE(RTCFrameCryptorStateEncryptionFailed),
+  RTC_OBJC_TYPE(RTCFrameCryptorStateDecryptionFailed),
+  RTC_OBJC_TYPE(RTCFrameCryptorStateMissingKey),
+  RTC_OBJC_TYPE(RTCFrameCryptorStateKeyRatcheted),
+  RTC_OBJC_TYPE(RTCFrameCryptorStateInternalError),
 };
 
 RTC_OBJC_EXPORT
@@ -46,7 +46,7 @@ RTC_OBJC_EXPORT
     /** Called when the RTCFrameCryptor got errors. */
     - (void)frameCryptor
     : (RTC_OBJC_TYPE(RTCFrameCryptor) *)frameCryptor didStateChangeWithParticipantId
-    : (NSString *)participantId withState : (FrameCryptionState)stateChanged;
+    : (NSString *)participantId withState : (RTC_OBJC_TYPE(RTCFrameCryptorState))stateChanged;
 @end
 
 RTC_OBJC_EXPORT
@@ -63,13 +63,13 @@ RTC_OBJC_EXPORT
 - (nullable instancetype)initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
                                rtpSender:(RTC_OBJC_TYPE(RTCRtpSender) *)sender
                            participantId:(NSString *)participantId
-                               algorithm:(RTCCryptorAlgorithm)algorithm
+                               algorithm:(RTC_OBJC_TYPE(RTCCryptorAlgorithm))algorithm
                              keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider;
 
 - (nullable instancetype)initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
                              rtpReceiver:(RTC_OBJC_TYPE(RTCRtpReceiver) *)receiver
                            participantId:(NSString *)participantId
-                               algorithm:(RTCCryptorAlgorithm)algorithm
+                               algorithm:(RTC_OBJC_TYPE(RTCCryptorAlgorithm))algorithm
                              keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider;
 
 @end

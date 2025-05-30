@@ -53,24 +53,24 @@ class CallbackWithSeverityLogSink final : public rtc::LogSink {
 
   void OnLogMessage(absl::string_view message, rtc::LoggingSeverity severity) override {
     if (callback_handler_) {
-      RTCLoggingSeverity loggingSeverity = NativeSeverityToObjcSeverity(severity);
+      RTC_OBJC_TYPE(RTCLoggingSeverity) loggingSeverity = NativeSeverityToObjcSeverity(severity);
       callback_handler_([NSString stringForAbslStringView:message], loggingSeverity);
     }
   }
 
  private:
-  static RTCLoggingSeverity NativeSeverityToObjcSeverity(rtc::LoggingSeverity severity) {
+  static RTC_OBJC_TYPE(RTCLoggingSeverity) NativeSeverityToObjcSeverity(rtc::LoggingSeverity severity) {
     switch (severity) {
       case rtc::LS_VERBOSE:
-        return RTCLoggingSeverityVerbose;
+        return RTC_OBJC_TYPE(RTCLoggingSeverityVerbose);
       case rtc::LS_INFO:
-        return RTCLoggingSeverityInfo;
+        return RTC_OBJC_TYPE(RTCLoggingSeverityInfo);
       case rtc::LS_WARNING:
-        return RTCLoggingSeverityWarning;
+        return RTC_OBJC_TYPE(RTCLoggingSeverityWarning);
       case rtc::LS_ERROR:
-        return RTCLoggingSeverityError;
+        return RTC_OBJC_TYPE(RTCLoggingSeverityError);
       case rtc::LS_NONE:
-        return RTCLoggingSeverityNone;
+        return RTC_OBJC_TYPE(RTCLoggingSeverityNone);
     }
   }
 
@@ -89,7 +89,7 @@ class CallbackWithSeverityLogSink final : public rtc::LogSink {
 - (instancetype)init {
   self = [super init];
   if (self != nil) {
-    _severity = RTCLoggingSeverityInfo;
+    _severity = RTC_OBJC_TYPE(RTCLoggingSeverityInfo);
   }
   return self;
 }
@@ -135,15 +135,15 @@ class CallbackWithSeverityLogSink final : public rtc::LogSink {
 
 - (rtc::LoggingSeverity)rtcSeverity {
   switch (_severity) {
-    case RTCLoggingSeverityVerbose:
+    case RTC_OBJC_TYPE(RTCLoggingSeverityVerbose):
       return rtc::LS_VERBOSE;
-    case RTCLoggingSeverityInfo:
+    case RTC_OBJC_TYPE(RTCLoggingSeverityInfo):
       return rtc::LS_INFO;
-    case RTCLoggingSeverityWarning:
+    case RTC_OBJC_TYPE(RTCLoggingSeverityWarning):
       return rtc::LS_WARNING;
-    case RTCLoggingSeverityError:
+    case RTC_OBJC_TYPE(RTCLoggingSeverityError):
       return rtc::LS_ERROR;
-    case RTCLoggingSeverityNone:
+    case RTC_OBJC_TYPE(RTCLoggingSeverityNone):
       return rtc::LS_NONE;
   }
 }

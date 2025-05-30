@@ -14,9 +14,9 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-typedef NS_ENUM(NSUInteger, RTCVideoCodecMode) {
-  RTCVideoCodecModeRealtimeVideo,
-  RTCVideoCodecModeScreensharing,
+typedef NS_ENUM(NSUInteger, RTC_OBJC_TYPE(RTCVideoCodecMode)) {
+  RTC_OBJC_TYPE(RTCVideoCodecModeRealtimeVideo),
+  RTC_OBJC_TYPE(RTCVideoCodecModeScreensharing),
 };
 
 /** Settings for encoder. Corresponds to webrtc::VideoCodec. */
@@ -35,7 +35,7 @@ RTC_OBJC_EXPORT
 @property(nonatomic, assign) uint32_t maxFramerate;
 
 @property(nonatomic, assign) unsigned int qpMax;
-@property(nonatomic, assign) RTCVideoCodecMode mode;
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCVideoCodecMode) mode;
 
 @end
 

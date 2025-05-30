@@ -27,7 +27,7 @@
 #include "rtc_base/thread.h"
 
 @protocol RTC_OBJC_TYPE
-(DesktopCapturerDelegate);
+(RTCDesktopCapturerPrivateDelegate);
 
 namespace webrtc {
 
@@ -39,8 +39,8 @@ class ObjCDesktopCapturer : public DesktopCapturer::Callback {
 
  public:
   ObjCDesktopCapturer(DesktopType type,
-    webrtc::DesktopCapturer::SourceId source_id, 
-    id<RTC_OBJC_TYPE(DesktopCapturerDelegate)> delegate);
+    webrtc::DesktopCapturer::SourceId source_id,
+    id<RTC_OBJC_TYPE(RTCDesktopCapturerPrivateDelegate)> delegate);
   virtual ~ObjCDesktopCapturer();
 
   virtual CaptureState Start(uint32_t fps);
@@ -60,7 +60,7 @@ class ObjCDesktopCapturer : public DesktopCapturer::Callback {
   CaptureState capture_state_ = CS_STOPPED;
   DesktopType type_;
   webrtc::DesktopCapturer::SourceId source_id_;
-  id<RTC_OBJC_TYPE(DesktopCapturerDelegate)> delegate_;
+  id<RTC_OBJC_TYPE(RTCDesktopCapturerPrivateDelegate)> delegate_;
   uint32_t capture_delay_ = 1000; // 1s
   webrtc::DesktopCapturer::Result result_ = webrtc::DesktopCapturer::Result::SUCCESS;
 };

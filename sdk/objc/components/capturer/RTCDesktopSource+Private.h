@@ -24,7 +24,7 @@ NS_ASSUME_NONNULL_BEGIN
 @interface RTC_OBJC_TYPE(RTCDesktopSource) ()
 
 - (instancetype)initWithNativeSource:(webrtc::MediaSource*) nativeSource 
-                          sourceType:(RTCDesktopSourceType) sourceType;
+                          sourceType:(RTC_OBJC_TYPE(RTCDesktopSourceType)) sourceType;
 
 @property(nonatomic, readonly)webrtc::MediaSource* nativeMediaSource;
 

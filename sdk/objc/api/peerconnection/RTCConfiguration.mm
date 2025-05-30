@@ -111,7 +111,7 @@
     _iceConnectionReceivingTimeout = config.ice_connection_receiving_timeout;
     _iceBackupCandidatePairPingInterval =
         config.ice_backup_candidate_pair_ping_interval;
-    _keyType = RTCEncryptionKeyTypeECDSA;
+    _keyType = RTC_OBJC_TYPE(RTCEncryptionKeyTypeECDSA);
     _iceCandidatePoolSize = config.ice_candidate_pool_size;
     _shouldPruneTurnPorts = config.prune_turn_ports;
     _shouldPresumeWritableWhenFullyRelayed =
@@ -310,233 +310,231 @@
 }
 
 + (webrtc::PeerConnectionInterface::IceTransportsType)
-    nativeTransportsTypeForTransportPolicy:(RTCIceTransportPolicy)policy {
+    nativeTransportsTypeForTransportPolicy:(RTC_OBJC_TYPE(RTCIceTransportPolicy))policy {
   switch (policy) {
-    case RTCIceTransportPolicyNone:
+    case RTC_OBJC_TYPE(RTCIceTransportPolicyNone):
       return webrtc::PeerConnectionInterface::kNone;
-    case RTCIceTransportPolicyRelay:
+    case RTC_OBJC_TYPE(RTCIceTransportPolicyRelay):
       return webrtc::PeerConnectionInterface::kRelay;
-    case RTCIceTransportPolicyNoHost:
+    case RTC_OBJC_TYPE(RTCIceTransportPolicyNoHost):
       return webrtc::PeerConnectionInterface::kNoHost;
-    case RTCIceTransportPolicyAll:
+    case RTC_OBJC_TYPE(RTCIceTransportPolicyAll):
       return webrtc::PeerConnectionInterface::kAll;
   }
 }
 
-+ (RTCIceTransportPolicy)transportPolicyForTransportsType:
++ (RTC_OBJC_TYPE(RTCIceTransportPolicy))transportPolicyForTransportsType:
     (webrtc::PeerConnectionInterface::IceTransportsType)nativeType {
   switch (nativeType) {
     case webrtc::PeerConnectionInterface::kNone:
-      return RTCIceTransportPolicyNone;
+      return RTC_OBJC_TYPE(RTCIceTransportPolicyNone);
     case webrtc::PeerConnectionInterface::kRelay:
-      return RTCIceTransportPolicyRelay;
+      return RTC_OBJC_TYPE(RTCIceTransportPolicyRelay);
     case webrtc::PeerConnectionInterface::kNoHost:
-      return RTCIceTransportPolicyNoHost;
+      return RTC_OBJC_TYPE(RTCIceTransportPolicyNoHost);
     case webrtc::PeerConnectionInterface::kAll:
-      return RTCIceTransportPolicyAll;
+      return RTC_OBJC_TYPE(RTCIceTransportPolicyAll);
   }
 }
 
-+ (NSString *)stringForTransportPolicy:(RTCIceTransportPolicy)policy {
++ (NSString *)stringForTransportPolicy:(RTC_OBJC_TYPE(RTCIceTransportPolicy))policy {
   switch (policy) {
-    case RTCIceTransportPolicyNone:
+    case RTC_OBJC_TYPE(RTCIceTransportPolicyNone):
       return @"NONE";
-    case RTCIceTransportPolicyRelay:
+    case RTC_OBJC_TYPE(RTCIceTransportPolicyRelay):
       return @"RELAY";
-    case RTCIceTransportPolicyNoHost:
+    case RTC_OBJC_TYPE(RTCIceTransportPolicyNoHost):
       return @"NO_HOST";
-    case RTCIceTransportPolicyAll:
+    case RTC_OBJC_TYPE(RTCIceTransportPolicyAll):
       return @"ALL";
   }
 }
 
 + (webrtc::PeerConnectionInterface::BundlePolicy)nativeBundlePolicyForPolicy:
-    (RTCBundlePolicy)policy {
+    (RTC_OBJC_TYPE(RTCBundlePolicy))policy {
   switch (policy) {
-    case RTCBundlePolicyBalanced:
+    case RTC_OBJC_TYPE(RTCBundlePolicyBalanced):
       return webrtc::PeerConnectionInterface::kBundlePolicyBalanced;
-    case RTCBundlePolicyMaxCompat:
+    case RTC_OBJC_TYPE(RTCBundlePolicyMaxCompat):
       return webrtc::PeerConnectionInterface::kBundlePolicyMaxCompat;
-    case RTCBundlePolicyMaxBundle:
+    case RTC_OBJC_TYPE(RTCBundlePolicyMaxBundle):
       return webrtc::PeerConnectionInterface::kBundlePolicyMaxBundle;
   }
 }
 
-+ (RTCBundlePolicy)bundlePolicyForNativePolicy:
++ (RTC_OBJC_TYPE(RTCBundlePolicy))bundlePolicyForNativePolicy:
     (webrtc::PeerConnectionInterface::BundlePolicy)nativePolicy {
   switch (nativePolicy) {
     case webrtc::PeerConnectionInterface::kBundlePolicyBalanced:
-      return RTCBundlePolicyBalanced;
+      return RTC_OBJC_TYPE(RTCBundlePolicyBalanced);
     case webrtc::PeerConnectionInterface::kBundlePolicyMaxCompat:
-      return RTCBundlePolicyMaxCompat;
+      return RTC_OBJC_TYPE(RTCBundlePolicyMaxCompat);
     case webrtc::PeerConnectionInterface::kBundlePolicyMaxBundle:
-      return RTCBundlePolicyMaxBundle;
+      return RTC_OBJC_TYPE(RTCBundlePolicyMaxBundle);
   }
 }
 
-+ (NSString *)stringForBundlePolicy:(RTCBundlePolicy)policy {
++ (NSString *)stringForBundlePolicy:(RTC_OBJC_TYPE(RTCBundlePolicy))policy {
   switch (policy) {
-    case RTCBundlePolicyBalanced:
+    case RTC_OBJC_TYPE(RTCBundlePolicyBalanced):
       return @"BALANCED";
-    case RTCBundlePolicyMaxCompat:
+    case RTC_OBJC_TYPE(RTCBundlePolicyMaxCompat):
       return @"MAX_COMPAT";
-    case RTCBundlePolicyMaxBundle:
+    case RTC_OBJC_TYPE(RTCBundlePolicyMaxBundle):
       return @"MAX_BUNDLE";
   }
 }
 
 + (webrtc::PeerConnectionInterface::RtcpMuxPolicy)nativeRtcpMuxPolicyForPolicy:
-    (RTCRtcpMuxPolicy)policy {
+    (RTC_OBJC_TYPE(RTCRtcpMuxPolicy))policy {
   switch (policy) {
-    case RTCRtcpMuxPolicyNegotiate:
+    case RTC_OBJC_TYPE(RTCRtcpMuxPolicyNegotiate):
       return webrtc::PeerConnectionInterface::kRtcpMuxPolicyNegotiate;
-    case RTCRtcpMuxPolicyRequire:
+    case RTC_OBJC_TYPE(RTCRtcpMuxPolicyRequire):
       return webrtc::PeerConnectionInterface::kRtcpMuxPolicyRequire;
   }
 }
 
-+ (RTCRtcpMuxPolicy)rtcpMuxPolicyForNativePolicy:
++ (RTC_OBJC_TYPE(RTCRtcpMuxPolicy))rtcpMuxPolicyForNativePolicy:
     (webrtc::PeerConnectionInterface::RtcpMuxPolicy)nativePolicy {
   switch (nativePolicy) {
     case webrtc::PeerConnectionInterface::kRtcpMuxPolicyNegotiate:
-      return RTCRtcpMuxPolicyNegotiate;
+      return RTC_OBJC_TYPE(RTCRtcpMuxPolicyNegotiate);
     case webrtc::PeerConnectionInterface::kRtcpMuxPolicyRequire:
-      return RTCRtcpMuxPolicyRequire;
+      return RTC_OBJC_TYPE(RTCRtcpMuxPolicyRequire);
   }
 }
 
-+ (NSString *)stringForRtcpMuxPolicy:(RTCRtcpMuxPolicy)policy {
++ (NSString *)stringForRtcpMuxPolicy:(RTC_OBJC_TYPE(RTCRtcpMuxPolicy))policy {
   switch (policy) {
-    case RTCRtcpMuxPolicyNegotiate:
+    case RTC_OBJC_TYPE(RTCRtcpMuxPolicyNegotiate):
       return @"NEGOTIATE";
-    case RTCRtcpMuxPolicyRequire:
+    case RTC_OBJC_TYPE(RTCRtcpMuxPolicyRequire):
       return @"REQUIRE";
   }
 }
 
-+ (webrtc::PeerConnectionInterface::TcpCandidatePolicy)
-    nativeTcpCandidatePolicyForPolicy:(RTCTcpCandidatePolicy)policy {
++ (webrtc::PeerConnectionInterface::TcpCandidatePolicy)nativeTcpCandidatePolicyForPolicy:
+    (RTC_OBJC_TYPE(RTCTcpCandidatePolicy))policy {
   switch (policy) {
-    case RTCTcpCandidatePolicyEnabled:
+    case RTC_OBJC_TYPE(RTCTcpCandidatePolicyEnabled):
       return webrtc::PeerConnectionInterface::kTcpCandidatePolicyEnabled;
-    case RTCTcpCandidatePolicyDisabled:
+    case RTC_OBJC_TYPE(RTCTcpCandidatePolicyDisabled):
       return webrtc::PeerConnectionInterface::kTcpCandidatePolicyDisabled;
   }
 }
 
-+ (webrtc::PeerConnectionInterface::CandidateNetworkPolicy)
-    nativeCandidateNetworkPolicyForPolicy:(RTCCandidateNetworkPolicy)policy {
++ (webrtc::PeerConnectionInterface::CandidateNetworkPolicy)nativeCandidateNetworkPolicyForPolicy:
+    (RTC_OBJC_TYPE(RTCCandidateNetworkPolicy))policy {
   switch (policy) {
-    case RTCCandidateNetworkPolicyAll:
+    case RTC_OBJC_TYPE(RTCCandidateNetworkPolicyAll):
       return webrtc::PeerConnectionInterface::kCandidateNetworkPolicyAll;
-    case RTCCandidateNetworkPolicyLowCost:
+    case RTC_OBJC_TYPE(RTCCandidateNetworkPolicyLowCost):
       return webrtc::PeerConnectionInterface::kCandidateNetworkPolicyLowCost;
   }
 }
 
-+ (RTCTcpCandidatePolicy)tcpCandidatePolicyForNativePolicy:
++ (RTC_OBJC_TYPE(RTCTcpCandidatePolicy))tcpCandidatePolicyForNativePolicy:
     (webrtc::PeerConnectionInterface::TcpCandidatePolicy)nativePolicy {
   switch (nativePolicy) {
     case webrtc::PeerConnectionInterface::kTcpCandidatePolicyEnabled:
-      return RTCTcpCandidatePolicyEnabled;
+      return RTC_OBJC_TYPE(RTCTcpCandidatePolicyEnabled);
     case webrtc::PeerConnectionInterface::kTcpCandidatePolicyDisabled:
-      return RTCTcpCandidatePolicyDisabled;
+      return RTC_OBJC_TYPE(RTCTcpCandidatePolicyDisabled);
   }
 }
 
-+ (NSString *)stringForTcpCandidatePolicy:(RTCTcpCandidatePolicy)policy {
++ (NSString *)stringForTcpCandidatePolicy:(RTC_OBJC_TYPE(RTCTcpCandidatePolicy))policy {
   switch (policy) {
-    case RTCTcpCandidatePolicyEnabled:
+    case RTC_OBJC_TYPE(RTCTcpCandidatePolicyEnabled):
       return @"TCP_ENABLED";
-    case RTCTcpCandidatePolicyDisabled:
+    case RTC_OBJC_TYPE(RTCTcpCandidatePolicyDisabled):
       return @"TCP_DISABLED";
   }
 }
 
-+ (RTCCandidateNetworkPolicy)candidateNetworkPolicyForNativePolicy:
++ (RTC_OBJC_TYPE(RTCCandidateNetworkPolicy))candidateNetworkPolicyForNativePolicy:
     (webrtc::PeerConnectionInterface::CandidateNetworkPolicy)nativePolicy {
   switch (nativePolicy) {
     case webrtc::PeerConnectionInterface::kCandidateNetworkPolicyAll:
-      return RTCCandidateNetworkPolicyAll;
+      return RTC_OBJC_TYPE(RTCCandidateNetworkPolicyAll);
     case webrtc::PeerConnectionInterface::kCandidateNetworkPolicyLowCost:
-      return RTCCandidateNetworkPolicyLowCost;
+      return RTC_OBJC_TYPE(RTCCandidateNetworkPolicyLowCost);
   }
 }
 
-+ (NSString *)stringForCandidateNetworkPolicy:
-    (RTCCandidateNetworkPolicy)policy {
++ (NSString *)stringForCandidateNetworkPolicy:(RTC_OBJC_TYPE(RTCCandidateNetworkPolicy))policy {
   switch (policy) {
-    case RTCCandidateNetworkPolicyAll:
+    case RTC_OBJC_TYPE(RTCCandidateNetworkPolicyAll):
       return @"CANDIDATE_ALL_NETWORKS";
-    case RTCCandidateNetworkPolicyLowCost:
+    case RTC_OBJC_TYPE(RTCCandidateNetworkPolicyLowCost):
       return @"CANDIDATE_LOW_COST_NETWORKS";
   }
 }
 
 + (webrtc::PeerConnectionInterface::ContinualGatheringPolicy)
     nativeContinualGatheringPolicyForPolicy:
-        (RTCContinualGatheringPolicy)policy {
+        (RTC_OBJC_TYPE(RTCContinualGatheringPolicy))policy {
   switch (policy) {
-    case RTCContinualGatheringPolicyGatherOnce:
+    case RTC_OBJC_TYPE(RTCContinualGatheringPolicyGatherOnce):
       return webrtc::PeerConnectionInterface::GATHER_ONCE;
-    case RTCContinualGatheringPolicyGatherContinually:
+    case RTC_OBJC_TYPE(RTCContinualGatheringPolicyGatherContinually):
       return webrtc::PeerConnectionInterface::GATHER_CONTINUALLY;
   }
 }
 
-+ (RTCContinualGatheringPolicy)continualGatheringPolicyForNativePolicy:
++ (RTC_OBJC_TYPE(RTCContinualGatheringPolicy))continualGatheringPolicyForNativePolicy:
     (webrtc::PeerConnectionInterface::ContinualGatheringPolicy)nativePolicy {
   switch (nativePolicy) {
     case webrtc::PeerConnectionInterface::GATHER_ONCE:
-      return RTCContinualGatheringPolicyGatherOnce;
+      return RTC_OBJC_TYPE(RTCContinualGatheringPolicyGatherOnce);
     case webrtc::PeerConnectionInterface::GATHER_CONTINUALLY:
-      return RTCContinualGatheringPolicyGatherContinually;
+      return RTC_OBJC_TYPE(RTCContinualGatheringPolicyGatherContinually);
   }
 }
 
 + (NSString *)stringForContinualGatheringPolicy:
-    (RTCContinualGatheringPolicy)policy {
+    (RTC_OBJC_TYPE(RTCContinualGatheringPolicy))policy {
   switch (policy) {
-    case RTCContinualGatheringPolicyGatherOnce:
+    case RTC_OBJC_TYPE(RTCContinualGatheringPolicyGatherOnce):
       return @"GATHER_ONCE";
-    case RTCContinualGatheringPolicyGatherContinually:
+    case RTC_OBJC_TYPE(RTCContinualGatheringPolicyGatherContinually):
       return @"GATHER_CONTINUALLY";
   }
 }
 
-+ (rtc::KeyType)nativeEncryptionKeyTypeForKeyType:
-    (RTCEncryptionKeyType)keyType {
++ (rtc::KeyType)nativeEncryptionKeyTypeForKeyType:(RTC_OBJC_TYPE(RTCEncryptionKeyType))keyType {
   switch (keyType) {
-    case RTCEncryptionKeyTypeRSA:
+    case RTC_OBJC_TYPE(RTCEncryptionKeyTypeRSA):
       return rtc::KT_RSA;
-    case RTCEncryptionKeyTypeECDSA:
+    case RTC_OBJC_TYPE(RTCEncryptionKeyTypeECDSA):
       return rtc::KT_ECDSA;
   }
 }
 
-+ (webrtc::SdpSemantics)nativeSdpSemanticsForSdpSemantics:(RTCSdpSemantics)sdpSemantics {
++ (webrtc::SdpSemantics)nativeSdpSemanticsForSdpSemantics:(RTC_OBJC_TYPE(RTCSdpSemantics))sdpSemantics {
   switch (sdpSemantics) {
-    case RTCSdpSemanticsPlanB:
+    case RTC_OBJC_TYPE(RTCSdpSemanticsPlanB):
       return webrtc::SdpSemantics::kPlanB_DEPRECATED;
-    case RTCSdpSemanticsUnifiedPlan:
+    case RTC_OBJC_TYPE(RTCSdpSemanticsUnifiedPlan):
       return webrtc::SdpSemantics::kUnifiedPlan;
   }
 }
 
-+ (RTCSdpSemantics)sdpSemanticsForNativeSdpSemantics:(webrtc::SdpSemantics)sdpSemantics {
++ (RTC_OBJC_TYPE(RTCSdpSemantics))sdpSemanticsForNativeSdpSemantics:(webrtc::SdpSemantics)sdpSemantics {
   switch (sdpSemantics) {
     case webrtc::SdpSemantics::kPlanB_DEPRECATED:
-      return RTCSdpSemanticsPlanB;
+      return RTC_OBJC_TYPE(RTCSdpSemanticsPlanB);
     case webrtc::SdpSemantics::kUnifiedPlan:
-      return RTCSdpSemanticsUnifiedPlan;
+      return RTC_OBJC_TYPE(RTCSdpSemanticsUnifiedPlan);
   }
 }
 
-+ (NSString *)stringForSdpSemantics:(RTCSdpSemantics)sdpSemantics {
++ (NSString *)stringForSdpSemantics:(RTC_OBJC_TYPE(RTCSdpSemantics))sdpSemantics {
   switch (sdpSemantics) {
-    case RTCSdpSemanticsPlanB:
+    case RTC_OBJC_TYPE(RTCSdpSemanticsPlanB):
       return @"PLAN_B";
-    case RTCSdpSemanticsUnifiedPlan:
+    case RTC_OBJC_TYPE(RTCSdpSemanticsUnifiedPlan):
       return @"UNIFIED_PLAN";
   }
 }

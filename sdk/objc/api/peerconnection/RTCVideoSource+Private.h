@@ -35,7 +35,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (instancetype)initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
               nativeMediaSource:(rtc::scoped_refptr<webrtc::MediaSourceInterface>)nativeMediaSource
-                           type:(RTCMediaSourceType)type NS_UNAVAILABLE;
+                           type:(RTC_OBJC_TYPE(RTCMediaSourceType))type NS_UNAVAILABLE;
 
 - (instancetype)initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
                 signalingThread:(rtc::Thread *)signalingThread

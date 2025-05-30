@@ -16,17 +16,17 @@
 NS_ASSUME_NONNULL_BEGIN
 
 /** Represents an encoded frame's type. */
-typedef NS_ENUM(NSUInteger, RTCFrameType) {
-  RTCFrameTypeEmptyFrame = 0,
-  RTCFrameTypeAudioFrameSpeech = 1,
-  RTCFrameTypeAudioFrameCN = 2,
-  RTCFrameTypeVideoFrameKey = 3,
-  RTCFrameTypeVideoFrameDelta = 4,
+typedef NS_ENUM(NSUInteger, RTC_OBJC_TYPE(RTCFrameType)) {
+  RTC_OBJC_TYPE(RTCFrameTypeEmptyFrame) = 0,
+  RTC_OBJC_TYPE(RTCFrameTypeAudioFrameSpeech) = 1,
+  RTC_OBJC_TYPE(RTCFrameTypeAudioFrameCN) = 2,
+  RTC_OBJC_TYPE(RTCFrameTypeVideoFrameKey) = 3,
+  RTC_OBJC_TYPE(RTCFrameTypeVideoFrameDelta) = 4,
 };
 
-typedef NS_ENUM(NSUInteger, RTCVideoContentType) {
-  RTCVideoContentTypeUnspecified,
-  RTCVideoContentTypeScreenshare,
+typedef NS_ENUM(NSUInteger, RTC_OBJC_TYPE(RTCVideoContentType)) {
+  RTC_OBJC_TYPE(RTCVideoContentTypeUnspecified),
+  RTC_OBJC_TYPE(RTCVideoContentTypeScreenshare),
 };
 
 /** Represents an encoded frame. Corresponds to webrtc::EncodedImage. */
@@ -42,10 +42,10 @@ RTC_OBJC_EXPORT
 @property(nonatomic, assign) uint8_t flags;
 @property(nonatomic, assign) int64_t encodeStartMs;
 @property(nonatomic, assign) int64_t encodeFinishMs;
-@property(nonatomic, assign) RTCFrameType frameType;
-@property(nonatomic, assign) RTCVideoRotation rotation;
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCFrameType) frameType;
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCVideoRotation) rotation;
 @property(nonatomic, strong) NSNumber *qp;
-@property(nonatomic, assign) RTCVideoContentType contentType;
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCVideoContentType) contentType;
 
 @end
 

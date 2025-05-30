@@ -45,7 +45,7 @@
     : (CMSampleBufferRef)sampleBuffer codecSpecificInfo
     : (id<RTC_OBJC_TYPE(RTCCodecSpecificInfo)>)codecSpecificInfo width : (int32_t)width height
     : (int32_t)height renderTimeMs : (int64_t)renderTimeMs timestamp : (uint32_t)timestamp rotation
-    : (RTCVideoRotation)rotation;
+    : (RTC_OBJC_TYPE(RTCVideoRotation))rotation;
 
 @end
 
@@ -63,14 +63,14 @@ const int kBitsPerByte = 8;
 
 const OSType kNV12PixelFormat = kCVPixelFormatType_420YpCbCr8BiPlanarFullRange;
 
-typedef NS_ENUM(NSInteger, RTCVideoEncodeMode) {
-  Variable = 0,
-  Constant = 1,
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCVideoEncodeMode)) {
+  RTC_OBJC_TYPE(RTCVideoEncodeModeVariable) = 0,
+  RTC_OBJC_TYPE(RTCVideoEncodeModeConstant) = 1,
 };
 
-NSArray *CreateRateLimitArray(uint32_t computedBitrateBps, RTCVideoEncodeMode mode) {
+NSArray *CreateRateLimitArray(uint32_t computedBitrateBps, RTC_OBJC_TYPE(RTCVideoEncodeMode) mode) {
   switch (mode) {
-    case Variable: {
+    case RTC_OBJC_TYPE(RTCVideoEncodeModeVariable): {
       // 5 seconds should be an okay interval for VBR to enforce the long-term
       // limit.
       float avgInterval = 5.0;
@@ -81,7 +81,7 @@ NSArray *CreateRateLimitArray(uint32_t computedBitrateBps, RTCVideoEncodeMode mo
           computedBitrateBps * kLimitToAverageBitRateFactor / kBitsPerByte;
       return @[ @(peakBytesPerSecond), @(peakInterval), @(avgBytesPerSecond), @(avgInterval) ];
     }
-    case Constant: {
+    case RTC_OBJC_TYPE(RTCVideoEncodeModeConstant): {
       // CBR should be enforces with granularity of a second.
       float targetInterval = 1.0;
       int32_t targetBitrate = computedBitrateBps / kBitsPerByte;
@@ -99,7 +99,7 @@ struct RTCFrameEncodeParams {
                        int32_t h,
                        int64_t rtms,
                        uint32_t ts,
-                       RTCVideoRotation r)
+                       RTC_OBJC_TYPE(RTCVideoRotation) r)
       : encoder(e), width(w), height(h), render_time_ms(rtms), timestamp(ts), rotation(r) {
     if (csi) {
       codecSpecificInfo = csi;
@@ -114,7 +114,7 @@ struct RTCFrameEncodeParams {
   int32_t height;
   int64_t render_time_ms;
   uint32_t timestamp;
-  RTCVideoRotation rotation;
+  RTC_OBJC_TYPE(RTCVideoRotation) rotation;
 };
 
 // We receive I420Frames as input, but we need to feed CVPixelBuffers into the
@@ -355,18 +355,18 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
   uint32_t _encoderBitrateBps;
   uint32_t _encoderFrameRate;
   uint32_t _maxAllowedFrameRate;
-  RTCH264PacketizationMode _packetizationMode;
+  RTC_OBJC_TYPE(RTCH264PacketizationMode) _packetizationMode;
   absl::optional<webrtc::H264ProfileLevelId> _profile_level_id;
   RTCVideoEncoderCallback _callback;
   int32_t _width;
   int32_t _height;
   VTCompressionSessionRef _compressionSession;
   CVPixelBufferPoolRef _pixelBufferPool;
-  RTCVideoCodecMode _codecMode;
+  RTC_OBJC_TYPE(RTCVideoCodecMode) _codecMode;
   unsigned int _maxQP;
   unsigned int _minBitrate;
   unsigned int _maxBitrate;
-  RTCVideoEncodeMode _encodeMode;
+  RTC_OBJC_TYPE(RTCVideoEncodeMode) _encodeMode;
 
   webrtc::H264BitstreamParser _h264BitstreamParser;
   std::vector<uint8_t> _frameScaleBuffer;
@@ -384,15 +384,15 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
 - (instancetype)initWithCodecInfo:(RTC_OBJC_TYPE(RTCVideoCodecInfo) *)codecInfo {
   if (self = [super init]) {
     _codecInfo = codecInfo;
-    _packetizationMode = RTCH264PacketizationModeNonInterleaved;
+    _packetizationMode = RTC_OBJC_TYPE(RTCH264PacketizationModeNonInterleaved);
     _profile_level_id =
         webrtc::ParseSdpForH264ProfileLevelId([codecInfo nativeSdpVideoFormat].parameters);
     _previousPresentationTimeStamp = kCMTimeZero;
     RTC_DCHECK(_profile_level_id);
     RTC_LOG(LS_INFO) << "Using profile "
                      << CFStringToString(ExtractProfile(
-                            *_profile_level_id, _codecMode == RTCVideoCodecModeScreensharing));
-    RTC_CHECK([codecInfo.name isEqualToString:kRTCVideoCodecH264Name]);
+                            *_profile_level_id, _codecMode == RTC_OBJC_TYPE(RTCVideoCodecModeScreensharing)));
+    RTC_CHECK([codecInfo.name isEqualToString:RTC_CONSTANT_TYPE(RTCVideoCodecH264Name)]);
   }
   return self;
 }
@@ -404,14 +404,14 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
 - (NSInteger)startEncodeWithSettings:(RTC_OBJC_TYPE(RTCVideoEncoderSettings) *)settings
                        numberOfCores:(int)numberOfCores {
   RTC_DCHECK(settings);
-  RTC_DCHECK([settings.name isEqualToString:kRTCVideoCodecH264Name]);
+  RTC_DCHECK([settings.name isEqualToString:RTC_CONSTANT_TYPE(RTCVideoCodecH264Name)]);
 
   _width = settings.width;
   _height = settings.height;
   _codecMode = settings.mode;
   _maxQP = settings.qpMax;
 
-  _encodeMode = Variable;                    // Always variable mode for now
+  _encodeMode = RTC_OBJC_TYPE(RTCVideoEncodeModeVariable);                    // Always variable mode for now
   _minBitrate = settings.minBitrate * 1000;  // minBitrate is in kbps.
   _maxBitrate = settings.maxBitrate * 1000;  // maxBitrate is in kbps.
 
@@ -421,7 +421,7 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
                                                (aligned_width * aligned_height));
 
   // We can only set average bitrate on the HW encoder.
-  if (_encodeMode == Constant) {
+  if (_encodeMode == RTC_OBJC_TYPE(RTCVideoEncodeModeConstant)) {
     _targetBitrateBps = _maxBitrate;
   } else {
     _targetBitrateBps = settings.startBitrate * 1000;  // startBitrate is in kbps.
@@ -517,7 +517,7 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
   // Check if we need a keyframe.
   if (!isKeyframeRequired && frameTypes) {
     for (NSNumber *frameType in frameTypes) {
-      if ((RTCFrameType)frameType.intValue == RTCFrameTypeVideoFrameKey) {
+      if ((RTC_OBJC_TYPE(RTCFrameType))frameType.intValue == RTC_OBJC_TYPE(RTCFrameTypeVideoFrameKey)) {
         isKeyframeRequired = YES;
         break;
       }
@@ -752,7 +752,7 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
   // https://developer.apple.com/documentation/videotoolbox/kvtcompressionpropertykey_maxallowedframeqp
   if (@available(iOS 15.0, macOS 12.0, *)) {
     // Only enable for screen sharing and let VideoToolbox do the optimizing as much as possible.
-    if (_codecMode == RTCVideoCodecModeScreensharing) {
+    if (_codecMode == RTC_OBJC_TYPE(RTCVideoCodecModeScreensharing)) {
       RTC_LOG(LS_INFO) << "Configuring VideoToolbox to use maxQP: " << kHighH264QpThreshold
                        << " mode: " << _codecMode;
       SetVTSessionProperty(
@@ -762,7 +762,7 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
   SetVTSessionProperty(
       _compressionSession,
       kVTCompressionPropertyKey_ProfileLevel,
-      ExtractProfile(*_profile_level_id, _codecMode == RTCVideoCodecModeScreensharing));
+      ExtractProfile(*_profile_level_id, _codecMode == RTC_OBJC_TYPE(RTCVideoCodecModeScreensharing)));
   SetVTSessionProperty(_compressionSession, kVTCompressionPropertyKey_AllowFrameReordering, false);
 
   // [self updateEncoderBitrateAndFrameRate];
@@ -857,7 +857,7 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
                  height:(int32_t)height
            renderTimeMs:(int64_t)renderTimeMs
               timestamp:(uint32_t)timestamp
-               rotation:(RTCVideoRotation)rotation {
+               rotation:(RTC_OBJC_TYPE(RTCVideoRotation))rotation {
   RTCVideoEncoderCallback callback = _callback;
   if (!callback) {
     return;
@@ -897,13 +897,13 @@ NSUInteger GetMaxSampleRate(const webrtc::H264ProfileLevelId &profile_level_id) 
                                          }];
   frame.encodedWidth = width;
   frame.encodedHeight = height;
-  frame.frameType = isKeyframe ? RTCFrameTypeVideoFrameKey : RTCFrameTypeVideoFrameDelta;
+  frame.frameType = isKeyframe ? RTC_OBJC_TYPE(RTCFrameTypeVideoFrameKey) : RTC_OBJC_TYPE(RTCFrameTypeVideoFrameDelta);
   frame.captureTimeMs = renderTimeMs;
   frame.timeStamp = timestamp;
   frame.rotation = rotation;
-  frame.contentType = (_codecMode == RTCVideoCodecModeScreensharing) ?
-      RTCVideoContentTypeScreenshare :
-      RTCVideoContentTypeUnspecified;
+  frame.contentType = (_codecMode == RTC_OBJC_TYPE(RTCVideoCodecModeScreensharing)) ?
+      RTC_OBJC_TYPE(RTCVideoContentTypeScreenshare) :
+      RTC_OBJC_TYPE(RTCVideoContentTypeUnspecified);
   frame.flags = webrtc::VideoSendTiming::kInvalid;
 
   _h264BitstreamParser.ParseBitstream(*buffer);

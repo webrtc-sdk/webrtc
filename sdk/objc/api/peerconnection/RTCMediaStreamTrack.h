@@ -15,15 +15,15 @@
 /**
  * Represents the state of the track. This exposes the same states in C++.
  */
-typedef NS_ENUM(NSInteger, RTCMediaStreamTrackState) {
-  RTCMediaStreamTrackStateLive,
-  RTCMediaStreamTrackStateEnded
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCMediaStreamTrackState)) {
+  RTC_OBJC_TYPE(RTCMediaStreamTrackStateLive),
+  RTC_OBJC_TYPE(RTCMediaStreamTrackStateEnded)
 };
 
 NS_ASSUME_NONNULL_BEGIN
 
-RTC_EXTERN NSString *const kRTCMediaStreamTrackKindAudio;
-RTC_EXTERN NSString *const kRTCMediaStreamTrackKindVideo;
+RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCMediaStreamTrackKindAudio);
+RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCMediaStreamTrackKindVideo);
 
 RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCMediaStreamTrack) : NSObject
@@ -41,7 +41,7 @@ RTC_OBJC_EXPORT
 @property(nonatomic, assign) BOOL isEnabled;
 
 /** The state of the track. */
-@property(nonatomic, readonly) RTCMediaStreamTrackState readyState;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCMediaStreamTrackState) readyState;
 
 - (instancetype)init NS_UNAVAILABLE;
 

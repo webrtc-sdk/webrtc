@@ -16,11 +16,11 @@
  * Represents the session description type. This exposes the same types that are
  * in C++, which doesn't include the rollback type that is in the W3C spec.
  */
-typedef NS_ENUM(NSInteger, RTCSdpType) {
-  RTCSdpTypeOffer,
-  RTCSdpTypePrAnswer,
-  RTCSdpTypeAnswer,
-  RTCSdpTypeRollback,
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCSdpType)) {
+  RTC_OBJC_TYPE(RTCSdpTypeOffer),
+  RTC_OBJC_TYPE(RTCSdpTypePrAnswer),
+  RTC_OBJC_TYPE(RTCSdpTypeAnswer),
+  RTC_OBJC_TYPE(RTCSdpTypeRollback),
 };
 
 NS_ASSUME_NONNULL_BEGIN
@@ -29,7 +29,7 @@ RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCSessionDescription) : NSObject
 
 /** The type of session description. */
-@property(nonatomic, readonly) RTCSdpType type;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCSdpType) type;
 
 /** The SDP string representation of this session description. */
 @property(nonatomic, readonly) NSString *sdp;
@@ -37,11 +37,11 @@ RTC_OBJC_EXPORT
 - (instancetype)init NS_UNAVAILABLE;
 
 /** Initialize a session description with a type and SDP string. */
-- (instancetype)initWithType:(RTCSdpType)type sdp:(NSString *)sdp NS_DESIGNATED_INITIALIZER;
+- (instancetype)initWithType:(RTC_OBJC_TYPE(RTCSdpType))type sdp:(NSString *)sdp NS_DESIGNATED_INITIALIZER;
 
-+ (NSString *)stringForType:(RTCSdpType)type;
++ (NSString *)stringForType:(RTC_OBJC_TYPE(RTCSdpType))type;
 
-+ (RTCSdpType)typeForString:(NSString *)string;
++ (RTC_OBJC_TYPE(RTCSdpType))typeForString:(NSString *)string;
 
 @end
 
