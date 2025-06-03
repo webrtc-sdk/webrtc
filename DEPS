@@ -187,7 +187,7 @@ deps = {
   },
 
   'src/third_party/boringssl/src':
-    'https://boringssl.googlesource.com/boringssl.git@f94f3ed3965ea033001fb9ae006084eee408b861',
+    'https://boringssl.googlesource.com/boringssl.git@12391e648d3c6f04a718721568cc89208b780654',
   'src/third_party/breakpad/breakpad':
     'https://chromium.googlesource.com/breakpad/breakpad.git@76788faa4ef163081f82273bfca7fae8a734b971',
   'src/third_party/catapult':
