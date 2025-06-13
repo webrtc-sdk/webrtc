@@ -250,7 +250,7 @@ int32_t AudioDeviceIOS::StartPlayout() {
   RTC_DCHECK(playout_is_initialized_);
   RTC_DCHECK(!playing_.load());
   RTC_DCHECK(audio_unit_);
-  if (!audio_is_initialized_) {
+  if (!playout_is_initialized_) {
     return -1;
   }
   if (fine_audio_buffer_) {
@@ -318,7 +318,7 @@ int32_t AudioDeviceIOS::StartRecording() {
   RTC_DCHECK(recording_is_initialized_);
   RTC_DCHECK(!recording_.load());
   RTC_DCHECK(audio_unit_);
-  if (!audio_is_initialized_) {
+  if (!recording_is_initialized_) {
     return -1;
   }
   if (fine_audio_buffer_) {
@@ -875,8 +875,8 @@ void AudioDeviceIOS::SetupAudioBuffersForActiveAudioSession() {
 
 bool AudioDeviceIOS::CreateAudioUnit() {
   RTC_DCHECK(!audio_unit_);
-  RTC_DCHECK(!audio_is_initialized_);
-  if (audio_unit_ || audio_is_initialized_) {
+  RTC_DCHECK(!playout_is_initialized_ && !recording_is_initialized_);
+  if (audio_unit_ || playout_is_initialized_ || recording_is_initialized_) {
     return false;
   }
   BOOL detect_mute_speech_ = (muted_speech_event_handler_ != 0);
@@ -1079,7 +1079,6 @@ bool AudioDeviceIOS::InitPlayOrRecord(bool enable_input) {
 
   // Release the lock.
   [session unlockForConfiguration];
-  audio_is_initialized_ = true;
   return true;
 }
 
@@ -1106,7 +1105,8 @@ void AudioDeviceIOS::ShutdownPlayOrRecord() {
   // session, hence we deactivate as last action.
   UnconfigureAudioSession();
 
-  audio_is_initialized_ = false;
+  playout_is_initialized_ = false;
+  recording_is_initialized_ = false;
 }
 
 void AudioDeviceIOS::PrepareForNewStart() {

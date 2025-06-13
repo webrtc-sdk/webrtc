@@ -367,7 +367,7 @@ enum FrameCryptionState {
   kInternalError,
 };
 
-class FrameCryptorTransformerObserver : public rtc::RefCountInterface {
+class FrameCryptorTransformerObserver : public webrtc::RefCountInterface {
  public:
   virtual void OnFrameCryptionStateChanged(const std::string participant_id,
                                            FrameCryptionState error) = 0;
