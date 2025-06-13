@@ -383,7 +383,6 @@ void ChannelReceive::OnReceivedPayloadData(ArrayView<const uint8_t> payload,
 void ChannelReceive::InitFrameTransformerDelegate(
     scoped_refptr<webrtc::FrameTransformerInterface> frame_transformer) {
   RTC_DCHECK(frame_transformer);
-  RTC_DCHECK(!frame_transformer_delegate_);
   RTC_DCHECK(worker_thread_->IsCurrent());
 
   // Pass a callback to ChannelReceive::OnReceivedPayloadData, to be called by
@@ -935,21 +934,29 @@ void ChannelReceive::RtcpPacketTypesCounterUpdated(
 void ChannelReceive::SetDepacketizerToDecoderFrameTransformer(
     scoped_refptr<webrtc::FrameTransformerInterface> frame_transformer) {
   RTC_DCHECK_RUN_ON(&worker_thread_checker_);
-  if (!frame_transformer) {
-    RTC_DCHECK_NOTREACHED() << "Not setting the transformer?";
-    return;
-  }
-  if (frame_transformer_delegate_) {
-    // Depending on when the channel is created, the transformer might be set
-    // twice. Don't replace the delegate if it was already initialized.
-    // TODO(crbug.com/webrtc/15674): Prevent multiple calls during
-    // reconfiguration.
-    RTC_CHECK_EQ(frame_transformer_delegate_->FrameTransformer(),
-                 frame_transformer);
-    return;
+
+  // Check if a reset is needed
+  if (frame_transformer_delegate_ &&
+      frame_transformer_delegate_->FrameTransformer() != frame_transformer) {
+    frame_transformer_delegate_->Reset();
+    frame_transformer_delegate_ = nullptr;
+    RTC_DLOG(LS_INFO) << "Frame transformer delegate has been reset.";
   }
 
-  InitFrameTransformerDelegate(std::move(frame_transformer));
+  // Initialize the delegate if needed
+  if (frame_transformer_delegate_ &&
+      frame_transformer_delegate_->FrameTransformer() == frame_transformer) {
+    RTC_DLOG(LS_INFO)
+        << "Frame transformer is already set to the provided transformer.";
+  } else {
+    if (!frame_transformer) {
+      RTC_DCHECK_NOTREACHED() << "Attempted to set a null frame transformer.";
+    } else {
+      RTC_DLOG(LS_INFO) << "Initializing frame transformer delegate with the "
+                           "new frame transformer.";
+      InitFrameTransformerDelegate(std::move(frame_transformer));
+    }
+  }
 }
 
 void ChannelReceive::SetFrameDecryptor(

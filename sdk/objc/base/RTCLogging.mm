@@ -12,34 +12,33 @@
 
 #include "rtc_base/logging.h"
 
-webrtc::LoggingSeverity RTCGetNativeLoggingSeverity(
-    RTCLoggingSeverity severity) {
+webrtc::LoggingSeverity RTC_OBJC_TYPE(RTCGetNativeLoggingSeverity)(RTC_OBJC_TYPE(RTCLoggingSeverity) severity) {
   switch (severity) {
-    case RTCLoggingSeverityVerbose:
+    case RTC_OBJC_TYPE(RTCLoggingSeverityVerbose):
       return webrtc::LS_VERBOSE;
-    case RTCLoggingSeverityInfo:
+    case RTC_OBJC_TYPE(RTCLoggingSeverityInfo):
       return webrtc::LS_INFO;
-    case RTCLoggingSeverityWarning:
+    case RTC_OBJC_TYPE(RTCLoggingSeverityWarning):
       return webrtc::LS_WARNING;
-    case RTCLoggingSeverityError:
+    case RTC_OBJC_TYPE(RTCLoggingSeverityError):
       return webrtc::LS_ERROR;
-    case RTCLoggingSeverityNone:
+    case RTC_OBJC_TYPE(RTCLoggingSeverityNone):
       return webrtc::LS_NONE;
   }
 }
 
-void RTCLogEx(RTCLoggingSeverity severity, NSString* log_string) {
+void RTC_OBJC_TYPE(RTCLogEx)(RTC_OBJC_TYPE(RTCLoggingSeverity) severity, NSString* log_string) {
   if (log_string.length) {
     const char* utf8_string = log_string.UTF8String;
-    RTC_LOG_V(RTCGetNativeLoggingSeverity(severity)) << utf8_string;
+    RTC_LOG_V(RTC_OBJC_TYPE(RTCGetNativeLoggingSeverity)(severity)) << utf8_string;
   }
 }
 
-void RTCSetMinDebugLogLevel(RTCLoggingSeverity severity) {
-  webrtc::LogMessage::LogToDebug(RTCGetNativeLoggingSeverity(severity));
+void RTC_OBJC_TYPE(RTCSetMinDebugLogLevel)(RTC_OBJC_TYPE(RTCLoggingSeverity) severity) {
+  webrtc::LogMessage::LogToDebug(RTC_OBJC_TYPE(RTCGetNativeLoggingSeverity)(severity));
 }
 
-NSString* RTCFileName(const char* file_path) {
+NSString* RTC_OBJC_TYPE(RTCFileName)(const char* file_path) {
   NSString* ns_file_path =
       [[NSString alloc] initWithBytesNoCopy:const_cast<char*>(file_path)
                                      length:strlen(file_path)

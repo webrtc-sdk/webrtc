@@ -1,0 +1,26 @@
+###################################################################################
+
+The following modifications follow Apache License 2.0 from shiguredo.
+
+https://github.com/webrtc-sdk/webrtc/commit/dfec53e93a0a1cb93f444caf50f844ec0068c7b7
+https://github.com/webrtc-sdk/webrtc/commit/403b4678543c5d4ac77bd1ea5753c02637b3bb89
+https://github.com/webrtc-sdk/webrtc/commit/77d5d685a90fb4bded17835ae72ec6671b26d696
+
+Apache License 2.0
+
+Copyright 2019-2021, Wandbox LLC (Original Author)
+Copyright 2019-2021, Shiguredo Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+#####################################################################################

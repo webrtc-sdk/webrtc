@@ -44,6 +44,10 @@
 #define RTC_OBJC_TYPE_PREFIX
 #endif
 
+#ifndef RTC_CONSTANT_TYPE_PREFIX
+#define RTC_CONSTANT_TYPE_PREFIX k
+#endif
+
 // RCT_OBJC_TYPE
 //
 // Macro used internally to declare API types. Declaring an API type without
@@ -51,6 +55,8 @@
 // that will be affected by the configurable RTC_OBJC_TYPE_PREFIX.
 #define RTC_OBJC_TYPE(type_name) \
   RTC_SYMBOL_CONCAT(RTC_OBJC_TYPE_PREFIX, type_name)
+
+#define RTC_CONSTANT_TYPE(type_name) RTC_SYMBOL_CONCAT(RTC_CONSTANT_TYPE_PREFIX, type_name)
 
 #if defined(__cplusplus)
 #define RTC_EXTERN extern "C" RTC_OBJC_EXPORT

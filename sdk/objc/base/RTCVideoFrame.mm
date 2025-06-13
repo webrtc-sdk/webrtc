@@ -14,7 +14,7 @@
 #import "RTCVideoFrameBuffer.h"
 
 @implementation RTC_OBJC_TYPE (RTCVideoFrame) {
-  RTCVideoRotation _rotation;
+  RTC_OBJC_TYPE(RTCVideoRotation) _rotation;
   int64_t _timeStampNs;
 }
 
@@ -29,7 +29,7 @@
   return _buffer.height;
 }
 
-- (RTCVideoRotation)rotation {
+- (RTC_OBJC_TYPE(RTCVideoRotation) )rotation {
   return _rotation;
 }
 
@@ -43,8 +43,28 @@
                                                   timeStampNs:_timeStampNs];
 }
 
+- (instancetype)initWithPixelBuffer:(CVPixelBufferRef)pixelBuffer
+                           rotation:(RTC_OBJC_TYPE(RTCVideoRotation))rotation
+                        timeStampNs:(int64_t)timeStampNs {
+  // Deprecated.
+  return nil;
+}
+
+- (instancetype)initWithPixelBuffer:(CVPixelBufferRef)pixelBuffer
+                        scaledWidth:(int)scaledWidth
+                       scaledHeight:(int)scaledHeight
+                          cropWidth:(int)cropWidth
+                         cropHeight:(int)cropHeight
+                              cropX:(int)cropX
+                              cropY:(int)cropY
+                           rotation:(RTC_OBJC_TYPE(RTCVideoRotation))rotation
+                        timeStampNs:(int64_t)timeStampNs {
+  // Deprecated.
+  return nil;
+}
+
 - (instancetype)initWithBuffer:(id<RTC_OBJC_TYPE(RTCVideoFrameBuffer)>)buffer
-                      rotation:(RTCVideoRotation)rotation
+                      rotation:(RTC_OBJC_TYPE(RTCVideoRotation))rotation
                    timeStampNs:(int64_t)timeStampNs {
   self = [super init];
   if (self) {

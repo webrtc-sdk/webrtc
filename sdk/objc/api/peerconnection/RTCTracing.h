@@ -12,10 +12,10 @@
 
 #import "sdk/objc/base/RTCMacros.h"
 
-RTC_EXTERN void RTCSetupInternalTracer(void);
+RTC_EXTERN void RTC_OBJC_TYPE(RTCSetupInternalTracer)(void);
 /** Starts capture to specified file. Must be a valid writable path.
  *  Returns YES if capture starts.
  */
-RTC_EXTERN BOOL RTCStartInternalCapture(NSString* filePath);
-RTC_EXTERN void RTCStopInternalCapture(void);
-RTC_EXTERN void RTCShutdownInternalTracer(void);
+RTC_EXTERN BOOL RTC_OBJC_TYPE(RTCStartInternalCapture)(NSString* filePath);
+RTC_EXTERN void RTC_OBJC_TYPE(RTCStopInternalCapture)(void);
+RTC_EXTERN void RTC_OBJC_TYPE(RTCShutdownInternalTracer)(void);

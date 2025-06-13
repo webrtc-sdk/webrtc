@@ -8,16 +8,24 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#import <AVFoundation/AVFoundation.h>
+#import <os/lock.h>
+
 #import "RTCAudioTrack+Private.h"
 
+#import "RTCAudioRenderer.h"
 #import "RTCAudioSource+Private.h"
 #import "RTCMediaStreamTrack+Private.h"
 #import "RTCPeerConnectionFactory+Private.h"
+#import "api/RTCAudioRendererAdapter+Private.h"
 #import "helpers/NSString+StdString.h"
 
 #include "rtc_base/checks.h"
 
-@implementation RTC_OBJC_TYPE (RTCAudioTrack)
+@implementation RTC_OBJC_TYPE (RTCAudioTrack) {
+  rtc::Thread *_signalingThread;
+  NSMutableArray *_adapters;
+}
 
 @synthesize source = _source;
 
@@ -31,26 +39,30 @@
 
   std::string nativeId = [NSString stdStringForString:trackId];
   webrtc::scoped_refptr<webrtc::AudioTrackInterface> track =
-      factory.nativeFactory->CreateAudioTrack(nativeId,
-                                              source.nativeAudioSource.get());
-  self = [self initWithFactory:factory
-                   nativeTrack:track
-                          type:RTCMediaStreamTrackTypeAudio];
-  if (self) {
+      factory.nativeFactory->CreateAudioTrack(nativeId, source.nativeAudioSource.get());
+  if (self = [self initWithFactory:factory nativeTrack:track type:RTC_OBJC_TYPE(RTCMediaStreamTrackTypeAudio)]) {
     _source = source;
   }
+
   return self;
 }
 
-- (instancetype)
-    initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
-        nativeTrack:(webrtc::scoped_refptr<webrtc::MediaStreamTrackInterface>)
-                        nativeTrack
-               type:(RTCMediaStreamTrackType)type {
+- (instancetype)initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
+                    nativeTrack:(rtc::scoped_refptr<webrtc::MediaStreamTrackInterface>)nativeTrack
+                           type:(RTC_OBJC_TYPE(RTCMediaStreamTrackType))type {
   NSParameterAssert(factory);
   NSParameterAssert(nativeTrack);
-  NSParameterAssert(type == RTCMediaStreamTrackTypeAudio);
-  return [super initWithFactory:factory nativeTrack:nativeTrack type:type];
+  NSParameterAssert(type == RTC_OBJC_TYPE(RTCMediaStreamTrackTypeAudio));
+  if (self = [super initWithFactory:factory nativeTrack:nativeTrack type:type]) {
+    _adapters = [NSMutableArray array];
+    _signalingThread = factory.signalingThread;
+  }
+
+  return self;
+}
+
+- (void)dealloc {
+  [self removeAllRenderers];
 }
 
 - (RTC_OBJC_TYPE(RTCAudioSource) *)source {
@@ -64,6 +76,64 @@
     }
   }
   return _source;
+}
+
+- (void)addRenderer:(id<RTC_OBJC_TYPE(RTCAudioRenderer)>)renderer {
+  if (!_signalingThread->IsCurrent()) {
+    _signalingThread->BlockingCall([renderer, self] { [self addRenderer:renderer]; });
+    return;
+  }
+
+  // Make sure we don't have this renderer yet.
+  for (RTC_OBJC_TYPE(RTCAudioRendererAdapter) * adapter in _adapters) {
+    if (adapter.audioRenderer == renderer) {
+      RTC_LOG(LS_INFO) << "|renderer| is already attached to this track";
+      return;
+    }
+  }
+  // Create a wrapper that provides a native pointer for us.
+  RTC_OBJC_TYPE(RTCAudioRendererAdapter) *adapter =
+      [[RTC_OBJC_TYPE(RTCAudioRendererAdapter) alloc] initWithNativeRenderer:renderer];
+  [_adapters addObject:adapter];
+  self.nativeAudioTrack->AddSink(adapter.nativeAudioRenderer);
+}
+
+- (void)removeRenderer:(id<RTC_OBJC_TYPE(RTCAudioRenderer)>)renderer {
+  if (!_signalingThread->IsCurrent()) {
+    _signalingThread->BlockingCall([renderer, self] { [self removeRenderer:renderer]; });
+    return;
+  }
+  __block NSUInteger indexToRemove = NSNotFound;
+  [_adapters enumerateObjectsUsingBlock:^(RTC_OBJC_TYPE(RTCAudioRendererAdapter) * adapter,
+                                          NSUInteger idx, BOOL * stop) {
+    if (adapter.audioRenderer == renderer) {
+      indexToRemove = idx;
+      *stop = YES;
+    }
+  }];
+  if (indexToRemove == NSNotFound) {
+    RTC_LOG(LS_INFO) << "removeRenderer called with a renderer that has not been previously added";
+    return;
+  }
+  RTC_OBJC_TYPE(RTCAudioRendererAdapter) *adapterToRemove = [_adapters objectAtIndex:indexToRemove];
+  self.nativeAudioTrack->RemoveSink(adapterToRemove.nativeAudioRenderer);
+  [_adapters removeObjectAtIndex:indexToRemove];
+}
+
+- (void)removeAllRenderers {
+  // Ensure the method is executed on the signaling thread.
+  if (!_signalingThread->IsCurrent()) {
+    _signalingThread->BlockingCall([self] { [self removeAllRenderers]; });
+    return;
+  }
+
+  // Iterate over all adapters and remove each one from the native audio track.
+  for (RTC_OBJC_TYPE(RTCAudioRendererAdapter) * adapter in _adapters) {
+    self.nativeAudioTrack->RemoveSink(adapter.nativeAudioRenderer);
+  }
+
+  // Clear the adapters array after all sinks have been removed.
+  [_adapters removeAllObjects];
 }
 
 #pragma mark - Private

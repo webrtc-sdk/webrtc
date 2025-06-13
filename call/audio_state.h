@@ -58,6 +58,9 @@ class AudioState : public RefCountInterface {
 
   virtual void SetStereoChannelSwapping(bool enable) = 0;
 
+  // Notify the AudioState that a stream updated it's mute state.
+  virtual void OnMuteStreamChanged() = 0;
+
   static scoped_refptr<AudioState> Create(const AudioState::Config& config);
 
   ~AudioState() override {}

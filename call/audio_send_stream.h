@@ -193,6 +193,7 @@ class AudioSendStream : public AudioSender {
                                   int event,
                                   int duration_ms) = 0;
 
+  virtual bool GetMuted() = 0;
   virtual void SetMuted(bool muted) = 0;
 
   virtual Stats GetStats() const = 0;

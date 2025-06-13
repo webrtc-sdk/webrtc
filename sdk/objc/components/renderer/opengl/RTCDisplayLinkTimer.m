@@ -12,7 +12,7 @@
 
 #import <UIKit/UIKit.h>
 
-@implementation RTCDisplayLinkTimer {
+@implementation RTC_OBJC_TYPE (RTCDisplayLinkTimer) {
   CADisplayLink *_displayLink;
   void (^_timerHandler)(void);
 }
@@ -22,17 +22,15 @@
   self = [super init];
   if (self) {
     _timerHandler = timerHandler;
-    _displayLink =
-        [CADisplayLink displayLinkWithTarget:self
-                                    selector:@selector(displayLinkDidFire:)];
+    _displayLink = [CADisplayLink displayLinkWithTarget:self
+                                               selector:@selector(displayLinkDidFire:)];
     _displayLink.paused = YES;
 #if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_10_0
     _displayLink.preferredFramesPerSecond = 30;
 #else
     [_displayLink setFrameInterval:2];
 #endif
-    [_displayLink addToRunLoop:[NSRunLoop currentRunLoop]
-                       forMode:NSRunLoopCommonModes];
+    [_displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSRunLoopCommonModes];
   }
   return self;
 }

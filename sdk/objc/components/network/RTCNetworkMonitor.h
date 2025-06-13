@@ -10,12 +10,14 @@
 
 #import <Foundation/Foundation.h>
 
+#import "RTCMacros.h"
+
 NS_ASSUME_NONNULL_BEGIN
 
 /** Listens for NWPathMonitor updates and forwards the results to a C++
  *  observer.
  */
-@interface RTCNetworkMonitor : NSObject
+@interface RTC_OBJC_TYPE (RTCNetworkMonitor): NSObject
 
 - (instancetype)init NS_UNAVAILABLE;
 

@@ -120,39 +120,39 @@ class PeerConnectionDelegateAdapter : public PeerConnectionObserver {
                              delegate NS_DESIGNATED_INITIALIZER;
 
 + (webrtc::PeerConnectionInterface::SignalingState)nativeSignalingStateForState:
-    (RTCSignalingState)state;
+    (RTC_OBJC_TYPE(RTCSignalingState))state;
 
-+ (RTCSignalingState)signalingStateForNativeState:
++ (RTC_OBJC_TYPE(RTCSignalingState))signalingStateForNativeState:
     (webrtc::PeerConnectionInterface::SignalingState)nativeState;
 
-+ (NSString *)stringForSignalingState:(RTCSignalingState)state;
++ (NSString *)stringForSignalingState:(RTC_OBJC_TYPE(RTCSignalingState))state;
 
-+ (webrtc::PeerConnectionInterface::IceConnectionState)
-    nativeIceConnectionStateForState:(RTCIceConnectionState)state;
++ (webrtc::PeerConnectionInterface::IceConnectionState)nativeIceConnectionStateForState:
+    (RTC_OBJC_TYPE(RTCIceConnectionState))state;
 
-+ (webrtc::PeerConnectionInterface::PeerConnectionState)
-    nativeConnectionStateForState:(RTCPeerConnectionState)state;
++ (webrtc::PeerConnectionInterface::PeerConnectionState)nativeConnectionStateForState:
+    (RTC_OBJC_TYPE(RTCPeerConnectionState))state;
 
-+ (RTCIceConnectionState)iceConnectionStateForNativeState:
++ (RTC_OBJC_TYPE(RTCIceConnectionState))iceConnectionStateForNativeState:
     (webrtc::PeerConnectionInterface::IceConnectionState)nativeState;
 
-+ (RTCPeerConnectionState)connectionStateForNativeState:
++ (RTC_OBJC_TYPE(RTCPeerConnectionState))connectionStateForNativeState:
     (webrtc::PeerConnectionInterface::PeerConnectionState)nativeState;
 
-+ (NSString *)stringForIceConnectionState:(RTCIceConnectionState)state;
++ (NSString *)stringForIceConnectionState:(RTC_OBJC_TYPE(RTCIceConnectionState))state;
 
-+ (NSString *)stringForConnectionState:(RTCPeerConnectionState)state;
++ (NSString *)stringForConnectionState:(RTC_OBJC_TYPE(RTCPeerConnectionState))state;
 
-+ (webrtc::PeerConnectionInterface::IceGatheringState)
-    nativeIceGatheringStateForState:(RTCIceGatheringState)state;
++ (webrtc::PeerConnectionInterface::IceGatheringState)nativeIceGatheringStateForState:
+    (RTC_OBJC_TYPE(RTCIceGatheringState))state;
 
-+ (RTCIceGatheringState)iceGatheringStateForNativeState:
++ (RTC_OBJC_TYPE(RTCIceGatheringState))iceGatheringStateForNativeState:
     (webrtc::PeerConnectionInterface::IceGatheringState)nativeState;
 
-+ (NSString *)stringForIceGatheringState:(RTCIceGatheringState)state;
++ (NSString *)stringForIceGatheringState:(RTC_OBJC_TYPE(RTCIceGatheringState))state;
 
-+ (webrtc::PeerConnectionInterface::StatsOutputLevel)
-    nativeStatsOutputLevelForLevel:(RTCStatsOutputLevel)level;
++ (webrtc::PeerConnectionInterface::StatsOutputLevel)nativeStatsOutputLevelForLevel:
+    (RTC_OBJC_TYPE(RTCStatsOutputLevel))level;
 
 @end
 

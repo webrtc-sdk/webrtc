@@ -12,21 +12,19 @@
 
 #import "sdk/objc/base/RTCMacros.h"
 
-/** The only valid value for the following if set is kRTCFieldTrialEnabledValue.
- */
-RTC_EXTERN NSString *const kRTCFieldTrialAudioForceABWENoTWCCKey;
-RTC_EXTERN NSString *const kRTCFieldTrialFlexFec03AdvertisedKey;
-RTC_EXTERN NSString *const kRTCFieldTrialFlexFec03Key;
-RTC_EXTERN NSString *const kRTCFieldTrialH264HighProfileKey;
-RTC_EXTERN NSString *const kRTCFieldTrialMinimizeResamplingOnMobileKey;
-RTC_EXTERN NSString *const kRTCFieldTrialUseNWPathMonitor;
+/** The only valid value for the following if set is kRTCFieldTrialEnabledValue. */
+RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialAudioForceABWENoTWCCKey);
+RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialFlexFec03AdvertisedKey);
+RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialFlexFec03Key);
+RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialH264HighProfileKey);
+RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialMinimizeResamplingOnMobileKey);
+RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialUseNWPathMonitor);
 
 /** The valid value for field trials above. */
-RTC_EXTERN NSString *const kRTCFieldTrialEnabledValue;
+RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialEnabledValue);
 
 /** Initialize field trials using a dictionary mapping field trial keys to their
  * values. See above for valid keys and values. Must be called before any other
  * call into WebRTC. See: webrtc/system_wrappers/include/field_trial.h
  */
-RTC_EXTERN void RTCInitFieldTrialDictionary(
-    NSDictionary<NSString *, NSString *> *fieldTrials);
+RTC_EXTERN void RTC_OBJC_TYPE(RTCInitFieldTrialDictionary)(NSDictionary<NSString *, NSString *> *fieldTrials);

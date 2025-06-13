@@ -108,6 +108,8 @@ class TransformableVideoSenderFrame : public TransformableVideoFrameInterface {
     csrcs_ = metadata.GetCsrcs();
   }
 
+  const RTPVideoHeader& header() const override { return header_; }
+
   const RTPVideoHeader& GetHeader() const { return header_; }
   uint8_t GetPayloadType() const override { return payload_type_; }
   std::optional<VideoCodecType> GetCodecType() const { return codec_type_; }

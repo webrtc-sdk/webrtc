@@ -143,11 +143,11 @@ public class HardwareVideoEncoderFactory implements VideoEncoderFactory {
         // supported by the decoder.
         if (type == VideoCodecMimeType.H264 && isH264HighProfileSupported(codec)) {
           supportedCodecInfos.add(new VideoCodecInfo(
-              name, MediaCodecUtils.getCodecProperties(type, /* highProfile= */ true)));
+              name, MediaCodecUtils.getCodecProperties(type, /* highProfile= */ true), new ArrayList<>()));
         }
 
         supportedCodecInfos.add(new VideoCodecInfo(
-            name, MediaCodecUtils.getCodecProperties(type, /* highProfile= */ false)));
+            name, MediaCodecUtils.getCodecProperties(type, /* highProfile= */ false), new ArrayList<>()));
       }
     }
 

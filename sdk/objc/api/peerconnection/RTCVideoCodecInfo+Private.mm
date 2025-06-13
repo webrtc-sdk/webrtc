@@ -14,6 +14,11 @@
 #include "api/video_codecs/scalability_mode_helper.h"
 #import "helpers/NSString+StdString.h"
 
+#include "absl/container/inlined_vector.h"
+#include "api/video_codecs/sdp_video_format.h"
+#include "modules/video_coding/svc/scalability_mode_util.h"
+#include "modules/video_coding/svc/create_scalability_structure.h"
+
 @implementation RTC_OBJC_TYPE (RTCVideoCodecInfo)
 (Private)
 

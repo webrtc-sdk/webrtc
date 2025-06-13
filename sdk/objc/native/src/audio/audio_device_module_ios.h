@@ -135,6 +135,9 @@ class AudioDeviceModuleIOS : public AudioDeviceModule {
   int GetPlayoutAudioParameters(AudioParameters* params) const override;
   int GetRecordAudioParameters(AudioParameters* params) const override;
 #endif  // WEBRTC_IOS
+
+  int32_t SetAudioDeviceSink(AudioDeviceSink* sink) const override;
+
  private:
   void ReportError(ADMError error) const;
   const bool bypass_voice_processing_;

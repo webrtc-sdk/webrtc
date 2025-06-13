@@ -620,7 +620,8 @@ class WebRtcVideoReceiveChannel : public MediaChannelUtil,
                                      bool nack_enabled,
                                      RtcpMode rtcp_mode,
                                      std::optional<int> rtx_time) override;
-
+  void StartReceive(uint32_t ssrc) override;
+  void StopReceive(uint32_t ssrc) override;
  private:
   class WebRtcVideoReceiveStream;
   struct ChangedReceiverParameters {

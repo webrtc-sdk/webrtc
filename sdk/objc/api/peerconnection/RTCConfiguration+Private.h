@@ -17,57 +17,52 @@ NS_ASSUME_NONNULL_BEGIN
 @interface RTC_OBJC_TYPE (RTCConfiguration)
 ()
 
-    + (webrtc::PeerConnectionInterface::IceTransportsType)
-          nativeTransportsTypeForTransportPolicy
-    : (RTCIceTransportPolicy)policy;
+    + (webrtc::PeerConnectionInterface::IceTransportsType)nativeTransportsTypeForTransportPolicy
+    : (RTC_OBJC_TYPE(RTCIceTransportPolicy))policy;
 
-+ (RTCIceTransportPolicy)transportPolicyForTransportsType:
++ (RTC_OBJC_TYPE(RTCIceTransportPolicy))transportPolicyForTransportsType:
     (webrtc::PeerConnectionInterface::IceTransportsType)nativeType;
 
-+ (NSString *)stringForTransportPolicy:(RTCIceTransportPolicy)policy;
++ (NSString *)stringForTransportPolicy:(RTC_OBJC_TYPE(RTCIceTransportPolicy))policy;
 
 + (webrtc::PeerConnectionInterface::BundlePolicy)nativeBundlePolicyForPolicy:
-    (RTCBundlePolicy)policy;
+    (RTC_OBJC_TYPE(RTCBundlePolicy))policy;
 
-+ (RTCBundlePolicy)bundlePolicyForNativePolicy:
++ (RTC_OBJC_TYPE(RTCBundlePolicy))bundlePolicyForNativePolicy:
     (webrtc::PeerConnectionInterface::BundlePolicy)nativePolicy;
 
-+ (NSString *)stringForBundlePolicy:(RTCBundlePolicy)policy;
++ (NSString *)stringForBundlePolicy:(RTC_OBJC_TYPE(RTCBundlePolicy))policy;
 
 + (webrtc::PeerConnectionInterface::RtcpMuxPolicy)nativeRtcpMuxPolicyForPolicy:
-    (RTCRtcpMuxPolicy)policy;
+    (RTC_OBJC_TYPE(RTCRtcpMuxPolicy))policy;
 
-+ (RTCRtcpMuxPolicy)rtcpMuxPolicyForNativePolicy:
++ (RTC_OBJC_TYPE(RTCRtcpMuxPolicy))rtcpMuxPolicyForNativePolicy:
     (webrtc::PeerConnectionInterface::RtcpMuxPolicy)nativePolicy;
 
-+ (NSString *)stringForRtcpMuxPolicy:(RTCRtcpMuxPolicy)policy;
++ (NSString *)stringForRtcpMuxPolicy:(RTC_OBJC_TYPE(RTCRtcpMuxPolicy))policy;
 
-+ (webrtc::PeerConnectionInterface::TcpCandidatePolicy)
-    nativeTcpCandidatePolicyForPolicy:(RTCTcpCandidatePolicy)policy;
++ (webrtc::PeerConnectionInterface::TcpCandidatePolicy)nativeTcpCandidatePolicyForPolicy:
+    (RTC_OBJC_TYPE(RTCTcpCandidatePolicy))policy;
 
-+ (RTCTcpCandidatePolicy)tcpCandidatePolicyForNativePolicy:
++ (RTC_OBJC_TYPE(RTCTcpCandidatePolicy))tcpCandidatePolicyForNativePolicy:
     (webrtc::PeerConnectionInterface::TcpCandidatePolicy)nativePolicy;
 
-+ (NSString *)stringForTcpCandidatePolicy:(RTCTcpCandidatePolicy)policy;
++ (NSString *)stringForTcpCandidatePolicy:(RTC_OBJC_TYPE(RTCTcpCandidatePolicy))policy;
 
-+ (webrtc::PeerConnectionInterface::CandidateNetworkPolicy)
-    nativeCandidateNetworkPolicyForPolicy:(RTCCandidateNetworkPolicy)policy;
++ (webrtc::PeerConnectionInterface::CandidateNetworkPolicy)nativeCandidateNetworkPolicyForPolicy:
+    (RTC_OBJC_TYPE(RTCCandidateNetworkPolicy))policy;
 
-+ (RTCCandidateNetworkPolicy)candidateNetworkPolicyForNativePolicy:
++ (RTC_OBJC_TYPE(RTCCandidateNetworkPolicy))candidateNetworkPolicyForNativePolicy:
     (webrtc::PeerConnectionInterface::CandidateNetworkPolicy)nativePolicy;
 
-+ (NSString *)stringForCandidateNetworkPolicy:(RTCCandidateNetworkPolicy)policy;
++ (NSString *)stringForCandidateNetworkPolicy:(RTC_OBJC_TYPE(RTCCandidateNetworkPolicy))policy;
 
-+ (webrtc::KeyType)nativeEncryptionKeyTypeForKeyType:
-    (RTCEncryptionKeyType)keyType;
++ (rtc::KeyType)nativeEncryptionKeyTypeForKeyType:(RTC_OBJC_TYPE(RTCEncryptionKeyType))keyType;
 
-+ (webrtc::SdpSemantics)nativeSdpSemanticsForSdpSemantics:
-    (RTCSdpSemantics)sdpSemantics;
++ (NSString *)stringForSdpSemantics:(RTC_OBJC_TYPE(RTCSdpSemantics))sdpSemantics;
++ (webrtc::SdpSemantics)nativeSdpSemanticsForSdpSemantics:(RTC_OBJC_TYPE(RTCSdpSemantics))sdpSemantics;
 
-+ (RTCSdpSemantics)sdpSemanticsForNativeSdpSemantics:
-    (webrtc::SdpSemantics)sdpSemantics;
-
-+ (NSString *)stringForSdpSemantics:(RTCSdpSemantics)sdpSemantics;
++ (RTC_OBJC_TYPE(RTCSdpSemantics))sdpSemanticsForNativeSdpSemantics:(webrtc::SdpSemantics)sdpSemantics;
 
 /**
  * RTCConfiguration struct representation of this RTCConfiguration.

@@ -41,11 +41,11 @@
     }
     _name = [NSString stringForStdString:nativeRtpCodecCapability.name];
     switch (nativeRtpCodecCapability.kind) {
-      case webrtc::MediaType::AUDIO:
-        _kind = kRTCMediaStreamTrackKindAudio;
+      case cricket::MEDIA_TYPE_AUDIO:
+        _kind = RTC_CONSTANT_TYPE(RTCMediaStreamTrackKindAudio);
         break;
-      case webrtc::MediaType::VIDEO:
-        _kind = kRTCMediaStreamTrackKindVideo;
+      case cricket::MEDIA_TYPE_VIDEO:
+        _kind = RTC_CONSTANT_TYPE(RTCMediaStreamTrackKindVideo);
         break;
       default:
         RTC_DCHECK_NOTREACHED();
@@ -95,10 +95,10 @@
   rtpCodecCapability.name = [NSString stdStringForString:_name];
   // NSString pointer comparison is safe here since "kind" is readonly and only
   // populated above.
-  if (_kind == kRTCMediaStreamTrackKindAudio) {
-    rtpCodecCapability.kind = webrtc::MediaType::AUDIO;
-  } else if (_kind == kRTCMediaStreamTrackKindVideo) {
-    rtpCodecCapability.kind = webrtc::MediaType::VIDEO;
+  if (_kind == RTC_CONSTANT_TYPE(RTCMediaStreamTrackKindAudio)) {
+    rtpCodecCapability.kind = cricket::MEDIA_TYPE_AUDIO;
+  } else if (_kind == RTC_CONSTANT_TYPE(RTCMediaStreamTrackKindVideo)) {
+    rtpCodecCapability.kind = cricket::MEDIA_TYPE_VIDEO;
   } else {
     RTC_DCHECK_NOTREACHED();
   }

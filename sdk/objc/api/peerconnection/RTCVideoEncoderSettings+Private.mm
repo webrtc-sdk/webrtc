@@ -30,7 +30,7 @@
       self.minBitrate = videoCodec->minBitrate;
       self.maxFramerate = videoCodec->maxFramerate;
       self.qpMax = videoCodec->qpMax;
-      self.mode = (RTCVideoCodecMode)videoCodec->mode;
+      self.mode = (RTC_OBJC_TYPE(RTCVideoCodecMode))videoCodec->mode;
     }
   }
   return self;

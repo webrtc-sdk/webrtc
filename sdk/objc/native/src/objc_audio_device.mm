@@ -87,9 +87,8 @@ int32_t ObjCAudioDeviceModule::Init() {
 
   if (![audio_device_ isInitialized]) {
     if (audio_device_delegate_ == nil) {
-      audio_device_delegate_ = [[ObjCAudioDeviceDelegate alloc]
-          initWithAudioDeviceModule:webrtc::scoped_refptr<
-                                        ObjCAudioDeviceModule>(this)
+      audio_device_delegate_ = [[RTC_OBJC_TYPE(RTCObjCAudioDeviceDelegate) alloc]
+          initWithAudioDeviceModule:webrtc::scoped_refptr<ObjCAudioDeviceModule>(this)
                   audioDeviceThread:thread_];
     }
 

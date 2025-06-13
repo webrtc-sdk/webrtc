@@ -12,16 +12,16 @@
 
 #import "sdk/objc/base/RTCMacros.h"
 
-typedef NS_ENUM(NSInteger, RTCDispatcherQueueType) {
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCDispatcherQueueType)) {
   // Main dispatcher queue.
-  RTCDispatcherTypeMain,
+  RTC_OBJC_TYPE(RTCDispatcherTypeMain),
   // Used for starting/stopping AVCaptureSession, and assigning
   // capture session to AVCaptureVideoPreviewLayer.
-  RTCDispatcherTypeCaptureSession,
+  RTC_OBJC_TYPE(RTCDispatcherTypeCaptureSession),
   // Used for operations on AVAudioSession.
-  RTCDispatcherTypeAudioSession,
+  RTC_OBJC_TYPE(RTCDispatcherTypeAudioSession),
   // Used for operations on NWPathMonitor.
-  RTCDispatcherTypeNetworkMonitor,
+  RTC_OBJC_TYPE(RTCDispatcherTypeNetworkMonitor),
 };
 
 /** Dispatcher that asynchronously dispatches blocks to a specific
@@ -36,12 +36,11 @@ RTC_OBJC_EXPORT
  *  @param dispatchType The queue type to dispatch on.
  *  @param block The block to dispatch asynchronously.
  */
-+ (void)dispatchAsyncOnType:(RTCDispatcherQueueType)dispatchType
-                      block:(dispatch_block_t)block;
++ (void)dispatchAsyncOnType:(RTC_OBJC_TYPE(RTCDispatcherQueueType))dispatchType block:(dispatch_block_t)block;
 
 /** Returns YES if run on queue for the dispatchType otherwise NO.
  *  Useful for asserting that a method is run on a correct queue.
  */
-+ (BOOL)isOnQueueForType:(RTCDispatcherQueueType)dispatchType;
++ (BOOL)isOnQueueForType:(RTC_OBJC_TYPE(RTCDispatcherQueueType))dispatchType;
 
 @end

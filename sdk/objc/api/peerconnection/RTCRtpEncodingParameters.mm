@@ -25,6 +25,7 @@
 @synthesize bitratePriority = _bitratePriority;
 @synthesize networkPriority = _networkPriority;
 @synthesize adaptiveAudioPacketTime = _adaptiveAudioPacketTime;
+@synthesize scalabilityMode = _scalabilityMode;
 
 - (instancetype)init {
   webrtc::RtpEncodingParameters nativeParameters;
@@ -61,6 +62,9 @@
     if (nativeParameters.ssrc) {
       _ssrc = [NSNumber numberWithUnsignedLong:*nativeParameters.ssrc];
     }
+    if (nativeParameters.scalability_mode) {
+      _scalabilityMode = [NSString stringWithUTF8String:nativeParameters.scalability_mode->c_str()];
+    }
     _bitratePriority = nativeParameters.bitrate_priority;
     _networkPriority = [RTC_OBJC_TYPE(RTCRtpEncodingParameters)
         priorityFromNativePriority:nativeParameters.network_priority];
@@ -95,6 +99,9 @@
   if (_ssrc != nil) {
     parameters.ssrc = std::optional<uint32_t>(_ssrc.unsignedLongValue);
   }
+  if (_scalabilityMode != nil) {
+    parameters.scalability_mode = std::optional<std::string>(std::string([_scalabilityMode UTF8String]));
+  }
   parameters.bitrate_priority = _bitratePriority;
   parameters.network_priority = [RTC_OBJC_TYPE(RTCRtpEncodingParameters)
       nativePriorityFromPriority:_networkPriority];
@@ -102,29 +109,29 @@
   return parameters;
 }
 
-+ (webrtc::Priority)nativePriorityFromPriority:(RTCPriority)networkPriority {
++ (webrtc::Priority)nativePriorityFromPriority:(RTC_OBJC_TYPE(RTCPriority))networkPriority {
   switch (networkPriority) {
-    case RTCPriorityVeryLow:
+    case RTC_OBJC_TYPE(RTCPriorityVeryLow):
       return webrtc::Priority::kVeryLow;
-    case RTCPriorityLow:
+    case RTC_OBJC_TYPE(RTCPriorityLow):
       return webrtc::Priority::kLow;
-    case RTCPriorityMedium:
+    case RTC_OBJC_TYPE(RTCPriorityMedium):
       return webrtc::Priority::kMedium;
-    case RTCPriorityHigh:
+    case RTC_OBJC_TYPE(RTCPriorityHigh):
       return webrtc::Priority::kHigh;
   }
 }
 
-+ (RTCPriority)priorityFromNativePriority:(webrtc::Priority)nativePriority {
++ (RTC_OBJC_TYPE(RTCPriority))priorityFromNativePriority:(webrtc::Priority)nativePriority {
   switch (nativePriority) {
     case webrtc::Priority::kVeryLow:
-      return RTCPriorityVeryLow;
+      return RTC_OBJC_TYPE(RTCPriorityVeryLow);
     case webrtc::Priority::kLow:
-      return RTCPriorityLow;
+      return RTC_OBJC_TYPE(RTCPriorityLow);
     case webrtc::Priority::kMedium:
-      return RTCPriorityMedium;
+      return RTC_OBJC_TYPE(RTCPriorityMedium);
     case webrtc::Priority::kHigh:
-      return RTCPriorityHigh;
+      return RTC_OBJC_TYPE(RTCPriorityHigh);
   }
 }
 

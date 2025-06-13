@@ -29,7 +29,7 @@ RtpReceiverDelegateAdapter::RtpReceiverDelegateAdapter(
 
 void RtpReceiverDelegateAdapter::OnFirstPacketReceived(
     webrtc::MediaType media_type) {
-  RTCRtpMediaType packet_media_type =
+  RTC_OBJC_TYPE(RTCRtpMediaType) packet_media_type =
       [RTC_OBJC_TYPE(RTCRtpReceiver) mediaTypeForNativeMediaType:media_type];
   RTC_OBJC_TYPE(RTCRtpReceiver) *receiver = receiver_;
   [receiver.delegate rtpReceiver:receiver
@@ -139,48 +139,48 @@ void RtpReceiverDelegateAdapter::OnFirstPacketReceived(
   return self;
 }
 
-+ (RTCRtpMediaType)mediaTypeForNativeMediaType:
++ (RTC_OBJC_TYPE(RTCRtpMediaType))mediaTypeForNativeMediaType:
     (webrtc::MediaType)nativeMediaType {
   switch (nativeMediaType) {
     case webrtc::MediaType::AUDIO:
-      return RTCRtpMediaTypeAudio;
+      return RTC_OBJC_TYPE(RTCRtpMediaTypeAudio);
     case webrtc::MediaType::VIDEO:
-      return RTCRtpMediaTypeVideo;
+      return RTC_OBJC_TYPE(RTCRtpMediaTypeVideo);
     case webrtc::MediaType::DATA:
-      return RTCRtpMediaTypeData;
+      return RTC_OBJC_TYPE(RTCRtpMediaTypeData);
     case webrtc::MediaType::UNSUPPORTED:
-      return RTCRtpMediaTypeUnsupported;
+      return RTC_OBJC_TYPE(RTCRtpMediaTypeUnsupported);
     case webrtc::MediaType::ANY:
-      return RTCRtpMediaTypeAny;
+      return RTC_OBJC_TYPE(RTCRtpMediaTypeAny);
   }
 }
 
-+ (webrtc::MediaType)nativeMediaTypeForMediaType:(RTCRtpMediaType)mediaType {
++ (webrtc::MediaType)nativeMediaTypeForMediaType:(RTC_OBJC_TYPE(RTCRtpMediaType))mediaType {
   switch (mediaType) {
-    case RTCRtpMediaTypeAudio:
+    case RTC_OBJC_TYPE(RTCRtpMediaTypeAudio):
       return webrtc::MediaType::AUDIO;
-    case RTCRtpMediaTypeVideo:
+    case RTC_OBJC_TYPE(RTCRtpMediaTypeVideo):
       return webrtc::MediaType::VIDEO;
-    case RTCRtpMediaTypeData:
+    case RTC_OBJC_TYPE(RTCRtpMediaTypeData):
       return webrtc::MediaType::DATA;
-    case RTCRtpMediaTypeUnsupported:
+    case RTC_OBJC_TYPE(RTCRtpMediaTypeUnsupported):
       return webrtc::MediaType::UNSUPPORTED;
-    case RTCRtpMediaTypeAny:
+    case RTC_OBJC_TYPE(RTCRtpMediaTypeAny):
       return webrtc::MediaType::ANY;
   }
 }
 
-+ (NSString *)stringForMediaType:(RTCRtpMediaType)mediaType {
++ (NSString *)stringForMediaType:(RTC_OBJC_TYPE(RTCRtpMediaType))mediaType {
   switch (mediaType) {
-    case RTCRtpMediaTypeAudio:
+    case RTC_OBJC_TYPE(RTCRtpMediaTypeAudio):
       return @"AUDIO";
-    case RTCRtpMediaTypeVideo:
+    case RTC_OBJC_TYPE(RTCRtpMediaTypeVideo):
       return @"VIDEO";
-    case RTCRtpMediaTypeData:
+    case RTC_OBJC_TYPE(RTCRtpMediaTypeData):
       return @"DATA";
-    case RTCRtpMediaTypeUnsupported:
+    case RTC_OBJC_TYPE(RTCRtpMediaTypeUnsupported):
       return @"UNSUPPORTED";
-    case RTCRtpMediaTypeAny:
+    case RTC_OBJC_TYPE(RTCRtpMediaTypeAny):
       return @"ANY";
   }
 }

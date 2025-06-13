@@ -298,6 +298,10 @@ class ADMWrapper : public AudioDeviceModule, public AudioTransport {
   }
 #endif  // WEBRTC_IOS
 
+  int32_t SetAudioDeviceSink(AudioDeviceSink* sink) const override {
+    return impl_->SetAudioDeviceSink(sink);
+  }
+
  protected:
   scoped_refptr<AudioDeviceModule> impl_;
   std::unique_ptr<AudioDeviceDataObserver> observer_;

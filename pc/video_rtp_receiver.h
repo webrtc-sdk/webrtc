@@ -26,6 +26,7 @@
 #include "api/rtp_receiver_interface.h"
 #include "api/scoped_refptr.h"
 #include "api/sequence_checker.h"
+#include "api/task_queue/pending_task_safety_flag.h"
 #include "api/transport/rtp/rtp_source.h"
 #include "api/video/video_frame.h"
 #include "api/video/video_sink_interface.h"
@@ -42,7 +43,8 @@
 
 namespace webrtc {
 
-class VideoRtpReceiver : public RtpReceiverInternal {
+class VideoRtpReceiver : public RtpReceiverInternal,
+                         public ObserverInterface {
  public:
   // An SSRC of 0 will create a receiver that will match the first SSRC it
   // sees. Must be called on signaling thread.
@@ -59,6 +61,9 @@ class VideoRtpReceiver : public RtpReceiverInternal {
   virtual ~VideoRtpReceiver();
 
   scoped_refptr<VideoTrackInterface> video_track() const { return track_; }
+
+  // ObserverInterface implementation
+  void OnChanged() override;
 
   // RtpReceiverInterface implementation
   scoped_refptr<MediaStreamTrackInterface> track() const override {
@@ -112,6 +117,8 @@ class VideoRtpReceiver : public RtpReceiverInternal {
                          MediaReceiveChannelInterface* media_channel);
 
  private:
+  void StartMediaChannel();
+  void StopMediaChannel();
   void RestartMediaChannel(std::optional<uint32_t> ssrc)
       RTC_RUN_ON(&signaling_thread_checker_);
   void RestartMediaChannel_w(std::optional<uint32_t> ssrc,
@@ -158,6 +165,8 @@ class VideoRtpReceiver : public RtpReceiverInternal {
       RTC_GUARDED_BY(&signaling_thread_checker_) = nullptr;
   bool received_first_packet_ RTC_GUARDED_BY(&signaling_thread_checker_) =
       false;
+
+  bool cached_track_should_receive_ RTC_GUARDED_BY(&signaling_thread_checker_);
   const int attachment_id_;
   scoped_refptr<FrameDecryptorInterface> frame_decryptor_
       RTC_GUARDED_BY(worker_thread_);
@@ -173,6 +182,7 @@ class VideoRtpReceiver : public RtpReceiverInternal {
   // or switched.
   bool saved_generate_keyframe_ RTC_GUARDED_BY(worker_thread_) = false;
   bool saved_encoded_sink_enabled_ RTC_GUARDED_BY(worker_thread_) = false;
+  const webrtc::scoped_refptr<PendingTaskSafetyFlag> worker_thread_safety_;
 };
 
 }  // namespace webrtc

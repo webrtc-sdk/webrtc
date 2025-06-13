@@ -149,9 +149,9 @@ class DataChannelDelegateAdapter : public DataChannelObserver {
   return _nativeDataChannel->id();
 }
 
-- (RTCDataChannelState)readyState {
-  return
-      [[self class] dataChannelStateForNativeState:_nativeDataChannel->state()];
+- (RTC_OBJC_TYPE(RTCDataChannelState))readyState {
+  return [[self class] dataChannelStateForNativeState:
+      _nativeDataChannel->state()];
 }
 
 - (uint64_t)bufferedAmount {
@@ -191,43 +191,43 @@ class DataChannelDelegateAdapter : public DataChannelObserver {
   return self;
 }
 
-+ (webrtc::DataChannelInterface::DataState)nativeDataChannelStateForState:
-    (RTCDataChannelState)state {
++ (webrtc::DataChannelInterface::DataState)
+    nativeDataChannelStateForState:(RTC_OBJC_TYPE(RTCDataChannelState))state {
   switch (state) {
-    case RTCDataChannelStateConnecting:
+    case RTC_OBJC_TYPE(RTCDataChannelStateConnecting):
       return webrtc::DataChannelInterface::DataState::kConnecting;
-    case RTCDataChannelStateOpen:
+    case RTC_OBJC_TYPE(RTCDataChannelStateOpen):
       return webrtc::DataChannelInterface::DataState::kOpen;
-    case RTCDataChannelStateClosing:
+    case RTC_OBJC_TYPE(RTCDataChannelStateClosing):
       return webrtc::DataChannelInterface::DataState::kClosing;
-    case RTCDataChannelStateClosed:
+    case RTC_OBJC_TYPE(RTCDataChannelStateClosed):
       return webrtc::DataChannelInterface::DataState::kClosed;
   }
 }
 
-+ (RTCDataChannelState)dataChannelStateForNativeState:
++ (RTC_OBJC_TYPE(RTCDataChannelState))dataChannelStateForNativeState:
     (webrtc::DataChannelInterface::DataState)nativeState {
   switch (nativeState) {
     case webrtc::DataChannelInterface::DataState::kConnecting:
-      return RTCDataChannelStateConnecting;
+      return RTC_OBJC_TYPE(RTCDataChannelStateConnecting);
     case webrtc::DataChannelInterface::DataState::kOpen:
-      return RTCDataChannelStateOpen;
+      return RTC_OBJC_TYPE(RTCDataChannelStateOpen);
     case webrtc::DataChannelInterface::DataState::kClosing:
-      return RTCDataChannelStateClosing;
+      return RTC_OBJC_TYPE(RTCDataChannelStateClosing);
     case webrtc::DataChannelInterface::DataState::kClosed:
-      return RTCDataChannelStateClosed;
+      return RTC_OBJC_TYPE(RTCDataChannelStateClosed);
   }
 }
 
-+ (NSString *)stringForState:(RTCDataChannelState)state {
++ (NSString *)stringForState:(RTC_OBJC_TYPE(RTCDataChannelState))state {
   switch (state) {
-    case RTCDataChannelStateConnecting:
+    case RTC_OBJC_TYPE(RTCDataChannelStateConnecting):
       return @"Connecting";
-    case RTCDataChannelStateOpen:
+    case RTC_OBJC_TYPE(RTCDataChannelStateOpen):
       return @"Open";
-    case RTCDataChannelStateClosing:
+    case RTC_OBJC_TYPE(RTCDataChannelStateClosing):
       return @"Closing";
-    case RTCDataChannelStateClosed:
+    case RTC_OBJC_TYPE(RTCDataChannelStateClosed):
       return @"Closed";
   }
 }

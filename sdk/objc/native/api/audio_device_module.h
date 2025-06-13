@@ -26,6 +26,7 @@ namespace webrtc {
 webrtc::scoped_refptr<AudioDeviceModule> CreateAudioDeviceModule(
     bool bypass_voice_processing = false);
 
+#if defined(WEBRTC_IOS)
 // If `muted_speech_event_handler` is exist, audio unit will catch speech
 // activity while muted.
 webrtc::scoped_refptr<AudioDeviceModule> CreateMutedDetectAudioDeviceModule(
@@ -40,6 +41,7 @@ webrtc::scoped_refptr<AudioDeviceModule> CreateMutedDetectAudioDeviceModule(
     AudioDeviceModule::MutedSpeechEventHandler muted_speech_event_handler,
     ADMErrorHandler error_handler,
     bool bypass_voice_processing = false);
+#endif
 
 }  // namespace webrtc
 

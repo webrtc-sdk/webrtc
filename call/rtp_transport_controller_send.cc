@@ -308,6 +308,9 @@ void RtpTransportControllerSend::ReconfigureBandwidthEstimation(
       UpdateNetworkAvailability();
     }
   }
+  pacer_.SetAllowProbeWithoutMediaPacket(
+      bwe_settings_.allow_probe_without_media &&
+      packet_router_.SupportsRtxPayloadPadding());
 }
 
 void RtpTransportControllerSend::RegisterTargetTransferRateObserver(

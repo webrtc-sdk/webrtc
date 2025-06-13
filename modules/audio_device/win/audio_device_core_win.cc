@@ -461,6 +461,8 @@ AudioDeviceWindowsCore::AudioDeviceWindowsCore()
   _playChannelsPrioList[0] = 2;  // stereo is prio 1
   _playChannelsPrioList[1] = 1;  // mono is prio 2
 
+  _deviceStateListener = new DeviceStateListener();
+
   HRESULT hr;
 
   // We know that this API will work since it has already been verified in
@@ -473,6 +475,8 @@ AudioDeviceWindowsCore::AudioDeviceWindowsCore()
                    __uuidof(IMMDeviceEnumerator),
                    reinterpret_cast<void**>(&_ptrEnumerator));
   RTC_DCHECK(_ptrEnumerator);
+
+  _ptrEnumerator->RegisterEndpointNotificationCallback(_deviceStateListener);
 
   // DMO initialization for built-in WASAPI AEC.
   {
@@ -498,6 +502,8 @@ AudioDeviceWindowsCore::~AudioDeviceWindowsCore() {
   RTC_DLOG(LS_INFO) << __FUNCTION__ << " destroyed";
 
   Terminate();
+
+  _ptrEnumerator->UnregisterEndpointNotificationCallback(_deviceStateListener);
 
   // The IMMDeviceEnumerator is created during construction. Must release
   // it here and not in Terminate() since we don't recreate it in Init().
@@ -533,6 +539,11 @@ AudioDeviceWindowsCore::~AudioDeviceWindowsCore() {
   if (NULL != _hShutdownCaptureEvent) {
     CloseHandle(_hShutdownCaptureEvent);
     _hShutdownCaptureEvent = NULL;
+  }
+
+  if(NULL != _deviceStateListener) {
+    delete _deviceStateListener;
+    _deviceStateListener = NULL;
   }
 
   if (_avrtLibrary) {
@@ -3892,6 +3903,65 @@ int32_t AudioDeviceWindowsCore::_GetDeviceID(IMMDevice* pDevice,
 
   CoTaskMemFree(pwszID);
   return 0;
+}
+
+int32_t AudioDeviceWindowsCore::SetAudioDeviceSink(AudioDeviceSink* sink) {
+  _deviceStateListener->SetAudioDeviceSink(sink);
+  return 0;
+}
+
+void AudioDeviceWindowsCore::DeviceStateListener::SetAudioDeviceSink(AudioDeviceSink *sink) {
+  callback_ = sink;
+}
+
+HRESULT AudioDeviceWindowsCore::DeviceStateListener::OnDeviceStateChanged(LPCWSTR pwstrDeviceId, DWORD dwNewState) {
+  RTC_DLOG(LS_INFO) << "AudioDeviceWindowsCore::OnDeviceStateChanged => " << pwstrDeviceId << ", NewState => " << dwNewState;
+  if(callback_) callback_->OnDevicesUpdated();
+  return S_OK;
+}
+
+HRESULT AudioDeviceWindowsCore::DeviceStateListener::OnDeviceAdded(LPCWSTR pwstrDeviceId) {
+  RTC_DLOG(LS_INFO) << "AudioDeviceWindowsCore::OnDeviceAdded => " << pwstrDeviceId;
+  return S_OK;
+}
+
+HRESULT AudioDeviceWindowsCore::DeviceStateListener::OnDeviceRemoved(LPCWSTR pwstrDeviceId) {
+  RTC_DLOG(LS_INFO) << "AudioDeviceWindowsCore::OnDeviceRemoved => " << pwstrDeviceId;
+  return S_OK;
+}
+
+HRESULT AudioDeviceWindowsCore::DeviceStateListener::OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWSTR pwstrDefaultDeviceId) {
+  RTC_DLOG(LS_INFO) << "AudioDeviceWindowsCore::OnDefaultDeviceChanged => " << pwstrDefaultDeviceId;
+  return S_OK;
+}
+
+HRESULT AudioDeviceWindowsCore::DeviceStateListener::OnPropertyValueChanged(LPCWSTR pwstrDeviceId, const PROPERTYKEY key) {
+  //RTC_DLOG(LS_INFO) << "AudioDeviceWindowsCore::OnPropertyValueChanged => " << pwstrDeviceId;
+  return S_OK;
+}
+
+ULONG AudioDeviceWindowsCore::DeviceStateListener::AddRef() {
+  ULONG new_ref = InterlockedIncrement(&ref_count_);
+  // RTC_DLOG(LS_INFO) << "__AddRef => " << new_ref;
+  return new_ref;
+}
+
+ULONG AudioDeviceWindowsCore::DeviceStateListener::Release() {
+  ULONG new_ref = InterlockedDecrement(&ref_count_);
+  // RTC_DLOG(LS_INFO) << "__Release => " << new_ref;
+  return new_ref;
+}
+
+HRESULT AudioDeviceWindowsCore::DeviceStateListener::QueryInterface(REFIID iid, void** object) {
+  if (object == nullptr) {
+    return E_POINTER;
+  }
+  if (iid == IID_IUnknown || iid == __uuidof(IMMNotificationClient)) {
+    *object = static_cast<IMMNotificationClient*>(this);
+    return S_OK;
+  }
+  *object = nullptr;
+  return E_NOINTERFACE;
 }
 
 // ----------------------------------------------------------------------------

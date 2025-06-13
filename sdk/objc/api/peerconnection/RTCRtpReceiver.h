@@ -17,12 +17,12 @@
 NS_ASSUME_NONNULL_BEGIN
 
 /** Represents the media type of the RtpReceiver. */
-typedef NS_ENUM(NSInteger, RTCRtpMediaType) {
-  RTCRtpMediaTypeAudio,
-  RTCRtpMediaTypeVideo,
-  RTCRtpMediaTypeData,
-  RTCRtpMediaTypeUnsupported,
-  RTCRtpMediaTypeAny,
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCRtpMediaType)) {
+  RTC_OBJC_TYPE(RTCRtpMediaTypeAudio),
+  RTC_OBJC_TYPE(RTCRtpMediaTypeVideo),
+  RTC_OBJC_TYPE(RTCRtpMediaTypeData),
+  RTC_OBJC_TYPE(RTCRtpMediaTypeUnsupported),
+  RTC_OBJC_TYPE(RTCRtpMediaTypeAny),
 };
 
 @class RTC_OBJC_TYPE(RTCRtpReceiver);
@@ -45,9 +45,9 @@ RTC_OBJC_EXPORT
      *
      *  The process is the same for video receivers.
      */
-    - (void)rtpReceiver : (RTC_OBJC_TYPE(RTCRtpReceiver) *)
-                              rtpReceiver didReceiveFirstPacketForMediaType
-    : (RTCRtpMediaType)mediaType;
+    - (void)rtpReceiver
+    : (RTC_OBJC_TYPE(RTCRtpReceiver) *)rtpReceiver didReceiveFirstPacketForMediaType
+    : (RTC_OBJC_TYPE(RTCRtpMediaType))mediaType;
 
 @end
 

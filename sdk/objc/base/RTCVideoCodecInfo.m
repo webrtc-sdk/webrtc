@@ -33,8 +33,8 @@
   self = [super init];
   if (self) {
     _name = name;
-    _parameters = parameters;
-    _scalabilityModes = scalabilityModes;
+    _parameters = (parameters ? parameters : @{});
+    _scalabilityModes = @[];
   }
 
   return self;

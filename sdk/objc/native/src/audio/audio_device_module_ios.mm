@@ -779,5 +779,11 @@ int AudioDeviceModuleIOS::GetRecordAudioParameters(
   return r;
 }
 #endif  // WEBRTC_IOS
-}  // namespace ios_adm
-}  // namespace webrtc
+
+  int32_t AudioDeviceModuleIOS::SetAudioDeviceSink(AudioDeviceSink* sink) const {
+    // not implemented
+    RTC_LOG(LS_WARNING) << __FUNCTION__ << "(" << sink << ") Not implemented";
+    return -1;
+  }
+}
+}

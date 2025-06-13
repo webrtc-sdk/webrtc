@@ -15,18 +15,18 @@
 #import "components/video_frame_buffer/RTCCVPixelBuffer.h"
 #include "rtc_base/system/gcd_helpers.h"
 
-NSString *const kRTCFileVideoCapturerErrorDomain =
+NSString *const RTC_CONSTANT_TYPE(RTCFileVideoCapturerErrorDomain) =
     @"org.webrtc.RTC_OBJC_TYPE(RTCFileVideoCapturer)";
 
-typedef NS_ENUM(NSInteger, RTCFileVideoCapturerErrorCode) {
-  RTCFileVideoCapturerErrorCode_CapturerRunning = 2000,
-  RTCFileVideoCapturerErrorCode_FileNotFound
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCFileVideoCapturerErrorCode)) {
+  RTC_OBJC_TYPE(RTCFileVideoCapturerErrorCode_CapturerRunning) = 2000,
+  RTC_OBJC_TYPE(RTCFileVideoCapturerErrorCode_FileNotFound)
 };
 
-typedef NS_ENUM(NSInteger, RTCFileVideoCapturerStatus) {
-  RTCFileVideoCapturerStatusNotInitialized,
-  RTCFileVideoCapturerStatusStarted,
-  RTCFileVideoCapturerStatusStopped
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCFileVideoCapturerStatus)) {
+  RTC_OBJC_TYPE(RTCFileVideoCapturerStatusNotInitialized),
+  RTC_OBJC_TYPE(RTCFileVideoCapturerStatusStarted),
+  RTC_OBJC_TYPE(RTCFileVideoCapturerStatusStopped)
 };
 
 @interface RTC_OBJC_TYPE (RTCFileVideoCapturer)
@@ -37,7 +37,7 @@ typedef NS_ENUM(NSInteger, RTCFileVideoCapturerStatus) {
 @implementation RTC_OBJC_TYPE (RTCFileVideoCapturer) {
   AVAssetReader *_reader;
   AVAssetReaderTrackOutput *_outTrack;
-  RTCFileVideoCapturerStatus _status;
+  RTC_OBJC_TYPE(RTCFileVideoCapturerStatus) _status;
   dispatch_queue_t _frameQueue;
 }
 
@@ -46,33 +46,29 @@ typedef NS_ENUM(NSInteger, RTCFileVideoCapturerStatus) {
 
 - (void)startCapturingFromFileNamed:(NSString *)nameOfFile
                             onError:(RTCFileVideoCapturerErrorBlock)errorBlock {
-  if (_status == RTCFileVideoCapturerStatusStarted) {
+  if (_status == RTC_OBJC_TYPE(RTCFileVideoCapturerStatusStarted)) {
     NSError *error =
-        [NSError errorWithDomain:kRTCFileVideoCapturerErrorDomain
-                            code:RTCFileVideoCapturerErrorCode_CapturerRunning
-                        userInfo:@{
-                          NSUnderlyingErrorKey : @"Capturer has been started."
-                        }];
+        [NSError errorWithDomain:RTC_CONSTANT_TYPE(RTCFileVideoCapturerErrorDomain)
+                            code:RTC_OBJC_TYPE(RTCFileVideoCapturerErrorCode_CapturerRunning)
+                        userInfo:@{NSUnderlyingErrorKey : @"Capturer has been started."}];
 
     errorBlock(error);
     return;
   } else {
-    _status = RTCFileVideoCapturerStatusStarted;
+    _status = RTC_OBJC_TYPE(RTCFileVideoCapturerStatusStarted);
   }
 
-  dispatch_async(
-      dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        NSString *pathForFile = [self pathForFileName:nameOfFile];
-        if (!pathForFile) {
-          NSString *errorString = [NSString
-              stringWithFormat:@"File %@ not found in bundle", nameOfFile];
-          NSError *error = [NSError
-              errorWithDomain:kRTCFileVideoCapturerErrorDomain
-                         code:RTCFileVideoCapturerErrorCode_FileNotFound
-                     userInfo:@{NSUnderlyingErrorKey : errorString}];
-          errorBlock(error);
-          return;
-        }
+  dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+    NSString *pathForFile = [self pathForFileName:nameOfFile];
+    if (!pathForFile) {
+      NSString *errorString =
+          [NSString stringWithFormat:@"File %@ not found in bundle", nameOfFile];
+      NSError *error = [NSError errorWithDomain:RTC_CONSTANT_TYPE(RTCFileVideoCapturerErrorDomain)
+                                           code:RTC_OBJC_TYPE(RTCFileVideoCapturerErrorCode_FileNotFound)
+                                       userInfo:@{NSUnderlyingErrorKey : errorString}];
+      errorBlock(error);
+      return;
+    }
 
         self.lastPresentationTime = CMTimeMake(0, 0);
 
@@ -107,7 +103,7 @@ typedef NS_ENUM(NSInteger, RTCFileVideoCapturerStatus) {
   [self readNextBuffer];
 }
 - (void)stopCapture {
-  _status = RTCFileVideoCapturerStatusStopped;
+  _status = RTC_OBJC_TYPE(RTCFileVideoCapturerStatusStopped);
   RTCLog(@"File capturer stopped.");
 }
 
@@ -135,7 +131,7 @@ typedef NS_ENUM(NSInteger, RTCFileVideoCapturerStatus) {
 }
 
 - (void)readNextBuffer {
-  if (_status == RTCFileVideoCapturerStatusStopped) {
+  if (_status == RTC_OBJC_TYPE(RTCFileVideoCapturerStatusStopped)) {
     [_reader cancelReading];
     _reader = nil;
     return;

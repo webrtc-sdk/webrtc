@@ -39,15 +39,13 @@ class ObjCEncodedImageBuffer : public webrtc::EncodedImageBufferInterface {
 };
 }  // namespace
 
-// A simple wrapper around webrtc::EncodedImageBufferInterface to make it usable
-// with associated objects.
-@interface RTCWrappedEncodedImageBuffer : NSObject
+@interface RTC_OBJC_TYPE (RTCWrappedEncodedImageBuffer): NSObject
 @property(nonatomic) webrtc::scoped_refptr<webrtc::EncodedImageBufferInterface>
     buffer;
 - (instancetype)initWithEncodedImageBuffer:
     (webrtc::scoped_refptr<webrtc::EncodedImageBufferInterface>)buffer;
 @end
-@implementation RTCWrappedEncodedImageBuffer
+@implementation RTC_OBJC_TYPE (RTCWrappedEncodedImageBuffer)
 @synthesize buffer = _buffer;
 - (instancetype)initWithEncodedImageBuffer:
     (webrtc::scoped_refptr<webrtc::EncodedImageBufferInterface>)buffer {
@@ -63,7 +61,7 @@ class ObjCEncodedImageBuffer : public webrtc::EncodedImageBufferInterface {
 (Private)
 
     - (webrtc::scoped_refptr<webrtc::EncodedImageBufferInterface>)encodedData {
-  RTCWrappedEncodedImageBuffer *wrappedBuffer =
+  RTC_OBJC_TYPE(RTCWrappedEncodedImageBuffer) *wrappedBuffer =
       objc_getAssociatedObject(self, @selector(encodedData));
   return wrappedBuffer.buffer;
 }
@@ -73,7 +71,7 @@ class ObjCEncodedImageBuffer : public webrtc::EncodedImageBufferInterface {
   return objc_setAssociatedObject(
       self,
       @selector(encodedData),
-      [[RTCWrappedEncodedImageBuffer alloc] initWithEncodedImageBuffer:buffer],
+      [[RTC_OBJC_TYPE(RTCWrappedEncodedImageBuffer) alloc] initWithEncodedImageBuffer:buffer],
       OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
@@ -98,13 +96,12 @@ class ObjCEncodedImageBuffer : public webrtc::EncodedImageBufferInterface {
     self.flags = encodedImage.timing_.flags;
     self.encodeStartMs = encodedImage.timing_.encode_start_ms;
     self.encodeFinishMs = encodedImage.timing_.encode_finish_ms;
-    self.frameType = static_cast<RTCFrameType>(encodedImage._frameType);
-    self.rotation = static_cast<RTCVideoRotation>(encodedImage.rotation_);
+    self.frameType = static_cast<RTC_OBJC_TYPE(RTCFrameType)>(encodedImage._frameType);
+    self.rotation = static_cast<RTC_OBJC_TYPE(RTCVideoRotation)>(encodedImage.rotation_);
     self.qp = @(encodedImage.qp_);
-    self.contentType =
-        (encodedImage.content_type_ == webrtc::VideoContentType::SCREENSHARE) ?
-        RTCVideoContentTypeScreenshare :
-        RTCVideoContentTypeUnspecified;
+    self.contentType = (encodedImage.content_type_ == webrtc::VideoContentType::SCREENSHARE) ?
+        RTC_OBJC_TYPE(RTCVideoContentTypeScreenshare) :
+        RTC_OBJC_TYPE(RTCVideoContentTypeUnspecified);
   }
 
   return self;
@@ -132,8 +129,7 @@ class ObjCEncodedImageBuffer : public webrtc::EncodedImageBufferInterface {
   encodedImage._frameType = webrtc::VideoFrameType(self.frameType);
   encodedImage.rotation_ = webrtc::VideoRotation(self.rotation);
   encodedImage.qp_ = self.qp ? self.qp.intValue : -1;
-  encodedImage.content_type_ =
-      (self.contentType == RTCVideoContentTypeScreenshare) ?
+  encodedImage.content_type_ = (self.contentType == RTC_OBJC_TYPE(RTCVideoContentTypeScreenshare)) ?
       webrtc::VideoContentType::SCREENSHARE :
       webrtc::VideoContentType::UNSPECIFIED;
 

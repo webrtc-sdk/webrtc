@@ -16,9 +16,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 @class RTC_OBJC_TYPE(RTCPeerConnectionFactory);
 
-typedef NS_ENUM(NSInteger, RTCMediaSourceType) {
-  RTCMediaSourceTypeAudio,
-  RTCMediaSourceTypeVideo,
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCMediaSourceType)) {
+  RTC_OBJC_TYPE(RTCMediaSourceTypeAudio),
+  RTC_OBJC_TYPE(RTCMediaSourceTypeVideo),
 };
 
 @interface RTC_OBJC_TYPE (RTCMediaSource)
@@ -28,19 +28,15 @@ typedef NS_ENUM(NSInteger, RTCMediaSourceType) {
         webrtc::scoped_refptr<webrtc::MediaSourceInterface>
             nativeMediaSource;
 
-- (instancetype)
-      initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
-    nativeMediaSource:
-        (webrtc::scoped_refptr<webrtc::MediaSourceInterface>)nativeMediaSource
-                 type:(RTCMediaSourceType)type NS_DESIGNATED_INITIALIZER;
+- (instancetype)initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
+              nativeMediaSource:(webrtc::scoped_refptr<webrtc::MediaSourceInterface>)nativeMediaSource
+                           type:(RTC_OBJC_TYPE(RTCMediaSourceType))type NS_DESIGNATED_INITIALIZER;
 
-+ (webrtc::MediaSourceInterface::SourceState)nativeSourceStateForState:
-    (RTCSourceState)state;
++ (webrtc::MediaSourceInterface::SourceState)nativeSourceStateForState:(RTC_OBJC_TYPE(RTCSourceState))state;
 
-+ (RTCSourceState)sourceStateForNativeState:
-    (webrtc::MediaSourceInterface::SourceState)nativeState;
++ (RTC_OBJC_TYPE(RTCSourceState))sourceStateForNativeState:(webrtc::MediaSourceInterface::SourceState)nativeState;
 
-+ (NSString *)stringForState:(RTCSourceState)state;
++ (NSString *)stringForState:(RTC_OBJC_TYPE(RTCSourceState))state;
 
 @end
 

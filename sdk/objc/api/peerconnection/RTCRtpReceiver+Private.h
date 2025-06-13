@@ -44,12 +44,10 @@ class RtpReceiverDelegateAdapter : public RtpReceiverObserverInterface {
         (webrtc::scoped_refptr<webrtc::RtpReceiverInterface>)nativeRtpReceiver
     NS_DESIGNATED_INITIALIZER;
 
-+ (RTCRtpMediaType)mediaTypeForNativeMediaType:
-    (webrtc::MediaType)nativeMediaType;
++ (RTC_OBJC_TYPE(RTCRtpMediaType))mediaTypeForNativeMediaType:(webrtc::MediaType)nativeMediaType;
 
-+ (webrtc::MediaType)nativeMediaTypeForMediaType:(RTCRtpMediaType)mediaType;
-
-+ (NSString *)stringForMediaType:(RTCRtpMediaType)mediaType;
++ (NSString *)stringForMediaType:(RTC_OBJC_TYPE(RTCRtpMediaType))mediaType;
++ (webrtc::MediaType)nativeMediaTypeForMediaType:(RTC_OBJC_TYPE(RTCRtpMediaType))mediaType;
 
 @end
 

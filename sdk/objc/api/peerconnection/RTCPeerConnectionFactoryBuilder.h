@@ -21,9 +21,9 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface RTCPeerConnectionFactoryBuilder : NSObject
+@interface RTC_OBJC_TYPE(RTCPeerConnectionFactoryBuilder) : NSObject
 
-+ (RTCPeerConnectionFactoryBuilder *)builder;
++ (RTC_OBJC_TYPE(RTCPeerConnectionFactoryBuilder) *)builder;
 
 - (RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)createPeerConnectionFactory;
 

@@ -21,7 +21,7 @@ webrtc::scoped_refptr<webrtc::VideoTrackSourceInterface>
                                   objc_video_capturer,
                               webrtc::Thread *signaling_thread,
                               webrtc::Thread *worker_thread) {
-  RTCObjCVideoSourceAdapter *adapter = [[RTCObjCVideoSourceAdapter alloc] init];
+  RTC_OBJC_TYPE(RTCObjCVideoSourceAdapter) *adapter = [[RTC_OBJC_TYPE(RTCObjCVideoSourceAdapter) alloc] init];
   webrtc::scoped_refptr<webrtc::ObjCVideoTrackSource> objc_video_track_source =
       webrtc::make_ref_counted<webrtc::ObjCVideoTrackSource>(adapter);
   webrtc::scoped_refptr<webrtc::VideoTrackSourceInterface> video_source =
