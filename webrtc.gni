@@ -1203,7 +1203,7 @@ if (is_mac || is_ios) {
     copy("copy_privacy_manifest_$target_name") {
       sources = [ privacy_manifest_path ]
       outputs =
-          [ "$root_out_dir/$privacy_manifest_out_path" ]
+          [ "$root_out_dir/$output_name.framework/$privacy_manifest_out_path" ]
 
       deps = [ ":create_privacy_manifest_$target_name" ]
     }
