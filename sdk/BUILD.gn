@@ -282,7 +282,7 @@ if (is_ios || is_mac) {
           ":videoframebuffer_objc",
         ]
 
-        if (target_environment != "xrdevice" && target_environment != "xrsimulator") {
+        if (is_ios && (target_environment != "xrdevice" && target_environment != "xrsimulator")) {
           deps += [ ":metal_objc" ]
         }
       }
@@ -638,7 +638,7 @@ if (is_ios || is_mac) {
         "Metal.framework",
         "MetalKit.framework",
       ]
-      if ((is_ios || is_mac) && !(target_environment == "xrsimulator" || target_environment == "xrdevice")) {
+      if (is_mac || (is_ios && !(target_environment == "xrsimulator" || target_environment == "xrdevice"))) {
         sources += [
           "objc/components/renderer/metal/RTCMTLVideoView.h",
           "objc/components/renderer/metal/RTCMTLVideoView.m",
@@ -681,7 +681,7 @@ if (is_ios || is_mac) {
         "objc/components/capturer/RTCCameraVideoCapturer.h",
         "objc/components/capturer/RTCCameraVideoCapturer.m",
       ]
-      if (target_environment != "xrdevice" && target_environment != "xrsimulator") {
+      if (is_ios && (target_environment != "xrdevice" && target_environment != "xrsimulator")) {
         sources += [
           "objc/components/capturer/RTCFileVideoCapturer.h",
           "objc/components/capturer/RTCFileVideoCapturer.m",
@@ -1711,7 +1711,7 @@ if (is_ios || is_mac) {
           ":videotoolbox_objc",
           ":darwin_privacy_info",
         ]
-        if (target_environment != "xrdevice" && target_environment != "xrsimulator") {
+        if (is_ios && (target_environment != "xrdevice" && target_environment != "xrsimulator")) {
           deps += [ ":metal_objc" ]
         }
         if (!build_with_chromium) {
