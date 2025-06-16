@@ -13,257 +13,255 @@ fi
 
 echo "build_xcframework_dynamic_livekit.sh: MODE=$MODE, DEBUG=$DEBUG"
 
-# gn gen $OUT_DIR/tvOS-arm64-device --args="
-#       rtc_objc_prefix = \"LK\"
-#       treat_warnings_as_errors = false 
-#       target_os = \"ios\"
-#       ios_enable_code_signing = false
-#       is_component_build = false
-#       target_environment = \"appletv\"
-#       target_cpu = \"arm64\"
-#       ios_deployment_target = \"17.0\"
-#       use_goma = false
-#       rtc_enable_symbol_export = true
-#       rtc_libvpx_build_vp9 = true
-#       rtc_include_tests = false
-#       rtc_build_examples = false
-#       rtc_use_h264 = false
-#       rtc_enable_protobuf = false
-#       enable_libaom = true
-#       rtc_include_dav1d_in_internal_decoder_factory = true
-#       use_rtti = true
-#       is_debug = $DEBUG
-#       enable_dsyms = $DEBUG
-#       enable_stripping = true" --ide=xcode
+gn gen $OUT_DIR/tvOS-arm64-device --args="
+      rtc_objc_prefix = \"LK\"
+      treat_warnings_as_errors = false 
+      target_os = \"ios\"
+      ios_enable_code_signing = false
+      is_component_build = false
+      target_environment = \"appletv\"
+      target_cpu = \"arm64\"
+      ios_deployment_target = \"17.0\"
+      use_goma = false
+      rtc_enable_symbol_export = true
+      rtc_libvpx_build_vp9 = true
+      rtc_include_tests = false
+      rtc_build_examples = false
+      rtc_use_h264 = false
+      rtc_enable_protobuf = false
+      enable_libaom = true
+      rtc_include_dav1d_in_internal_decoder_factory = true
+      use_rtti = true
+      is_debug = $DEBUG
+      enable_dsyms = $DEBUG
+      enable_stripping = true" --ide=xcode
 
 # ninja -C $OUT_DIR/tvOS-arm64-device ios_framework_bundle -j 10
 
-# gn gen $OUT_DIR/tvOS-arm64-simulator --args="
-#       rtc_objc_prefix = \"LK\"
-#       treat_warnings_as_errors = false 
-#       target_os = \"ios\"
-#       ios_enable_code_signing = false
-#       is_component_build = false
-#       target_environment = \"appletvsimulator\"
-#       target_cpu = \"arm64\"
-#       ios_deployment_target = \"17.0\"
-#       use_goma = false
-#       rtc_enable_symbol_export = true
-#       rtc_libvpx_build_vp9 = true
-#       rtc_include_tests = false
-#       rtc_build_examples = false
-#       rtc_use_h264 = false
-#       rtc_enable_protobuf = false
-#       enable_libaom = true
-#       rtc_include_dav1d_in_internal_decoder_factory = true
-#       use_rtti = true
-#       is_debug = $DEBUG
-#       enable_dsyms = $DEBUG
-#       enable_stripping = true" --ide=xcode
+gn gen $OUT_DIR/tvOS-arm64-simulator --args="
+      rtc_objc_prefix = \"LK\"
+      treat_warnings_as_errors = false 
+      target_os = \"ios\"
+      ios_enable_code_signing = false
+      is_component_build = false
+      target_environment = \"appletvsimulator\"
+      target_cpu = \"arm64\"
+      ios_deployment_target = \"17.0\"
+      use_goma = false
+      rtc_enable_symbol_export = true
+      rtc_libvpx_build_vp9 = true
+      rtc_include_tests = false
+      rtc_build_examples = false
+      rtc_use_h264 = false
+      rtc_enable_protobuf = false
+      enable_libaom = true
+      rtc_include_dav1d_in_internal_decoder_factory = true
+      use_rtti = true
+      is_debug = $DEBUG
+      enable_dsyms = $DEBUG
+      enable_stripping = true" --ide=xcode
 
 # ninja -C $OUT_DIR/tvOS-arm64-simulator ios_framework_bundle -j 10
 
-# gn gen $OUT_DIR/xrOS-arm64-device --args="
-#       rtc_objc_prefix = \"LK\"
-#       treat_warnings_as_errors = false 
-#       target_os = \"ios\"
-#       ios_enable_code_signing = false
-#       is_component_build = false
-#       target_environment = \"xrdevice\"
-#       target_cpu = \"arm64\"
-#       ios_deployment_target = \"1.1.0\"
-#       use_goma = false
-#       rtc_enable_symbol_export = true
-#       rtc_libvpx_build_vp9 = true
-#       rtc_include_tests = false
-#       rtc_build_examples = false
-#       rtc_use_h264 = false
-#       rtc_enable_protobuf = false
-#       enable_libaom = true
-#       rtc_include_dav1d_in_internal_decoder_factory = true
-#       use_rtti = true
-#       is_debug = $DEBUG
-#       enable_dsyms = $DEBUG
-#       enable_stripping = true" --ide=xcode
+gn gen $OUT_DIR/xrOS-arm64-device --args="
+      rtc_objc_prefix = \"LK\"
+      treat_warnings_as_errors = false 
+      target_os = \"ios\"
+      ios_enable_code_signing = false
+      is_component_build = false
+      target_environment = \"xrdevice\"
+      target_cpu = \"arm64\"
+      ios_deployment_target = \"1.1.0\"
+      use_goma = false
+      rtc_enable_symbol_export = true
+      rtc_libvpx_build_vp9 = true
+      rtc_include_tests = false
+      rtc_build_examples = false
+      rtc_use_h264 = false
+      rtc_enable_protobuf = false
+      enable_libaom = true
+      rtc_include_dav1d_in_internal_decoder_factory = true
+      use_rtti = true
+      is_debug = $DEBUG
+      enable_dsyms = $DEBUG
+      enable_stripping = true" --ide=xcode
 
 # ninja -C $OUT_DIR/xrOS-arm64-device ios_framework_bundle -j 10
 
-# gn gen $OUT_DIR/xrOS-arm64-simulator --args="
-#       rtc_objc_prefix = \"LK\"
-#       treat_warnings_as_errors = false
-#       target_os = \"ios\"
-#       ios_enable_code_signing = false
-#       is_component_build = false
-#       target_environment = \"xrsimulator\"
-#       target_cpu = \"arm64\"
-#       ios_deployment_target = \"1.1.0\"
-#       use_goma = false
-#       rtc_enable_symbol_export = true
-#       rtc_libvpx_build_vp9 = true
-#       rtc_include_tests = false
-#       rtc_build_examples = false
-#       rtc_use_h264 = false
-#       rtc_enable_protobuf = false
-#       enable_libaom = true
-#       rtc_include_dav1d_in_internal_decoder_factory = true
-#       use_rtti = true
-#       is_debug = $DEBUG
-#       enable_dsyms = $DEBUG
-#       enable_stripping = true" --ide=xcode
+gn gen $OUT_DIR/xrOS-arm64-simulator --args="
+      rtc_objc_prefix = \"LK\"
+      treat_warnings_as_errors = false
+      target_os = \"ios\"
+      ios_enable_code_signing = false
+      is_component_build = false
+      target_environment = \"xrsimulator\"
+      target_cpu = \"arm64\"
+      ios_deployment_target = \"1.1.0\"
+      use_goma = false
+      rtc_enable_symbol_export = true
+      rtc_libvpx_build_vp9 = true
+      rtc_include_tests = false
+      rtc_build_examples = false
+      rtc_use_h264 = false
+      rtc_enable_protobuf = false
+      enable_libaom = true
+      rtc_include_dav1d_in_internal_decoder_factory = true
+      use_rtti = true
+      is_debug = $DEBUG
+      enable_dsyms = $DEBUG
+      enable_stripping = true" --ide=xcode
 
 # ninja -C $OUT_DIR/xrOS-arm64-simulator ios_framework_bundle -j 10
 
-# gn gen $OUT_DIR/catalyst-arm64 --args="
-#       rtc_objc_prefix = \"LK\"
-#       treat_warnings_as_errors = false
-#       target_os = \"ios\"
-#       ios_enable_code_signing = false
-#       is_component_build = false
-#       target_environment = \"catalyst\"
-#       target_cpu = \"arm64\"
-#       ios_deployment_target = \"14.0\"
-#       use_goma = false
-#       rtc_enable_symbol_export = true
-#       rtc_libvpx_build_vp9 = true
-#       rtc_include_tests = false
-#       rtc_build_examples = false
-#       rtc_use_h264 = false
-#       rtc_enable_protobuf = false
-#       enable_libaom = true
-#       rtc_include_dav1d_in_internal_decoder_factory = true
-#       use_rtti = true
-#       is_debug = $DEBUG
-#       enable_dsyms = $DEBUG
-#       enable_stripping = true" --ide=xcode
+gn gen $OUT_DIR/catalyst-arm64 --args="
+      rtc_objc_prefix = \"LK\"
+      treat_warnings_as_errors = false
+      target_os = \"ios\"
+      ios_enable_code_signing = false
+      is_component_build = false
+      target_environment = \"catalyst\"
+      target_cpu = \"arm64\"
+      ios_deployment_target = \"14.0\"
+      use_goma = false
+      rtc_enable_symbol_export = true
+      rtc_libvpx_build_vp9 = true
+      rtc_include_tests = false
+      rtc_build_examples = false
+      rtc_use_h264 = false
+      rtc_enable_protobuf = false
+      enable_libaom = true
+      rtc_include_dav1d_in_internal_decoder_factory = true
+      use_rtti = true
+      is_debug = $DEBUG
+      enable_dsyms = $DEBUG
+      enable_stripping = true" --ide=xcode
 
 # ninja -C $OUT_DIR/catalyst-arm64 ios_framework_bundle -j 10
 
-# gn gen $OUT_DIR/catalyst-x64 --args="
-#       rtc_objc_prefix = \"LK\"
-#       treat_warnings_as_errors = false
-#       target_os = \"ios\"
-#       ios_enable_code_signing = false
-#       is_component_build = false
-#       target_environment = \"catalyst\"
-#       target_cpu = \"x64\"
-#       ios_deployment_target = \"14.0\"
-#       use_goma = false
-#       rtc_enable_symbol_export = true
-#       rtc_libvpx_build_vp9 = true
-#       rtc_include_tests = false
-#       rtc_build_examples = false
-#       rtc_use_h264 = false
-#       rtc_enable_protobuf = false
-#       enable_libaom = true
-#       rtc_include_dav1d_in_internal_decoder_factory = true
-#       use_rtti = true
-#       is_debug = $DEBUG
-#       enable_dsyms = $DEBUG
-#       enable_stripping = true" --ide=xcode
+gn gen $OUT_DIR/catalyst-x64 --args="
+      rtc_objc_prefix = \"LK\"
+      treat_warnings_as_errors = false
+      target_os = \"ios\"
+      ios_enable_code_signing = false
+      is_component_build = false
+      target_environment = \"catalyst\"
+      target_cpu = \"x64\"
+      ios_deployment_target = \"14.0\"
+      use_goma = false
+      rtc_enable_symbol_export = true
+      rtc_libvpx_build_vp9 = true
+      rtc_include_tests = false
+      rtc_build_examples = false
+      rtc_use_h264 = false
+      rtc_enable_protobuf = false
+      enable_libaom = true
+      rtc_include_dav1d_in_internal_decoder_factory = true
+      use_rtti = true
+      is_debug = $DEBUG
+      enable_dsyms = $DEBUG
+      enable_stripping = true" --ide=xcode
 
 # ninja -C $OUT_DIR/catalyst-x64 ios_framework_bundle -j 10
 
-# gn gen $OUT_DIR/iOS-arm64-device --args="
-#       rtc_objc_prefix = \"LK\"
-#       treat_warnings_as_errors = false
-#       target_os = \"ios\"
-#       ios_enable_code_signing = false
-#       is_component_build = false
-#       target_environment = \"device\"
-#       target_cpu = \"arm64\"
-#       ios_deployment_target = \"13.0\"
-#       use_goma = false
-#       rtc_enable_symbol_export = true
-#       rtc_libvpx_build_vp9 = true
-#       rtc_include_tests = false
-#       rtc_build_examples = false
-#       rtc_use_h264 = false
-#       rtc_enable_protobuf = false
-#       enable_libaom = true
-#       rtc_include_dav1d_in_internal_decoder_factory = true
-#       use_rtti = true
-#       is_debug = $DEBUG
-#       enable_dsyms = $DEBUG
-#       enable_stripping = true" --ide=xcode
+gn gen $OUT_DIR/iOS-arm64-device --args="
+      rtc_objc_prefix = \"LK\"
+      treat_warnings_as_errors = false
+      target_os = \"ios\"
+      ios_enable_code_signing = false
+      is_component_build = false
+      target_environment = \"device\"
+      target_cpu = \"arm64\"
+      ios_deployment_target = \"13.0\"
+      use_goma = false
+      rtc_enable_symbol_export = true
+      rtc_libvpx_build_vp9 = true
+      rtc_include_tests = false
+      rtc_build_examples = false
+      rtc_use_h264 = false
+      rtc_enable_protobuf = false
+      enable_libaom = true
+      rtc_include_dav1d_in_internal_decoder_factory = true
+      use_rtti = true
+      is_debug = $DEBUG
+      enable_dsyms = $DEBUG
+      enable_stripping = true" --ide=xcode
 
 # ninja -C $OUT_DIR/iOS-arm64-device ios_framework_bundle -j 10
 
-# gn gen $OUT_DIR/iOS-x64-simulator --args="
-#       rtc_objc_prefix = \"LK\"
-#       treat_warnings_as_errors = false
-#       target_os = \"ios\"
-#       ios_enable_code_signing = false
-#       is_component_build = false
-#       target_environment = \"simulator\"
-#       target_cpu = \"x64\"
-#       ios_deployment_target = \"13.0\"
-#       rtc_libvpx_build_vp9 = true
-#       use_goma = false
-#       rtc_enable_symbol_export = true
-#       rtc_include_tests = false
-#       rtc_build_examples = false
-#       rtc_use_h264 = false
-#       rtc_enable_protobuf = false
-#       enable_libaom = true
-#       rtc_include_dav1d_in_internal_decoder_factory = true
-#       use_rtti = true
-#       is_debug = $DEBUG
-#       enable_dsyms = $DEBUG
-#       enable_stripping = true" --ide=xcode
+gn gen $OUT_DIR/iOS-x64-simulator --args="
+      rtc_objc_prefix = \"LK\"
+      treat_warnings_as_errors = false
+      target_os = \"ios\"
+      ios_enable_code_signing = false
+      is_component_build = false
+      target_environment = \"simulator\"
+      target_cpu = \"x64\"
+      ios_deployment_target = \"13.0\"
+      rtc_libvpx_build_vp9 = true
+      use_goma = false
+      rtc_enable_symbol_export = true
+      rtc_include_tests = false
+      rtc_build_examples = false
+      rtc_use_h264 = false
+      rtc_enable_protobuf = false
+      enable_libaom = true
+      rtc_include_dav1d_in_internal_decoder_factory = true
+      use_rtti = true
+      is_debug = $DEBUG
+      enable_dsyms = $DEBUG
+      enable_stripping = true" --ide=xcode
 
 # ninja -C $OUT_DIR/iOS-x64-simulator ios_framework_bundle -j 10
 
-# gn gen $OUT_DIR/iOS-arm64-simulator --args="
-#       rtc_objc_prefix = \"LK\"
-#       treat_warnings_as_errors = false
-#       target_os = \"ios\"
-#       ios_enable_code_signing = false
-#       is_component_build = false
-#       target_environment = \"simulator\"
-#       target_cpu = \"arm64\"
-#       ios_deployment_target = \"13.0\"
-#       use_goma = false
-#       rtc_enable_symbol_export = true
-#       rtc_libvpx_build_vp9 = true
-#       rtc_include_tests = false
-#       rtc_build_examples = false
-#       rtc_use_h264 = false
-#       rtc_enable_protobuf = false
-#       enable_libaom = true
-#       rtc_include_dav1d_in_internal_decoder_factory = true
-#       use_rtti = true
-#       is_debug = $DEBUG
-#       enable_dsyms = $DEBUG
-#       enable_stripping = true" --ide=xcode
+gn gen $OUT_DIR/iOS-arm64-simulator --args="
+      rtc_objc_prefix = \"LK\"
+      treat_warnings_as_errors = false
+      target_os = \"ios\"
+      ios_enable_code_signing = false
+      is_component_build = false
+      target_environment = \"simulator\"
+      target_cpu = \"x64\"
+      ios_deployment_target = \"13.0\"
+      rtc_libvpx_build_vp9 = true
+      use_goma = false
+      rtc_enable_symbol_export = true
+      rtc_include_tests = false
+      rtc_build_examples = false
+      rtc_use_h264 = false
+      rtc_enable_protobuf = false
+      enable_libaom = true
+      rtc_include_dav1d_in_internal_decoder_factory = true
+      use_rtti = true
+      is_debug = $DEBUG
+      enable_dsyms = $DEBUG
+      enable_stripping = true" --ide=xcode
 
 # ninja -C $OUT_DIR/iOS-arm64-simulator ios_framework_bundle -j 10
 
-# gn gen $OUT_DIR/macOS-x64 --args="
-#       rtc_objc_prefix = \"LK\"
-#       treat_warnings_as_errors = false
-#       target_os=\"mac\"
-#       target_cpu=\"x64\"
-#       mac_deployment_target=\"10.15\"
-#       is_component_build = false
-#       target_cpu = \"x64\"
-#       use_goma = false
-#       rtc_enable_symbol_export = true
-#       rtc_libvpx_build_vp9 = true
-#       rtc_include_tests = false
-#       rtc_build_examples = false
-#       rtc_use_h264 = false
-#       rtc_enable_protobuf = false
-#       enable_libaom = true
-#       rtc_include_dav1d_in_internal_decoder_factory = true
-#       use_rtti = true
-#       is_debug = $DEBUG
-#       enable_dsyms = $DEBUG" --ide=xcode
+gn gen $OUT_DIR/macOS-x64 --args="
+      rtc_objc_prefix = \"LK\"
+      treat_warnings_as_errors = false
+      target_os=\"mac\"
+      target_cpu=\"x64\"
+      mac_deployment_target=\"10.15\"
+      is_component_build = false
+      target_cpu = \"x64\"
+      use_goma = false
+      rtc_enable_symbol_export = true
+      rtc_libvpx_build_vp9 = true
+      rtc_include_tests = false
+      rtc_build_examples = false
+      rtc_use_h264 = false
+      rtc_enable_protobuf = false
+      enable_libaom = true
+      rtc_include_dav1d_in_internal_decoder_factory = true
+      use_rtti = true
+      is_debug = $DEBUG
+      enable_dsyms = $DEBUG" --ide=xcode
 
 # ninja -C $OUT_DIR/macOS-x64 mac_framework_bundle -j 10
 
 gn gen $OUT_DIR/macOS-arm64 --args="
-      use_custom_libcxx = false
-      use_explicit_libcxx_modules = false
       rtc_objc_prefix = \"LK\"
       treat_warnings_as_errors = false
       target_os=\"mac\"
@@ -278,14 +276,12 @@ gn gen $OUT_DIR/macOS-arm64 --args="
       rtc_use_h264 = false
       rtc_enable_protobuf = false
       enable_libaom = true
-      enable_freetype = false
-      enable_rust = false
       rtc_include_dav1d_in_internal_decoder_factory = true
       use_rtti = true
       is_debug = $DEBUG
       enable_dsyms = $DEBUG" --ide=xcode
 
-ninja -C $OUT_DIR/macOS-arm64 mac_framework_bundle -j 10
+# ninja -C $OUT_DIR/macOS-arm64 mac_framework_bundle -j 10
 
 # rm -rf $OUT_DIR/*-lib $OUT_DIR/LiveKitWebRTC.*
 
