@@ -53,11 +53,12 @@ static RTC_OBJC_TYPE(RTCAudioSessionConfiguration) *gWebRTCConfiguration = nil;
 @synthesize outputNumberOfChannels = _outputNumberOfChannels;
 
 - (instancetype)init {
-  if (self = [super init]) {
+  self = [super init];
+  if (self) {
     // Use AVAudioSession values for default
     AVAudioSession *session = [AVAudioSession sharedInstance];
     // Use a category which supports simultaneous recording and playback.
-    // By default, using this category implies that our app’s audio is
+    // By default, using this category implies that our app's audio is
     // nonmixable, hence activating the session will interrupt any other
     // audio sessions which are also nonmixable.
     _category = session.category;

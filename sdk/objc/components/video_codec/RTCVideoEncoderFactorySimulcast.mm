@@ -28,8 +28,9 @@
 @synthesize fallback = _fallback;
 
 - (instancetype)initWithPrimary:(id<RTC_OBJC_TYPE(RTCVideoEncoderFactory)>)primary
-                       fallback:(id<RTC_OBJC_TYPE(RTCVideoEncoderFactory)>)fallback {
-    if (self = [super init]) {
+                         fallback:(id<RTC_OBJC_TYPE(RTCVideoEncoderFactory)>)fallback {
+    self = [super init];
+    if (self) {
         _primary = primary;
         _fallback = fallback;
     }

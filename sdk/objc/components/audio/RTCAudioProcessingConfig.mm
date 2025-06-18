@@ -85,7 +85,8 @@
 #pragma mark - Private
 
 - (instancetype)initWithNativeAudioProcessingConfig:(webrtc::AudioProcessing::Config)config {
-  if (self = [super init]) {
+  self = [super init];
+  if (self) {
     _config = config;
   }
   return self;

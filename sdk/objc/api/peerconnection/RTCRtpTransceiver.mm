@@ -32,7 +32,8 @@ NSString *const RTC_CONSTANT_TYPE(RTCRtpTransceiverErrorDomain) = @"org.webrtc.R
 @synthesize sendEncodings = _sendEncodings;
 
 - (instancetype)init {
-  if (self = [super init]) {
+  self = [super init];
+  if (self) {
     _direction = RTC_OBJC_TYPE(RTCRtpTransceiverDirectionSendRecv);
   }
   return self;

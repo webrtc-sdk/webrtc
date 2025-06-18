@@ -32,7 +32,8 @@
 }
 
 - (instancetype)initWithType:(RTC_OBJC_TYPE(RTCSdpType))type sdp:(NSString *)sdp {
-  if (self = [super init]) {
+  self = [super init];
+  if (self) {
     _type = type;
     _sdp = [sdp copy];
   }

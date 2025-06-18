@@ -46,7 +46,8 @@
 #pragma mark - Private
 
 - (instancetype)initWithNativeType:(webrtc::AudioBuffer *)audioBuffer {
-  if (self = [super init]) {
+  self = [super init];
+  if (self) {
     _audioBuffer = audioBuffer;
   }
   return self;

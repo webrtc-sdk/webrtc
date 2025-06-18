@@ -102,7 +102,8 @@ class AudioRendererAdapter : public webrtc::AudioTrackSinkInterface {
 
 - (instancetype)initWithNativeRenderer:(id<RTC_OBJC_TYPE(RTCAudioRenderer)>)audioRenderer {
   NSParameterAssert(audioRenderer);
-  if (self = [super init]) {
+  self = [super init];
+  if (self) {
     _audioRenderer = audioRenderer;
     _adapter.reset(new webrtc::AudioRendererAdapter(self));
   }

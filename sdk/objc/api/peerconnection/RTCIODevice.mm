@@ -34,7 +34,8 @@ NSString *const kDefaultDeviceId = @"default";
 - (instancetype)initWithType: (RTC_OBJC_TYPE(RTCIODeviceType))type
                     deviceId: (NSString *)deviceId
                         name: (NSString* )name {
-  if (self = [super init]) {
+  self = [super init];
+  if (self) {
     _type = type;
     _deviceId = deviceId;
     _name = name;

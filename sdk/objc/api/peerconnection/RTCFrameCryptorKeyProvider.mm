@@ -64,7 +64,8 @@
                    failureTolerance:(int)failureTolerance
                         keyRingSize:(int)keyRingSize
     discardFrameWhenCryptorNotReady:(BOOL)discardFrameWhenCryptorNotReady {
-  if (self = [super init]) {
+  self = [super init];
+  if (self) {
     webrtc::KeyProviderOptions options;
     options.ratchet_salt = std::vector<uint8_t>((const uint8_t *)salt.bytes,
                                                 ((const uint8_t *)salt.bytes) + salt.length);

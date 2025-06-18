@@ -40,7 +40,8 @@
 - (id)initWithPrimary:(id<RTC_OBJC_TYPE(RTCVideoEncoderFactory)>)primary
              fallback:(id<RTC_OBJC_TYPE(RTCVideoEncoderFactory)>)fallback
        videoCodecInfo:(RTC_OBJC_TYPE(RTCVideoCodecInfo) *)videoCodecInfo {
-    if (self = [super init]) {
+    self = [super init];
+    if (self) {
         self->_primary = primary;
         self->_fallback = fallback;
         self->_videoCodecInfo = videoCodecInfo;

@@ -116,7 +116,8 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
                            participantId:(NSString *)participantId
                                algorithm:(RTC_OBJC_TYPE(RTCCryptorAlgorithm))algorithm
                              keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider {
-  if (self = [super init]) {
+  self = [super init];
+  if (self) {
     _lock = OS_UNFAIR_LOCK_INIT;
 
     webrtc::scoped_refptr<webrtc::RtpSenderInterface> nativeRtpSender = sender.nativeRtpSender;
@@ -156,7 +157,8 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
                            participantId:(NSString *)participantId
                                algorithm:(RTC_OBJC_TYPE(RTCCryptorAlgorithm))algorithm
                              keyProvider:(RTC_OBJC_TYPE(RTCFrameCryptorKeyProvider) *)keyProvider {
-  if (self = [super init]) {
+  self = [super init];
+  if (self) {
     _lock = OS_UNFAIR_LOCK_INIT;
 
     webrtc::scoped_refptr<webrtc::RtpReceiverInterface> nativeRtpReceiver = receiver.nativeRtpReceiver;

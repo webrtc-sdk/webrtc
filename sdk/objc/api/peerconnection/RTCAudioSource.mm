@@ -25,9 +25,10 @@
   RTC_DCHECK(factory);
   RTC_DCHECK(nativeAudioSource);
 
-  if (self = [super initWithFactory:factory
+  self = [super initWithFactory:factory
                   nativeMediaSource:nativeAudioSource
-                               type:RTC_OBJC_TYPE(RTCMediaSourceTypeAudio)]) {
+                               type:RTC_OBJC_TYPE(RTCMediaSourceTypeAudio)];
+  if (self) {
     _nativeAudioSource = nativeAudioSource;
   }
   return self;

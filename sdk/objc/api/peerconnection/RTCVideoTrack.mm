@@ -33,7 +33,8 @@
   std::string nativeId = [NSString stdStringForString:trackId];
   webrtc::scoped_refptr<webrtc::VideoTrackInterface> track =
       factory.nativeFactory->CreateVideoTrack(source.nativeVideoSource, nativeId);
-  if (self = [self initWithFactory:factory nativeTrack:track type:RTC_OBJC_TYPE(RTCMediaStreamTrackTypeVideo)]) {
+  self = [self initWithFactory:factory nativeTrack:track type:RTC_OBJC_TYPE(RTCMediaStreamTrackTypeVideo)];
+  if (self) {
     _source = source;
   }
   return self;
@@ -46,7 +47,8 @@
   NSParameterAssert(factory);
   NSParameterAssert(nativeMediaTrack);
   NSParameterAssert(type == RTC_OBJC_TYPE(RTCMediaStreamTrackTypeVideo));
-  if (self = [super initWithFactory:factory nativeTrack:nativeMediaTrack type:type]) {
+  self = [super initWithFactory:factory nativeTrack:nativeMediaTrack type:type];
+  if (self) {
     _adapters = [NSMutableArray array];
     _workerThread = factory.workerThread;
   }

@@ -108,7 +108,8 @@ NSString *MaxSupportedProfileLevelConstrainedHigh() {
 }
 
 - (instancetype)initWithProfile:(RTC_OBJC_TYPE(RTCH264Profile))profile level:(RTC_OBJC_TYPE(RTCH264Level))level {
-  if (self = [super init]) {
+  self = [super init];
+  if (self) {
     self.profile = profile;
     self.level = level;
 

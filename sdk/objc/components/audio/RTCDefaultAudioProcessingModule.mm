@@ -41,7 +41,8 @@
         (nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)capturePostProcessingDelegate
       renderPreProcessingDelegate:(nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)
                                       renderPreProcessingDelegate {
-  if (self = [super init]) {
+  self = [super init];
+  if (self) {
     webrtc::BuiltinAudioProcessingBuilder builder = webrtc::BuiltinAudioProcessingBuilder();
 
     // TODO: Custom Config...

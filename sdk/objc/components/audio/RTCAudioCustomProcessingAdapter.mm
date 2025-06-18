@@ -93,7 +93,8 @@ class AudioCustomProcessingAdapter : public webrtc::CustomProcessing {
 
 - (instancetype)initWithDelegate:
     (nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)audioCustomProcessingDelegate {
-  if (self = [super init]) {
+  self = [super init];
+  if (self) {
     _lock = OS_UNFAIR_LOCK_INIT;
     _rawAudioCustomProcessingDelegate = audioCustomProcessingDelegate;
     _adapter = new webrtc::AudioCustomProcessingAdapter(self, &_lock);

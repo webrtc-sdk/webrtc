@@ -28,8 +28,8 @@
 }
 
 - (instancetype)initWithName:(NSString *)name
-                  parameters:(NSDictionary<NSString *, NSString *> *)parameters
-            scalabilityModes:(NSArray<NSString *> *)scalabilityModes {
+                  parameters:(nullable NSDictionary<NSString *, NSString *> *)parameters
+            scalabilityModes:(nullable NSArray<NSString *> *)scalabilityModes {
   self = [super init];
   if (self) {
     _name = name;
