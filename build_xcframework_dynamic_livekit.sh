@@ -13,6 +13,7 @@ fi
 
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+RED='\033[0;31m'
 NC='\033[0m'
 
 echo "build_xcframework_dynamic_livekit.sh: MODE=$MODE, DEBUG=$DEBUG"
@@ -38,8 +39,8 @@ COMMON_ARGS="
 PLATFORMS=(
   "tvOS-arm64-device:target_os=\"ios\" target_environment=\"appletv\" target_cpu=\"arm64\" ios_deployment_target=\"17.0\""
   "tvOS-arm64-simulator:target_os=\"ios\" target_environment=\"appletvsimulator\" target_cpu=\"arm64\" ios_deployment_target=\"17.0\""
-  "xrOS-arm64-device:target_os=\"ios\" target_environment=\"xrdevice\" target_cpu=\"arm64\" ios_deployment_target=\"1.1.0\""
-  "xrOS-arm64-simulator:target_os=\"ios\" target_environment=\"xrsimulator\" target_cpu=\"arm64\" ios_deployment_target=\"1.1.0\""
+  "xrOS-arm64-device:target_os=\"ios\" target_environment=\"xrdevice\" target_cpu=\"arm64\" ios_deployment_target=\"2.2.0\""
+  "xrOS-arm64-simulator:target_os=\"ios\" target_environment=\"xrsimulator\" target_cpu=\"arm64\" ios_deployment_target=\"2.2.0\""
   "catalyst-arm64:target_os=\"ios\" target_environment=\"catalyst\" target_cpu=\"arm64\" ios_deployment_target=\"14.0\""
   "catalyst-x64:target_os=\"ios\" target_environment=\"catalyst\" target_cpu=\"x64\" ios_deployment_target=\"14.0\""
   "iOS-arm64-device:target_os=\"ios\" target_environment=\"device\" target_cpu=\"arm64\" ios_deployment_target=\"13.0\""
@@ -64,6 +65,10 @@ for platform_config in "${PLATFORMS[@]}"; do
   
   echo "${YELLOW}Building $platform...${NC}"
   ninja -C $OUT_DIR/$platform $build_target -j 10 --quiet
+  if [ $? -ne 0 ]; then
+    echo "${RED}Build $platform failed${NC}"
+    exit 1
+  fi
   echo "${GREEN}Build $platform completed${NC}"
 done
 
