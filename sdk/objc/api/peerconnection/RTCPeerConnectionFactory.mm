@@ -77,7 +77,7 @@
 @synthesize nativeFactory = _nativeFactory;
 @synthesize audioDeviceModule = _audioDeviceModule;
 
-- (rtc::scoped_refptr<webrtc::AudioDeviceModule>)createAudioDeviceModule:(BOOL)bypassVoiceProcessing {
+- (webrtc::scoped_refptr<webrtc::AudioDeviceModule>)createAudioDeviceModule:(BOOL)bypassVoiceProcessing {
 #if defined(WEBRTC_IOS)
   return webrtc::CreateAudioDeviceModule(bypassVoiceProcessing);
 #else

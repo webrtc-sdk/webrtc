@@ -280,7 +280,7 @@ void JavaToNativeRTCConfiguration(
   rtc_config->enable_any_address_ports =
       Java_RTCConfiguration_getEnableIceGatheringOnAnyAddressPorts(jni, j_rtc_config);
 
-  ScopedJavaLocalRef<jstring> j_turn_logging_id =
+  jni_zero::ScopedJavaLocalRef<jstring> j_turn_logging_id =
       Java_RTCConfiguration_getTurnLoggingId(jni, j_rtc_config);
   if (!IsNull(jni, j_turn_logging_id)) {
     rtc_config->turn_logging_id = JavaToNativeString(jni, j_turn_logging_id);

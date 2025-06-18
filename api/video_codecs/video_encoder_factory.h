@@ -85,9 +85,6 @@ class VideoEncoderFactory {
   virtual CodecSupport QueryCodecSupport(
       const SdpVideoFormat& format,
       std::optional<std::string> scalability_mode) const {
-    // Default implementation, query for supported formats and check if the
-    // specified format is supported. Returns false if scalability_mode is
-    // specified.
     CodecSupport codec_support;
     codec_support.is_supported = format.IsCodecInList(GetSupportedFormats());
     return codec_support;

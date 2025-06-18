@@ -12,7 +12,7 @@
 
 #import "sdk/objc/base/RTCMacros.h"
 
-// Subset of rtc::LoggingSeverity.
+// Subset of webrtc::LoggingSeverity.
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCLoggingSeverity)) {
   RTC_OBJC_TYPE(RTCLoggingSeverityVerbose),
   RTC_OBJC_TYPE(RTCLoggingSeverityInfo),

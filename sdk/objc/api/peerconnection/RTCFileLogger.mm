@@ -158,13 +158,13 @@ const char * RTC_CONSTANT_TYPE(RTCFileLoggerRotatingLogPrefix) = "rotating_log";
 - (webrtc::LoggingSeverity)rtcSeverity {
   switch (_severity) {
     case RTC_OBJC_TYPE(RTCFileLoggerSeverityVerbose):
-      return rtc::LS_VERBOSE;
+      return webrtc::LS_VERBOSE;
     case RTC_OBJC_TYPE(RTCFileLoggerSeverityInfo):
-      return rtc::LS_INFO;
+      return webrtc::LS_INFO;
     case RTC_OBJC_TYPE(RTCFileLoggerSeverityWarning):
-      return rtc::LS_WARNING;
+      return webrtc::LS_WARNING;
     case RTC_OBJC_TYPE(RTCFileLoggerSeverityError):
-      return rtc::LS_ERROR;
+      return webrtc::LS_ERROR;
   }
 }
 

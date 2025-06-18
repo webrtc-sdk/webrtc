@@ -13,6 +13,6 @@
 
 #include "media/base/media_constants.h"
 
-NSString *const RTC_CONSTANT_TYPE(RTCVideoCodecVp8Name) = @(cricket::kVp8CodecName);
-NSString *const RTC_CONSTANT_TYPE(RTCVideoCodecVp9Name) = @(cricket::kVp9CodecName);
-NSString *const RTC_CONSTANT_TYPE(RTCVideoCodecAv1Name) = @(cricket::kAv1CodecName);
+NSString *const RTC_CONSTANT_TYPE(RTCVideoCodecVp8Name) = @(webrtc::kVp8CodecName);
+NSString *const RTC_CONSTANT_TYPE(RTCVideoCodecVp9Name) = @(webrtc::kVp9CodecName);
+NSString *const RTC_CONSTANT_TYPE(RTCVideoCodecAv1Name) = @(webrtc::kAv1CodecName);

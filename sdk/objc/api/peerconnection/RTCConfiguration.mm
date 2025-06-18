@@ -526,7 +526,7 @@
   }
 }
 
-+ (rtc::KeyType)nativeEncryptionKeyTypeForKeyType:(RTC_OBJC_TYPE(RTCEncryptionKeyType))keyType {
++ (webrtc::KeyType)nativeEncryptionKeyTypeForKeyType:(RTC_OBJC_TYPE(RTCEncryptionKeyType))keyType {
   switch (keyType) {
     case RTC_OBJC_TYPE(RTCEncryptionKeyTypeRSA):
       return rtc::KT_RSA;

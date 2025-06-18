@@ -47,9 +47,11 @@
   return self;
 }
 
-- (instancetype)initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
-                    nativeTrack:(rtc::scoped_refptr<webrtc::MediaStreamTrackInterface>)nativeTrack
-                           type:(RTC_OBJC_TYPE(RTCMediaStreamTrackType))type {
+- (instancetype)
+    initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
+        nativeTrack:(webrtc::scoped_refptr<webrtc::MediaStreamTrackInterface>)
+                        nativeTrack
+               type:(RTC_OBJC_TYPE(RTCMediaStreamTrackType))type {
   NSParameterAssert(factory);
   NSParameterAssert(nativeTrack);
   NSParameterAssert(type == RTC_OBJC_TYPE(RTCMediaStreamTrackTypeAudio));

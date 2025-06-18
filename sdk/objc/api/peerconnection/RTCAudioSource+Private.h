@@ -30,8 +30,10 @@
         (webrtc::scoped_refptr<webrtc::AudioSourceInterface>)nativeAudioSource
     NS_DESIGNATED_INITIALIZER;
 
-- (instancetype)initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
-              nativeMediaSource:(rtc::scoped_refptr<webrtc::MediaSourceInterface>)nativeMediaSource
-                           type:(RTC_OBJC_TYPE(RTCMediaSourceType))type NS_UNAVAILABLE;
+- (instancetype)
+      initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
+    nativeMediaSource:
+        (webrtc::scoped_refptr<webrtc::MediaSourceInterface>)nativeMediaSource
+                 type:(RTC_OBJC_TYPE(RTCMediaSourceType))type NS_UNAVAILABLE;
 
 @end

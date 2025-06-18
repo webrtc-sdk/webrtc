@@ -64,17 +64,17 @@ class CallbackWithSeverityLogSink final : public webrtc::LogSink {
   }
 
  private:
-  static RTC_OBJC_TYPE(RTCLoggingSeverity) NativeSeverityToObjcSeverity(rtc::LoggingSeverity severity) {
+  static RTC_OBJC_TYPE(RTCLoggingSeverity) NativeSeverityToObjcSeverity(webrtc::LoggingSeverity severity) {
     switch (severity) {
-      case rtc::LS_VERBOSE:
+      case webrtc::LS_VERBOSE:
         return RTC_OBJC_TYPE(RTCLoggingSeverityVerbose);
-      case rtc::LS_INFO:
+      case webrtc::LS_INFO:
         return RTC_OBJC_TYPE(RTCLoggingSeverityInfo);
-      case rtc::LS_WARNING:
+      case webrtc::LS_WARNING:
         return RTC_OBJC_TYPE(RTCLoggingSeverityWarning);
-      case rtc::LS_ERROR:
+      case webrtc::LS_ERROR:
         return RTC_OBJC_TYPE(RTCLoggingSeverityError);
-      case rtc::LS_NONE:
+      case webrtc::LS_NONE:
         return RTC_OBJC_TYPE(RTCLoggingSeverityNone);
     }
   }
@@ -141,15 +141,15 @@ class CallbackWithSeverityLogSink final : public webrtc::LogSink {
 - (webrtc::LoggingSeverity)rtcSeverity {
   switch (_severity) {
     case RTC_OBJC_TYPE(RTCLoggingSeverityVerbose):
-      return rtc::LS_VERBOSE;
+      return webrtc::LS_VERBOSE;
     case RTC_OBJC_TYPE(RTCLoggingSeverityInfo):
-      return rtc::LS_INFO;
+      return webrtc::LS_INFO;
     case RTC_OBJC_TYPE(RTCLoggingSeverityWarning):
-      return rtc::LS_WARNING;
+      return webrtc::LS_WARNING;
     case RTC_OBJC_TYPE(RTCLoggingSeverityError):
-      return rtc::LS_ERROR;
+      return webrtc::LS_ERROR;
     case RTC_OBJC_TYPE(RTCLoggingSeverityNone):
-      return rtc::LS_NONE;
+      return webrtc::LS_NONE;
   }
 }
 
