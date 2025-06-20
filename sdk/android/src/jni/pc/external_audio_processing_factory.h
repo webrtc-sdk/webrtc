@@ -28,7 +28,7 @@ namespace jni {
 
 class ExternalAudioProcessingJni
     : public webrtc::ExternalAudioProcessingInterface,
-      public rtc::RefCountInterface {
+      public webrtc::RefCountInterface {
  public:
   ExternalAudioProcessingJni(JNIEnv* jni, const JavaRef<jobject>& j_processing);
   ~ExternalAudioProcessingJni();
@@ -43,7 +43,7 @@ class ExternalAudioProcessingJni
   const ScopedJavaGlobalRef<jobject> j_processing_;
 };
 
-class ExternalAudioProcessingFactory : public rtc::RefCountInterface {
+class ExternalAudioProcessingFactory : public webrtc::RefCountInterface {
  public:
   ExternalAudioProcessingFactory();
   virtual ~ExternalAudioProcessingFactory() = default;

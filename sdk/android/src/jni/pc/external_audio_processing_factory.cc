@@ -19,6 +19,8 @@
 #include <jni.h>
 #include <syslog.h>
 
+#include "api/audio/builtin_audio_processing_builder.h"
+#include "api/environment/environment_factory.h"
 #include "api/make_ref_counted.h"
 #include "rtc_base/ref_counted_object.h"
 #include "sdk/android/generated_peerconnection_jni/ExternalAudioProcessingFactory_jni.h"
@@ -63,10 +65,10 @@ ExternalAudioProcessingFactory::ExternalAudioProcessingFactory() {
   std::unique_ptr<webrtc::CustomProcessing> render_pre_processor(
       render_pre_processor_);
 
-  apm_ = webrtc::AudioProcessingBuilder()
+  apm_ = webrtc::BuiltinAudioProcessingBuilder()
              .SetCapturePostProcessing(std::move(capture_post_processor))
              .SetRenderPreProcessing(std::move(render_pre_processor))
-             .Create();
+             .Build(CreateEnvironment());
 
   webrtc::AudioProcessing::Config config;
   apm_->ApplyConfig(config);

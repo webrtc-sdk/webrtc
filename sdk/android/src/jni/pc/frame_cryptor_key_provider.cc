@@ -37,13 +37,13 @@ static jboolean JNI_FrameCryptorKeyProvider_SetSharedKey(
     JNIEnv* jni,
     jlong j_key_provider,
     jint j_index,
-    const base::android::JavaParamRef<jbyteArray>& j_key) {
+    const JavaParamRef<jbyteArray>& j_key) {
   auto key = JavaToNativeByteArray(jni, j_key);
   return reinterpret_cast<webrtc::DefaultKeyProviderImpl*>(j_key_provider)
       ->SetSharedKey(j_index,std::vector<uint8_t>(key.begin(), key.end()));
 }
 
-static base::android::ScopedJavaLocalRef<jbyteArray>
+static ScopedJavaLocalRef<jbyteArray>
 JNI_FrameCryptorKeyProvider_RatchetSharedKey(
     JNIEnv* env,
     jlong keyProviderPointer,
@@ -56,7 +56,7 @@ JNI_FrameCryptorKeyProvider_RatchetSharedKey(
   return NativeToJavaByteArray(env, rtc::ArrayView<int8_t>(int8tKey));
 }
 
-static base::android::ScopedJavaLocalRef<jbyteArray>
+static ScopedJavaLocalRef<jbyteArray>
 JNI_FrameCryptorKeyProvider_ExportSharedKey(
     JNIEnv* env,
     jlong keyProviderPointer,
@@ -71,9 +71,9 @@ JNI_FrameCryptorKeyProvider_ExportSharedKey(
 static jboolean JNI_FrameCryptorKeyProvider_SetKey(
     JNIEnv* jni,
     jlong j_key_provider,
-    const base::android::JavaParamRef<jstring>& participantId,
+    const JavaParamRef<jstring>& participantId,
     jint j_index,
-    const base::android::JavaParamRef<jbyteArray>& j_key) {
+    const JavaParamRef<jbyteArray>& j_key) {
   auto key = JavaToNativeByteArray(jni, j_key);
   auto participant_id = JavaToStdString(jni, participantId);
   return reinterpret_cast<webrtc::DefaultKeyProviderImpl*>(j_key_provider)
@@ -81,11 +81,11 @@ static jboolean JNI_FrameCryptorKeyProvider_SetKey(
                std::vector<uint8_t>(key.begin(), key.end()));
 }
 
-static base::android::ScopedJavaLocalRef<jbyteArray>
+static ScopedJavaLocalRef<jbyteArray>
 JNI_FrameCryptorKeyProvider_RatchetKey(
     JNIEnv* env,
     jlong keyProviderPointer,
-    const base::android::JavaParamRef<jstring>& participantId,
+    const JavaParamRef<jstring>& participantId,
     jint j_index) {
   auto participant_id = JavaToStdString(env, participantId);
   auto key_provider =
@@ -96,11 +96,11 @@ JNI_FrameCryptorKeyProvider_RatchetKey(
   return NativeToJavaByteArray(env, rtc::ArrayView<int8_t>(int8tKey));
 }
 
-static base::android::ScopedJavaLocalRef<jbyteArray>
+static ScopedJavaLocalRef<jbyteArray>
 JNI_FrameCryptorKeyProvider_ExportKey(
     JNIEnv* env,
     jlong keyProviderPointer,
-    const base::android::JavaParamRef<jstring>& participantId,
+    const JavaParamRef<jstring>& participantId,
     jint j_index) {
   auto participant_id = JavaToStdString(env, participantId);
   auto key_provider =
@@ -113,7 +113,7 @@ JNI_FrameCryptorKeyProvider_ExportKey(
 static void JNI_FrameCryptorKeyProvider_SetSifTrailer(
     JNIEnv* jni,
     jlong j_key_provider,
-    const base::android::JavaParamRef<jbyteArray>& j_trailer) {
+    const JavaParamRef<jbyteArray>& j_trailer) {
   auto trailer = JavaToNativeByteArray(jni, j_trailer);
   reinterpret_cast<webrtc::DefaultKeyProviderImpl*>(j_key_provider)
       ->SetSifTrailer(std::vector<uint8_t>(trailer.begin(), trailer.end()));

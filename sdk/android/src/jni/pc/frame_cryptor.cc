@@ -108,12 +108,12 @@ webrtc::FrameCryptorTransformer::Algorithm AlgorithmFromIndex(int index) {
   }
 }
 
-static base::android::ScopedJavaLocalRef<jobject>
+static ScopedJavaLocalRef<jobject>
 JNI_FrameCryptorFactory_CreateFrameCryptorForRtpReceiver(
     JNIEnv* env,
     jlong native_factory,
     jlong j_rtp_receiver_pointer,
-    const base::android::JavaParamRef<jstring>& participantId,
+    const JavaParamRef<jstring>& participantId,
     jint j_algorithm_index,
     jlong j_key_provider) {
   OwnedFactoryAndThreads* factory =
@@ -140,12 +140,12 @@ JNI_FrameCryptorFactory_CreateFrameCryptorForRtpReceiver(
   return NativeToJavaFrameCryptor(env, frame_crypto_transformer);
 }
 
-static base::android::ScopedJavaLocalRef<jobject>
+static ScopedJavaLocalRef<jobject>
 JNI_FrameCryptorFactory_CreateFrameCryptorForRtpSender(
     JNIEnv* env,
     jlong native_factory,
     jlong j_rtp_sender_pointer,
-    const base::android::JavaParamRef<jstring>& participantId,
+    const JavaParamRef<jstring>& participantId,
     jint j_algorithm_index,
     jlong j_key_provider) {
   OwnedFactoryAndThreads* factory =
@@ -170,13 +170,13 @@ JNI_FrameCryptorFactory_CreateFrameCryptorForRtpSender(
   return NativeToJavaFrameCryptor(env, frame_crypto_transformer);
 }
 
-static base::android::ScopedJavaLocalRef<jobject>
+static ScopedJavaLocalRef<jobject>
 JNI_FrameCryptorFactory_CreateFrameCryptorKeyProvider(
     JNIEnv* env,
     jboolean j_shared,
-    const base::android::JavaParamRef<jbyteArray>& j_ratchetSalt,
+    const JavaParamRef<jbyteArray>& j_ratchetSalt,
     jint j_ratchetWindowSize,
-    const base::android::JavaParamRef<jbyteArray>& j_uncryptedMagicBytes,
+    const JavaParamRef<jbyteArray>& j_uncryptedMagicBytes,
     jint j_failureTolerance,
     jint j_keyRingSize,
     jboolean j_discardFrameWhenCryptorNotReady) {
