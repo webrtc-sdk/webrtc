@@ -27,7 +27,7 @@ SdpVideoFormat VideoCodecInfoToSdpVideoFormat(JNIEnv* jni,
     scalability_modes;
   for (auto mode : params) {
     auto scalability_mode = ScalabilityModeFromString(mode);
-    if (scalability_mode != absl::nullopt) {
+    if (scalability_mode) {
       scalability_modes.push_back(*scalability_mode);
     }
   }

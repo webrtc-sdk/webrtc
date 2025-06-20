@@ -11,6 +11,7 @@
 #ifndef SDK_ANDROID_SRC_JNI_AUDIO_TRACK_SINK_H_
 #define SDK_ANDROID_SRC_JNI_AUDIO_TRACK_SINK_H_
 
+#include <optional>
 #include <jni.h>
 
 #include "api/media_stream_interface.h"
@@ -30,7 +31,7 @@ class AudioTrackSinkWrapper : public webrtc::AudioTrackSinkInterface {
               int sample_rate,
               size_t number_of_channels,
               size_t number_of_frames,
-              absl::optional<int64_t> absolute_capture_timestamp_ms) override;
+              std::optional<int64_t> absolute_capture_timestamp_ms) override;
 
   const ScopedJavaGlobalRef<jobject> j_sink_;
 };

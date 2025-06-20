@@ -26,7 +26,7 @@ void AudioTrackSinkWrapper::OnData(
     int sample_rate,
     size_t number_of_channels,
     size_t number_of_frames,
-    absl::optional<int64_t> absolute_capture_timestamp_ms) {
+    std::optional<int64_t> absolute_capture_timestamp_ms) {
   JNIEnv* jni = AttachCurrentThreadIfNeeded();
   int length = (bits_per_sample / 8) * number_of_channels * number_of_frames;
   ScopedJavaLocalRef<jobject> audio_buffer =
