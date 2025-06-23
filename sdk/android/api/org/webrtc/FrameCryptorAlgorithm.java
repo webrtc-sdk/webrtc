@@ -17,5 +17,15 @@
 package org.webrtc;
 
 public enum FrameCryptorAlgorithm {
-  AES_GCM,
+  AES_GCM(0);
+
+  private final int value;
+
+  FrameCryptorAlgorithm(int value) {
+    this.value = value;
+  }
+
+  public int getValue() {
+    return value;
+  }
 }

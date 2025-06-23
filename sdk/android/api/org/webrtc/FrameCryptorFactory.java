@@ -25,13 +25,13 @@ public class FrameCryptorFactory {
   public static FrameCryptor createFrameCryptorForRtpSender(PeerConnectionFactory factory, RtpSender rtpSender,
       String participantId, FrameCryptorAlgorithm algorithm, FrameCryptorKeyProvider keyProvider) {
     return nativeCreateFrameCryptorForRtpSender(factory.getNativeOwnedFactoryAndThreads(),rtpSender.getNativeRtpSender(), participantId,
-        algorithm.ordinal(), keyProvider.getNativeKeyProvider());
+        algorithm.getValue(), keyProvider.getNativeKeyProvider());
   }
 
   public static FrameCryptor createFrameCryptorForRtpReceiver(PeerConnectionFactory factory, RtpReceiver rtpReceiver,
       String participantId, FrameCryptorAlgorithm algorithm, FrameCryptorKeyProvider keyProvider) {
     return nativeCreateFrameCryptorForRtpReceiver(factory.getNativeOwnedFactoryAndThreads(), rtpReceiver.getNativeRtpReceiver(), participantId,
-        algorithm.ordinal(), keyProvider.getNativeKeyProvider());
+        algorithm.getValue(), keyProvider.getNativeKeyProvider());
   }
 
   private static native FrameCryptor nativeCreateFrameCryptorForRtpSender(long factory,
