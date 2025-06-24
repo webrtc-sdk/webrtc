@@ -221,9 +221,9 @@
   [self setNeedsLayout];
 }
 
-- (RTCVideoRotation)videoRotation {
+- (RTC_OBJC_TYPE(RTCVideoRotation) )videoRotation {
   if (self.rotationOverride) {
-    RTCVideoRotation rotation;
+    RTC_OBJC_TYPE(RTCVideoRotation) rotation;
     if (@available(iOS 11, macos 10.13, *)) {
       [self.rotationOverride getValue:&rotation size:sizeof(rotation)];
     } else {
@@ -238,12 +238,12 @@
 - (CGSize)drawableSize {
   // Flip width/height if the rotations are not the same.
   CGSize videoFrameSize = self.videoFrameSize;
-  RTCVideoRotation videoRotation = [self videoRotation];
+  RTC_OBJC_TYPE(RTCVideoRotation) videoRotation = [self videoRotation];
 
   BOOL useLandscape =
-      (videoRotation == RTCVideoRotation_0) || (videoRotation == RTCVideoRotation_180);
-  BOOL sizeIsLandscape = (self.videoFrame.rotation == RTCVideoRotation_0) ||
-      (self.videoFrame.rotation == RTCVideoRotation_180);
+      (videoRotation == RTC_OBJC_TYPE(RTCVideoRotation_0)) || (videoRotation == RTC_OBJC_TYPE(RTCVideoRotation_180));
+  BOOL sizeIsLandscape = (self.videoFrame.rotation == RTC_OBJC_TYPE(RTCVideoRotation_0)) ||
+      (self.videoFrame.rotation == RTC_OBJC_TYPE(RTCVideoRotation_180));
 
   CGSize size;
   if (useLandscape == sizeIsLandscape) {

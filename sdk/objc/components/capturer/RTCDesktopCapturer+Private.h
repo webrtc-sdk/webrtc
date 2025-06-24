@@ -21,8 +21,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 RTC_OBJC_EXPORT
-@protocol RTC_OBJC_TYPE
-(DesktopCapturerDelegate)<NSObject>
+@protocol RTC_OBJC_TYPE(RTCDesktopCapturerPrivateDelegate)<NSObject>
 -(void)didCaptureVideoFrame:(RTC_OBJC_TYPE(RTCVideoFrame) *) frame;
 -(void)didSourceCaptureStart;
 -(void)didSourceCapturePaused;

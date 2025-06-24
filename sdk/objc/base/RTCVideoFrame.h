@@ -15,11 +15,11 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-typedef NS_ENUM(NSInteger, RTCVideoRotation) {
-  RTCVideoRotation_0 = 0,
-  RTCVideoRotation_90 = 90,
-  RTCVideoRotation_180 = 180,
-  RTCVideoRotation_270 = 270,
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCVideoRotation)) {
+  RTC_OBJC_TYPE(RTCVideoRotation_0) = 0,
+  RTC_OBJC_TYPE(RTCVideoRotation_90) = 90,
+  RTC_OBJC_TYPE(RTCVideoRotation_180) = 180,
+  RTC_OBJC_TYPE(RTCVideoRotation_270) = 270,
 };
 
 @protocol RTC_OBJC_TYPE
@@ -34,7 +34,7 @@ RTC_OBJC_EXPORT
 
 /** Height without rotation applied. */
 @property(nonatomic, readonly) int height;
-@property(nonatomic, readonly) RTCVideoRotation rotation;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCVideoRotation) rotation;
 
 /** Timestamp in nanoseconds. */
 @property(nonatomic, readonly) int64_t timeStampNs;
@@ -51,7 +51,7 @@ RTC_OBJC_EXPORT
  *  Deprecated - initialize with a RTCCVPixelBuffer instead
  */
 - (instancetype)initWithPixelBuffer:(CVPixelBufferRef)pixelBuffer
-                           rotation:(RTCVideoRotation)rotation
+                           rotation:(RTC_OBJC_TYPE(RTCVideoRotation))rotation
                         timeStampNs:(int64_t)timeStampNs
     DEPRECATED_MSG_ATTRIBUTE("use initWithBuffer instead");
 
@@ -66,14 +66,14 @@ RTC_OBJC_EXPORT
                          cropHeight:(int)cropHeight
                               cropX:(int)cropX
                               cropY:(int)cropY
-                           rotation:(RTCVideoRotation)rotation
+                           rotation:(RTC_OBJC_TYPE(RTCVideoRotation))rotation
                         timeStampNs:(int64_t)timeStampNs
     DEPRECATED_MSG_ATTRIBUTE("use initWithBuffer instead");
 
 /** Initialize an RTCVideoFrame from a frame buffer, rotation, and timestamp.
  */
 - (instancetype)initWithBuffer:(id<RTC_OBJC_TYPE(RTCVideoFrameBuffer)>)frameBuffer
-                      rotation:(RTCVideoRotation)rotation
+                      rotation:(RTC_OBJC_TYPE(RTCVideoRotation))rotation
                    timeStampNs:(int64_t)timeStampNs;
 
 /** Return a frame that is guaranteed to be I420, i.e. it is possible to access

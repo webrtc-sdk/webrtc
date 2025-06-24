@@ -101,7 +101,7 @@ rtc::AdapterType AdapterTypeFromInterfaceType(nw_interface_type_t interfaceType)
       });
       nw_path_monitor_set_queue(
           _pathMonitor,
-          [RTC_OBJC_TYPE(RTCDispatcher) dispatchQueueForType:RTCDispatcherTypeNetworkMonitor]);
+          [RTC_OBJC_TYPE(RTCDispatcher) dispatchQueueForType:RTC_OBJC_TYPE(RTCDispatcherTypeNetworkMonitor)]);
       nw_path_monitor_start(_pathMonitor);
     }
   }

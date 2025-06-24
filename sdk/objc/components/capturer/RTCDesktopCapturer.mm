@@ -35,7 +35,7 @@
 - (instancetype)initWithSource:(RTC_OBJC_TYPE(RTCDesktopSource) *)source delegate:(__weak id<RTC_OBJC_TYPE(RTCDesktopCapturerDelegate)>)delegate captureDelegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)captureDelegate {
     if (self = [super initWithDelegate:captureDelegate]) {
       webrtc::DesktopType captureType = webrtc::kScreen;
-      if(source.sourceType == RTCDesktopSourceTypeWindow) {
+      if(source.sourceType == RTC_OBJC_TYPE(RTCDesktopSourceTypeWindow)) {
           captureType = webrtc::kWindow;
       }
       _nativeCapturer = std::make_shared<webrtc::ObjCDesktopCapturer>(captureType, source.nativeMediaSource->id(), self);

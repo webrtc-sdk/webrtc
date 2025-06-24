@@ -186,7 +186,7 @@
       factory = [[RTC_OBJC_TYPE(RTCPeerConnectionFactory) alloc] init];
       peerConnection =
           [factory peerConnectionWithConfiguration:config constraints:constraints delegate:nil];
-      sender = [peerConnection senderWithKind:kRTCMediaStreamTrackKindVideo streamId:@"stream"];
+      sender = [peerConnection senderWithKind:RTC_CONSTANT_TYPE(RTCMediaStreamTrackKindVideo) streamId:@"stream"];
       XCTAssertNotNil(sender);
       [peerConnection close];
       peerConnection = nil;
@@ -216,10 +216,10 @@
     @autoreleasepool {
       factory = [[RTC_OBJC_TYPE(RTCPeerConnectionFactory) alloc] init];
       pc1 = [factory peerConnectionWithConfiguration:config constraints:constraints delegate:nil];
-      [pc1 senderWithKind:kRTCMediaStreamTrackKindAudio streamId:@"stream"];
+      [pc1 senderWithKind:RTC_CONSTANT_TYPE(RTCMediaStreamTrackKindAudio) streamId:@"stream"];
 
       pc2 = [factory peerConnectionWithConfiguration:config constraints:constraints delegate:nil];
-      [pc2 senderWithKind:kRTCMediaStreamTrackKindAudio streamId:@"stream"];
+      [pc2 senderWithKind:RTC_CONSTANT_TYPE(RTCMediaStreamTrackKindAudio) streamId:@"stream"];
 
       NSTimeInterval negotiationTimeout = 15;
       XCTAssertTrue([self negotiatePeerConnection:pc1
@@ -320,7 +320,7 @@
     config.sdpSemantics = RTCSdpSemanticsUnifiedPlan;
     RTC_OBJC_TYPE(RTCMediaConstraints) *constraints =
         [[RTC_OBJC_TYPE(RTCMediaConstraints) alloc] initWithMandatoryConstraints:@{
-          kRTCMediaConstraintsOfferToReceiveAudio : kRTCMediaConstraintsValueTrue
+          RTC_CONSTANT_TYPE(RTCMediaConstraintsOfferToReceiveAudio) : RTC_CONSTANT_TYPE(RTCMediaConstraintsValueTrue)
         }
                                                              optionalConstraints:nil];
 
@@ -381,7 +381,7 @@
                                                                        decoderFactory:decoder];
 
     RTC_OBJC_TYPE(RTCRtpCapabilities) *capabilities =
-        [factory rtpSenderCapabilitiesForKind:kRTCMediaStreamTrackKindVideo];
+        [factory rtpSenderCapabilitiesForKind:RTC_CONSTANT_TYPE(RTCMediaStreamTrackKindVideo)];
     NSMutableArray<NSString *> *codecNames = [NSMutableArray new];
     for (RTC_OBJC_TYPE(RTCRtpCodecCapability) * codec in capabilities.codecs) {
       [codecNames addObject:codec.name];
@@ -410,7 +410,7 @@
                                                                        decoderFactory:decoder];
 
     RTC_OBJC_TYPE(RTCRtpCapabilities) *capabilities =
-        [factory rtpReceiverCapabilitiesForKind:kRTCMediaStreamTrackKindVideo];
+        [factory rtpReceiverCapabilitiesForKind:RTC_CONSTANT_TYPE(RTCMediaStreamTrackKindVideo)];
     NSMutableArray<NSString *> *codecNames = [NSMutableArray new];
     for (RTC_OBJC_TYPE(RTCRtpCodecCapability) * codec in capabilities.codecs) {
       [codecNames addObject:codec.name];
@@ -454,7 +454,7 @@
     XCTAssertNotNil(tranceiver);
 
     RTC_OBJC_TYPE(RTCRtpCapabilities) *capabilities =
-        [factory rtpReceiverCapabilitiesForKind:kRTCMediaStreamTrackKindVideo];
+        [factory rtpReceiverCapabilitiesForKind:RTC_CONSTANT_TYPE(RTCMediaStreamTrackKindVideo)];
 
     RTC_OBJC_TYPE(RTCRtpCodecCapability) * targetCodec;
     for (RTC_OBJC_TYPE(RTCRtpCodecCapability) * codec in capabilities.codecs) {
@@ -513,7 +513,7 @@
   __weak RTC_OBJC_TYPE(RTCPeerConnection) *weakPC2 = pc2;
   RTC_OBJC_TYPE(RTCMediaConstraints) *sdpConstraints =
       [[RTC_OBJC_TYPE(RTCMediaConstraints) alloc] initWithMandatoryConstraints:@{
-        kRTCMediaConstraintsOfferToReceiveAudio : kRTCMediaConstraintsValueTrue
+        RTC_CONSTANT_TYPE(RTCMediaConstraintsOfferToReceiveAudio) : RTC_CONSTANT_TYPE(RTCMediaConstraintsValueTrue)
       }
                                                            optionalConstraints:nil];
 

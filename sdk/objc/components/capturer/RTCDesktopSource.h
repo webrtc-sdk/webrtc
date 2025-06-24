@@ -19,9 +19,9 @@
 
 #import "RTCMacros.h"
 
-typedef NS_ENUM(NSInteger, RTCDesktopSourceType) {
-  RTCDesktopSourceTypeScreen,
-  RTCDesktopSourceTypeWindow,
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCDesktopSourceType)) {
+  RTC_OBJC_TYPE(RTCDesktopSourceTypeScreen),
+  RTC_OBJC_TYPE(RTCDesktopSourceTypeWindow),
 };
 
 RTC_OBJC_EXPORT
@@ -33,7 +33,7 @@ RTC_OBJC_EXPORT
 
 @property(nonatomic, readonly) NSImage *thumbnail;
 
-@property(nonatomic, readonly) RTCDesktopSourceType sourceType;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCDesktopSourceType) sourceType;
 
 -( NSImage *)UpdateThumbnail;
 

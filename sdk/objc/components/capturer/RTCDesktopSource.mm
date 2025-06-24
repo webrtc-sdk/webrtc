@@ -23,7 +23,7 @@
     NSString *_sourceId;
     NSString *_name;
     NSImage *_thumbnail;
-    RTCDesktopSourceType _sourceType;
+    RTC_OBJC_TYPE(RTCDesktopSourceType) _sourceType;
 }
 
 @synthesize sourceId = _sourceId;
@@ -33,7 +33,7 @@
 @synthesize nativeMediaSource = _nativeMediaSource;
 
 - (instancetype)initWithNativeSource:(webrtc::MediaSource*)nativeSource 
-                          sourceType:(RTCDesktopSourceType) sourceType {
+                          sourceType:(RTC_OBJC_TYPE(RTCDesktopSourceType)) sourceType {
     if (self = [super init]) {
         _nativeMediaSource = nativeSource;
         _sourceId = [NSString stringWithUTF8String:std::to_string(nativeSource->id()).c_str()];
