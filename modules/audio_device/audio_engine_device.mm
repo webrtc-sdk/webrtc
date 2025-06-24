@@ -2278,8 +2278,11 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
 #if TARGET_OS_OSX
           // Workaround for engine not starting in some cases when other apps are using voice
           // processing already.
+          // TODO: Find a better workaround, or a cleaner way to wait the vp config is complete.
           [engine_device_ prepare];
-          usleep(1000);
+
+          LOGI() << "Sleeping for 0.1 seconds...";
+          usleep(100000);  // 0.1 seconds
 #endif
 
           NSError* error = nil;
