@@ -261,7 +261,7 @@ class AudioDeviceSink : public webrtc::AudioDeviceSink {
       _native->PlayoutDeviceName(i, name, guid);
       NSString *strGUID = [[NSString alloc] initWithCString:guid encoding:NSUTF8StringEncoding];
       NSString *strName = [[NSString alloc] initWithCString:name encoding:NSUTF8StringEncoding];
-      RTC_OBJC_TYPE(RTCIODevice) *device = [[RTC_OBJC_TYPE(RTCIODevice) alloc] initWithType:RTCIODeviceTypeOutput deviceId:strGUID name:strName];
+      RTC_OBJC_TYPE(RTCIODevice) *device = [[RTC_OBJC_TYPE(RTCIODevice) alloc] initWithType:RTC_OBJC_TYPE(RTCIODeviceTypeOutput) deviceId:strGUID name:strName];
       [result addObject: device];
     }
   }
@@ -283,7 +283,7 @@ class AudioDeviceSink : public webrtc::AudioDeviceSink {
       _native->RecordingDeviceName(i, name, guid);
       NSString *strGUID = [[NSString alloc] initWithCString:guid encoding:NSUTF8StringEncoding];
       NSString *strName = [[NSString alloc] initWithCString:name encoding:NSUTF8StringEncoding];
-      RTC_OBJC_TYPE(RTCIODevice) *device = [[RTC_OBJC_TYPE(RTCIODevice) alloc] initWithType:RTCIODeviceTypeInput deviceId:strGUID name:strName];
+      RTC_OBJC_TYPE(RTCIODevice) *device = [[RTC_OBJC_TYPE(RTCIODevice) alloc] initWithType:RTC_OBJC_TYPE(RTCIODeviceTypeInput) deviceId:strGUID name:strName];
       [result addObject: device];
     }
   }
