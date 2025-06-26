@@ -55,7 +55,7 @@ class AudioDeviceDelegateImpl final : public rtc::RefCountedNonVirtual<AudioDevi
 
 }  // namespace
 
-@implementation RTC_OBJC_TYPE(ObjCAudioDeviceDelegate) {
+@implementation RTC_OBJC_TYPE(RTCObjCAudioDeviceDelegate) {
   rtc::scoped_refptr<AudioDeviceDelegateImpl> impl_;
 }
 

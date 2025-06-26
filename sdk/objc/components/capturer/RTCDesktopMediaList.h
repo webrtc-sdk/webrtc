@@ -38,9 +38,9 @@ RTC_OBJC_EXPORT
 RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCDesktopMediaList) : NSObject
 
--(instancetype)initWithType:(RTCDesktopSourceType)type delegate:(__weak id<RTC_OBJC_TYPE(RTCDesktopMediaListDelegate)>)delegate;
+-(instancetype)initWithType:(RTC_OBJC_TYPE(RTCDesktopSourceType))type delegate:(__weak id<RTC_OBJC_TYPE(RTCDesktopMediaListDelegate)>)delegate;
 
-@property(nonatomic, readonly) RTCDesktopSourceType sourceType;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCDesktopSourceType) sourceType;
 
 - (int32_t)UpdateSourceList:(BOOL)forceReload  updateAllThumbnails:(BOOL)updateThumbnail;
 

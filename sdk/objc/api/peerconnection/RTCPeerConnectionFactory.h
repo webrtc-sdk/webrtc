@@ -27,7 +27,7 @@ NS_ASSUME_NONNULL_BEGIN
 @class RTC_OBJC_TYPE(RTCAudioDeviceModule);
 @class RTC_OBJC_TYPE(RTCRtpCapabilities);
 
-typedef NS_ENUM(NSInteger, RTCRtpMediaType);
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCRtpMediaType));
 
 @protocol RTC_OBJC_TYPE
 (RTCPeerConnectionDelegate);

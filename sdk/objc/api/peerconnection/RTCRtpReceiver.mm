@@ -27,7 +27,7 @@ RtpReceiverDelegateAdapter::RtpReceiverDelegateAdapter(RTC_OBJC_TYPE(RTCRtpRecei
 
 void RtpReceiverDelegateAdapter::OnFirstPacketReceived(
     cricket::MediaType media_type) {
-  RTCRtpMediaType packet_media_type =
+  RTC_OBJC_TYPE(RTCRtpMediaType) packet_media_type =
       [RTC_OBJC_TYPE(RTCRtpReceiver) mediaTypeForNativeMediaType:media_type];
   RTC_OBJC_TYPE(RTCRtpReceiver) *receiver = receiver_;
   [receiver.delegate rtpReceiver:receiver didReceiveFirstPacketForMediaType:packet_media_type];
@@ -116,42 +116,42 @@ void RtpReceiverDelegateAdapter::OnFirstPacketReceived(
   return self;
 }
 
-+ (RTCRtpMediaType)mediaTypeForNativeMediaType:
++ (RTC_OBJC_TYPE(RTCRtpMediaType))mediaTypeForNativeMediaType:
     (cricket::MediaType)nativeMediaType {
   switch (nativeMediaType) {
     case cricket::MEDIA_TYPE_AUDIO:
-      return RTCRtpMediaTypeAudio;
+      return RTC_OBJC_TYPE(RTCRtpMediaTypeAudio);
     case cricket::MEDIA_TYPE_VIDEO:
-      return RTCRtpMediaTypeVideo;
+      return RTC_OBJC_TYPE(RTCRtpMediaTypeVideo);
     case cricket::MEDIA_TYPE_DATA:
-      return RTCRtpMediaTypeData;
+      return RTC_OBJC_TYPE(RTCRtpMediaTypeData);
     case cricket::MEDIA_TYPE_UNSUPPORTED:
-      return RTCRtpMediaTypeUnsupported;
+      return RTC_OBJC_TYPE(RTCRtpMediaTypeUnsupported);
   }
 }
 
-+ (cricket::MediaType)nativeMediaTypeForMediaType:(RTCRtpMediaType)mediaType {
++ (cricket::MediaType)nativeMediaTypeForMediaType:(RTC_OBJC_TYPE(RTCRtpMediaType))mediaType {
   switch (mediaType) {
-    case RTCRtpMediaTypeAudio:
+    case RTC_OBJC_TYPE(RTCRtpMediaTypeAudio):
       return cricket::MEDIA_TYPE_AUDIO;
-    case RTCRtpMediaTypeVideo:
+    case RTC_OBJC_TYPE(RTCRtpMediaTypeVideo):
       return cricket::MEDIA_TYPE_VIDEO;
-    case RTCRtpMediaTypeData:
+    case RTC_OBJC_TYPE(RTCRtpMediaTypeData):
       return cricket::MEDIA_TYPE_DATA;
-    case RTCRtpMediaTypeUnsupported:
+    case RTC_OBJC_TYPE(RTCRtpMediaTypeUnsupported):
       return cricket::MEDIA_TYPE_UNSUPPORTED;
   }
 }
 
-+ (NSString *)stringForMediaType:(RTCRtpMediaType)mediaType {
++ (NSString *)stringForMediaType:(RTC_OBJC_TYPE(RTCRtpMediaType))mediaType {
   switch (mediaType) {
-    case RTCRtpMediaTypeAudio:
+    case RTC_OBJC_TYPE(RTCRtpMediaTypeAudio):
       return @"AUDIO";
-    case RTCRtpMediaTypeVideo:
+    case RTC_OBJC_TYPE(RTCRtpMediaTypeVideo):
       return @"VIDEO";
-    case RTCRtpMediaTypeData:
+    case RTC_OBJC_TYPE(RTCRtpMediaTypeData):
       return @"DATA";
-    case RTCRtpMediaTypeUnsupported:
+    case RTC_OBJC_TYPE(RTCRtpMediaTypeUnsupported):
       return @"UNSUPPORTED";
   }
 }

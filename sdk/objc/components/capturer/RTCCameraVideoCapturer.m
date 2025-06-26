@@ -48,7 +48,7 @@ const int64_t kNanosecondsPerSecond = 1000000000;
   AVCaptureSession *_captureSession;
   FourCharCode _preferredOutputPixelFormat;
   FourCharCode _outputPixelFormat;
-  RTCVideoRotation _rotation;
+  RTC_OBJC_TYPE(RTCVideoRotation) _rotation;
 
 #if TARGET_WATCH_DEVICE_ROTATION
   UIInterfaceOrientation _orientation;
@@ -97,7 +97,7 @@ static NSUInteger _sharedMultiCamSessionCount = 0;
 
 #if TARGET_WATCH_DEVICE_ROTATION
     _orientation = UIInterfaceOrientationPortrait;
-    _rotation = RTCVideoRotation_90;
+    _rotation = RTC_OBJC_TYPE(RTCVideoRotation_90);
     [center addObserver:self
                selector:@selector(deviceOrientationDidChange:)
                    name:UIDeviceOrientationDidChangeNotification
@@ -201,7 +201,7 @@ static NSUInteger _sharedMultiCamSessionCount = 0;
              completionHandler:(nullable void (^)(NSError *_Nullable error))completionHandler {
   _willBeRunning = YES;
   [RTC_OBJC_TYPE(RTCDispatcher)
-      dispatchAsyncOnType:RTCDispatcherTypeCaptureSession
+      dispatchAsyncOnType:RTC_OBJC_TYPE(RTCDispatcherTypeCaptureSession)
                     block:^{
                       RTCLogInfo("startCaptureWithDevice %@ @ %ld fps", format, (long)fps);
 
@@ -245,7 +245,7 @@ static NSUInteger _sharedMultiCamSessionCount = 0;
 - (void)stopCaptureWithCompletionHandler:(nullable void (^)(void))completionHandler {
   _willBeRunning = NO;
   [RTC_OBJC_TYPE(RTCDispatcher)
-      dispatchAsyncOnType:RTCDispatcherTypeCaptureSession
+      dispatchAsyncOnType:RTC_OBJC_TYPE(RTCDispatcherTypeCaptureSession)
                     block:^{
                       RTCLogInfo("Stop");
 
@@ -320,24 +320,24 @@ static NSUInteger _sharedMultiCamSessionCount = 0;
   }
   switch (_orientation) {
     case UIInterfaceOrientationPortrait:
-      _rotation = RTCVideoRotation_90;
+      _rotation = RTC_OBJC_TYPE(RTCVideoRotation_90);
       break;
     case UIInterfaceOrientationPortraitUpsideDown:
-      _rotation = RTCVideoRotation_270;
+      _rotation = RTC_OBJC_TYPE(RTCVideoRotation_270);
       break;
     case UIInterfaceOrientationLandscapeLeft:
-      _rotation = usingFrontCamera ? RTCVideoRotation_0 : RTCVideoRotation_180;
+      _rotation = usingFrontCamera ? RTC_OBJC_TYPE(RTCVideoRotation_0) : RTC_OBJC_TYPE(RTCVideoRotation_180);
       break;
     case UIInterfaceOrientationLandscapeRight:
-      _rotation = usingFrontCamera ? RTCVideoRotation_180 : RTCVideoRotation_0;
+      _rotation = usingFrontCamera ? RTC_OBJC_TYPE(RTCVideoRotation_180) : RTC_OBJC_TYPE(RTCVideoRotation_0);
       break;
     case UIInterfaceOrientationUnknown:
-      _rotation = RTCVideoRotation_0;
+      _rotation = RTC_OBJC_TYPE(RTCVideoRotation_0);
       break;
   }
 #else
   // No rotation on Mac.
-  _rotation = RTCVideoRotation_0;
+  _rotation = RTC_OBJC_TYPE(RTCVideoRotation_0);
 #endif
 
   RTC_OBJC_TYPE(RTCCVPixelBuffer) *rtcPixelBuffer =
@@ -398,7 +398,7 @@ static NSUInteger _sharedMultiCamSessionCount = 0;
   NSError *error = [notification.userInfo objectForKey:AVCaptureSessionErrorKey];
   RTCLogError(@"Capture session runtime error: %@", error);
 
-  [RTC_OBJC_TYPE(RTCDispatcher) dispatchAsyncOnType:RTCDispatcherTypeCaptureSession
+  [RTC_OBJC_TYPE(RTCDispatcher) dispatchAsyncOnType:RTC_OBJC_TYPE(RTCDispatcherTypeCaptureSession)
                                               block:^{
 #if TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST
                                                 if (error.code == AVErrorMediaServicesWereReset) {
@@ -415,7 +415,7 @@ static NSUInteger _sharedMultiCamSessionCount = 0;
 - (void)handleCaptureSessionDidStartRunning:(NSNotification *)notification {
   RTCLog(@"Capture session started.");
 
-  [RTC_OBJC_TYPE(RTCDispatcher) dispatchAsyncOnType:RTCDispatcherTypeCaptureSession
+  [RTC_OBJC_TYPE(RTCDispatcher) dispatchAsyncOnType:RTC_OBJC_TYPE(RTCDispatcherTypeCaptureSession)
                                               block:^{
                                                 // If we successfully restarted after an unknown
                                                 // error, allow future retries on fatal errors.
@@ -429,7 +429,7 @@ static NSUInteger _sharedMultiCamSessionCount = 0;
 
 - (void)handleFatalError {
   [RTC_OBJC_TYPE(RTCDispatcher)
-      dispatchAsyncOnType:RTCDispatcherTypeCaptureSession
+      dispatchAsyncOnType:RTC_OBJC_TYPE(RTCDispatcherTypeCaptureSession)
                     block:^{
                       if (!self.hasRetriedOnFatalError) {
                         RTCLogWarning(@"Attempting to recover from fatal capture error.");
@@ -442,7 +442,7 @@ static NSUInteger _sharedMultiCamSessionCount = 0;
 }
 
 - (void)handleNonFatalError {
-  [RTC_OBJC_TYPE(RTCDispatcher) dispatchAsyncOnType:RTCDispatcherTypeCaptureSession
+  [RTC_OBJC_TYPE(RTCDispatcher) dispatchAsyncOnType:RTC_OBJC_TYPE(RTCDispatcherTypeCaptureSession)
                                               block:^{
                                                 RTCLog(@"Restarting capture session after error.");
                                                 if (self.isRunning) {
@@ -457,7 +457,7 @@ static NSUInteger _sharedMultiCamSessionCount = 0;
 
 - (void)handleApplicationDidBecomeActive:(NSNotification *)notification {
   [RTC_OBJC_TYPE(RTCDispatcher)
-      dispatchAsyncOnType:RTCDispatcherTypeCaptureSession
+      dispatchAsyncOnType:RTC_OBJC_TYPE(RTCDispatcherTypeCaptureSession)
                     block:^{
                       if (self.isRunning && !self.captureSession.isRunning) {
                         RTCLog(@"Restarting capture session on active.");
@@ -607,7 +607,7 @@ static NSUInteger _sharedMultiCamSessionCount = 0;
 #pragma mark - Private, called inside capture queue
 
 - (void)updateDeviceCaptureFormat:(AVCaptureDeviceFormat *)format fps:(NSInteger)fps {
-  NSAssert([RTC_OBJC_TYPE(RTCDispatcher) isOnQueueForType:RTCDispatcherTypeCaptureSession],
+  NSAssert([RTC_OBJC_TYPE(RTCDispatcher) isOnQueueForType:RTC_OBJC_TYPE(RTCDispatcherTypeCaptureSession)],
            @"updateDeviceCaptureFormat must be called on the capture queue.");
   @try {
     _currentDevice.activeFormat = format;
@@ -621,7 +621,7 @@ static NSUInteger _sharedMultiCamSessionCount = 0;
 }
 
 - (void)updateZoomFactor {
-  NSAssert([RTC_OBJC_TYPE(RTCDispatcher) isOnQueueForType:RTCDispatcherTypeCaptureSession],
+  NSAssert([RTC_OBJC_TYPE(RTCDispatcher) isOnQueueForType:RTC_OBJC_TYPE(RTCDispatcherTypeCaptureSession)],
            @"updateZoomFactor must be called on the capture queue.");
 
 #if (TARGET_OS_IOS || TARGET_OS_TV) && !TARGET_OS_VISION
@@ -631,7 +631,7 @@ static NSUInteger _sharedMultiCamSessionCount = 0;
 }
 
 - (void)reconfigureCaptureSessionInput {
-  NSAssert([RTC_OBJC_TYPE(RTCDispatcher) isOnQueueForType:RTCDispatcherTypeCaptureSession],
+  NSAssert([RTC_OBJC_TYPE(RTCDispatcher) isOnQueueForType:RTC_OBJC_TYPE(RTCDispatcherTypeCaptureSession)],
            @"reconfigureCaptureSessionInput must be called on the capture queue.");
   NSError *error = nil;
   AVCaptureDeviceInput *input = [[AVCaptureDeviceInput alloc] initWithDevice:_currentDevice
@@ -669,7 +669,7 @@ static NSUInteger _sharedMultiCamSessionCount = 0;
 
 #if TARGET_WATCH_DEVICE_ROTATION
 - (void)updateOrientation {
-  NSAssert([RTC_OBJC_TYPE(RTCDispatcher) isOnQueueForType:RTCDispatcherTypeMain],
+  NSAssert([RTC_OBJC_TYPE(RTCDispatcher) isOnQueueForType:RTC_OBJC_TYPE(RTCDispatcherTypeMain)],
            @"Retrieving device orientation must be called on the main queue.");
 
   // Must be called on the main queue.
@@ -677,7 +677,7 @@ static NSUInteger _sharedMultiCamSessionCount = 0;
       (UIWindowScene *)[UIApplication sharedApplication].connectedScenes.anyObject;
   UIInterfaceOrientation newOrientation = windowScene.interfaceOrientation;
 
-  [RTC_OBJC_TYPE(RTCDispatcher) dispatchAsyncOnType:RTCDispatcherTypeCaptureSession
+  [RTC_OBJC_TYPE(RTCDispatcher) dispatchAsyncOnType:RTC_OBJC_TYPE(RTCDispatcherTypeCaptureSession)
                                               block:^{
                                                 // Must be called on the capture queue
                                                 self->_orientation = newOrientation;

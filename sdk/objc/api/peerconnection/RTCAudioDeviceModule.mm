@@ -421,7 +421,7 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
       NSString *strGUID = [[NSString alloc] initWithCString:guid encoding:NSUTF8StringEncoding];
       NSString *strName = [[NSString alloc] initWithCString:name encoding:NSUTF8StringEncoding];
       RTC_OBJC_TYPE(RTCIODevice) *device =
-          [[RTC_OBJC_TYPE(RTCIODevice) alloc] initWithType:RTCIODeviceTypeOutput
+          [[RTC_OBJC_TYPE(RTCIODevice) alloc] initWithType:RTC_OBJC_TYPE(RTCIODeviceTypeOutput)
                                                   deviceId:strGUID
                                                       name:strName];
       [result addObject:device];
@@ -445,7 +445,7 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
       NSString *strGUID = [[NSString alloc] initWithCString:guid encoding:NSUTF8StringEncoding];
       NSString *strName = [[NSString alloc] initWithCString:name encoding:NSUTF8StringEncoding];
       RTC_OBJC_TYPE(RTCIODevice) *device =
-          [[RTC_OBJC_TYPE(RTCIODevice) alloc] initWithType:RTCIODeviceTypeInput
+          [[RTC_OBJC_TYPE(RTCIODevice) alloc] initWithType:RTC_OBJC_TYPE(RTCIODeviceTypeInput)
                                                   deviceId:strGUID
                                                       name:strName];
       [result addObject:device];

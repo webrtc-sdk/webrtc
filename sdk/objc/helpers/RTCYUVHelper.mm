@@ -28,7 +28,7 @@
         dstStrideV:(int)dstStrideV
              width:(int)width
              height:(int)height
-              mode:(RTCVideoRotation)mode {
+              mode:(RTC_OBJC_TYPE(RTCVideoRotation))mode {
   libyuv::I420Rotate(srcY,
                      srcStrideY,
                      srcU,

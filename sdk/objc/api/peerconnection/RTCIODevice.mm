@@ -25,13 +25,13 @@ NSString *const kDefaultDeviceId = @"default";
 @synthesize deviceId = _deviceId;
 @synthesize name = _name;
 
-+ (instancetype)defaultDeviceWithType: (RTCIODeviceType)type {
++ (instancetype)defaultDeviceWithType: (RTC_OBJC_TYPE(RTCIODeviceType))type {
   return [[self alloc] initWithType: type 
                            deviceId: kDefaultDeviceId
                                name: @""];
 }
 
-- (instancetype)initWithType: (RTCIODeviceType)type
+- (instancetype)initWithType: (RTC_OBJC_TYPE(RTCIODeviceType))type
                     deviceId: (NSString *)deviceId
                         name: (NSString* )name {
   if (self = [super init]) {

@@ -16,21 +16,21 @@
 
 #include "system_wrappers/include/field_trial.h"
 
-NSString *const kRTCFieldTrialAudioForceABWENoTWCCKey = @"WebRTC-Audio-ABWENoTWCC";
-NSString *const kRTCFieldTrialFlexFec03AdvertisedKey = @"WebRTC-FlexFEC-03-Advertised";
-NSString *const kRTCFieldTrialFlexFec03Key = @"WebRTC-FlexFEC-03";
-NSString *const kRTCFieldTrialH264HighProfileKey = @"WebRTC-H264HighProfile";
-NSString *const kRTCFieldTrialMinimizeResamplingOnMobileKey =
+NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialAudioForceABWENoTWCCKey) = @"WebRTC-Audio-ABWENoTWCC";
+NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialFlexFec03AdvertisedKey) = @"WebRTC-FlexFEC-03-Advertised";
+NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialFlexFec03Key) = @"WebRTC-FlexFEC-03";
+NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialH264HighProfileKey) = @"WebRTC-H264HighProfile";
+NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialMinimizeResamplingOnMobileKey) =
     @"WebRTC-Audio-MinimizeResamplingOnMobile";
-NSString *const kRTCFieldTrialUseNWPathMonitor = @"WebRTC-Network-UseNWPathMonitor";
-NSString *const kRTCFieldTrialEnabledValue = @"Enabled";
+NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialUseNWPathMonitor) = @"WebRTC-Network-UseNWPathMonitor";
+NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialEnabledValue) = @"Enabled";
 
 // InitFieldTrialsFromString stores the char*, so the char array must outlive
 // the application.
 static char *gFieldTrialInitString = nullptr;
 static os_unfair_lock fieldTrialLock = OS_UNFAIR_LOCK_INIT;
 
-void RTCInitFieldTrialDictionary(NSDictionary<NSString *, NSString *> *fieldTrials) {
+void RTC_OBJC_TYPE(RTCInitFieldTrialDictionary)(NSDictionary<NSString *, NSString *> *fieldTrials) {
   if (!fieldTrials) {
     RTCLogWarning(@"No fieldTrials provided.");
     return;

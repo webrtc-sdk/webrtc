@@ -20,7 +20,7 @@
 #import "RTCDesktopMediaList+Private.h"
 
 @implementation RTC_OBJC_TYPE(RTCDesktopMediaList) {
-     RTCDesktopSourceType _sourceType;
+     RTC_OBJC_TYPE(RTCDesktopSourceType) _sourceType;
      NSMutableArray<RTC_OBJC_TYPE(RTCDesktopSource) *>* _sources;
      __weak id<RTC_OBJC_TYPE(RTCDesktopMediaListDelegate)> _delegate;
 }
@@ -28,10 +28,10 @@
 @synthesize sourceType = _sourceType;
 @synthesize nativeMediaList = _nativeMediaList;
 
-- (instancetype)initWithType:(RTCDesktopSourceType)type delegate:(__weak id<RTC_OBJC_TYPE(RTCDesktopMediaListDelegate)>)delegate{
+- (instancetype)initWithType:(RTC_OBJC_TYPE(RTCDesktopSourceType))type delegate:(__weak id<RTC_OBJC_TYPE(RTCDesktopMediaListDelegate)>)delegate{
     if (self = [super init]) {
         webrtc::DesktopType captureType = webrtc::kScreen;
-        if(type == RTCDesktopSourceTypeWindow) {
+        if(type == RTC_OBJC_TYPE(RTCDesktopSourceTypeWindow)) {
             captureType = webrtc::kWindow;
         }
         _nativeMediaList = std::make_shared<webrtc::ObjCDesktopMediaList>(captureType, self);

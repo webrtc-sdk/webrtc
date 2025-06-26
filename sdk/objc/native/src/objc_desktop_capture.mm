@@ -29,7 +29,7 @@ enum { kCaptureDelay = 33, kCaptureMessageId = 1000 };
 
 ObjCDesktopCapturer::ObjCDesktopCapturer(DesktopType type,
                                          webrtc::DesktopCapturer::SourceId source_id,
-                                         id<RTC_OBJC_TYPE(DesktopCapturerDelegate)> delegate)
+                                         id<RTC_OBJC_TYPE(RTCDesktopCapturerPrivateDelegate)> delegate)
     : thread_(rtc::Thread::Create()), source_id_(source_id), delegate_(delegate) {
   RTC_DCHECK(thread_);
   type_ = type;
@@ -184,7 +184,7 @@ void ObjCDesktopCapturer::OnCaptureResult(webrtc::DesktopCapturer::Result result
   int64_t timeStampNs = lroundf(timeStampSeconds * NSEC_PER_SEC);
   RTC_OBJC_TYPE(RTCVideoFrame) *videoFrame =
       [[RTC_OBJC_TYPE(RTCVideoFrame) alloc] initWithBuffer:rtcPixelBuffer
-                                                  rotation:RTCVideoRotation_0
+                                                  rotation:RTC_OBJC_TYPE(RTCVideoRotation_0)
                                                timeStampNs:timeStampNs];
   CVPixelBufferRelease(pixelBuffer);
   [delegate_ didCaptureVideoFrame:videoFrame];
