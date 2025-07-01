@@ -830,6 +830,11 @@ void AudioProcessingImpl::InitializeLocked(const ProcessingConfig& config) {
 
   formats_.api_format = config;
 
+  RTC_LOG(LS_INFO) << "AudioProcessing::InitializeLocked input sampleRate:"
+                   << formats_.api_format.input_stream().sample_rate_hz()
+                   << " output sampleRate:"
+                   << formats_.api_format.output_stream().sample_rate_hz();
+
   // Choose maximum rate to use for the split filtering.
   RTC_DCHECK(config_.pipeline.maximum_internal_processing_rate == 48000 ||
              config_.pipeline.maximum_internal_processing_rate == 32000);
