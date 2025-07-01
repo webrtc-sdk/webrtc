@@ -13,7 +13,7 @@
 #import <sys/utsname.h>
 #include <memory>
 
-@implementation UIDevice (LKRTCDevice)
+@implementation UIDevice (RTCDevice)
 
 + (NSString *)machineName {
   struct utsname systemInfo;

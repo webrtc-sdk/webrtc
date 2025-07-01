@@ -5,13 +5,13 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleExecutable</key>
-	<string>LiveKitWebRTC</string>
+	<string>WebRTC</string>
 	<key>CFBundleIdentifier</key>
-	<string>io.livekit.LiveKitWebRTC</string>
+	<string>org.webrtc.WebRTC</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>LiveKitWebRTC</string>
+	<string>WebRTC</string>
 	<key>CFBundlePackageType</key>
 	<string>FMWK</string>
 	<key>CFBundleShortVersionString</key>

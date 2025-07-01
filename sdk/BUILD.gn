@@ -1379,7 +1379,7 @@ if (is_ios || is_mac) {
     if (is_ios) {
       apple_framework_bundle_with_umbrella_header("framework_objc") {
         info_plist = "objc/Info.plist"
-        output_name = "LiveKitWebRTC"
+        output_name = "WebRTC"
 
         common_objc_headers = [
           "objc/base/RTCCodecSpecificInfo.h",
@@ -1548,7 +1548,7 @@ if (is_ios || is_mac) {
 
       bundle_data("ios_framework_bundle") {
         deps = [ "../sdk:framework_objc" ]
-        sources = [ "$root_build_dir/LiveKitWebRTC.framework" ]
+        sources = [ "$root_build_dir/WebRTC.framework" ]
         outputs = [ "{{bundle_resources_dir}}/Frameworks/{{source_file_part}}" ]
       }
     }
@@ -1556,7 +1556,7 @@ if (is_ios || is_mac) {
     if (is_mac) {
       apple_framework_bundle_with_umbrella_header("mac_framework_objc") {
         info_plist = "objc/Info.plist"
-        output_name = "LiveKitWebRTC"
+        output_name = "WebRTC"
 
         sources = [
           "objc/api/peerconnection/RTCAudioDeviceModule.h",
@@ -1702,7 +1702,7 @@ if (is_ios || is_mac) {
 
       bundle_data("mac_framework_bundle") {
         deps = [ "../sdk:mac_framework_objc" ]
-        sources = [ "$root_build_dir/LiveKitWebRTC.framework" ]
+        sources = [ "$root_build_dir/WebRTC.framework" ]
         outputs = [ "{{bundle_contents_dir}}/Frameworks/{{source_file_part}}" ]
       }
     }
