@@ -114,7 +114,7 @@
   if (decoderFactory) {
     native_decoder_factory = webrtc::ObjCToNativeVideoDecoderFactory(decoderFactory);
   }
-  rtc::scoped_refptr<webrtc::AudioDeviceModule> audio_device_module;
+  webrtc::scoped_refptr<webrtc::AudioDeviceModule> audio_device_module;
   if (audioDevice) {
     // TODO: Should be created on worker thread ?
     audio_device_module = webrtc::CreateAudioDeviceModule(audioDevice);
@@ -285,17 +285,17 @@
 }
 
 - (instancetype)initWithNativeAudioEncoderFactory:
-                    (rtc::scoped_refptr<webrtc::AudioEncoderFactory>)audioEncoderFactory
+                    (webrtc::scoped_refptr<webrtc::AudioEncoderFactory>)audioEncoderFactory
                         nativeAudioDecoderFactory:
-                            (rtc::scoped_refptr<webrtc::AudioDecoderFactory>)audioDecoderFactory
+                            (webrtc::scoped_refptr<webrtc::AudioDecoderFactory>)audioDecoderFactory
                         nativeVideoEncoderFactory:
                             (std::unique_ptr<webrtc::VideoEncoderFactory>)videoEncoderFactory
                         nativeVideoDecoderFactory:
                             (std::unique_ptr<webrtc::VideoDecoderFactory>)videoDecoderFactory
                                 audioDeviceModule:
-                                    (rtc::scoped_refptr<webrtc::AudioDeviceModule>)audioDeviceModule
+                                    (webrtc::scoped_refptr<webrtc::AudioDeviceModule>)audioDeviceModule
                             audioProcessingModule:
-                                (rtc::scoped_refptr<webrtc::AudioProcessing>)audioProcessingModule
+                                (webrtc::scoped_refptr<webrtc::AudioProcessing>)audioProcessingModule
                          networkControllerFactory:
                              (std::unique_ptr<webrtc::NetworkControllerFactoryInterface>)
                                  networkControllerFactory
@@ -316,7 +316,7 @@
       _nativeAudioDeviceModule = audioDeviceModule;
     } else if (audioDeviceModuleType == RTC_OBJC_TYPE(RTCAudioDeviceModuleTypeAudioEngine)) {
       _nativeAudioDeviceModule = _workerThread->BlockingCall([&bypassVoiceProcessing]() {
-        return rtc::make_ref_counted<webrtc::AudioEngineDevice>(bypassVoiceProcessing == YES);
+        return webrtc::make_ref_counted<webrtc::AudioEngineDevice>(bypassVoiceProcessing == YES);
       });
     } else {
       _nativeAudioDeviceModule =
