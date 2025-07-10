@@ -33,8 +33,7 @@ class AudioCustomProcessingAdapter : public webrtc::CustomProcessing {
 
   std::string ToString() const override { return "AudioCustomProcessingAdapter"; }
 
-  AudioCustomProcessingAdapter(unsigned long obj_id) {
-    obj_id_ = obj_id;
+  AudioCustomProcessingAdapter() {
     lock_ = OS_UNFAIR_LOCK_INIT;
     is_initialized_ = false;
     sample_rate_hz_ = 0;
@@ -100,7 +99,6 @@ class AudioCustomProcessingAdapter : public webrtc::CustomProcessing {
   }
 
  private:
-  unsigned long obj_id_;
   __weak id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)> delegate_;
   os_unfair_lock lock_;
 };
@@ -113,7 +111,7 @@ class AudioCustomProcessingAdapter : public webrtc::CustomProcessing {
 - (instancetype)initWithDelegate:
     (nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)audioCustomProcessingDelegate {
   if (self = [super init]) {
-    _adapter = new webrtc::AudioCustomProcessingAdapter(self.hash);
+    _adapter = new webrtc::AudioCustomProcessingAdapter();
     RTC_LOG(LS_INFO) << "RTCAudioCustomProcessingAdapter init";
   }
 
