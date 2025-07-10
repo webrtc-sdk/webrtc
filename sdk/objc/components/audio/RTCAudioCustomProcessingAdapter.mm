@@ -110,7 +110,8 @@ class AudioCustomProcessingAdapter : public webrtc::CustomProcessing {
 
 - (instancetype)initWithDelegate:
     (nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)audioCustomProcessingDelegate {
-  if (self = [super init]) {
+  self = [super init];
+  if (self) {
     _adapter = new webrtc::AudioCustomProcessingAdapter();
     RTC_LOG(LS_INFO) << "RTCAudioCustomProcessingAdapter init";
   }

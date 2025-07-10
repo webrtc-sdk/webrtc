@@ -536,6 +536,7 @@ class RTC_EXPORT AudioProcessing : public RefCountInterface {
   // Default false. This method takes a lock. To achieve this in a lock-less
   // manner the PostRuntimeSetting can instead be used.
   virtual void set_output_will_be_muted(bool muted) = 0;
+  virtual bool get_output_will_be_muted() = 0;
 
   // Enqueues a runtime setting.
   virtual void SetRuntimeSetting(RuntimeSetting setting) = 0;

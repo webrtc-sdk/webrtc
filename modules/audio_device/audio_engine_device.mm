@@ -1706,7 +1706,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
 
     engine_device_ = [[AVAudioEngine alloc] init];
 
-    rollback_actions.push_back([=]() {
+    rollback_actions.push_back([=, this]() {
       RTC_DCHECK_RUN_ON(thread_);
       LOGI() << "Rolling back create AVAudioEngine (device)...";
       engine_device_ = nil;

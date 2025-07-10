@@ -36,31 +36,6 @@ class AudioRendererAdapter : public webrtc::AudioTrackSinkInterface {
       return;
     }
 
-    OSStatus status;
-    AudioChannelLayout acl = {};
-    acl.mChannelLayoutTag =
-        (number_of_channels == 2) ? kAudioChannelLayoutTag_Stereo : kAudioChannelLayoutTag_Mono;
-
-    AudioStreamBasicDescription sd = {
-        .mSampleRate = static_cast<Float64>(sample_rate),
-        .mFormatID = kAudioFormatLinearPCM,
-        .mFormatFlags = kLinearPCMFormatFlagIsSignedInteger | kLinearPCMFormatFlagIsPacked,
-        .mBytesPerPacket = static_cast<UInt32>(number_of_channels * 2),
-        .mFramesPerPacket = 1,
-        .mBytesPerFrame = static_cast<UInt32>(number_of_channels * 2),
-        .mChannelsPerFrame = static_cast<UInt32>(number_of_channels),
-        .mBitsPerChannel = 16,
-        .mReserved = 0};
-
-    CMFormatDescriptionRef formatDescription = nullptr;
-    status = CMAudioFormatDescriptionCreate(kCFAllocatorDefault, &sd, sizeof(acl), &acl, 0, NULL,
-                                            NULL, &formatDescription);
-    if (status != noErr) {
-      NSLog(@"RTCAudioTrack: Failed to create audio formatDescription description. Error: %d",
-            (int)status);
-      return;
-    }
-
     AVAudioFormat *format =
         [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatInt16
                                          sampleRate:sample_rate
