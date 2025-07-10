@@ -108,7 +108,7 @@
 
 #pragma mark - Private
 
-- (rtc::scoped_refptr<webrtc::AudioProcessing>)nativeAudioProcessingModule {
+- (webrtc::scoped_refptr<webrtc::AudioProcessing>)nativeAudioProcessingModule {
   return _nativeAudioProcessingModule;
 }
 

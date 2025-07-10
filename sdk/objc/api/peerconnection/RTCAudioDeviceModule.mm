@@ -135,7 +135,7 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 };
 
 @implementation RTC_OBJC_TYPE (RTCAudioDeviceModule) {
-  rtc::Thread *_workerThread;
+  webrtc::Thread *_workerThread;
   webrtc::scoped_refptr<webrtc::AudioDeviceModule> _native;
   AudioDeviceObserver *_observer;
 }
@@ -151,8 +151,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   });
 }
 
-- (instancetype)initWithNativeModule:(rtc::scoped_refptr<webrtc::AudioDeviceModule>)module
-                        workerThread:(rtc::Thread *)workerThread {
+- (instancetype)initWithNativeModule:(webrtc::scoped_refptr<webrtc::AudioDeviceModule>)module
+                        workerThread:(webrtc::Thread *)workerThread {
   RTCLogInfo(@"RTCAudioDeviceModule initWithNativeModule:workerThread:");
 
   self = [super init];

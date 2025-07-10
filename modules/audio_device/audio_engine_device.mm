@@ -63,7 +63,7 @@ AudioEngineDevice::AudioEngineDevice(bool voice_processing_bypassed)
     : task_queue_factory_(CreateDefaultTaskQueueFactory()), initialized_(false) {
   LOGI() << "voice_processing_bypassed " << voice_processing_bypassed;
 
-  thread_ = rtc::Thread::Current();
+  thread_ = webrtc::Thread::Current();
   audio_device_buffer_.reset(new webrtc::AudioDeviceBuffer(task_queue_factory_.get()));
 
 #if defined(WEBRTC_IOS)
@@ -1603,7 +1603,7 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
     // Create render thread
     LOGI() << "Starting render thread...";
     RTC_DCHECK(render_thread_ == nullptr);
-    render_thread_ = rtc::Thread::Create();
+    render_thread_ = webrtc::Thread::Create();
     render_thread_->SetName("render_thread", nullptr);
     render_thread_->Start();
     render_thread_->PostTask([this] { this->StartRenderLoop(); });
@@ -1864,7 +1864,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
           int16_t* dest_buffer = (int16_t*)outputData->mBuffers[0].mData;
 
           fine_audio_buffer_->GetPlayoutData(
-              rtc::ArrayView<int16_t>(static_cast<int16_t*>(dest_buffer), frameCount),
+              webrtc::ArrayView<int16_t>(static_cast<int16_t*>(dest_buffer), frameCount),
               kFixedPlayoutDelayEstimate);
 
           return noErr;
@@ -1986,34 +1986,35 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     }
 
     // Convert to Int16 buffers within the sink block.
-    AVAudioSinkNodeReceiverBlock sink_block = ^OSStatus(const AudioTimeStamp* timestamp,
-                                                        AVAudioFrameCount frameCount,
-                                                        const AudioBufferList* inputData) {
-      RTC_DCHECK(inputData->mNumberBuffers == 1);
+    AVAudioSinkNodeReceiverBlock sink_block =
+        ^OSStatus(const AudioTimeStamp* timestamp, AVAudioFrameCount frameCount,
+                  const AudioBufferList* inputData) {
+          RTC_DCHECK(inputData->mNumberBuffers == 1);
 
-      AudioBufferList* converter_buffer_abl =
-          const_cast<AudioBufferList*>(converter_buffer_.audioBufferList);
-      RTC_DCHECK(converter_buffer_abl->mNumberBuffers == inputData->mNumberBuffers);
+          AudioBufferList* converter_buffer_abl =
+              const_cast<AudioBufferList*>(converter_buffer_.audioBufferList);
+          RTC_DCHECK(converter_buffer_abl->mNumberBuffers == inputData->mNumberBuffers);
 
-      // Fails for conversions where there is a variation between the input and output data buffer
-      // sizes.
-      converter_buffer_abl->mBuffers[0].mDataByteSize = inputData->mBuffers[0].mDataByteSize;
+          // Fails for conversions where there is a variation between the input and output data
+          // buffer sizes.
+          converter_buffer_abl->mBuffers[0].mDataByteSize = inputData->mBuffers[0].mDataByteSize;
 
-      RTC_DCHECK(converter_buffer_abl->mBuffers[0].mDataByteSize ==
-                 inputData->mBuffers[0].mDataByteSize);
+          RTC_DCHECK(converter_buffer_abl->mBuffers[0].mDataByteSize ==
+                     inputData->mBuffers[0].mDataByteSize);
 
-      OSStatus err = AudioConverterConvertComplexBuffer(converter_ref_, frameCount, inputData,
-                                                        converter_buffer_abl);
-      RTC_DCHECK(err == noErr);
+          OSStatus err = AudioConverterConvertComplexBuffer(converter_ref_, frameCount, inputData,
+                                                            converter_buffer_abl);
+          RTC_DCHECK(err == noErr);
 
-      const int16_t* rtc_buffer = (int16_t*)converter_buffer_abl->mBuffers[0].mData;  // Float32
-      const int64_t capture_time_ns = timestamp->mHostTime * machTickUnitsToNanoseconds_;
+          const int16_t* rtc_buffer = (int16_t*)converter_buffer_abl->mBuffers[0].mData;  // Float32
+          const int64_t capture_time_ns = timestamp->mHostTime * machTickUnitsToNanoseconds_;
 
-      fine_audio_buffer_->DeliverRecordedData(rtc::ArrayView<const int16_t>(rtc_buffer, frameCount),
-                                              kFixedRecordDelayEstimate, capture_time_ns);
+          fine_audio_buffer_->DeliverRecordedData(
+              webrtc::ArrayView<const int16_t>(rtc_buffer, frameCount), kFixedRecordDelayEstimate,
+              capture_time_ns);
 
-      return noErr;
-    };
+          return noErr;
+        };
 
     NSMutableArray<AVAudioConnectionPoint*>* input_mixer_connections = [NSMutableArray array];
 
@@ -2376,8 +2377,8 @@ void AudioEngineDevice::StartRenderLoop() {
       const int64_t capture_time_ns = capture_time * machTickUnitsToNanoseconds_;
 
       fine_audio_buffer_->DeliverRecordedData(
-          rtc::ArrayView<const int16_t>(rtc_buffer, frames_per_buffer), kFixedRecordDelayEstimate,
-          capture_time_ns);
+          webrtc::ArrayView<const int16_t>(rtc_buffer, frames_per_buffer),
+          kFixedRecordDelayEstimate, capture_time_ns);
     } else {
       LOGW() << "Render error: " << err << " frames: " << frames_per_buffer;
     }

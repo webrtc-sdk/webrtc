@@ -427,7 +427,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   void UpdateAllDeviceIDs();
 
   // Debounce flags for device updates
-  rtc::scoped_refptr<PendingTaskSafetyFlag> default_device_update_safety_ =
+  webrtc::scoped_refptr<PendingTaskSafetyFlag> default_device_update_safety_ =
       PendingTaskSafetyFlag::Create();
   const int kDefaultDeviceUpdateDebounceMs = 500;  // Debounce delay in milliseconds
 
@@ -443,8 +443,8 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   AVAudioEngineManualRenderingBlock render_block_;
 
   // Thread that this object is created on.
-  rtc::Thread* thread_;
-  std::unique_ptr<rtc::Thread> render_thread_;
+  webrtc::Thread* thread_;
+  std::unique_ptr<webrtc::Thread> render_thread_;
   AVAudioPCMBuffer* render_buffer_;
 
   const std::unique_ptr<TaskQueueFactory> task_queue_factory_;
@@ -466,7 +466,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 #endif
 
   // Avoids running pending task after `this` is Terminated.
-  rtc::scoped_refptr<PendingTaskSafetyFlag> safety_ = PendingTaskSafetyFlag::Create();
+  webrtc::scoped_refptr<PendingTaskSafetyFlag> safety_ = PendingTaskSafetyFlag::Create();
 
   // Ratio between mach tick units and nanosecond. Used to change mach tick
   // units to nanoseconds.
