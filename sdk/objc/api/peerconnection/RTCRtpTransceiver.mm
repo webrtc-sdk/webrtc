@@ -176,7 +176,7 @@ NSString *const RTC_CONSTANT_TYPE(RTCRtpTransceiverErrorDomain) = @"org.webrtc.R
   webrtc::RTCError nativeError =
       _nativeRtpTransceiver->SetCodecPreferences(codecCapabilities);
   if (!nativeError.ok() && error) {
-    *error = [NSError errorWithDomain:kRTCRtpTransceiverErrorDomain
+    *error = [NSError errorWithDomain:RTC_CONSTANT_TYPE(RTCRtpTransceiverErrorDomain)
                                  code:static_cast<int>(nativeError.type())
                              userInfo:@{
                                @"message" : [NSString
@@ -211,7 +211,7 @@ NSString *const RTC_CONSTANT_TYPE(RTCRtpTransceiverErrorDomain) = @"org.webrtc.R
           [NSString stringWithCString:nativeError.message()
                              encoding:NSUTF8StringEncoding]
     };
-    *error = [NSError errorWithDomain:kRTCRtpTransceiverErrorDomain
+    *error = [NSError errorWithDomain:RTC_CONSTANT_TYPE(RTCRtpTransceiverErrorDomain)
                                  code:static_cast<int>(nativeError.type())
                              userInfo:userInfo];
   }
