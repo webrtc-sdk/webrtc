@@ -392,7 +392,7 @@ void AudioDeviceIOS::OnInterruptionBegin() {
   thread_->PostTask(SafeTask(safety_, [this] { HandleInterruptionBegin(); }));
 }
 
-void AudioDeviceIOS::OnInterruptionEnd() {
+void AudioDeviceIOS::OnInterruptionEnd(bool should_resume) {
   RTC_DCHECK(thread_);
   LOGI() << "OnInterruptionEnd";
   thread_->PostTask(SafeTask(safety_, [this] { HandleInterruptionEnd(); }));

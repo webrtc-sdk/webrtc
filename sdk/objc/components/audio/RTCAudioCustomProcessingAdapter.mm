@@ -31,110 +31,108 @@ class AudioCustomProcessingAdapter : public webrtc::CustomProcessing {
   int sample_rate_hz_;
   int num_channels_;
 
-  AudioCustomProcessingAdapter(RTC_OBJC_TYPE(RTCAudioCustomProcessingAdapter) *adapter, os_unfair_lock *lock) {
-    RTC_LOG(LS_INFO) << "RTCAudioCustomProcessingAdapter.AudioCustomProcessingAdapter init";
+  std::string ToString() const override { return "AudioCustomProcessingAdapter"; }
 
-    adapter_ = adapter;
-    lock_ = lock;
+  AudioCustomProcessingAdapter() {
+    lock_ = OS_UNFAIR_LOCK_INIT;
     is_initialized_ = false;
     sample_rate_hz_ = 0;
     num_channels_ = 0;
   }
 
   ~AudioCustomProcessingAdapter() {
-    RTC_LOG(LS_INFO) << "RTCAudioCustomProcessingAdapter.AudioCustomProcessingAdapter dealloc";
-
-    os_unfair_lock_lock(lock_);
-    id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)> delegate = adapter_.rawAudioCustomProcessingDelegate;
-    [delegate audioProcessingRelease];
-    os_unfair_lock_unlock(lock_);
+    os_unfair_lock_lock(&lock_);
+    [delegate_ audioProcessingRelease];
+    os_unfair_lock_unlock(&lock_);
   }
 
   void Initialize(int sample_rate_hz, int num_channels) override {
-    os_unfair_lock_lock(lock_);
-    id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)> delegate = adapter_.rawAudioCustomProcessingDelegate;
-    [delegate audioProcessingInitializeWithSampleRate:sample_rate_hz channels:num_channels];
+    os_unfair_lock_lock(&lock_);
+    [delegate_ audioProcessingInitializeWithSampleRate:sample_rate_hz channels:num_channels];
     is_initialized_ = true;
     sample_rate_hz_ = sample_rate_hz;
     num_channels_ = num_channels;
-    os_unfair_lock_unlock(lock_);
+    os_unfair_lock_unlock(&lock_);
   }
 
   void Process(AudioBuffer *audio_buffer) override {
-    bool is_locked = os_unfair_lock_trylock(lock_);
-    if (!is_locked) {
-      RTC_LOG(LS_INFO) << "RTCAudioCustomProcessingAdapter.AudioCustomProcessingAdapter Process "
+    bool did_lock = os_unfair_lock_trylock(&lock_);
+    if (!did_lock) {
+      RTC_LOG(LS_INFO) << "RTCAudioCustomProcessingAdapter Process "
                           "already locked, skipping...";
 
       return;
     }
-    id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)> delegate = adapter_.rawAudioCustomProcessingDelegate;
-    if (delegate != nil) {
-      RTC_OBJC_TYPE(RTCAudioBuffer) *audioBuffer = [[RTC_OBJC_TYPE(RTCAudioBuffer) alloc] initWithNativeType:audio_buffer];
-      [delegate audioProcessingProcess:audioBuffer];
+
+    if (delegate_ != nil) {
+      RTC_OBJC_TYPE(RTCAudioBuffer) *audioBuffer =
+          [[RTC_OBJC_TYPE(RTCAudioBuffer) alloc] initWithNativeType:audio_buffer];
+      [delegate_ audioProcessingProcess:audioBuffer];
     }
-    os_unfair_lock_unlock(lock_);
+    os_unfair_lock_unlock(&lock_);
   }
 
-  std::string ToString() const override { return "AudioCustomProcessingAdapter"; }
+  id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)> GetDelegate() {
+    __weak id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)> delegate = nil;
+    os_unfair_lock_lock(&lock_);
+    delegate = delegate_;
+    os_unfair_lock_unlock(&lock_);
+    return delegate;
+  }
+
+  void SetDelegate(__weak id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)> delegate) {
+    RTC_LOG(LS_INFO) << "RTCAudioCustomProcessingAdapter SetDelegate: "
+                     << (delegate != nullptr ? "YES" : "NO");
+
+    os_unfair_lock_lock(&lock_);
+    // Release previous.
+    if (delegate_ != nil && is_initialized_) {
+      [delegate_ audioProcessingRelease];
+    }
+
+    delegate_ = delegate;
+
+    if (is_initialized_) {
+      [delegate_ audioProcessingInitializeWithSampleRate:sample_rate_hz_ channels:num_channels_];
+    }
+    os_unfair_lock_unlock(&lock_);
+  }
 
  private:
-  __weak RTC_OBJC_TYPE(RTCAudioCustomProcessingAdapter) *adapter_;
-  os_unfair_lock *lock_;
+  __weak id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)> delegate_;
+  os_unfair_lock lock_;
 };
 }  // namespace webrtc
 
-@implementation RTC_OBJC_TYPE(RTCAudioCustomProcessingAdapter) {
+@implementation RTC_OBJC_TYPE (RTCAudioCustomProcessingAdapter) {
   webrtc::AudioCustomProcessingAdapter *_adapter;
-  os_unfair_lock _lock;
 }
-
-@synthesize rawAudioCustomProcessingDelegate = _rawAudioCustomProcessingDelegate;
 
 - (instancetype)initWithDelegate:
     (nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)audioCustomProcessingDelegate {
-  self = [super init];
-  if (self) {
-    _lock = OS_UNFAIR_LOCK_INIT;
-    _rawAudioCustomProcessingDelegate = audioCustomProcessingDelegate;
-    _adapter = new webrtc::AudioCustomProcessingAdapter(self, &_lock);
+  if (self = [super init]) {
+    _adapter = new webrtc::AudioCustomProcessingAdapter();
     RTC_LOG(LS_INFO) << "RTCAudioCustomProcessingAdapter init";
   }
 
   return self;
 }
 
-- (void)dealloc {
-  RTC_LOG(LS_INFO) << "RTCAudioCustomProcessingAdapter dealloc";
-}
-
 #pragma mark - Getter & Setter for audioCustomProcessingDelegate
 
 - (nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)audioCustomProcessingDelegate {
-  os_unfair_lock_lock(&_lock);
-  id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)> delegate = _rawAudioCustomProcessingDelegate;
-  os_unfair_lock_unlock(&_lock);
-  return delegate;
+  return _adapter->GetDelegate();
 }
 
-- (void)setAudioCustomProcessingDelegate:(nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)delegate {
-  os_unfair_lock_lock(&_lock);
-  if (_rawAudioCustomProcessingDelegate != nil && _adapter->is_initialized_) {
-    [_rawAudioCustomProcessingDelegate audioProcessingRelease];
-  }
-  _rawAudioCustomProcessingDelegate = delegate;
-  if (_adapter->is_initialized_) {
-    [_rawAudioCustomProcessingDelegate
-        audioProcessingInitializeWithSampleRate:_adapter->sample_rate_hz_
-                                       channels:_adapter->num_channels_];
-  }
-  os_unfair_lock_unlock(&_lock);
+- (void)setAudioCustomProcessingDelegate:
+    (nullable id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)>)delegate {
+  _adapter->SetDelegate(delegate);
 }
 
 #pragma mark - Private
 
-- (std::unique_ptr<webrtc::CustomProcessing>)nativeAudioCustomProcessingModule {
-  return std::unique_ptr<webrtc::CustomProcessing>(_adapter);
+- (webrtc::CustomProcessing *)nativeAudioCustomProcessingModule {
+  return _adapter;
 }
 
 @end

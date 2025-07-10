@@ -192,6 +192,16 @@ void AudioDeviceBuffer::StopRecording() {
   RTC_LOG(LS_INFO) << "total recording time: " << time_since_start;
 }
 
+bool AudioDeviceBuffer::IsPlaying() {
+  RTC_DCHECK_RUN_ON(&main_thread_checker_);
+  return playing_;
+}
+
+bool AudioDeviceBuffer::IsRecording() {
+  RTC_DCHECK_RUN_ON(&main_thread_checker_);
+  return recording_;
+}
+
 int32_t AudioDeviceBuffer::SetRecordingSampleRate(uint32_t fsHz) {
   RTC_LOG(LS_INFO) << "SetRecordingSampleRate(" << fsHz << ")";
   rec_sample_rate_ = fsHz;

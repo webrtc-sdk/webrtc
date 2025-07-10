@@ -209,6 +209,16 @@ RTC_OBJC_EXPORT
  */
 @property(nonatomic) BOOL ignoresPreferredAttributeConfigurationErrors;
 
+/** Number of times setActive:YES has succeeded without a balanced call to
+ *  setActive:NO.
+ */
+@property(nonatomic, readonly) int activationCount;
+
+/** The number of times `beginWebRTCSession` was called without a balanced call
+ *  to `endWebRTCSession`.
+ */
+@property(nonatomic, readonly) int webRTCSessionCount;
+
 /** Default constructor. */
 + (instancetype)sharedInstance;
 - (instancetype)init NS_UNAVAILABLE;

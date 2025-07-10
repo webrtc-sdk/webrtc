@@ -780,10 +780,11 @@ int AudioDeviceModuleIOS::GetRecordAudioParameters(
 }
 #endif  // WEBRTC_IOS
 
-  int32_t AudioDeviceModuleIOS::SetAudioDeviceSink(AudioDeviceSink* sink) const {
-    // not implemented
-    RTC_LOG(LS_WARNING) << __FUNCTION__ << "(" << sink << ") Not implemented";
-    return -1;
+  int32_t AudioDeviceModuleIOS::SetObserver(AudioDeviceObserver* observer) {
+    RTC_DLOG(LS_INFO) << __FUNCTION__;
+    int r = audio_device_->SetObserver(observer);
+    RTC_DLOG(LS_INFO) << "output: " << r;
+    return r;
   }
 }
 }

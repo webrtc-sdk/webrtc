@@ -26,8 +26,8 @@
 @implementation RTC_OBJC_TYPE (RTCDefaultAudioProcessingModule) {
   webrtc::scoped_refptr<webrtc::AudioProcessing> _nativeAudioProcessingModule;
   // Custom processing adapters...
-  RTC_OBJC_TYPE(RTCAudioCustomProcessingAdapter) *_capturePostProcessingAdapter;
-  RTC_OBJC_TYPE(RTCAudioCustomProcessingAdapter) *_renderPreProcessingAdapter;
+  RTC_OBJC_TYPE(RTCAudioCustomProcessingAdapter) * _capturePostProcessingAdapter;
+  RTC_OBJC_TYPE(RTCAudioCustomProcessingAdapter) * _renderPreProcessingAdapter;
 }
 
 - (instancetype)init {
@@ -51,14 +51,15 @@
       builder.SetConfig(config.nativeAudioProcessingConfig);
     }
 
-    _capturePostProcessingAdapter =
-        [[RTC_OBJC_TYPE(RTCAudioCustomProcessingAdapter) alloc] initWithDelegate:capturePostProcessingDelegate];
-    builder.SetCapturePostProcessing(
-        _capturePostProcessingAdapter.nativeAudioCustomProcessingModule);
+    _capturePostProcessingAdapter = [[RTC_OBJC_TYPE(RTCAudioCustomProcessingAdapter) alloc]
+        initWithDelegate:capturePostProcessingDelegate];
+    builder.SetCapturePostProcessing(std::unique_ptr<webrtc::CustomProcessing>(
+        _capturePostProcessingAdapter.nativeAudioCustomProcessingModule));
 
-    _renderPreProcessingAdapter =
-        [[RTC_OBJC_TYPE(RTCAudioCustomProcessingAdapter) alloc] initWithDelegate:renderPreProcessingDelegate];
-    builder.SetRenderPreProcessing(_renderPreProcessingAdapter.nativeAudioCustomProcessingModule);
+    _renderPreProcessingAdapter = [[RTC_OBJC_TYPE(RTCAudioCustomProcessingAdapter) alloc]
+        initWithDelegate:renderPreProcessingDelegate];
+    builder.SetRenderPreProcessing(std::unique_ptr<webrtc::CustomProcessing>(
+        _renderPreProcessingAdapter.nativeAudioCustomProcessingModule));
 
     _nativeAudioProcessingModule = builder.Build(webrtc::CreateEnvironment());
   }
@@ -89,11 +90,20 @@
 
 - (RTC_OBJC_TYPE(RTCAudioProcessingConfig) *)config {
   webrtc::AudioProcessing::Config nativeConfig = _nativeAudioProcessingModule->GetConfig();
-  return [[RTC_OBJC_TYPE(RTCAudioProcessingConfig) alloc] initWithNativeAudioProcessingConfig: nativeConfig];
+  return [[RTC_OBJC_TYPE(RTCAudioProcessingConfig) alloc]
+      initWithNativeAudioProcessingConfig:nativeConfig];
 }
 
 - (void)setConfig:(RTC_OBJC_TYPE(RTCAudioProcessingConfig) *)config {
   _nativeAudioProcessingModule->ApplyConfig(config.nativeAudioProcessingConfig);
+}
+
+- (BOOL)isMuted {
+  return _nativeAudioProcessingModule->get_output_will_be_muted();
+}
+
+- (void)setMuted:(BOOL)isMuted {
+  _nativeAudioProcessingModule->set_output_will_be_muted(isMuted);
 }
 
 #pragma mark - Private
