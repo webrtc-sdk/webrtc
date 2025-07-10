@@ -83,7 +83,7 @@ class AudioCustomProcessingAdapter : public webrtc::CustomProcessing {
 
   void SetDelegate(__weak id<RTC_OBJC_TYPE(RTCAudioCustomProcessingDelegate)> delegate) {
     RTC_LOG(LS_INFO) << "RTCAudioCustomProcessingAdapter SetDelegate: "
-                     << (delegate != nullptr ? "YES" : "NOsssssssdqadqwedqwedqwef");
+                     << (delegate != nullptr ? "YES" : "NO");
 
     os_unfair_lock_lock(&lock_);
     // Release previous.
