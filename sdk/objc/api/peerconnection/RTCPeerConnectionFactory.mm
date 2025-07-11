@@ -336,9 +336,11 @@
     dependencies.video_decoder_factory = std::move(videoDecoderFactory);
 
     if (audioProcessingModule) {
-      dependencies.audio_processing = std::move(audioProcessingModule);
+      dependencies.audio_processing_builder =
+          webrtc::CustomAudioProcessing(std::move(audioProcessingModule));
     } else {
-      dependencies.audio_processing = webrtc::BuiltinAudioProcessingBuilder().Build(webrtc::CreateEnvironment());
+      dependencies.audio_processing_builder =
+          std::make_unique<webrtc::BuiltinAudioProcessingBuilder>();
     }
     webrtc::EnableMedia(dependencies);
     dependencies.event_log_factory = std::make_unique<webrtc::RtcEventLogFactory>();
