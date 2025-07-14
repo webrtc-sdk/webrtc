@@ -264,7 +264,11 @@ static NSUInteger _sharedMultiCamSessionCount = 0;
                       RTCLogInfo("Stop");
 
 #if TARGET_MULTICAM_CAPABLE
-                      [self.captureSession removeConnection:self->_captureConnection];
+                      if (self->_captureConnection != nil &&
+                          [self.captureSession.connections
+                              containsObject:self->_captureConnection]) {
+                        [self.captureSession removeConnection:self->_captureConnection];
+                      }
                       self->_captureConnection = nil;
 #endif
 
