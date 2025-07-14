@@ -262,15 +262,13 @@ static NSUInteger _sharedMultiCamSessionCount = 0;
       dispatchAsyncOnType:RTC_OBJC_TYPE(RTCDispatcherTypeCaptureSession)
                     block:^{
                       RTCLogInfo("Stop");
-                      self.currentDevice = nil;
-                      for (AVCaptureDeviceInput *oldInput in
-                           [self.captureSession.inputs copy]) {
-                        [self.captureSession removeInput:oldInput];
-                      }
-                      [self.captureSession stopRunning];
 
 #if TARGET_MULTICAM_CAPABLE
-                      [self.captureSession removeConnection:self->_captureConnection];
+                      if (self->_captureConnection != nil &&
+                          [self.captureSession.connections
+                              containsObject:self->_captureConnection]) {
+                        [self.captureSession removeConnection:self->_captureConnection];
+                      }
                       self->_captureConnection = nil;
 #endif
 
