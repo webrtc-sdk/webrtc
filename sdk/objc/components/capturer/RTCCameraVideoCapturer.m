@@ -270,9 +270,7 @@ static NSUInteger _sharedMultiCamSessionCount = 0;
                       [self.captureSession stopRunning];
 
 #if TARGET_MULTICAM_CAPABLE
-                      if (self->_captureConnection && [self.captureSession.connections containsObject:self->_captureConnection]) {
-                        [self.captureSession removeConnection:self->_captureConnection];
-                      }
+                      [self.captureSession removeConnection:self->_captureConnection];
                       self->_captureConnection = nil;
 #endif
 
