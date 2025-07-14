@@ -1764,6 +1764,10 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   //
   if (state.next.IsInputEnabled() &&
       inputNode().voiceProcessingEnabled != state.next.voice_processing_enabled) {
+#if TARGET_OS_SIMULATOR
+    LOGI() << "setVoiceProcessingEnabled (input): "
+           << (state.next.voice_processing_enabled ? "YES" : "NO") << " (Ignored on Simulator)";
+#else
     LOGI() << "setVoiceProcessingEnabled (input): " << state.next.voice_processing_enabled ? "YES"
                                                                                            : "NO";
     NSError* error = nil;
@@ -1774,6 +1778,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       RTC_DCHECK(set_vp_result);
     }
     LOGI() << "setVoiceProcessingEnabled (input) result: " << set_vp_result ? "YES" : "NO";
+#endif
 
     if (inputNode().voiceProcessingEnabled) {
       // Always unmute vp if restart mute mode.
