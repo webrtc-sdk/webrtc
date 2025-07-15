@@ -31,34 +31,16 @@ class AudioRendererAdapter : public webrtc::AudioTrackSinkInterface {
   void OnData(const void *audio_data, int bits_per_sample, int sample_rate,
               size_t number_of_channels, size_t number_of_frames,
               std::optional<int64_t> absolute_capture_timestamp_ms) override {
-    OSStatus status;
-    AudioChannelLayout acl = {};
-    acl.mChannelLayoutTag =
-        (number_of_channels == 2) ? kAudioChannelLayoutTag_Stereo : kAudioChannelLayoutTag_Mono;
-
-    AudioStreamBasicDescription sd = {
-        .mSampleRate = static_cast<Float64>(sample_rate),
-        .mFormatID = kAudioFormatLinearPCM,
-        .mFormatFlags = kLinearPCMFormatFlagIsSignedInteger | kLinearPCMFormatFlagIsPacked,
-        .mBytesPerPacket = static_cast<UInt32>(number_of_channels * 2),
-        .mFramesPerPacket = 1,
-        .mBytesPerFrame = static_cast<UInt32>(number_of_channels * 2),
-        .mChannelsPerFrame = static_cast<UInt32>(number_of_channels),
-        .mBitsPerChannel = 16,
-        .mReserved = 0};
-
-    CMFormatDescriptionRef formatDescription = nullptr;
-    status = CMAudioFormatDescriptionCreate(kCFAllocatorDefault, &sd, sizeof(acl), &acl, 0, NULL,
-                                            NULL, &formatDescription);
-    if (status != noErr) {
-      NSLog(@"RTCAudioTrack: Failed to create audio formatDescription description. Error: %d",
-            (int)status);
+    if (sample_rate <= 0 || number_of_channels == 0 || number_of_channels > 2) {
+      NSLog(@"Invalid sample rate or channel count");
       return;
     }
 
     AVAudioFormat *format =
-        [[AVAudioFormat alloc] initWithCMAudioFormatDescription:formatDescription];
-    CFRelease(formatDescription);
+        [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatInt16
+                                         sampleRate:sample_rate
+                                           channels:(AVAudioChannelCount)number_of_channels
+                                        interleaved:YES];
 
     AVAudioFrameCount frameCount = static_cast<AVAudioFrameCount>(number_of_frames);
     AVAudioPCMBuffer *pcmBuffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat:format
@@ -70,24 +52,9 @@ class AudioRendererAdapter : public webrtc::AudioTrackSinkInterface {
 
     pcmBuffer.frameLength = frameCount;
 
-    // Handle both mono and stereo
     const int16_t *inputData = static_cast<const int16_t *>(audio_data);
-    if (number_of_channels == 1) {
-      // Mono: straight copy
-      memcpy(pcmBuffer.int16ChannelData[0], inputData, number_of_frames * sizeof(int16_t));
-    } else if (number_of_channels == 2) {
-      // Stereo: manual deinterleave
-      int16_t *leftChannel = pcmBuffer.int16ChannelData[0];
-      int16_t *rightChannel = pcmBuffer.int16ChannelData[1];
-
-      for (size_t i = 0; i < number_of_frames; i++) {
-        leftChannel[i] = inputData[i * 2];
-        rightChannel[i] = inputData[i * 2 + 1];
-      }
-    } else {
-      NSLog(@"Unsupported number of channels: %zu", number_of_channels);
-      return;
-    }
+    const size_t copy_size = number_of_frames * number_of_channels * sizeof(int16_t);
+    memcpy(pcmBuffer.int16ChannelData[0], inputData, copy_size);
 
     [adapter_.audioRenderer renderPCMBuffer:pcmBuffer];
   }

@@ -93,6 +93,9 @@ class AudioDeviceBuffer {
   void StopPlayout();
   void StopRecording();
 
+  bool IsPlaying();
+  bool IsRecording();
+
   int32_t SetRecordingSampleRate(uint32_t fsHz);
   int32_t SetPlayoutSampleRate(uint32_t fsHz);
   uint32_t RecordingSampleRate() const;

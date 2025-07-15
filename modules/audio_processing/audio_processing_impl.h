@@ -100,6 +100,7 @@ class AudioProcessingImpl : public AudioProcessing {
   bool GetLinearAecOutput(
       ArrayView<std::array<float, 160>> linear_output) const override;
   void set_output_will_be_muted(bool muted) override;
+  bool get_output_will_be_muted() override;
   void HandleCaptureOutputUsedSetting(bool capture_output_used)
       RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_capture_);
   int set_stream_delay_ms(int delay) override;

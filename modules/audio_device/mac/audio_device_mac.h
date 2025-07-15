@@ -154,8 +154,8 @@ class AudioDeviceMac : public AudioDeviceGeneric {
   virtual void AttachAudioBuffer(AudioDeviceBuffer* audioBuffer)
       RTC_LOCKS_EXCLUDED(mutex_);
 
-  virtual int32_t SetAudioDeviceSink(AudioDeviceSink* sink) RTC_LOCKS_EXCLUDED(mutex_) {
-    audio_device_module_sink_ = sink;
+  virtual int32_t SetObserver(AudioDeviceObserver* observer) RTC_LOCKS_EXCLUDED(mutex_) {
+    audio_device_module_sink_ = observer;
     return 0;
   }
   virtual int32_t GetPlayoutDevice() const;
@@ -187,8 +187,8 @@ class AudioDeviceMac : public AudioDeviceGeneric {
 
   int32_t GetDeviceName(AudioObjectPropertyScope scope,
                         uint16_t index,
-                        rtc::ArrayView<char> name,
-                        rtc::ArrayView<char> guid);
+                        webrtc::ArrayView<char> name,
+                        webrtc::ArrayView<char> guid);
 
   int32_t InitDevice(uint16_t userDeviceIndex,
                      AudioDeviceID& deviceId,
@@ -352,7 +352,7 @@ class AudioDeviceMac : public AudioDeviceGeneric {
   // 0x5c is key "9", after that comes function keys.
   bool prev_key_state_[0x5d];
 
-  AudioDeviceSink *audio_device_module_sink_ = nullptr;
+  AudioDeviceObserver *audio_device_module_sink_ = nullptr;
 };
 
 }  // namespace webrtc

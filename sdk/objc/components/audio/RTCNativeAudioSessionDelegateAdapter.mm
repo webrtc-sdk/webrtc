@@ -36,7 +36,7 @@
 
 - (void)audioSessionDidEndInterruption:(RTC_OBJC_TYPE(RTCAudioSession) *)session
                    shouldResumeSession:(BOOL)shouldResumeSession {
-  _observer->OnInterruptionEnd();
+  _observer->OnInterruptionEnd(shouldResumeSession);
 }
 
 - (void)audioSessionDidChangeRoute:(RTC_OBJC_TYPE(RTCAudioSession) *)session

@@ -151,7 +151,7 @@ class AudioDeviceIOS : public AudioDeviceGeneric,
 
   // AudioSessionObserver methods. May be called from any thread.
   void OnInterruptionBegin() override;
-  void OnInterruptionEnd() override;
+  void OnInterruptionEnd(bool should_resume) override;
   void OnValidRouteChange() override;
   void OnCanPlayOrRecordChange(bool can_play_or_record) override;
   void OnChangedOutputVolume() override;

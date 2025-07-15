@@ -848,8 +848,8 @@ int32_t AudioDeviceMac::PlayoutDeviceName(uint16_t index,
   memset(guid, 0, kAdmMaxGuidSize);
 
   return GetDeviceName(kAudioDevicePropertyScopeOutput, index,
-                       rtc::ArrayView<char>(name, kAdmMaxDeviceNameSize),
-                       rtc::ArrayView<char>(guid, kAdmMaxGuidSize));
+                       webrtc::ArrayView<char>(name, kAdmMaxDeviceNameSize),
+                       webrtc::ArrayView<char>(guid, kAdmMaxGuidSize));
 }
 
 int32_t AudioDeviceMac::RecordingDeviceName(uint16_t index,
@@ -868,8 +868,8 @@ int32_t AudioDeviceMac::RecordingDeviceName(uint16_t index,
   }
 
   return GetDeviceName(kAudioDevicePropertyScopeInput, index,
-                       rtc::ArrayView<char>(name, kAdmMaxDeviceNameSize),
-                       rtc::ArrayView<char>(guid, kAdmMaxGuidSize));
+                       webrtc::ArrayView<char>(name, kAdmMaxDeviceNameSize),
+                       webrtc::ArrayView<char>(guid, kAdmMaxGuidSize));
 }
 
 int16_t AudioDeviceMac::RecordingDevices() {
@@ -1647,8 +1647,8 @@ int32_t AudioDeviceMac::GetNumberDevices(const AudioObjectPropertyScope scope,
 
 int32_t AudioDeviceMac::GetDeviceName(const AudioObjectPropertyScope scope,
                                       const uint16_t index,
-                                      rtc::ArrayView<char> name,
-                                      rtc::ArrayView<char> guid) {
+                                      webrtc::ArrayView<char> name,
+                                      webrtc::ArrayView<char> guid) {
   OSStatus err = noErr;
   AudioDeviceID deviceIds[MaxNumberDevices];
 
@@ -1687,7 +1687,7 @@ int32_t AudioDeviceMac::GetDeviceName(const AudioObjectPropertyScope scope,
   }
   AudioObjectPropertyAddress propertyAddress = {kAudioDevicePropertyDeviceName,
                                                 scope, 0};
-  rtc::SimpleStringBuilder guid_ss(guid);
+  webrtc::SimpleStringBuilder guid_ss(guid);
   if (isDefaultDevice) {
     std::array<char, kAdmMaxDeviceNameSize> devName;
     UInt32 len = devName.size();

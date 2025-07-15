@@ -3905,13 +3905,13 @@ int32_t AudioDeviceWindowsCore::_GetDeviceID(IMMDevice* pDevice,
   return 0;
 }
 
-int32_t AudioDeviceWindowsCore::SetAudioDeviceSink(AudioDeviceSink* sink) {
-  _deviceStateListener->SetAudioDeviceSink(sink);
+int32_t AudioDeviceWindowsCore::SetObserver(AudioDeviceObserver* observer) {
+  _deviceStateListener->SetObserver(observer);
   return 0;
 }
 
-void AudioDeviceWindowsCore::DeviceStateListener::SetAudioDeviceSink(AudioDeviceSink *sink) {
-  callback_ = sink;
+void AudioDeviceWindowsCore::DeviceStateListener::SetObserver(AudioDeviceObserver *observer) {
+  callback_ = observer;
 }
 
 HRESULT AudioDeviceWindowsCore::DeviceStateListener::OnDeviceStateChanged(LPCWSTR pwstrDeviceId, DWORD dwNewState) {

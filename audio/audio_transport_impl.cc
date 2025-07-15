@@ -154,8 +154,12 @@ int32_t AudioTransportImpl::RecordedDataIsAvailable(
   bool swap_stereo_channels = false;
   {
     MutexLock lock(&capture_lock_);
-    send_sample_rate_hz = send_sample_rate_hz_;
-    send_num_channels = send_num_channels_;
+    bool has_senders = !audio_senders_.empty();
+    // If no senders attached, use the provided sample rate and channel count to
+    // initialize the AudioFrame so ProcessCaptureFrame will have correct sample
+    // rate.
+    send_sample_rate_hz = has_senders ? send_sample_rate_hz_ : sample_rate;
+    send_num_channels = has_senders ? send_num_channels_ : number_of_channels;
     swap_stereo_channels = swap_stereo_channels_;
   }
 

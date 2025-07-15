@@ -594,6 +594,11 @@ void AudioProcessingImpl::InitializeLocked(const ProcessingConfig& config) {
 
   formats_.api_format = config;
 
+  RTC_LOG(LS_INFO) << "AudioProcessing::InitializeLocked input sampleRate:"
+                   << formats_.api_format.input_stream().sample_rate_hz()
+                   << " output sampleRate:"
+                   << formats_.api_format.output_stream().sample_rate_hz();
+
   // Choose maximum rate to use for the split filtering.
   RTC_DCHECK(config_.pipeline.maximum_internal_processing_rate == 48000 ||
              config_.pipeline.maximum_internal_processing_rate == 32000);
@@ -783,6 +788,11 @@ size_t AudioProcessingImpl::num_proc_channels() const {
 size_t AudioProcessingImpl::num_output_channels() const {
   // Used as callback from submodules, hence locking is not allowed.
   return formats_.api_format.output_stream().num_channels();
+}
+
+bool AudioProcessingImpl::get_output_will_be_muted() {
+  MutexLock lock(&mutex_capture_);
+  return !capture_.capture_output_used;
 }
 
 void AudioProcessingImpl::set_output_will_be_muted(bool muted) {

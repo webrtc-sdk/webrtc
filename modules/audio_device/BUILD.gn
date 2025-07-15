@@ -359,12 +359,25 @@ rtc_library("audio_device_impl") {
           "linux/pulseaudiosymboltable_linux.h",
         ]
       }
+      if (is_mac || is_ios) {
+        sources += [
+          "audio_engine_device.h",
+          "audio_engine_device.mm",
+        ]
+      }
+      if (is_ios) {
+        deps += [
+          "../../sdk:audio_session_objc",
+        ]
+      }
       if (is_mac) {
         sources += [
           "mac/audio_device_mac.cc",
           "mac/audio_device_mac.h",
           "mac/audio_mixer_manager_mac.cc",
           "mac/audio_mixer_manager_mac.h",
+          "mac/audio_device_utils_mac.cc",
+          "mac/audio_device_utils_mac.h",
         ]
         deps += [
           ":audio_device_impl_frameworks",

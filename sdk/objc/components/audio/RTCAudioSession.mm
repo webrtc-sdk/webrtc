@@ -826,6 +826,7 @@ ABSL_CONST_INIT thread_local bool mutex_locked = false;
                   withOptions:options
                         error:&error]) {
     self.isActive = shouldActivate;
+     RTCLogError(@"Did set session active to %d", shouldActivate);
   } else {
     RTCLogError(@"Failed to set session active to %d. Error:%@",
                 shouldActivate,

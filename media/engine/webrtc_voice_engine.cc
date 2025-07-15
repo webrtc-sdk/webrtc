@@ -551,15 +551,10 @@ void WebRtcVoiceEngine::Init() {
   // Set default engine options.
   {
     AudioOptions options;
-    options.echo_cancellation = true;
-    options.auto_gain_control = true;
-#if defined(WEBRTC_IOS)
-    // On iOS, VPIO provides built-in NS.
+    options.echo_cancellation = false;
+    options.auto_gain_control = false;
     options.noise_suppression = false;
-#else
-    options.noise_suppression = true;
-#endif
-    options.highpass_filter = true;
+    options.highpass_filter = false;
     options.stereo_swapping = false;
     options.audio_jitter_buffer_max_packets = 200;
     options.audio_jitter_buffer_fast_accelerate = false;
@@ -604,31 +599,14 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
   // Use desktop AEC by default, when not using hardware AEC.
   bool use_mobile_software_aec = false;
 
-#if defined(WEBRTC_IOS) && !TARGET_OS_SIMULATOR
-  if (options.ios_force_software_aec_HACK &&
-      *options.ios_force_software_aec_HACK) {
-    // EC may be forced on for a device known to have non-functioning platform
-    // AEC.
-    options.echo_cancellation = true;
-    RTC_LOG(LS_WARNING)
-        << "Force software AEC on iOS. May conflict with platform AEC.";
-  } else {
-    // On iOS, VPIO provides built-in EC.
-    options.echo_cancellation = false;
-    RTC_LOG(LS_INFO) << "Always disable AEC on iOS. Use built-in instead.";
-  }
-#elif defined(WEBRTC_ANDROID)
+  // Skip AEC AGC NS option manipulation for iOS adn macOS.
+#if !(defined(WEBRTC_IOS) || defined(WEBRTC_MAC))
+
+#if defined(WEBRTC_ANDROID)
   use_mobile_software_aec = true;
 #endif
 
-// Set and adjust gain control options.
-#if defined(WEBRTC_IOS) && !TARGET_OS_SIMULATOR
-  // On iOS, VPIO provides built-in AGC.
-  options.auto_gain_control = false;
-  RTC_LOG(LS_INFO) << "Always disable AGC on iOS. Use built-in instead.";
-#endif
-
-#if defined(WEBRTC_IOS) || defined(WEBRTC_ANDROID)
+#if defined(WEBRTC_ANDROID)
   // Turn off the gain control if specified by the field trial.
   // The purpose of the field trial is to reduce the amount of resampling
   // performed inside the audio processing module on mobile platforms by
@@ -694,6 +672,7 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
       }
     }
   }
+#endif
 
   if (options.stereo_swapping) {
     audio_state()->SetStereoChannelSwapping(*options.stereo_swapping);
@@ -727,7 +706,7 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
   if (options.auto_gain_control) {
     const bool enabled = *options.auto_gain_control;
     apm_config.gain_controller1.enabled = enabled;
-#if defined(WEBRTC_IOS) || defined(WEBRTC_ANDROID)
+#if defined(WEBRTC_IOS) || defined(WEBRTC_MAC) || defined(WEBRTC_ANDROID)
     apm_config.gain_controller1.mode =
         apm_config.gain_controller1.kFixedDigital;
 #else
@@ -994,7 +973,7 @@ class WebRtcVoiceSendChannel::WebRtcAudioSendStream : public AudioSource::Sink {
     muted_ = muted;
   }
 
-  bool muted() const {
+  bool IsMuted() const {
     RTC_DCHECK_RUN_ON(&worker_thread_checker_);
     return muted_;
   }
@@ -1019,6 +998,11 @@ class WebRtcVoiceSendChannel::WebRtcAudioSendStream : public AudioSource::Sink {
     source->SetSink(this);
     source_ = source;
     UpdateSendState();
+  }
+
+  bool HasSource() const {
+    RTC_DCHECK_RUN_ON(&worker_thread_checker_);
+    return source_ != nullptr;
   }
 
   // Stops sending by setting the sink of the AudioSource to nullptr. No data
@@ -1742,17 +1726,36 @@ bool WebRtcVoiceSendChannel::MuteStream(uint32_t ssrc, bool muted) {
   // This implementation is not ideal, instead we should signal the AGC when
   // the mic channel is muted/unmuted. We can't do it today because there
   // is no good way to know which stream is mapping to the mic channel.
-  bool all_muted = muted;
-  for (const auto& kv : send_streams_) {
-    all_muted = all_muted && kv.second->muted();
-  }
-  AudioProcessing* ap = engine()->apm();
-  if (ap) {
-    ap->set_output_will_be_muted(all_muted);
-  }
+  if (send_streams_.size() > 0) {
+    // This will be true if MuteStream is called from
+    // AudioRtpSender::ClearSend().
+    bool is_all_no_source =
+        std::none_of(send_streams_.begin(), send_streams_.end(),
+                     [](const auto& kv) { return kv.second->HasSource(); });
 
-  // Notfy the AudioState that the mute state has updated.
-  engine_->audio_state()->OnMuteStreamChanged();
+    bool is_all_muted =
+        std::all_of(send_streams_.begin(), send_streams_.end(),
+                    [](const auto& kv) { return kv.second->IsMuted(); });
+
+    // Only mute the microphone if we're not in cleanup state
+    // (i.e. if we have active send streams)
+    webrtc::AudioProcessing* ap = engine()->apm();
+    if (ap) {
+      bool v = !is_all_no_source && is_all_muted;
+      RTC_LOG(LS_INFO) << "WebRtcVoiceSendChannel::MuteStream: APM:" << v;
+      ap->set_output_will_be_muted(v);
+    }
+
+    if (!is_all_no_source) {
+      // We don't mute when ClearSend() is called.
+      webrtc::AudioDeviceModule* adm = engine()->adm();
+      if (adm) {
+        RTC_LOG(LS_INFO) << "WebRtcVoiceSendChannel::MuteStream: ADM:"
+                         << is_all_muted;
+        adm->SetMicrophoneMute(is_all_muted);
+      }
+    }
+  }
 
   return true;
 }

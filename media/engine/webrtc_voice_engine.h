@@ -130,7 +130,7 @@ class WebRtcVoiceEngine final : public VoiceEngineInterface {
   // Stops AEC dump.
   void StopAecDump() override;
 
-  std::optional<AudioDeviceModule::Stats> GetAudioDeviceStats() override;
+  std::optional<webrtc::AudioDeviceModule::Stats> GetAudioDeviceStats() override;
 
  private:
   // Every option that is "set" will be applied. Every option not "set" will be
@@ -141,9 +141,9 @@ class WebRtcVoiceEngine final : public VoiceEngineInterface {
   const Environment env_;
   std::unique_ptr<TaskQueueBase, TaskQueueDeleter> low_priority_worker_queue_;
 
-  AudioDeviceModule* adm();
-  AudioProcessing* apm() const;
-  AudioState* audio_state();
+  webrtc::AudioDeviceModule* adm();
+  webrtc::AudioProcessing* apm() const;
+  webrtc::AudioState* audio_state();
 
   SequenceChecker signal_thread_checker_{SequenceChecker::kDetached};
   SequenceChecker worker_thread_checker_{SequenceChecker::kDetached};
