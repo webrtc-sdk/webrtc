@@ -19,6 +19,10 @@
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
 
+#ifdef RTC_ENABLE_H265
+#include "common_video/h265/h265_common.h"
+#endif
+
 namespace webrtc {
 
 using H264::kAud;
@@ -325,5 +329,290 @@ bool AvccBufferWriter::WriteNalu(const uint8_t* data, size_t data_size) {
 size_t AvccBufferWriter::BytesRemaining() const {
   return length_ - offset_;
 }
+
+#ifdef RTC_ENABLE_H265
+
+bool H265CMSampleBufferToAnnexBBuffer(CMSampleBufferRef avcc_sample_buffer,
+                                      bool is_keyframe,
+                                      Buffer* annexb_buffer) {
+  RTC_DCHECK(avcc_sample_buffer);
+  RTC_DCHECK(annexb_buffer);
+
+  // Get format description from the sample buffer.
+  CMVideoFormatDescriptionRef description =
+      CMSampleBufferGetFormatDescription(avcc_sample_buffer);
+  if (description == nullptr) {
+    RTC_LOG(LS_ERROR) << "Failed to get sample buffer's description.";
+    return false;
+  }
+
+  // Get parameter set information.
+  int nalu_header_size = 0;
+  size_t param_set_count = 0;
+  OSStatus status = CMVideoFormatDescriptionGetHEVCParameterSetAtIndex(
+      description, 0, nullptr, nullptr, &param_set_count, &nalu_header_size);
+  if (status != noErr) {
+    RTC_LOG(LS_ERROR) << "Failed to get parameter set.";
+    return false;
+  }
+  RTC_CHECK_EQ(nalu_header_size, kAvccHeaderByteSize);
+  RTC_DCHECK_EQ(param_set_count, 3);
+
+  // Get the actual data.
+  CMBlockBufferRef block_buffer =
+      CMSampleBufferGetDataBuffer(avcc_sample_buffer);
+  if (block_buffer == nullptr) {
+    RTC_LOG(LS_ERROR) << "Failed to get sample buffer's data.";
+    return false;
+  }
+  size_t block_buffer_size = CMBlockBufferGetDataLength(block_buffer);
+  uint8_t* block_buffer_data = nullptr;
+  status = CMBlockBufferGetDataPointer(block_buffer, 0, nullptr, nullptr,
+                                       reinterpret_cast<char**>(&block_buffer_data));
+  if (status != noErr) {
+    RTC_LOG(LS_ERROR) << "Failed to get block buffer's data.";
+    return false;
+  }
+
+  // 1. If this is a keyframe, write parameter sets first.
+  if (is_keyframe) {
+    // Write VPS.
+    const uint8_t* param_set = nullptr;
+    size_t param_set_size = 0;
+    status = CMVideoFormatDescriptionGetHEVCParameterSetAtIndex(
+        description, 0, &param_set, &param_set_size, nullptr, nullptr);
+    if (status != noErr) {
+      RTC_LOG(LS_ERROR) << "Failed to get VPS.";
+      return false;
+    }
+    annexb_buffer->AppendData(kAnnexBHeaderBytes, sizeof(kAnnexBHeaderBytes));
+    annexb_buffer->AppendData(param_set, param_set_size);
+
+    // Write SPS.
+    status = CMVideoFormatDescriptionGetHEVCParameterSetAtIndex(
+        description, 1, &param_set, &param_set_size, nullptr, nullptr);
+    if (status != noErr) {
+      RTC_LOG(LS_ERROR) << "Failed to get SPS.";
+      return false;
+    }
+    annexb_buffer->AppendData(kAnnexBHeaderBytes, sizeof(kAnnexBHeaderBytes));
+    annexb_buffer->AppendData(param_set, param_set_size);
+
+    // Write PPS.
+    status = CMVideoFormatDescriptionGetHEVCParameterSetAtIndex(
+        description, 2, &param_set, &param_set_size, nullptr, nullptr);
+    if (status != noErr) {
+      RTC_LOG(LS_ERROR) << "Failed to get PPS.";
+      return false;
+    }
+    annexb_buffer->AppendData(kAnnexBHeaderBytes, sizeof(kAnnexBHeaderBytes));
+    annexb_buffer->AppendData(param_set, param_set_size);
+  }
+
+  // 2. Write the sample buffer's data with proper start codes.
+  size_t bytes_remaining = block_buffer_size;
+  uint8_t* data_ptr = block_buffer_data;
+  while (bytes_remaining > 0) {
+    // The size type here must match `nalu_header_size`, we expect 4 bytes.
+    // Read the length of the next NALU from the sample buffer.
+    uint32_t nalu_size = 0;
+    if (bytes_remaining < kAvccHeaderByteSize) {
+      RTC_LOG(LS_ERROR) << "Failed to read complete NALU size.";
+      return false;
+    }
+    nalu_size = CFSwapInt32BigToHost(*reinterpret_cast<uint32_t*>(data_ptr));
+    data_ptr += kAvccHeaderByteSize;
+    bytes_remaining -= kAvccHeaderByteSize;
+
+    if (bytes_remaining < nalu_size) {
+      RTC_LOG(LS_ERROR) << "Failed to read complete NALU.";
+      return false;
+    }
+
+    // Replace length header with start code.
+    annexb_buffer->AppendData(kAnnexBHeaderBytes, sizeof(kAnnexBHeaderBytes));
+    annexb_buffer->AppendData(data_ptr, nalu_size);
+
+    data_ptr += nalu_size;
+    bytes_remaining -= nalu_size;
+  }
+
+  return true;
+}
+
+bool H265AnnexBBufferToCMSampleBuffer(const uint8_t* annexb_buffer,
+                                      size_t annexb_buffer_size,
+                                      CMVideoFormatDescriptionRef video_format,
+                                      CMSampleBufferRef* out_sample_buffer,
+                                      CMMemoryPoolRef memory_pool) {
+  RTC_DCHECK(annexb_buffer);
+  RTC_DCHECK(out_sample_buffer);
+  RTC_DCHECK(video_format);
+  *out_sample_buffer = nullptr;
+
+  RTC_LOG(LS_INFO) << "H265SampleBuffer: Converting AnnexB buffer size " << annexb_buffer_size << " to CMSampleBuffer";
+
+  // For H.265, we need to parse NALUs manually and skip parameter sets
+  std::vector<webrtc::H265::NaluIndex> nalu_indices = webrtc::H265::FindNaluIndices(annexb_buffer, annexb_buffer_size);
+  
+  RTC_LOG(LS_INFO) << "H265SampleBuffer: Found " << nalu_indices.size() << " NALUs";
+  
+  // Calculate total size of non-parameter-set NALUs
+  size_t output_size = 0;
+  std::vector<webrtc::H265::NaluIndex> frame_nalus;
+  
+  for (const auto& nalu : nalu_indices) {
+    if (annexb_buffer_size > nalu.payload_start_offset) {
+      webrtc::H265::NaluType nalu_type = webrtc::H265::ParseNaluType(annexb_buffer[nalu.payload_start_offset]);
+      
+      // Skip parameter sets (VPS, SPS, PPS) as they're already in the format description
+      if (nalu_type != webrtc::H265::kVps && 
+          nalu_type != webrtc::H265::kSps && 
+          nalu_type != webrtc::H265::kPps) {
+        frame_nalus.push_back(nalu);
+        output_size += nalu.payload_size + kAvccHeaderByteSize;
+        RTC_LOG(LS_VERBOSE) << "H265SampleBuffer: Including NALU type " << static_cast<int>(nalu_type) 
+                           << " size " << nalu.payload_size;
+      } else {
+        RTC_LOG(LS_VERBOSE) << "H265SampleBuffer: Skipping parameter set NALU type " << static_cast<int>(nalu_type);
+      }
+    }
+  }
+
+  RTC_LOG(LS_INFO) << "H265SampleBuffer: Will include " << frame_nalus.size() << " frame NALUs, total size: " << output_size;
+
+  if (frame_nalus.empty()) {
+    RTC_LOG(LS_WARNING) << "H265SampleBuffer: No frame NALUs found, only parameter sets";
+    return false;
+  }
+
+  // Allocate memory as a block buffer.
+  CMBlockBufferRef data = nullptr;
+  CFAllocatorRef block_allocator = CMMemoryPoolGetAllocator(memory_pool);
+  OSStatus status = CMBlockBufferCreateWithMemoryBlock(
+      kCFAllocatorDefault, nullptr, output_size, block_allocator,
+      nullptr, 0, output_size, kCMBlockBufferAssureMemoryNowFlag, &data);
+  if (status != kCMBlockBufferNoErr) {
+    RTC_LOG(LS_ERROR) << "H265SampleBuffer: Failed to create block buffer, status: " << status;
+    return false;
+  }
+
+  // Make sure block buffer is contiguous.
+  status = CMBlockBufferAssureBlockMemory(data);
+  if (status != kCMBlockBufferNoErr) {
+    RTC_LOG(LS_ERROR) << "Failed to make block buffer contiguous.";
+    CFRelease(data);
+    return false;
+  }
+
+  // Get a raw pointer to the data.
+  uint8_t* data_ptr = nullptr;
+  status = CMBlockBufferGetDataPointer(data, 0, nullptr, nullptr,
+                                       reinterpret_cast<char**>(&data_ptr));
+  if (status != kCMBlockBufferNoErr) {
+    RTC_LOG(LS_ERROR) << "Failed to get block buffer data pointer.";
+    CFRelease(data);
+    return false;
+  }
+
+  // Write Avcc NALUs into block buffer (excluding parameter sets).
+  AvccBufferWriter writer(data_ptr, output_size);
+  for (size_t i = 0; i < frame_nalus.size(); ++i) {
+    const auto& nalu = frame_nalus[i];
+    const uint8_t* nalu_data_ptr = annexb_buffer + nalu.payload_start_offset;
+    size_t nalu_data_size = nalu.payload_size;
+    if (!writer.WriteNalu(nalu_data_ptr, nalu_data_size)) {
+      RTC_LOG(LS_ERROR) << "H265SampleBuffer: Failed to write NALU " << i 
+                        << ", type: " << static_cast<int>(H265::ParseNaluType(*nalu_data_ptr))
+                        << ", size: " << nalu_data_size;
+      CFRelease(data);
+      return false;
+    }
+  }
+
+  // Create sample buffer.
+  status = CMSampleBufferCreate(kCFAllocatorDefault, data, true, nullptr,
+                                nullptr, video_format, 1, 0, nullptr, 0,
+                                nullptr, out_sample_buffer);
+  if (status != noErr) {
+    RTC_LOG(LS_ERROR) << "H265SampleBuffer: Failed to create sample buffer, status: " << status 
+                      << ", output_size: " << output_size;
+    CFRelease(data);
+    return false;
+  }
+  CFRelease(data);
+  RTC_LOG(LS_INFO) << "H265SampleBuffer: Successfully created sample buffer with " 
+                   << frame_nalus.size() << " NALUs, total size: " << output_size;
+  return true;
+}
+
+CMVideoFormatDescriptionRef CreateH265VideoFormatDescription(
+    const uint8_t* annexb_buffer,
+    size_t annexb_buffer_size) {
+  RTC_LOG(LS_INFO) << "H265FormatDesc: Creating format description from buffer size: " << annexb_buffer_size;
+  
+  const uint8_t* param_set_ptrs[3] = {};
+  size_t param_set_sizes[3] = {};
+  bool found_vps = false, found_sps = false, found_pps = false;
+
+  // Parse H.265 NALUs manually
+  std::vector<webrtc::H265::NaluIndex> nalu_indices = webrtc::H265::FindNaluIndices(annexb_buffer, annexb_buffer_size);
+  
+  RTC_LOG(LS_INFO) << "H265FormatDesc: Found " << nalu_indices.size() << " NALUs in buffer";
+  
+  // Collect VPS, SPS, PPS (order doesn't matter)
+  for (const auto& nalu : nalu_indices) {
+    if (annexb_buffer_size > nalu.payload_start_offset) {
+      webrtc::H265::NaluType nalu_type = webrtc::H265::ParseNaluType(annexb_buffer[nalu.payload_start_offset]);
+      
+      RTC_LOG(LS_VERBOSE) << "H265FormatDesc: Processing NALU type: " << static_cast<int>(nalu_type) 
+                          << " size: " << nalu.payload_size;
+      
+      if (nalu_type == webrtc::H265::kVps && !found_vps) {
+        param_set_ptrs[0] = annexb_buffer + nalu.payload_start_offset;
+        param_set_sizes[0] = nalu.payload_size;
+        found_vps = true;
+        RTC_LOG(LS_INFO) << "H265FormatDesc: Found VPS, size: " << nalu.payload_size;
+      } else if (nalu_type == webrtc::H265::kSps && !found_sps) {
+        param_set_ptrs[1] = annexb_buffer + nalu.payload_start_offset;
+        param_set_sizes[1] = nalu.payload_size;
+        found_sps = true;
+        RTC_LOG(LS_INFO) << "H265FormatDesc: Found SPS, size: " << nalu.payload_size;
+      } else if (nalu_type == webrtc::H265::kPps && !found_pps) {
+        param_set_ptrs[2] = annexb_buffer + nalu.payload_start_offset;
+        param_set_sizes[2] = nalu.payload_size;
+        found_pps = true;
+        RTC_LOG(LS_INFO) << "H265FormatDesc: Found PPS, size: " << nalu.payload_size;
+      }
+      
+      // Break early if we found all parameter sets
+      if (found_vps && found_sps && found_pps) {
+        break;
+      }
+    }
+  }
+  
+  // Check if we found all required parameter sets
+  if (!found_vps || !found_sps || !found_pps) {
+    RTC_LOG(LS_WARNING) << "H265FormatDesc: Failed to find all required parameter sets (VPS/SPS/PPS). Found: VPS=" 
+                        << found_vps << ", SPS=" << found_sps << ", PPS=" << found_pps;
+    return nullptr;
+  }
+
+  // Create video format description.
+  CMVideoFormatDescriptionRef description = nullptr;
+  OSStatus status = CMVideoFormatDescriptionCreateFromHEVCParameterSets(
+      kCFAllocatorDefault, 3, param_set_ptrs, param_set_sizes, kAvccHeaderByteSize,
+      nullptr, &description);
+  if (status != noErr) {
+    RTC_LOG(LS_ERROR) << "H265FormatDesc: Failed to create video format description, status: " << status;
+    return nullptr;
+  }
+  
+  RTC_LOG(LS_INFO) << "H265FormatDesc: Successfully created video format description";
+  return description;
+}
+
+#endif  // RTC_ENABLE_H265
 
 }  // namespace webrtc

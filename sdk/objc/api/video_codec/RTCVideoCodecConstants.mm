@@ -16,3 +16,6 @@
 NSString *const RTC_CONSTANT_TYPE(RTCVideoCodecVp8Name) = @(webrtc::kVp8CodecName);
 NSString *const RTC_CONSTANT_TYPE(RTCVideoCodecVp9Name) = @(webrtc::kVp9CodecName);
 NSString *const RTC_CONSTANT_TYPE(RTCVideoCodecAv1Name) = @(webrtc::kAv1CodecName);
+#ifdef RTC_ENABLE_H265
+NSString *const RTC_CONSTANT_TYPE(RTCVideoCodecH265Name) = @(webrtc::kH265CodecName);
+#endif

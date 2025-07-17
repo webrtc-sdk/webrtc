@@ -1,5 +1,5 @@
 /*
- *  Copyright 2018 The WebRTC project authors. All Rights Reserved.
+ *  Copyright 2024 The WebRTC project authors. All Rights Reserved.
  *
  *  Use of this source code is governed by a BSD-style license
  *  that can be found in the LICENSE file in the root of the source
@@ -10,11 +10,17 @@
 
 #import <Foundation/Foundation.h>
 
+#import "RTCVideoCodecInfo.h"
+#import "RTCVideoEncoder.h"
 #import "sdk/objc/base/RTCMacros.h"
 
-RTC_EXTERN NSString* const RTC_CONSTANT_TYPE(RTCVideoCodecVp8Name);
-RTC_EXTERN NSString* const RTC_CONSTANT_TYPE(RTCVideoCodecVp9Name);
-RTC_EXTERN NSString* const RTC_CONSTANT_TYPE(RTCVideoCodecAv1Name);
 #ifdef RTC_ENABLE_H265
-RTC_EXTERN NSString* const RTC_CONSTANT_TYPE(RTCVideoCodecH265Name);
-#endif
+
+RTC_OBJC_EXPORT
+@interface RTC_OBJC_TYPE (RTCVideoEncoderH265) : NSObject <RTC_OBJC_TYPE(RTCVideoEncoder)>
+
+- (instancetype)initWithCodecInfo:(RTC_OBJC_TYPE(RTCVideoCodecInfo) *)codecInfo;
+
+@end
+
+#endif  // RTC_ENABLE_H265 

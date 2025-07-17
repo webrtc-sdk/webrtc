@@ -108,6 +108,23 @@ class AvccBufferWriter final {
   const size_t length_;
 };
 
+#ifdef RTC_ENABLE_H265
+// H.265/HEVC versions of the above functions
+bool H265CMSampleBufferToAnnexBBuffer(CMSampleBufferRef avcc_sample_buffer,
+                                      bool is_keyframe,
+                                      webrtc::Buffer* annexb_buffer);
+
+bool H265AnnexBBufferToCMSampleBuffer(const uint8_t* annexb_buffer,
+                                      size_t annexb_buffer_size,
+                                      CMVideoFormatDescriptionRef video_format,
+                                      CMSampleBufferRef* out_sample_buffer,
+                                      CMMemoryPoolRef memory_pool);
+
+CMVideoFormatDescriptionRef CreateH265VideoFormatDescription(
+    const uint8_t* annexb_buffer,
+    size_t annexb_buffer_size);
+#endif  // RTC_ENABLE_H265
+
 }  // namespace webrtc
 
 #endif  // SDK_OBJC_FRAMEWORK_CLASSES_VIDEOTOOLBOX_NALU_REWRITER_H_
