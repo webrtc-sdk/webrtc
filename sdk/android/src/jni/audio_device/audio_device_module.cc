@@ -151,13 +151,15 @@ class AndroidAudioDeviceModule : public AudioDeviceModule {
   int32_t PlayoutDeviceName(uint16_t index,
                             char name[kAdmMaxDeviceNameSize],
                             char guid[kAdmMaxGuidSize]) override {
-    RTC_CHECK_NOTREACHED();
+    RTC_DLOG(LS_INFO) << __FUNCTION__ << " - Not implemented";
+    return -1;
   }
 
   int32_t RecordingDeviceName(uint16_t index,
                               char name[kAdmMaxDeviceNameSize],
                               char guid[kAdmMaxGuidSize]) override {
-    RTC_CHECK_NOTREACHED();
+    RTC_DLOG(LS_INFO) << __FUNCTION__ << " - Not implemented";
+    return -1;
   }
 
   int32_t SetPlayoutDevice(uint16_t index) override {
@@ -169,7 +171,8 @@ class AndroidAudioDeviceModule : public AudioDeviceModule {
 
   int32_t SetPlayoutDevice(
       AudioDeviceModule::WindowsDeviceType device) override {
-    RTC_CHECK_NOTREACHED();
+    RTC_DLOG(LS_INFO) << __FUNCTION__ << " - Not implemented";
+    return -1;
   }
 
   int32_t SetRecordingDevice(uint16_t index) override {
@@ -181,7 +184,8 @@ class AndroidAudioDeviceModule : public AudioDeviceModule {
 
   int32_t SetRecordingDevice(
       AudioDeviceModule::WindowsDeviceType device) override {
-    RTC_CHECK_NOTREACHED();
+    RTC_DLOG(LS_INFO) << __FUNCTION__ << " - Not implemented";
+    return -1;
   }
 
   int32_t PlayoutIsAvailable(bool* available) override {
@@ -389,53 +393,53 @@ class AndroidAudioDeviceModule : public AudioDeviceModule {
   }
 
   int32_t SetMicrophoneVolume(uint32_t volume) override {
-    RTC_DLOG(LS_INFO) << __FUNCTION__ << "(" << volume << ")";
-    RTC_CHECK_NOTREACHED();
+    RTC_DLOG(LS_INFO) << __FUNCTION__ << "(" << volume << ")" << " - Not implemented";
+    return -1;
   }
 
   int32_t MicrophoneVolume(uint32_t* volume) const override {
-    RTC_DLOG(LS_INFO) << __FUNCTION__;
-    RTC_CHECK_NOTREACHED();
+    RTC_DLOG(LS_INFO) << __FUNCTION__ << " - Not implemented";
+    return -1;
   }
 
   int32_t MaxMicrophoneVolume(uint32_t* maxVolume) const override {
-    RTC_DLOG(LS_INFO) << __FUNCTION__;
-    RTC_CHECK_NOTREACHED();
+    RTC_DLOG(LS_INFO) << __FUNCTION__ << " - Not implemented";
+    return -1;
   }
 
   int32_t MinMicrophoneVolume(uint32_t* minVolume) const override {
-    RTC_DLOG(LS_INFO) << __FUNCTION__;
-    RTC_CHECK_NOTREACHED();
+    RTC_DLOG(LS_INFO) << __FUNCTION__ << " - Not implemented";
+    return -1;
   }
 
   int32_t SpeakerMuteIsAvailable(bool* available) override {
-    RTC_DLOG(LS_INFO) << __FUNCTION__;
-    RTC_CHECK_NOTREACHED();
+    RTC_DLOG(LS_INFO) << __FUNCTION__ << " - Not implemented";
+    return -1;
   }
 
   int32_t SetSpeakerMute(bool enable) override {
-    RTC_DLOG(LS_INFO) << __FUNCTION__ << "(" << enable << ")";
-    RTC_CHECK_NOTREACHED();
+    RTC_DLOG(LS_INFO) << __FUNCTION__ << "(" << enable << ")" << " - Not implemented";
+    return -1;
   }
 
   int32_t SpeakerMute(bool* enabled) const override {
-    RTC_DLOG(LS_INFO) << __FUNCTION__;
-    RTC_CHECK_NOTREACHED();
+    RTC_DLOG(LS_INFO) << __FUNCTION__ << " - Not implemented";
+    return -1;
   }
 
   int32_t MicrophoneMuteIsAvailable(bool* available) override {
-    RTC_DLOG(LS_INFO) << __FUNCTION__;
-    RTC_CHECK_NOTREACHED();
+    RTC_DLOG(LS_INFO) << __FUNCTION__ << " - Not implemented";
+    return -1;
   }
 
   int32_t SetMicrophoneMute(bool enable) override {
-    RTC_DLOG(LS_INFO) << __FUNCTION__ << "(" << enable << ")";
-    RTC_CHECK_NOTREACHED();
+    RTC_DLOG(LS_INFO) << __FUNCTION__ << "(" << enable << ")" << " - Not implemented";
+    return -1;
   }
 
   int32_t MicrophoneMute(bool* enabled) const override {
-    RTC_DLOG(LS_INFO) << __FUNCTION__;
-    RTC_CHECK_NOTREACHED();
+    RTC_DLOG(LS_INFO) << __FUNCTION__ << " - Not implemented";
+    return -1;
   }
 
   int32_t StereoPlayoutIsAvailable(bool* available) const override {
@@ -552,8 +556,8 @@ class AndroidAudioDeviceModule : public AudioDeviceModule {
   }
 
   int32_t EnableBuiltInAGC(bool enable) override {
-    RTC_DLOG(LS_INFO) << __FUNCTION__ << "(" << enable << ")";
-    RTC_CHECK_NOTREACHED();
+    RTC_DLOG(LS_INFO) << __FUNCTION__ << "(" << enable << ")" << " - Not implemented";
+    return -1;
   }
 
   // TODO(henrika): add implementation for OpenSL ES based audio as well.
