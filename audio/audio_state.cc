@@ -144,13 +144,21 @@ void AudioState::AddSendingStream(webrtc::AudioSendStream* stream,
 
   // Make sure recording is initialized; start recording if enabled.
   auto* adm = config_.audio_device_module.get();
-  if (recording_enabled_) {
-    if (!adm->Recording()) {
-      if (adm->InitRecording() == 0) {
+  if (!adm->Recording()) {
+    if (adm->InitRecording() == 0) {
+      if (recording_enabled_) {
+#if defined(WEBRTC_WIN)
+        if (adm->BuiltInAECIsAvailable() && !adm->Playing()) {
+          if (!adm->PlayoutIsInitialized()) {
+            adm->InitPlayout();
+          }
+          adm->StartPlayout();
+        }
+#endif
         adm->StartRecording();
-      } else {
-        RTC_DLOG_F(LS_ERROR) << "Failed to initialize recording.";
       }
+    } else {
+      RTC_DLOG_F(LS_ERROR) << "Failed to initialize recording.";
     }
   }
 }

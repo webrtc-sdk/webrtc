@@ -12,6 +12,6 @@
 
 #import "sdk/objc/base/RTCMacros.h"
 
-RTC_EXTERN NSString* const kRTCVideoCodecVp8Name;
-RTC_EXTERN NSString* const kRTCVideoCodecVp9Name;
-RTC_EXTERN NSString* const kRTCVideoCodecAv1Name;
+RTC_EXTERN NSString* const RTC_CONSTANT_TYPE(RTCVideoCodecVp8Name);
+RTC_EXTERN NSString* const RTC_CONSTANT_TYPE(RTCVideoCodecVp9Name);
+RTC_EXTERN NSString* const RTC_CONSTANT_TYPE(RTCVideoCodecAv1Name);

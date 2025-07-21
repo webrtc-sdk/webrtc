@@ -18,16 +18,17 @@
 
 namespace webrtc {
 
-scoped_refptr<VideoTrackSourceInterface> ObjCToNativeVideoCapturer(
-    RTC_OBJC_TYPE(RTCVideoCapturer) * objc_video_capturer,
-    const Environment &env,
-    Thread *signaling_thread,
-    Thread *worker_thread) {
-  RTCObjCVideoSourceAdapter *adapter = [[RTCObjCVideoSourceAdapter alloc] init];
-  scoped_refptr<ObjCVideoTrackSource> objc_video_track_source =
-      make_ref_counted<ObjCVideoTrackSource>(env, adapter);
-  scoped_refptr<VideoTrackSourceInterface> video_source =
-      CreateVideoTrackSourceProxy(
+webrtc::scoped_refptr<webrtc::VideoTrackSourceInterface>
+    ObjCToNativeVideoCapturer(RTC_OBJC_TYPE(RTCVideoCapturer) *
+                                  objc_video_capturer,
+                              const Environment &env,
+                              webrtc::Thread *signaling_thread,
+                              webrtc::Thread *worker_thread) {
+  RTC_OBJC_TYPE(RTCObjCVideoSourceAdapter) *adapter = [[RTC_OBJC_TYPE(RTCObjCVideoSourceAdapter) alloc] init];
+  webrtc::scoped_refptr<webrtc::ObjCVideoTrackSource> objc_video_track_source =
+      webrtc::make_ref_counted<webrtc::ObjCVideoTrackSource>(env, adapter);
+  webrtc::scoped_refptr<webrtc::VideoTrackSourceInterface> video_source =
+      webrtc::CreateVideoTrackSourceProxy(
           signaling_thread, worker_thread, objc_video_track_source.get());
 
   objc_video_capturer.delegate = adapter;

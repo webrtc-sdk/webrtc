@@ -13,7 +13,12 @@
 #include "api/environment/environment.h"
 #include "api/make_ref_counted.h"
 #include "rtc_base/logging.h"
+
+#if defined(WEBRTC_IOS)
 #include "sdk/objc/native/src/audio/audio_device_module_ios.h"
+#endif
+
+#include "modules/audio_device/include/audio_device.h"
 
 #ifndef WEBRTC_IOS
 #error This file shouldn't be compiled on platforms other than IOS.

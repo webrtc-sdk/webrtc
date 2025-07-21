@@ -13,6 +13,6 @@
 
 #include "media/base/media_constants.h"
 
-NSString *const kRTCVideoCodecVp8Name = @(webrtc::kVp8CodecName);
-NSString *const kRTCVideoCodecVp9Name = @(webrtc::kVp9CodecName);
-NSString *const kRTCVideoCodecAv1Name = @(webrtc::kAv1CodecName);
+NSString *const RTC_CONSTANT_TYPE(RTCVideoCodecVp8Name) = @(webrtc::kVp8CodecName);
+NSString *const RTC_CONSTANT_TYPE(RTCVideoCodecVp9Name) = @(webrtc::kVp9CodecName);
+NSString *const RTC_CONSTANT_TYPE(RTCVideoCodecAv1Name) = @(webrtc::kAv1CodecName);

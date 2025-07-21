@@ -154,6 +154,13 @@ class AudioDeviceMac : public AudioDeviceGeneric {
   virtual void AttachAudioBuffer(AudioDeviceBuffer* audioBuffer)
       RTC_LOCKS_EXCLUDED(mutex_);
 
+  virtual int32_t SetObserver(AudioDeviceObserver* observer) RTC_LOCKS_EXCLUDED(mutex_) {
+    audio_device_module_sink_ = observer;
+    return 0;
+  }
+  virtual int32_t GetPlayoutDevice() const;
+  virtual int32_t GetRecordingDevice() const;
+
  private:
   int32_t InitSpeakerLocked() RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
   int32_t InitMicrophoneLocked() RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
@@ -178,7 +185,8 @@ class AudioDeviceMac : public AudioDeviceGeneric {
 
   int32_t GetDeviceName(AudioObjectPropertyScope scope,
                         uint16_t index,
-                        ArrayView<char> name);
+                        webrtc::ArrayView<char> name,
+                        webrtc::ArrayView<char> guid);
 
   int32_t InitDevice(uint16_t userDeviceIndex,
                      AudioDeviceID& deviceId,
@@ -199,6 +207,8 @@ class AudioDeviceMac : public AudioDeviceGeneric {
                                   const AudioObjectPropertyAddress addresses[]);
 
   int32_t HandleDeviceChange();
+  int32_t HandleDefaultOutputDeviceChange();
+  int32_t HandleDefaultInputDeviceChange();
 
   int32_t HandleStreamFormatChange(AudioObjectID objectId,
                                    AudioObjectPropertyAddress propertyAddress);
@@ -339,6 +349,8 @@ class AudioDeviceMac : public AudioDeviceGeneric {
   // Typing detection
   // 0x5c is key "9", after that comes function keys.
   bool prev_key_state_[0x5d];
+
+  AudioDeviceObserver *audio_device_module_sink_ = nullptr;
 };
 
 }  // namespace webrtc

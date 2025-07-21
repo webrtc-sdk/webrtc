@@ -25,8 +25,8 @@
   webrtc::PeerConnectionFactoryDependencies _dependencies;
 }
 
-+ (RTCPeerConnectionFactoryBuilder *)builder {
-  return [[RTCPeerConnectionFactoryBuilder alloc] init];
++ (RTC_OBJC_TYPE(RTCPeerConnectionFactoryBuilder) *)builder {
+  return [[RTC_OBJC_TYPE(RTCPeerConnectionFactoryBuilder) alloc] init];
 }
 
 - (RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)createPeerConnectionFactory {

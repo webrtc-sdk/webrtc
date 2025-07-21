@@ -13,51 +13,47 @@
 #import "sdk/objc/base/RTCMacros.h"
 
 // Subset of webrtc::LoggingSeverity.
-typedef NS_ENUM(NSInteger, RTCLoggingSeverity) {
-  RTCLoggingSeverityVerbose,
-  RTCLoggingSeverityInfo,
-  RTCLoggingSeverityWarning,
-  RTCLoggingSeverityError,
-  RTCLoggingSeverityNone,
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCLoggingSeverity)) {
+  RTC_OBJC_TYPE(RTCLoggingSeverityVerbose),
+  RTC_OBJC_TYPE(RTCLoggingSeverityInfo),
+  RTC_OBJC_TYPE(RTCLoggingSeverityWarning),
+  RTC_OBJC_TYPE(RTCLoggingSeverityError),
+  RTC_OBJC_TYPE(RTCLoggingSeverityNone),
 };
 
 // Wrapper for C++ RTC_LOG(sev) macros.
 // Logs the log string to the webrtc logstream for the given severity.
-RTC_EXTERN void RTCLogEx(RTCLoggingSeverity severity, NSString* log_string);
+RTC_EXTERN void RTC_OBJC_TYPE(RTCLogEx)(RTC_OBJC_TYPE(RTCLoggingSeverity) severity, NSString* log_string);
 
 // Wrapper for webrtc::LogMessage::LogToDebug.
 // Sets the minimum severity to be logged to console.
-RTC_EXTERN void RTCSetMinDebugLogLevel(RTCLoggingSeverity severity);
+RTC_EXTERN void RTC_OBJC_TYPE(RTCSetMinDebugLogLevel)(RTC_OBJC_TYPE(RTCLoggingSeverity) severity);
 
 // Returns the filename with the path prefix removed.
-RTC_EXTERN NSString* RTCFileName(const char* filePath);
+RTC_EXTERN NSString* RTC_OBJC_TYPE(RTCFileName)(const char* filePath);
 
 // Some convenience macros.
 
-#define RTCLogString(format, ...)                    \
-  [NSString stringWithFormat:@"(%@:%d %s): " format, \
-                             RTCFileName(__FILE__),  \
-                             __LINE__,               \
-                             __FUNCTION__,           \
+#define RTCLogString(format, ...)                                  \
+  [NSString stringWithFormat:@"(%@:%d %s): " format,               \
+                             RTC_OBJC_TYPE(RTCFileName)(__FILE__), \
+                             __LINE__,                             \
+                             __FUNCTION__,                         \
                              ##__VA_ARGS__]
 
 #define RTCLogFormat(severity, format, ...)                     \
   do {                                                          \
     NSString* log_string = RTCLogString(format, ##__VA_ARGS__); \
-    RTCLogEx(severity, log_string);                             \
+    RTC_OBJC_TYPE(RTCLogEx)(severity, log_string);              \
   } while (false)
 
-#define RTCLogVerbose(format, ...) \
-  RTCLogFormat(RTCLoggingSeverityVerbose, format, ##__VA_ARGS__)
+#define RTCLogVerbose(format, ...) RTCLogFormat(RTC_OBJC_TYPE(RTCLoggingSeverityVerbose), format, ##__VA_ARGS__)
 
-#define RTCLogInfo(format, ...) \
-  RTCLogFormat(RTCLoggingSeverityInfo, format, ##__VA_ARGS__)
+#define RTCLogInfo(format, ...) RTCLogFormat(RTC_OBJC_TYPE(RTCLoggingSeverityInfo), format, ##__VA_ARGS__)
 
-#define RTCLogWarning(format, ...) \
-  RTCLogFormat(RTCLoggingSeverityWarning, format, ##__VA_ARGS__)
+#define RTCLogWarning(format, ...) RTCLogFormat(RTC_OBJC_TYPE(RTCLoggingSeverityWarning), format, ##__VA_ARGS__)
 
-#define RTCLogError(format, ...) \
-  RTCLogFormat(RTCLoggingSeverityError, format, ##__VA_ARGS__)
+#define RTCLogError(format, ...) RTCLogFormat(RTC_OBJC_TYPE(RTCLoggingSeverityError), format, ##__VA_ARGS__)
 
 #if !defined(NDEBUG)
 #define RTCLogDebug(format, ...) RTCLogInfo(format, ##__VA_ARGS__)

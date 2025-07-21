@@ -318,8 +318,8 @@
                 withOptions:0
                       error:&error];
   EXPECT_TRUE(error != nil);
-  EXPECT_EQ(error.domain, kRTCAudioSessionErrorDomain);
-  EXPECT_EQ(error.code, kRTCAudioSessionErrorLockRequired);
+  EXPECT_EQ(error.domain, RTC_CONSTANT_TYPE(RTCAudioSessionErrorDomain));
+  EXPECT_EQ(error.code, RTC_CONSTANT_TYPE(RTCAudioSessionErrorLockRequired));
   waitCleanup.Set();
   thread->Stop();
 

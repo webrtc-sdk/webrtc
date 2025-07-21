@@ -14,6 +14,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import androidx.annotation.Nullable;
 import androidx.test.filters.SmallTest;
+import java.util.ArrayList;
 import java.util.HashMap;
 import org.junit.Before;
 import org.junit.Test;
@@ -52,7 +53,7 @@ public class SoftwareVideoEncoderFactoryTest {
   @Test
   public void createEncoder_unsupportedCodec_returnsNull() {
     VideoEncoderFactory factory = new SoftwareVideoEncoderFactory();
-    VideoCodecInfo codec = new VideoCodecInfo("unsupported", new HashMap<String, String>());
+    VideoCodecInfo codec = new VideoCodecInfo("unsupported", new HashMap<String, String>(), new ArrayList<>());
     VideoEncoder encoder = factory.createEncoder(codec);
     assertThat(encoder).isNull();
   }

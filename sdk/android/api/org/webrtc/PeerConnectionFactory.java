@@ -17,6 +17,7 @@ import java.util.List;
 import org.webrtc.Logging.Severity;
 import org.webrtc.audio.AudioDeviceModule;
 import org.webrtc.audio.JavaAudioDeviceModule;
+import org.webrtc.RtpCapabilities;
 
 /**
  * Java wrapper for a C++ PeerConnectionFactoryInterface.  Main entry point to

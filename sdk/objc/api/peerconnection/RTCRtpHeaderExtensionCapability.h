@@ -12,7 +12,7 @@
 
 #import "sdk/objc/base/RTCMacros.h"
 
-typedef NS_ENUM(NSInteger, RTCRtpTransceiverDirection);
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCRtpTransceiverDirection));
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -30,7 +30,7 @@ RTC_OBJC_EXPORT
     BOOL preferredEncrypted;
 
 /** Direction of the header extension. */
-@property(nonatomic) RTCRtpTransceiverDirection direction;
+@property(nonatomic) RTC_OBJC_TYPE(RTCRtpTransceiverDirection) direction;
 
 - (instancetype)init NS_UNAVAILABLE;
 

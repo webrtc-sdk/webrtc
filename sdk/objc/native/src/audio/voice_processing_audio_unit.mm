@@ -212,7 +212,7 @@ VoiceProcessingAudioUnit::State VoiceProcessingAudioUnit::GetState() const {
   return state_;
 }
 
-bool VoiceProcessingAudioUnit::Initialize(Float64 sample_rate) {
+bool VoiceProcessingAudioUnit::Initialize(Float64 sample_rate, bool enable_input) {
   RTC_DCHECK_GE(state_, kUninitialized);
   RTCLog(@"Initializing audio unit with sample rate: %f", sample_rate);
 
@@ -222,6 +222,19 @@ bool VoiceProcessingAudioUnit::Initialize(Float64 sample_rate) {
 #if !defined(NDEBUG)
   LogStreamDescription(format);
 #endif
+
+  UInt32 _enable_input = enable_input ? 1 : 0;
+  RTCLog(@"Initializing AudioUnit, _enable_input=%d", (int) _enable_input);
+  result = AudioUnitSetProperty(vpio_unit_, kAudioOutputUnitProperty_EnableIO,
+                                kAudioUnitScope_Input, kInputBus, &_enable_input,
+                                sizeof(_enable_input));
+  if (result != noErr) {
+    DisposeAudioUnit();
+    RTCLogError(@"Failed to enable input on input scope of input element. "
+                 "Error=%ld.",
+                (long)result);
+    return false;
+  }
 
   // Set the format on the output scope of the input element/bus.
   result = AudioUnitSetProperty(vpio_unit_,
@@ -531,7 +544,7 @@ AudioStreamBasicDescription VoiceProcessingAudioUnit::GetFormat(
   // - linear PCM => noncompressed audio data format with one frame per packet
   // - no need to specify interleaving since only mono is supported
   AudioStreamBasicDescription format;
-  RTC_DCHECK_EQ(1, kRTCAudioSessionPreferredNumberOfChannels);
+  RTC_DCHECK_EQ(1, RTC_CONSTANT_TYPE(RTCAudioSessionPreferredNumberOfChannels));
   format.mSampleRate = sample_rate;
   format.mFormatID = kAudioFormatLinearPCM;
   format.mFormatFlags =
@@ -539,7 +552,7 @@ AudioStreamBasicDescription VoiceProcessingAudioUnit::GetFormat(
   format.mBytesPerPacket = kBytesPerSample;
   format.mFramesPerPacket = 1;  // uncompressed.
   format.mBytesPerFrame = kBytesPerSample;
-  format.mChannelsPerFrame = kRTCAudioSessionPreferredNumberOfChannels;
+  format.mChannelsPerFrame = RTC_CONSTANT_TYPE(RTCAudioSessionPreferredNumberOfChannels);
   format.mBitsPerChannel = 8 * kBytesPerSample;
   return format;
 }

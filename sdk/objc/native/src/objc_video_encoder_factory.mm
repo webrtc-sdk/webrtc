@@ -85,7 +85,7 @@ class ObjCVideoEncoder : public VideoEncoder {
                  const std::vector<VideoFrameType> *frame_types) override {
     NSMutableArray<NSNumber *> *rtcFrameTypes = [NSMutableArray array];
     for (size_t i = 0; i < frame_types->size(); ++i) {
-      [rtcFrameTypes addObject:@(RTCFrameType(frame_types->at(i)))];
+      [rtcFrameTypes addObject:@(RTC_OBJC_TYPE(RTCFrameType)(frame_types->at(i)))];
     }
 
     return [encoder_ encode:ToObjCVideoFrame(frame)

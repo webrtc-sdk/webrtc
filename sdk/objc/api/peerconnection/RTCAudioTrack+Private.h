@@ -8,6 +8,7 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+#import <AVFoundation/AVFoundation.h>
 #import "RTCAudioTrack.h"
 
 #include "api/media_stream_interface.h"
@@ -15,8 +16,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @class RTC_OBJC_TYPE(RTCPeerConnectionFactory);
-@interface RTC_OBJC_TYPE (RTCAudioTrack)
-()
+@interface RTC_OBJC_TYPE (RTCAudioTrack) ()
 
     /** AudioTrackInterface created or passed in at construction. */
     @property(nonatomic, readonly)

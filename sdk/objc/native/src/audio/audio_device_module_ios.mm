@@ -783,5 +783,12 @@ int AudioDeviceModuleIOS::GetRecordAudioParameters(
   return r;
 }
 #endif  // WEBRTC_IOS
-}  // namespace ios_adm
-}  // namespace webrtc
+
+  int32_t AudioDeviceModuleIOS::SetObserver(AudioDeviceObserver* observer) {
+    RTC_DLOG(LS_INFO) << __FUNCTION__;
+    int r = audio_device_->SetObserver(observer);
+    RTC_DLOG(LS_INFO) << "output: " << r;
+    return r;
+  }
+}
+}

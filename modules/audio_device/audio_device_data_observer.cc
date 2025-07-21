@@ -298,6 +298,10 @@ class ADMWrapper : public AudioDeviceModule, public AudioTransport {
   }
 #endif  // WEBRTC_IOS
 
+  int32_t SetObserver(AudioDeviceObserver* observer) override {
+    return impl_->SetObserver(observer);
+  }
+
  protected:
   scoped_refptr<AudioDeviceModule> impl_;
   std::unique_ptr<AudioDeviceDataObserver> observer_;

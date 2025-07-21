@@ -10,11 +10,13 @@
 
 #import <Foundation/Foundation.h>
 
+#import "RTCMacros.h"
+
 // RTCDisplayLinkTimer wraps a CADisplayLink and is set to fire every two screen
 // refreshes, which should be 30fps. We wrap the display link in order to avoid
 // a retain cycle since CADisplayLink takes a strong reference onto its target.
 // The timer is paused by default.
-@interface RTCDisplayLinkTimer : NSObject
+@interface RTC_OBJC_TYPE (RTCDisplayLinkTimer): NSObject
 
 @property(nonatomic) BOOL isPaused;
 

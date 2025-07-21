@@ -17,7 +17,7 @@ NS_ASSUME_NONNULL_BEGIN
  * render the video in a rectangle without any color or geometric
  * transformations.
  */
-@interface RTCDefaultShader : NSObject <RTC_OBJC_TYPE (RTCVideoViewShading)>
+@interface RTC_OBJC_TYPE(RTCDefaultShader) : NSObject <RTC_OBJC_TYPE (RTCVideoViewShading)>
 
 @end
 
