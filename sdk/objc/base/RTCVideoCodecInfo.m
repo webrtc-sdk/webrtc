@@ -34,7 +34,7 @@
   if (self) {
     _name = name;
     _parameters = (parameters ? parameters : @{});
-    _scalabilityModes = @[];
+    _scalabilityModes = (scalabilityModes ? scalabilityModes : @[]);
   }
 
   return self;
