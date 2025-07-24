@@ -177,19 +177,33 @@ CreateH264SpecificSettings(VideoStreamConfig config) {
   return nullptr;
 }
 
+rtc::scoped_refptr<VideoEncoderConfig::EncoderSpecificSettings>
+CreateH265SpecificSettings(VideoStreamConfig config) {
+  RTC_DCHECK_EQ(config.encoder.layers.temporal, 1);
+  RTC_DCHECK_EQ(config.encoder.layers.spatial, 1);
+
+  VideoCodecH265 h265_settings = VideoEncoder::GetDefaultH265Settings();
+  h265_settings.frameDroppingOn = config.encoder.frame_dropping;
+  h265_settings.keyFrameInterval =
+      config.encoder.key_frame_interval.value_or(0);
+  return new rtc::RefCountedObject<
+      VideoEncoderConfig::H265EncoderSpecificSettings>(h265_settings);
+}
+
 scoped_refptr<VideoEncoderConfig::EncoderSpecificSettings>
 CreateEncoderSpecificSettings(VideoStreamConfig config) {
   using Codec = VideoStreamConfig::Encoder::Codec;
   switch (config.encoder.codec) {
     case Codec::kVideoCodecH264:
       return CreateH264SpecificSettings(config);
+    case Codec::kVideoCodecH265:
+      return CreateH265SpecificSettings(config);
     case Codec::kVideoCodecVP8:
       return CreateVp8SpecificSettings(config);
     case Codec::kVideoCodecVP9:
       return CreateVp9SpecificSettings(config);
     case Codec::kVideoCodecGeneric:
     case Codec::kVideoCodecAV1:
-    case Codec::kVideoCodecH265:
       return nullptr;
   }
 }

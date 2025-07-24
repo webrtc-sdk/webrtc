@@ -119,6 +119,11 @@ void VideoEncoderConfig::EncoderSpecificSettings::FillEncoderSpecificSettings(
   }
 }
 
+void VideoEncoderConfig::H265EncoderSpecificSettings::FillVideoCodecH265(
+    VideoCodecH265* h265_settings) const {
+  *h265_settings = specifics_;
+}
+
 void VideoEncoderConfig::EncoderSpecificSettings::FillVideoCodecVp8(
     VideoCodecVP8* vp8_settings) const {
   RTC_DCHECK_NOTREACHED();
@@ -133,6 +138,15 @@ void VideoEncoderConfig::EncoderSpecificSettings::FillVideoCodecAv1(
     VideoCodecAV1* av1_settings) const {
   RTC_DCHECK_NOTREACHED();
 }
+
+void VideoEncoderConfig::EncoderSpecificSettings::FillVideoCodecH265(
+    VideoCodecH265* h265_settings) const {
+  RTC_DCHECK_NOTREACHED();
+}
+
+VideoEncoderConfig::H265EncoderSpecificSettings::H265EncoderSpecificSettings(
+    const VideoCodecH265& specifics)
+    : specifics_(specifics) {}
 
 VideoEncoderConfig::Vp8EncoderSpecificSettings::Vp8EncoderSpecificSettings(
     const VideoCodecVP8& specifics)

@@ -24,6 +24,7 @@
 #include "common_video/frame_instrumentation_data.h"
 #include "common_video/generic_frame_descriptor/generic_frame_info.h"
 #include "modules/video_coding/codecs/h264/include/h264_globals.h"
+#include "modules/video_coding/codecs/h264/include/h265_globals.h"
 #include "modules/video_coding/codecs/vp9/include/vp9_globals.h"
 #include "rtc_base/system/rtc_export.h"
 
@@ -99,10 +100,19 @@ static_assert(std::is_trivial_v<CodecSpecificInfoH264> &&
                   std::is_standard_layout_v<CodecSpecificInfoH264>,
               "");
 
+struct CodecSpecificInfoH265 {
+  H265PacketizationMode packetization_mode;
+  bool idr_frame;
+};
+static_assert(std::is_trivial_v<CodecSpecificInfoH265> &&
+                  std::is_standard_layout_v<CodecSpecificInfoH265>,
+              "");
+
 union CodecSpecificInfoUnion {
   CodecSpecificInfoVP8 VP8;
   CodecSpecificInfoVP9 VP9;
   CodecSpecificInfoH264 H264;
+  CodecSpecificInfoH265 H265;
 };
 static_assert(std::is_trivial_v<CodecSpecificInfoUnion> &&
                   std::is_standard_layout_v<CodecSpecificInfoUnion>,

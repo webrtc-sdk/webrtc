@@ -98,6 +98,7 @@ class VideoEncoderConfig {
     // directly.
     void FillEncoderSpecificSettings(VideoCodec* codec_struct) const;
 
+    virtual void FillVideoCodecH265(VideoCodecH265* h265_settings) const;
     virtual void FillVideoCodecVp8(VideoCodecVP8* vp8_settings) const;
     virtual void FillVideoCodecVp9(VideoCodecVP9* vp9_settings) const;
     virtual void FillVideoCodecAv1(VideoCodecAV1* av1_settings) const;
@@ -107,6 +108,14 @@ class VideoEncoderConfig {
     friend class VideoEncoderConfig;
   };
 
+  class H265EncoderSpecificSettings : public EncoderSpecificSettings {
+   public:
+    explicit H265EncoderSpecificSettings(const VideoCodecH265& specifics);
+    void FillVideoCodecH265(VideoCodecH265* h265_settings) const override;
+
+   private:
+    VideoCodecH265 specifics_;
+  };
   class Vp8EncoderSpecificSettings : public EncoderSpecificSettings {
    public:
     explicit Vp8EncoderSpecificSettings(const VideoCodecVP8& specifics);

@@ -97,6 +97,21 @@ struct VideoCodecH264 {
   uint8_t numberOfTemporalLayers;
 };
 
+struct VideoCodecH265 {
+  bool operator==(const VideoCodecH265& other) const;
+  bool operator!=(const VideoCodecH265& other) const {
+    return !(*this == other);
+  }
+  bool frameDroppingOn;
+  int keyFrameInterval;
+  const uint8_t* vpsData;
+  size_t vpsLen;
+  const uint8_t* spsData;
+  size_t spsLen;
+  const uint8_t* ppsData;
+  size_t ppsLen;
+};
+
 struct VideoCodecAV1 {
   bool operator==(const VideoCodecAV1& other) const {
     return automatic_resize_on == other.automatic_resize_on;
@@ -116,6 +131,7 @@ union VideoCodecUnion {
   VideoCodecVP9 VP9;
   VideoCodecH264 H264;
   VideoCodecAV1 AV1;
+  VideoCodecH265 H265;
 };
 
 enum class VideoCodecMode { kRealtimeVideo, kScreensharing };
@@ -210,6 +226,8 @@ class RTC_EXPORT VideoCodec {
   const VideoCodecH264& H264() const;
   VideoCodecAV1* AV1();
   const VideoCodecAV1& AV1() const;
+  VideoCodecH265* H265();
+  const VideoCodecH265& H265() const;
 
  private:
   // TODO(hta): Consider replacing the union with a pointer type.

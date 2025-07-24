@@ -12,6 +12,8 @@
 
 #import "RTCH264ProfileLevelId.h"
 #import "RTCVideoDecoderH264.h"
+#import "RTCH265ProfileLevelId.h"
+#import "RTCVideoDecoderH265.h"
 #import "api/video_codec/RTCVideoCodecConstants.h"
 #import "api/video_codec/RTCVideoDecoderVP8.h"
 #import "api/video_codec/RTCVideoDecoderVP9.h"
@@ -29,35 +31,46 @@
     @"level-asymmetry-allowed" : @"1",
     @"packetization-mode" : @"1",
   };
-  RTC_OBJC_TYPE(RTCVideoCodecInfo) *constrainedHighInfo =
-      [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecH264Name)
-                                                  parameters:constrainedHighParams];
+  RTC_OBJC_TYPE(RTCVideoCodecInfo) *constrainedHighInfo = [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc]
+      initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecH264Name)
+        parameters:constrainedHighParams];
 
   NSDictionary<NSString *, NSString *> *constrainedBaselineParams = @{
     @"profile-level-id" : RTC_CONSTANT_TYPE(RTCMaxSupportedH264ProfileLevelConstrainedBaseline),
     @"level-asymmetry-allowed" : @"1",
     @"packetization-mode" : @"1",
   };
-  RTC_OBJC_TYPE(RTCVideoCodecInfo) *constrainedBaselineInfo =
-      [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecH264Name)
-                                                  parameters:constrainedBaselineParams];
+  RTC_OBJC_TYPE(RTCVideoCodecInfo) *constrainedBaselineInfo = [[RTC_OBJC_TYPE(RTCVideoCodecInfo)
+      alloc] initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecH264Name)
+               parameters:constrainedBaselineParams];
 
-  RTC_OBJC_TYPE(RTCVideoCodecInfo) *vp8Info =
-      [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecVp8Name)];
+  NSDictionary<NSString *, NSString *> *h265CodecInfoParams = @{
+    @"profile-level-id" : RTC_CONSTANT_TYPE(RTCH265ProfileMain),
+    @"level-asymmetry-allowed" : @"1",
+    @"packetization-mode" : @"1",
+  };
+  RTC_OBJC_TYPE(RTCVideoCodecInfo) *h265CodecInfo = [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc]
+      initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecH265Name)
+        parameters:h265CodecInfoParams];
+
+  RTC_OBJC_TYPE(RTCVideoCodecInfo) *vp8Info = [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc]
+      initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecVp8Name)];
 
   NSMutableArray<RTC_OBJC_TYPE(RTCVideoCodecInfo) *> *result = [@[
     constrainedHighInfo,
     constrainedBaselineInfo,
+    h265CodecInfo,
     vp8Info,
   ] mutableCopy];
 
   if ([RTC_OBJC_TYPE(RTCVideoDecoderVP9) isSupported]) {
-    [result
-        addObject:[[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecVp9Name)]];
+    [result addObject:[[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc]
+                          initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecVp9Name)]];
   }
 
 #if defined(RTC_DAV1D_IN_INTERNAL_DECODER_FACTORY)
-  [result addObject:[[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecAv1Name)]];
+  [result addObject:[[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc]
+                        initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecAv1Name)]];
 #endif
 
   return result;
@@ -66,6 +79,8 @@
 - (id<RTC_OBJC_TYPE(RTCVideoDecoder)>)createDecoder:(RTC_OBJC_TYPE(RTCVideoCodecInfo) *)info {
   if ([info.name isEqualToString:RTC_CONSTANT_TYPE(RTCVideoCodecH264Name)]) {
     return [[RTC_OBJC_TYPE(RTCVideoDecoderH264) alloc] init];
+  } else if ([info.name isEqualToString:RTC_CONSTANT_TYPE(RTCVideoCodecH265Name)]) {
+    return [[RTC_OBJC_TYPE(RTCVideoDecoderH265) alloc] init];
   } else if ([info.name isEqualToString:RTC_CONSTANT_TYPE(RTCVideoCodecVp8Name)]) {
     return [RTC_OBJC_TYPE(RTCVideoDecoderVP8) vp8Decoder];
   } else if ([info.name isEqualToString:RTC_CONSTANT_TYPE(RTCVideoCodecVp9Name)] &&

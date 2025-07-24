@@ -11,7 +11,9 @@
 #import "RTCDefaultVideoEncoderFactory.h"
 
 #import "RTCH264ProfileLevelId.h"
+#import "RTCH265ProfileLevelId.h"
 #import "RTCVideoEncoderH264.h"
+#import "RTCVideoEncoderH265.h"
 #import "api/video_codec/RTCVideoCodecConstants.h"
 #import "api/video_codec/RTCVideoEncoderVP8.h"
 #import "api/video_codec/RTCVideoEncoderVP9.h"
@@ -31,36 +33,50 @@
     @"level-asymmetry-allowed" : @"1",
     @"packetization-mode" : @"1",
   };
-  RTC_OBJC_TYPE(RTCVideoCodecInfo) *constrainedHighInfo =
-      [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecH264Name)
-                                                  parameters:constrainedHighParams];
+  RTC_OBJC_TYPE(RTCVideoCodecInfo) *constrainedHighInfo = [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc]
+      initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecH264Name)
+        parameters:constrainedHighParams];
 
   NSDictionary<NSString *, NSString *> *constrainedBaselineParams = @{
     @"profile-level-id" : RTC_CONSTANT_TYPE(RTCMaxSupportedH264ProfileLevelConstrainedBaseline),
     @"level-asymmetry-allowed" : @"1",
     @"packetization-mode" : @"1",
   };
-  RTC_OBJC_TYPE(RTCVideoCodecInfo) *constrainedBaselineInfo =
-      [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecH264Name)
-                                                  parameters:constrainedBaselineParams];
+  RTC_OBJC_TYPE(RTCVideoCodecInfo) *constrainedBaselineInfo = [[RTC_OBJC_TYPE(RTCVideoCodecInfo)
+      alloc] initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecH264Name)
+               parameters:constrainedBaselineParams];
 
-  RTC_OBJC_TYPE(RTCVideoCodecInfo) *vp8Info =
-      [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecVp8Name)];
+  NSDictionary<NSString *, NSString *> *h265CodecInfoParams = @{
+    @"profile-level-id" : RTC_CONSTANT_TYPE(RTCH265ProfileMain),
+    @"level-asymmetry-allowed" : @"1",
+    @"packetization-mode" : @"1",
+  };
+  RTC_OBJC_TYPE(RTCVideoCodecInfo) *h265CodecInfo = [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc]
+      initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecH265Name)
+        parameters:h265CodecInfoParams];
+
+  RTC_OBJC_TYPE(RTCVideoCodecInfo) *vp8Info = [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc]
+      initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecVp8Name)];
 
   NSMutableArray<RTC_OBJC_TYPE(RTCVideoCodecInfo) *> *result = [@[
     constrainedHighInfo,
     constrainedBaselineInfo,
+    h265CodecInfo,
     vp8Info,
   ] mutableCopy];
 
   if ([RTC_OBJC_TYPE(RTCVideoEncoderVP9) isSupported]) {
-    [result
-        addObject:[[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecVp9Name) parameters:nil scalabilityModes:[RTC_OBJC_TYPE(RTCVideoEncoderVP9) scalabilityModes]]];
+    [result addObject:[[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc]
+                              initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecVp9Name)
+                                parameters:nil
+                          scalabilityModes:[RTC_OBJC_TYPE(RTCVideoEncoderVP9) scalabilityModes]]];
   }
 
 #if defined(RTC_USE_LIBAOM_AV1_ENCODER)
-  RTC_OBJC_TYPE(RTCVideoCodecInfo) *av1Info =
-    [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecAv1Name) parameters:nil scalabilityModes:[RTC_OBJC_TYPE(RTCVideoEncoderAV1) scalabilityModes]];
+  RTC_OBJC_TYPE(RTCVideoCodecInfo) *av1Info = [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc]
+          initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecAv1Name)
+            parameters:nil
+      scalabilityModes:[RTC_OBJC_TYPE(RTCVideoEncoderAV1) scalabilityModes]];
   [result addObject:av1Info];
 #endif
 
@@ -70,6 +86,8 @@
 - (id<RTC_OBJC_TYPE(RTCVideoEncoder)>)createEncoder:(RTC_OBJC_TYPE(RTCVideoCodecInfo) *)info {
   if ([info.name isEqualToString:RTC_CONSTANT_TYPE(RTCVideoCodecH264Name)]) {
     return [[RTC_OBJC_TYPE(RTCVideoEncoderH264) alloc] initWithCodecInfo:info];
+  } else if ([info.name isEqualToString:RTC_CONSTANT_TYPE(RTCVideoCodecH265Name)]) {
+    return [[RTC_OBJC_TYPE(RTCVideoEncoderH265) alloc] initWithCodecInfo:info];
   } else if ([info.name isEqualToString:RTC_CONSTANT_TYPE(RTCVideoCodecVp8Name)]) {
     return [RTC_OBJC_TYPE(RTCVideoEncoderVP8) vp8Encoder];
   } else if ([info.name isEqualToString:RTC_CONSTANT_TYPE(RTCVideoCodecVp9Name)] &&
@@ -90,8 +108,7 @@
   NSMutableArray<RTC_OBJC_TYPE(RTCVideoCodecInfo) *> *codecs =
       [[[self class] supportedCodecs] mutableCopy];
 
-  NSMutableArray<RTC_OBJC_TYPE(RTCVideoCodecInfo) *> *orderedCodecs =
-      [NSMutableArray array];
+  NSMutableArray<RTC_OBJC_TYPE(RTCVideoCodecInfo) *> *orderedCodecs = [NSMutableArray array];
   NSUInteger index = [codecs indexOfObject:self.preferredCodec];
   if (index != NSNotFound) {
     [orderedCodecs addObject:[codecs objectAtIndex:index]];
