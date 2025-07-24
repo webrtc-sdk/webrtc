@@ -512,6 +512,10 @@ class HardwareVideoEncoder implements VideoEncoder {
         final int kLowH264QpThreshold = 24;
         final int kHighH264QpThreshold = 37;
         return new ScalingSettings(kLowH264QpThreshold, kHighH264QpThreshold);
+      } else if (codecType == VideoCodecMimeType.H265) {
+        final int kLowH265QpThreshold = 24;
+        final int kHighH265QpThreshold = 37;
+        return new ScalingSettings(kLowH265QpThreshold, kHighH265QpThreshold);
       }
     }
     return ScalingSettings.OFF;
