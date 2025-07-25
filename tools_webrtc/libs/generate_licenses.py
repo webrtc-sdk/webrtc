@@ -48,6 +48,7 @@ LIB_TO_LICENSES_DICT = {
         'third_party/android_deps/libs/'
         'com_google_errorprone_error_prone_core/LICENSE'
     ],
+    'ffmpeg': ['third_party/ffmpeg/LICENSE.md'],
     'fiat': ['third_party/boringssl/src/third_party/fiat/LICENSE'],
     'guava': ['third_party/android_deps/libs/com_google_guava_guava/LICENSE'],
     'ijar': ['third_party/ijar/LICENSE'],
@@ -62,6 +63,7 @@ LIB_TO_LICENSES_DICT = {
     'libvpx': ['third_party/libvpx/source/libvpx/LICENSE'],
     'libyuv': ['third_party/libyuv/LICENSE'],
     'nasm': ['third_party/nasm/LICENSE'],
+    'openh264': ['third_party/openh264/src/LICENSE'],
     'opus': ['third_party/opus/src/COPYING'],
     'pffft': ['third_party/pffft/LICENSE'],
     'protobuf': ['third_party/protobuf/LICENSE'],
