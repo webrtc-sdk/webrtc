@@ -38,8 +38,6 @@
 #include "sdk/objc/Framework/Classes/VideoToolbox/nalu_rewriter.h"
 #include "system_wrappers/include/clock.h"
 
-static constexpr int ErrorCallbackDefaultValue = -1;
-
 @interface RTC_OBJC_TYPE (RTCVideoEncoderH265) ()
 
 - (void)frameWasEncoded:(OSStatus)status
