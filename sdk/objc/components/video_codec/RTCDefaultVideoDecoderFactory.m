@@ -15,6 +15,8 @@
 #import "api/video_codec/RTCVideoCodecConstants.h"
 #import "api/video_codec/RTCVideoDecoderVP8.h"
 #import "api/video_codec/RTCVideoDecoderVP9.h"
+#import "RTCH265ProfileLevelId.h"
+#import "RTCVideoDecoderH265.h"
 #import "base/RTCVideoCodecInfo.h"
 
 #if defined(RTC_DAV1D_IN_INTERNAL_DECODER_FACTORY)
@@ -42,6 +44,9 @@
       [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecH264Name)
                                                   parameters:constrainedBaselineParams];
 
+  RTC_OBJC_TYPE(RTCVideoCodecInfo) *h265Info =
+      [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecH265Name)];
+
   RTC_OBJC_TYPE(RTCVideoCodecInfo) *vp8Info =
       [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecVp8Name)];
 
@@ -49,6 +54,7 @@
     constrainedHighInfo,
     constrainedBaselineInfo,
     vp8Info,
+    h265Info,
   ] mutableCopy];
 
   if ([RTC_OBJC_TYPE(RTCVideoDecoderVP9) isSupported]) {
@@ -68,6 +74,8 @@
     return [[RTC_OBJC_TYPE(RTCVideoDecoderH264) alloc] init];
   } else if ([info.name isEqualToString:RTC_CONSTANT_TYPE(RTCVideoCodecVp8Name)]) {
     return [RTC_OBJC_TYPE(RTCVideoDecoderVP8) vp8Decoder];
+  } else if ([info.name isEqualToString:RTC_CONSTANT_TYPE(RTCVideoCodecH265Name)]) {
+    return [[RTC_OBJC_TYPE(RTCVideoDecoderH265) alloc] init];
   } else if ([info.name isEqualToString:RTC_CONSTANT_TYPE(RTCVideoCodecVp9Name)] &&
              [RTC_OBJC_TYPE(RTCVideoDecoderVP9) isSupported]) {
     return [RTC_OBJC_TYPE(RTCVideoDecoderVP9) vp9Decoder];

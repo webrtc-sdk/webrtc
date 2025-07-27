@@ -759,6 +759,16 @@ if (is_ios || is_mac) {
         ]
       }
 
+      if (rtc_use_h265) {
+        sources += [
+          "objc/components/video_codec/RTCCodecSpecificInfoH265+Private.h",
+          "objc/components/video_codec/RTCCodecSpecificInfoH265.h",
+          "objc/components/video_codec/RTCCodecSpecificInfoH265.mm",
+          "objc/components/video_codec/RTCH265ProfileLevelId.h",
+          "objc/components/video_codec/RTCH265ProfileLevelId.mm",
+        ]
+      }
+
       public_configs = [ ":common_config_objc" ]
       deps = [
         ":base_objc",
@@ -1516,6 +1526,15 @@ if (is_ios || is_mac) {
           "objc/components/audio/RTCAudioProcessingConfig.h",
         ]
 
+        if (rtc_use_h265) {
+          common_objc_headers += [
+            "objc/components/video_codec/RTCCodecSpecificInfoH265.h",
+            "objc/components/video_codec/RTCH265ProfileLevelId.h",
+            "objc/components/video_codec/RTCVideoDecoderH265.h",
+            "objc/components/video_codec/RTCVideoEncoderH265.h",
+          ]
+        }
+
         if (target_environment != "xrdevice" && target_environment != "xrsimulator") {
           common_objc_headers += [
             "objc/helpers/RTCCameraPreviewView.h",
@@ -1918,6 +1937,17 @@ if (is_ios || is_mac) {
         "objc/components/video_codec/RTCVideoEncoderH264.h",
         "objc/components/video_codec/RTCVideoEncoderH264.mm",
       ]
+
+      if (rtc_use_h265) {
+        sources += [
+          "objc/components/video_codec/RTCVideoDecoderH265.h",
+          "objc/components/video_codec/RTCVideoDecoderH265.mm",
+          "objc/components/video_codec/RTCVideoEncoderH265.h",
+          "objc/components/video_codec/RTCVideoEncoderH265.mm",
+          "objc/components/video_codec/RTCVideoFrameReorderQueue.h",
+          "objc/components/video_codec/RTCVideoFrameReorderQueue.mm",
+        ]
+      }
 
       configs += [
         "..:common_objc",
