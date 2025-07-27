@@ -30,16 +30,16 @@ void RTCVideoFrameReorderQueue::setReorderSize(uint8_t size)
     _reorderSize = size;
 }
 
-void RTCVideoFrameReorderQueue::append(RTCVideoFrame* frame, uint8_t reorderSize)
+void RTCVideoFrameReorderQueue::append(RTC_OBJC_TYPE(RTCVideoFrame) * frame, uint8_t reorderSize)
 {
     webrtc::MutexLock lock(&_reorderQueueLock);
-    _reorderQueue.push_back(std::make_unique<RTCVideoFrameWithOrder>(frame, reorderSize));
+    _reorderQueue.push_back(std::make_unique<RTC_OBJC_TYPE(RTCVideoFrameWithOrder)>(frame, reorderSize));
     std::sort(_reorderQueue.begin(), _reorderQueue.end(), [](auto& a, auto& b) {
         return a->timeStamp < b->timeStamp;
     });
 }
 
-RTCVideoFrame* RTCVideoFrameReorderQueue::takeIfAvailable()
+RTC_OBJC_TYPE(RTCVideoFrame) * RTCVideoFrameReorderQueue::takeIfAvailable()
 {
     webrtc::MutexLock lock(&_reorderQueueLock);
     if (_reorderQueue.size() && _reorderQueue.size() > _reorderQueue.front()->reorderSize) {
@@ -50,7 +50,7 @@ RTCVideoFrame* RTCVideoFrameReorderQueue::takeIfAvailable()
     return nil;
 }
 
-RTCVideoFrame* RTCVideoFrameReorderQueue::takeIfAny()
+RTC_OBJC_TYPE(RTCVideoFrame) * RTCVideoFrameReorderQueue::takeIfAny()
 {
     webrtc::MutexLock lock(&_reorderQueueLock);
     if (_reorderQueue.size()) {

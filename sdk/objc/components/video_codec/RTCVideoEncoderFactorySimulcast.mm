@@ -62,7 +62,7 @@
     // H265
     {
         RTC_OBJC_TYPE(RTCVideoCodecInfo) *codec =
-            [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:kRTCVideoCodecH265Name];
+            [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecH265Name)];
         [addingCodecs addObject: codec];
     }
 

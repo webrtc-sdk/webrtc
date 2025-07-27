@@ -33,23 +33,23 @@ class RTCVideoFrameReorderQueue {
 public:
     RTCVideoFrameReorderQueue() = default;
 
-    struct RTCVideoFrameWithOrder {
-        RTCVideoFrameWithOrder(RTCVideoFrame* frame, uint64_t reorderSize)
+    struct RTC_OBJC_TYPE(RTCVideoFrameWithOrder) {
+        RTC_OBJC_TYPE(RTCVideoFrameWithOrder)(RTC_OBJC_TYPE(RTCVideoFrame) * frame, uint64_t reorderSize)
             : frame((__bridge_retained void*)frame)
             , timeStamp(frame.timeStamp)
             , reorderSize(reorderSize)
         {
         }
 
-        ~RTCVideoFrameWithOrder()
+        ~RTC_OBJC_TYPE(RTCVideoFrameWithOrder)()
         {
             if (frame)
                 take();
         }
 
-        RTCVideoFrame* take()
+        RTC_OBJC_TYPE(RTCVideoFrame) * take()
         {
-            auto* rtcFrame = (__bridge_transfer RTCVideoFrame *)frame;
+            auto* rtcFrame = (__bridge_transfer RTC_OBJC_TYPE(RTCVideoFrame) *)frame;
             frame = nullptr;
             return rtcFrame;
         }
@@ -62,12 +62,12 @@ public:
     bool isEmpty();
     uint8_t reorderSize() const;
     void setReorderSize(uint8_t);
-    void append(RTCVideoFrame*, uint8_t);
-    RTCVideoFrame *takeIfAvailable();
-    RTCVideoFrame *takeIfAny();
+    void append(RTC_OBJC_TYPE(RTCVideoFrame) *, uint8_t);
+    RTC_OBJC_TYPE(RTCVideoFrame) *takeIfAvailable();
+    RTC_OBJC_TYPE(RTCVideoFrame) *takeIfAny();
 
 private:
-    std::deque<std::unique_ptr<RTCVideoFrameWithOrder>> _reorderQueue;
+    std::deque<std::unique_ptr<RTC_OBJC_TYPE(RTCVideoFrameWithOrder)>> _reorderQueue;
     uint8_t _reorderSize { 0 };
     mutable webrtc::Mutex _reorderQueueLock;
 };

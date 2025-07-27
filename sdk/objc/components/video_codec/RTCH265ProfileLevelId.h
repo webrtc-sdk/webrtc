@@ -12,5 +12,5 @@
 
 #import "RTCMacros.h"
 
-RTC_OBJC_EXPORT extern NSString *const kRTCVideoCodecH265Name;
-RTC_OBJC_EXPORT extern NSString *const kRTCLevel31Main;
+RTC_OBJC_EXPORT extern NSString *const RTC_CONSTANT_TYPE(RTCVideoCodecH265Name);
+RTC_OBJC_EXPORT extern NSString *const RTC_CONSTANT_TYPE(RTCLevel31Main);

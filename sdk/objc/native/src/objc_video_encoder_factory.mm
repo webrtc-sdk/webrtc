@@ -69,8 +69,7 @@ class ObjCVideoEncoder : public VideoEncoder {
           codecSpecificInfo = [(RTC_OBJC_TYPE(
               RTCCodecSpecificInfoH264) *)info nativeCodecSpecificInfo];
         } else if ([info isKindOfClass:[RTC_OBJC_TYPE(RTCCodecSpecificInfoH265) class]]) {
-          // if ([info isKindOfClass:[RTCCodecSpecificInfoH265 class]]) {
-          codecSpecificInfo = [(RTCCodecSpecificInfoH265 *)info nativeCodecSpecificInfo];
+          codecSpecificInfo = [(RTC_OBJC_TYPE(RTCCodecSpecificInfoH265) *)info nativeCodecSpecificInfo];
         }
 
         EncodedImageCallback::Result res =

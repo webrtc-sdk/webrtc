@@ -78,7 +78,7 @@
              [RTC_OBJC_TYPE(RTCVideoEncoderVP9) isSupported]) {
     return [RTC_OBJC_TYPE(RTCVideoEncoderVP9) vp9Encoder];
   } else if (@available(iOS 11, *)) {
-    if ([info.name isEqualToString:kRTCVideoCodecH265Name]) {
+    if ([info.name isEqualToString:RTC_CONSTANT_TYPE(RTCVideoCodecH265Name)]) {
       return [[RTC_OBJC_TYPE(RTCVideoEncoderH265) alloc] initWithCodecInfo:info];
     }
   }

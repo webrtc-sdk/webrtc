@@ -13,6 +13,6 @@
 
 #include "media/base/media_constants.h"
 
-NSString *const kRTCVideoCodecH265Name = @"H265";
+NSString *const RTC_CONSTANT_TYPE(RTCVideoCodecH265Name) = @"H265";
 // TODO(jianjunz): This is value is not correct.
-NSString *const kRTCLevel31Main = @"4d001f";
+NSString *const RTC_CONSTANT_TYPE(RTCLevel31Main) = @"4d001f";

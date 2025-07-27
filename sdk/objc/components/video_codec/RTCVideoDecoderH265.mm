@@ -40,7 +40,7 @@ struct RTCH265FrameDecodeParams {
 
 @interface RTC_OBJC_TYPE (RTCVideoDecoderH265) ()
 - (void)setError:(OSStatus)error;
-- (void)processFrame:(RTCVideoFrame*)decodedFrame reorderSize:(uint64_t)reorderSize;
+- (void)processFrame:(RTC_OBJC_TYPE(RTCVideoFrame)*)decodedFrame reorderSize:(uint64_t)reorderSize;
 @end
 
 static void overrideColorSpaceAttachments(CVImageBufferRef imageBuffer) {
@@ -189,7 +189,7 @@ void h265DecompressionOutputCallback(void* decoderRef,
       [[RTC_OBJC_TYPE (RTCCVPixelBuffer) alloc] initWithPixelBuffer:imageBuffer];
   RTC_OBJC_TYPE (RTCVideoFrame)* decodedFrame = [[RTC_OBJC_TYPE (RTCVideoFrame) alloc]
       initWithBuffer:frameBuffer
-            rotation:RTCVideoRotation_0
+            rotation:RTC_OBJC_TYPE(RTCVideoRotation_0)
          timeStampNs:CMTimeGetSeconds(timestamp) * rtc::kNumNanosecsPerSec];
   decodedFrame.timeStamp = decodeParams->timestamp;
   [decoder processFrame:decodedFrame reorderSize:decodeParams->reorderSize];
@@ -206,7 +206,8 @@ void h265DecompressionOutputCallback(void* decoderRef,
 }
 
 - (instancetype)init {
-  if (self = [super init]) {
+  self = [super init];
+  if (self) {
     _useHEVC = false;
   }
 
@@ -495,7 +496,7 @@ CMSampleBufferRef H265BufferToCMSampleBuffer(const uint8_t* buffer, size_t buffe
   return @"VideoToolbox";
 }
 
-- (void)processFrame:(RTCVideoFrame*)decodedFrame reorderSize:(uint64_t)reorderSize {
+- (void)processFrame:(RTC_OBJC_TYPE(RTCVideoFrame)*)decodedFrame reorderSize:(uint64_t)reorderSize {
   // FIXME: In case of IDR, we could push out all queued frames.
   if (!_reorderQueue.isEmpty() || reorderSize) {
     _reorderQueue.append(decodedFrame, reorderSize);

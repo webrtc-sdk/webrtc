@@ -25,6 +25,7 @@
 #if defined(WEBRTC_IOS)
 #import "helpers/UIDevice+RTCDevice.h"
 #endif
+#import "RTCH265ProfileLevelId.h"
 
 #include "common_video/h265/h265_bitstream_parser.h"
 #include "common_video/include/bitrate_adjuster.h"
@@ -48,7 +49,7 @@ static constexpr int ErrorCallbackDefaultValue = -1;
                  height:(int32_t)height
            renderTimeMs:(int64_t)renderTimeMs
               timestamp:(uint32_t)timestamp
-               rotation:(RTCVideoRotation)rotation;
+               rotation:(RTC_OBJC_TYPE(RTCVideoRotation))rotation;
 @end
 
 namespace {  // anonymous namespace
@@ -60,13 +61,13 @@ const int kHighh265QpThreshold = 39;
 
 // Struct that we pass to the encoder per frame to encode. We receive it again
 // in the encoder callback.
-struct API_AVAILABLE(ios(11.0)) RTCFrameEncodeParams {
-  RTCFrameEncodeParams(RTC_OBJC_TYPE (RTCVideoEncoderH265)* e,
+struct API_AVAILABLE(ios(11.0)) RTC_OBJC_TYPE(RTCFrameEncodeParams) {
+  RTC_OBJC_TYPE( RTCFrameEncodeParams)(RTC_OBJC_TYPE (RTCVideoEncoderH265)* e,
                        int32_t w,
                        int32_t h,
                        int64_t rtms,
                        uint32_t ts,
-                       RTCVideoRotation r)
+                       RTC_OBJC_TYPE(RTCVideoRotation) r)
       : encoder(e),
         width(w),
         height(h),
@@ -79,7 +80,7 @@ struct API_AVAILABLE(ios(11.0)) RTCFrameEncodeParams {
   int32_t height;
   int64_t render_time_ms;
   uint32_t timestamp;
-  RTCVideoRotation rotation;
+  RTC_OBJC_TYPE(RTCVideoRotation) rotation;
 };
 
 // We receive I420Frames as input, but we need to feed CVPixelBuffers into the
@@ -147,7 +148,7 @@ void compressionOutputCallback(void* encoder,
     API_AVAILABLE(ios(11.0)) {
   RTC_CHECK(params);
   std::unique_ptr<RTC_OBJC_TYPE (RTCFrameEncodeParams)> encodeParams(
-      reinterpret_cast<RTCFrameEncodeParams*>(params));
+      reinterpret_cast<RTC_OBJC_TYPE(RTCFrameEncodeParams)*>(params));
   RTC_CHECK(encodeParams->encoder);
   [encodeParams->encoder frameWasEncoded:status
                                    flags:infoFlags
@@ -170,7 +171,7 @@ void compressionOutputCallback(void* encoder,
   int32_t _width;
   int32_t _height;
   VTCompressionSessionRef _compressionSession;
-  RTCVideoCodecMode _mode;
+  RTC_OBJC_TYPE(RTCVideoCodecMode) _mode;
   int framesLeft;
   std::vector<uint8_t> _nv12ScaleBuffer;
   bool _useAnnexB;
@@ -187,12 +188,14 @@ void compressionOutputCallback(void* encoder,
 // conditions, 0.95 seems to give us better overall bitrate over long periods
 // of time.
 - (instancetype)initWithCodecInfo:(RTC_OBJC_TYPE (RTCVideoCodecInfo)*)codecInfo {
-  if (self = [super init]) {
+  NSParameterAssert(codecInfo);
+  self = [super init];
+  if (self) {
     _codecInfo = codecInfo;
     _bitrateAdjuster.reset(new webrtc::BitrateAdjuster(.5, .95));
     _useAnnexB = true;
     _isLowLatencyEnabled = true;
-    RTC_CHECK([codecInfo.name isEqualToString:@"H265"]);
+    RTC_CHECK([codecInfo.name isEqualToString:RTC_CONSTANT_TYPE(RTCVideoCodecH265Name)]);
   }
 
   return self;
@@ -202,10 +205,10 @@ void compressionOutputCallback(void* encoder,
   [self destroyCompressionSession];
 }
 
-- (NSInteger)startEncodeWithSettings:(RTCVideoEncoderSettings*)settings
+- (NSInteger)startEncodeWithSettings:(RTC_OBJC_TYPE(RTCVideoEncoderSettings) *)settings
                        numberOfCores:(int)numberOfCores {
   RTC_DCHECK(settings);
-  RTC_DCHECK([settings.name isEqualToString:@"H265"]);
+  RTC_DCHECK([settings.name isEqualToString:RTC_CONSTANT_TYPE(RTCVideoCodecH265Name)]);
 
   _width = settings.width;
   _height = settings.height;
@@ -311,7 +314,7 @@ void compressionOutputCallback(void* encoder,
   // Check if we need a keyframe.
   if (!isKeyframeRequired && frameTypes) {
     for (NSNumber* frameType in frameTypes) {
-      if ((RTCFrameType)frameType.intValue == RTCFrameTypeVideoFrameKey) {
+      if ((RTC_OBJC_TYPE(RTCFrameType))frameType.intValue == RTC_OBJC_TYPE(RTCFrameTypeVideoFrameKey)) {
         isKeyframeRequired = YES;
         break;
       }
@@ -327,8 +330,8 @@ void compressionOutputCallback(void* encoder,
     frameProperties = CreateCFTypeDictionary(keys, values, 1);
   }
 
-  std::unique_ptr<RTCFrameEncodeParams> encodeParams;
-  encodeParams.reset(new RTCFrameEncodeParams(
+  std::unique_ptr<RTC_OBJC_TYPE(RTCFrameEncodeParams)> encodeParams;
+  encodeParams.reset(new RTC_OBJC_TYPE(RTCFrameEncodeParams)(
       self, _width, _height, frame.timeStampNs / rtc::kNumNanosecsPerMillisec,
       frame.timeStamp, frame.rotation));
 
@@ -515,7 +518,7 @@ void compressionOutputCallback(void* encoder,
                  height:(int32_t)height
            renderTimeMs:(int64_t)renderTimeMs
               timestamp:(uint32_t)timestamp
-               rotation:(RTCVideoRotation)rotation {
+               rotation:(RTC_OBJC_TYPE(RTCVideoRotation))rotation {
   if (status != noErr) {
     RTC_LOG(LS_ERROR) << "h265 encode failed.";
     return;
@@ -569,13 +572,13 @@ void compressionOutputCallback(void* encoder,
   frame.encodedWidth = width;
   frame.encodedHeight = height;
   frame.frameType =
-      isKeyframe ? RTCFrameTypeVideoFrameKey : RTCFrameTypeVideoFrameDelta;
+      isKeyframe ? RTC_OBJC_TYPE(RTCFrameTypeVideoFrameKey) : RTC_OBJC_TYPE(RTCFrameTypeVideoFrameDelta);
   frame.captureTimeMs = renderTimeMs;
   frame.timeStamp = timestamp;
   frame.rotation = rotation;
-  frame.contentType = (_mode == RTCVideoCodecModeScreensharing)
-                          ? RTCVideoContentTypeScreenshare
-                          : RTCVideoContentTypeUnspecified;
+  frame.contentType = (_mode == RTC_OBJC_TYPE(RTCVideoCodecModeScreensharing))
+                          ? RTC_OBJC_TYPE(RTCVideoContentTypeScreenshare)
+                          : RTC_OBJC_TYPE(RTCVideoContentTypeUnspecified);
   frame.flags = webrtc::VideoSendTiming::kInvalid;
 
   if (_useAnnexB) {
