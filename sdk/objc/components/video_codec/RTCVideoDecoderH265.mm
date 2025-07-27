@@ -309,7 +309,6 @@ CMSampleBufferRef H265BufferToCMSampleBuffer(const uint8_t* buffer, size_t buffe
   OSStatus status = VTDecompressionSessionDecodeFrame(
       _decompressionSession, sampleBuffer, decodeFlags,
       frameDecodeParams.release(), nullptr);
-#if defined(WEBRTC_IOS)
   // Re-initialize the decoder if we have an invalid session while the app is
   // active and retry the decode request.
   if (status == kVTInvalidSessionErr &&
@@ -320,7 +319,6 @@ CMSampleBufferRef H265BufferToCMSampleBuffer(const uint8_t* buffer, size_t buffe
         _decompressionSession, sampleBuffer, decodeFlags,
         frameDecodeParams.release(), nullptr);
   }
-#endif
   CFRelease(sampleBuffer);
   if (status != noErr) {
     RTC_LOG(LS_ERROR) << "Failed to decode frame with code: " << status;
@@ -454,16 +452,12 @@ CMSampleBufferRef H265BufferToCMSampleBuffer(const uint8_t* buffer, size_t buffe
 
 - (void)configureDecompressionSession {
   RTC_DCHECK(_decompressionSession);
-#if defined(WEBRTC_IOS)
   VTSessionSetProperty(_decompressionSession, kVTDecompressionPropertyKey_RealTime, kCFBooleanTrue);
-#endif
 }
 
 - (void)destroyDecompressionSession {
   if (_decompressionSession) {
-#if defined(WEBRTC_IOS)
     VTDecompressionSessionWaitForAsynchronousFrames(_decompressionSession);
-#endif
     VTDecompressionSessionInvalidate(_decompressionSession);
     CFRelease(_decompressionSession);
     _decompressionSession = nullptr;
