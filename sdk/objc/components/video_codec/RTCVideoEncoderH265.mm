@@ -233,8 +233,6 @@ void compressionOutputCallback(void* encoder,
 - (NSInteger)encode:(RTC_OBJC_TYPE (RTCVideoFrame) *)frame
     codecSpecificInfo:(nullable id<RTC_OBJC_TYPE (RTCCodecSpecificInfo)>)codecSpecificInfo
            frameTypes:(NSArray<NSNumber *> *)frameTypes {
-  RTC_DCHECK_EQ(frame.width, _width);
-  RTC_DCHECK_EQ(frame.height, _height);
   if (!_callback || !_compressionSession) {
     return WEBRTC_VIDEO_CODEC_UNINITIALIZED;
   }
@@ -297,6 +295,9 @@ void compressionOutputCallback(void* encoder,
 
   if (!pixelBuffer) {
     // We did not have a native frame buffer
+    RTC_DCHECK_EQ(frame.width, _width);
+    RTC_DCHECK_EQ(frame.height, _height);
+
     pixelBuffer = CreatePixelBuffer(pixelBufferPool);
     if (!pixelBuffer) {
       return WEBRTC_VIDEO_CODEC_ERROR;
