@@ -60,11 +60,9 @@
     [addingCodecs addObject: av1Codec];
 
     // H265
-    {
-        RTC_OBJC_TYPE(RTCVideoCodecInfo) *codec =
-            [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecH265Name)];
-        [addingCodecs addObject: codec];
-    }
+    auto *h265Codec = [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc]
+        initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecH265Name)];
+    [addingCodecs addObject:h265Codec];
 
     return [supportedCodecs arrayByAddingObjectsFromArray: addingCodecs];
 }
