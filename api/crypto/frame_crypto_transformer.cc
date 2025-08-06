@@ -113,7 +113,6 @@ inline bool FrameIsH265(webrtc::TransformableFrameInterface* frame,
 
 inline bool IsH265SliceNalu(webrtc::H265::NaluType nalu_type) {
   // VCL NALUs (Video Coding Layer) - slice segments
-  // Based on H.265 spec and matches TypeScript logic in naluUtils.ts
   return nalu_type == webrtc::H265::NaluType::kTrailN ||
          nalu_type == webrtc::H265::NaluType::kTrailR ||
          nalu_type == webrtc::H265::NaluType::kTsaN ||
@@ -122,8 +121,8 @@ inline bool IsH265SliceNalu(webrtc::H265::NaluType nalu_type) {
          nalu_type == webrtc::H265::NaluType::kStsaR ||
          nalu_type == webrtc::H265::NaluType::kRadlN ||
          nalu_type == webrtc::H265::NaluType::kRadlR ||
-         nalu_type == static_cast<webrtc::H265::NaluType>(8) ||  // RASL_N
-         nalu_type == static_cast<webrtc::H265::NaluType>(9) ||  // RASL_R
+         nalu_type == webrtc::H265::NaluType::kRaslN ||
+         nalu_type == webrtc::H265::NaluType::kRaslR ||
          nalu_type == webrtc::H265::NaluType::kBlaWLp ||
          nalu_type == webrtc::H265::NaluType::kBlaWRadl ||
          nalu_type == webrtc::H265::NaluType::kBlaNLp ||
