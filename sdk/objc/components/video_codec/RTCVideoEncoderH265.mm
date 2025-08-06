@@ -541,7 +541,7 @@ void compressionOutputCallback(void* encoder,
     RTC_LOG(LS_INFO) << "Generated keyframe";
   }
 
-  std::unique_ptr<rtc::Buffer> buffer(new rtc::Buffer());
+  __block std::unique_ptr<webrtc::Buffer> buffer = std::make_unique<webrtc::Buffer>();
   if (_useAnnexB) {
     if (!webrtc::H265CMSampleBufferToAnnexBBuffer(sampleBuffer, isKeyframe, buffer.get())) {
       RTC_LOG(LS_WARNING) << "Unable to parse H265 encoded buffer";
@@ -565,9 +565,12 @@ void compressionOutputCallback(void* encoder,
   }
 
   RTC_OBJC_TYPE (RTCEncodedImage)* frame = [[RTC_OBJC_TYPE (RTCEncodedImage) alloc] init];
-  frame.buffer = [NSData dataWithBytesNoCopy:buffer->data()
-                                      length:buffer->size()
-                                freeWhenDone:NO];
+  // This assumes ownership of `buffer` and is responsible for freeing it when done.
+  frame.buffer = [[NSData alloc] initWithBytesNoCopy:buffer->data()
+                                              length:buffer->size()
+                                         deallocator:^(void* bytes, NSUInteger size) {
+                                           buffer.reset();
+                                         }];
   frame.encodedWidth = width;
   frame.encodedHeight = height;
   frame.frameType =
