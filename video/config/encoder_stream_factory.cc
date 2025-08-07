@@ -354,71 +354,74 @@ EncoderStreamFactory::CreateSimulcastOrConferenceModeScreenshareStreams(
           ? NormalizeSimulcastSize(trials_, height,
                                    encoder_config.number_of_streams)
           : height;
+
   for (size_t i = 0; i < layers.size(); ++i) {
-    layers[i].active = encoder_config.simulcast_layers[i].active;
-    layers[i].scalability_mode =
-        encoder_config.simulcast_layers[i].scalability_mode;
-    layers[i].requested_resolution =
-        encoder_config.simulcast_layers[i].requested_resolution;
+    // account for layers removed in `GetSimulcastConfig`. Layers are ordered
+    // from lowest to highest quality, including their
+    // `scale_down_resolution_by` factor. So we need to map the last
+    // simulcast_layer to the last layer, not the other way round. Otherwise the
+    // scaling factor is applied multiple times
+
+    size_t simulcast_layer_index =
+        i + encoder_config.simulcast_layers.size() - layers.size();
+    auto& simulcast_layer = encoder_config.simulcast_layers[simulcast_layer_i];
+    layers[i].active = simulcast_layer.active;
+    layers[i].scalability_mode = simulcast_layer.scalability_mode;
+    layers[i].requested_resolution = simulcast_layer.requested_resolution;
     // Update with configured num temporal layers if supported by codec.
-    if (encoder_config.simulcast_layers[i].num_temporal_layers &&
+    if (simulcast_layer.num_temporal_layers &&
         IsTemporalLayersSupported(codec_name_)) {
-      layers[i].num_temporal_layers =
-          *encoder_config.simulcast_layers[i].num_temporal_layers;
+      layers[i].num_temporal_layers = *simulcast_layer.num_temporal_layers;
     }
-    if (encoder_config.simulcast_layers[i].max_framerate > 0) {
-      layers[i].max_framerate =
-          encoder_config.simulcast_layers[i].max_framerate;
+    if (simulcast_layer.max_framerate > 0) {
+      layers[i].max_framerate = simulcast_layer.max_framerate;
     }
-    if (encoder_config.simulcast_layers[i].requested_resolution.has_value()) {
+    if (simulcast_layer.requested_resolution.has_value()) {
       auto res = GetLayerResolutionFromRequestedResolution(
           normalized_width, normalized_height,
-          *encoder_config.simulcast_layers[i].requested_resolution);
+          *simulcast_layer.requested_resolution);
       layers[i].width = res.width;
       layers[i].height = res.height;
     } else if (has_scale_resolution_down_by) {
-      const double scale_resolution_down_by = std::max(
-          encoder_config.simulcast_layers[i].scale_resolution_down_by, 1.0);
+      const double scale_resolution_down_by =
+          std::max(simulcast_layer.scale_resolution_down_by, 1.0);
       layers[i].width = ScaleDownResolution(
           normalized_width, scale_resolution_down_by, kMinLayerSize);
       layers[i].height = ScaleDownResolution(
           normalized_height, scale_resolution_down_by, kMinLayerSize);
     }
     // Update simulcast bitrates with configured min and max bitrate.
-    if (encoder_config.simulcast_layers[i].min_bitrate_bps > 0) {
-      layers[i].min_bitrate_bps =
-          encoder_config.simulcast_layers[i].min_bitrate_bps;
+    if (simulcast_layer.min_bitrate_bps > 0) {
+      layers[i].min_bitrate_bps = simulcast_layer.min_bitrate_bps;
     }
-    if (encoder_config.simulcast_layers[i].max_bitrate_bps > 0) {
-      layers[i].max_bitrate_bps =
-          encoder_config.simulcast_layers[i].max_bitrate_bps;
+    if (simulcast_layer.max_bitrate_bps > 0) {
+      layers[i].max_bitrate_bps = simulcast_layer.max_bitrate_bps;
     }
-    if (encoder_config.simulcast_layers[i].target_bitrate_bps > 0) {
-      layers[i].target_bitrate_bps =
-          encoder_config.simulcast_layers[i].target_bitrate_bps;
+    if (simulcast_layer.target_bitrate_bps > 0) {
+      layers[i].target_bitrate_bps = simulcast_layer.target_bitrate_bps;
     }
-    if (encoder_config.simulcast_layers[i].min_bitrate_bps > 0 &&
-        encoder_config.simulcast_layers[i].max_bitrate_bps > 0) {
+    if (simulcast_layer.min_bitrate_bps > 0 &&
+        simulcast_layer.max_bitrate_bps > 0) {
       // Min and max bitrate are configured.
       // Set target to 3/4 of the max bitrate (or to max if below min).
-      if (encoder_config.simulcast_layers[i].target_bitrate_bps <= 0)
+      if (simulcast_layer.target_bitrate_bps <= 0)
         layers[i].target_bitrate_bps = layers[i].max_bitrate_bps * 3 / 4;
       if (layers[i].target_bitrate_bps < layers[i].min_bitrate_bps)
         layers[i].target_bitrate_bps = layers[i].max_bitrate_bps;
-    } else if (encoder_config.simulcast_layers[i].min_bitrate_bps > 0) {
+    } else if (simulcast_layer.min_bitrate_bps > 0) {
       // Only min bitrate is configured, make sure target/max are above min.
       layers[i].target_bitrate_bps =
           std::max(layers[i].target_bitrate_bps, layers[i].min_bitrate_bps);
       layers[i].max_bitrate_bps =
           std::max(layers[i].max_bitrate_bps, layers[i].min_bitrate_bps);
-    } else if (encoder_config.simulcast_layers[i].max_bitrate_bps > 0) {
+    } else if (simulcast_layer.max_bitrate_bps > 0) {
       // Only max bitrate is configured, make sure min/target are below max.
       // Keep target bitrate if it is set explicitly in encoding config.
       // Otherwise set target bitrate to 3/4 of the max bitrate
       // or the one calculated from GetSimulcastConfig() which is larger.
       layers[i].min_bitrate_bps =
           std::min(layers[i].min_bitrate_bps, layers[i].max_bitrate_bps);
-      if (encoder_config.simulcast_layers[i].target_bitrate_bps <= 0) {
+      if (simulcast_layer.target_bitrate_bps <= 0) {
         layers[i].target_bitrate_bps = std::max(
             layers[i].target_bitrate_bps, layers[i].max_bitrate_bps * 3 / 4);
       }
@@ -428,7 +431,7 @@ EncoderStreamFactory::CreateSimulcastOrConferenceModeScreenshareStreams(
     }
     if (i == layers.size() - 1) {
       is_highest_layer_max_bitrate_configured =
-          encoder_config.simulcast_layers[i].max_bitrate_bps > 0;
+          simulcast_layer.max_bitrate_bps > 0;
     }
   }
   if (!is_screenshare_ && !is_highest_layer_max_bitrate_configured &&
