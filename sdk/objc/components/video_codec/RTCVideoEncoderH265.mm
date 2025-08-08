@@ -451,6 +451,16 @@ void compressionOutputCallback(void* encoder, void* params, OSStatus status,
   // SetVTSessionProperty(_compressionSession,
   // kVTCompressionPropertyKey_ProfileLevel, _profile);
   SetVTSessionProperty(_compressionSession, kVTCompressionPropertyKey_AllowFrameReordering, false);
+  // Set maximum QP for screen sharing mode on supported OS versions.
+  // https://developer.apple.com/documentation/videotoolbox/kvtcompressionpropertykey_maxallowedframeqp
+  if (@available(iOS 15.0, macOS 12.0, *)) {
+    if (_mode == RTC_OBJC_TYPE(RTCVideoCodecModeScreensharing)) {
+      RTC_LOG(LS_INFO) << "Configuring VideoToolbox to use maxQP: " << kHighh265QpThreshold
+                       << " mode: " << _mode;
+      SetVTSessionProperty(_compressionSession, kVTCompressionPropertyKey_MaxAllowedFrameQP,
+                           kHighh265QpThreshold);
+    }
+  }
   // Reduce the encoder's internal buffering for lower latency if available.
   // kVTCompressionPropertyKey_MaxFrameDelayCount is supported on macOS/iOS for HEVC.
   SetVTSessionProperty(_compressionSession, kVTCompressionPropertyKey_MaxFrameDelayCount, 1);
