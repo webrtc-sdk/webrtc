@@ -43,6 +43,8 @@ enum NaluType : uint8_t {
   kStsaR = 5,
   kRadlN = 6,
   kRadlR = 7,
+  kRaslN = 8,
+  kRaslR = 9,
   kBlaWLp = 16,
   kBlaWRadl = 17,
   kBlaNLp = 18,
