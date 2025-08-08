@@ -385,11 +385,18 @@ void compressionOutputCallback(void* encoder, void* params, OSStatus status,
   }
   CFMutableDictionaryRef encoder_specs = CFDictionaryCreateMutable(
       nullptr, 2, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
-#if defined(WEBRTC_MAC) && !defined(WEBRTC_IOS)
-  CFDictionarySetValue(encoder_specs,
-                       kVTVideoEncoderSpecification_EnableHardwareAcceleratedVideoEncoder,
-                       kCFBooleanTrue);
-#endif
+
+  if (@available(iOS 17.4, macCatalyst 17.4, macOS 10.9, tvOS 17.4, visionOS 1.1, *)) {
+    CFDictionarySetValue(encoder_specs,
+                         kVTVideoEncoderSpecification_EnableHardwareAcceleratedVideoEncoder,
+                         kCFBooleanTrue);
+  }
+
+  if (@available(iOS 14.5, macCatalyst 14.5, macOS 11.3, tvOS 14.5, visionOS 1.0, *)) {
+    CFDictionarySetValue(encoder_specs, kVTVideoEncoderSpecification_EnableLowLatencyRateControl,
+                         kCFBooleanTrue);
+  }
+
   OSStatus status =
       VTCompressionSessionCreate(nullptr,  // use default allocator
                                  _width, _height, kCMVideoCodecType_HEVC,
@@ -418,17 +425,17 @@ void compressionOutputCallback(void* encoder, void* params, OSStatus status,
     RTC_LOG(LS_ERROR) << "Failed to create compression session: " << status;
     return WEBRTC_VIDEO_CODEC_ERROR;
   }
-#if defined(WEBRTC_MAC) && !defined(WEBRTC_IOS)
-  CFBooleanRef hwaccl_enabled = nullptr;
-  status = VTSessionCopyProperty(_compressionSession,
-                                 kVTCompressionPropertyKey_UsingHardwareAcceleratedVideoEncoder,
-                                 nullptr, &hwaccl_enabled);
-  if (status == noErr && (CFBooleanGetValue(hwaccl_enabled))) {
-    RTC_LOG(LS_INFO) << "Compression session created with hw accl enabled";
-  } else {
-    RTC_LOG(LS_INFO) << "Compression session created with hw accl disabled";
+  if (@available(iOS 17.4, macCatalyst 17.4, macOS 10.9, tvOS 17.4, visionOS 1.1, *)) {
+    CFBooleanRef hwaccl_enabled = nullptr;
+    status = VTSessionCopyProperty(_compressionSession,
+                                   kVTCompressionPropertyKey_UsingHardwareAcceleratedVideoEncoder,
+                                   kCFAllocatorDefault, &hwaccl_enabled);
+    if (status == noErr && (CFBooleanGetValue(hwaccl_enabled))) {
+      RTC_LOG(LS_INFO) << "Compression session created with hw accl enabled";
+    } else {
+      RTC_LOG(LS_INFO) << "Compression session created with hw accl disabled";
+    }
   }
-#endif
   [self configureCompressionSession];
   return WEBRTC_VIDEO_CODEC_OK;
 }
@@ -451,7 +458,7 @@ void compressionOutputCallback(void* encoder, void* params, OSStatus status,
   }
   // Reduce the encoder's internal buffering for lower latency if available.
   // kVTCompressionPropertyKey_MaxFrameDelayCount is supported on macOS/iOS for HEVC.
-  SetVTSessionProperty(_compressionSession, kVTCompressionPropertyKey_MaxFrameDelayCount, 1);
+  // SetVTSessionProperty(_compressionSession, kVTCompressionPropertyKey_MaxFrameDelayCount, 1);
   [self setEncoderBitrateBps:_targetBitrateBps];
 
   // Set a relatively large value for keyframe emission (7200 frames or 4 minutes).
