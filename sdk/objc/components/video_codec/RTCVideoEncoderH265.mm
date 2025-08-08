@@ -155,9 +155,6 @@ void compressionOutputCallback(void* encoder, void* params, OSStatus status,
   RTC_OBJC_TYPE(RTCVideoCodecMode) _mode;
   int framesLeft;
   std::vector<uint8_t> _nv12ScaleBuffer;
-  bool _useAnnexB;
-  bool _isLowLatencyEnabled;
-  bool _needsToSendDescription;
   webrtc::H265BitstreamParser _h265BitstreamParser;
 }
 
@@ -174,8 +171,7 @@ void compressionOutputCallback(void* encoder, void* params, OSStatus status,
   if (self) {
     _codecInfo = codecInfo;
     _bitrateAdjuster.reset(new webrtc::BitrateAdjuster(.5, .95));
-    _useAnnexB = true;
-    _isLowLatencyEnabled = true;
+    // AnnexB and low latency are always enabled.
     RTC_CHECK([codecInfo.name isEqualToString:RTC_CONSTANT_TYPE(RTCVideoCodecH265Name)]);
   }
 
@@ -202,14 +198,7 @@ void compressionOutputCallback(void* encoder, void* params, OSStatus status,
   return [self resetCompressionSession];
 }
 
-- (void)setUseAnnexB:(bool)useAnnexB {
-  _useAnnexB = useAnnexB;
-  _needsToSendDescription = !useAnnexB;
-}
-
-- (void)setLowLatency:(bool)enabled {
-  _isLowLatencyEnabled = enabled;
-}
+// AnnexB and low latency are always enabled; setters removed.
 
 - (NSInteger)encode:(RTC_OBJC_TYPE(RTCVideoFrame) *)frame
     codecSpecificInfo:(nullable id<RTC_OBJC_TYPE(RTCCodecSpecificInfo)>)codecSpecificInfo
@@ -446,8 +435,7 @@ void compressionOutputCallback(void* encoder, void* params, OSStatus status,
 
 - (void)configureCompressionSession {
   RTC_DCHECK(_compressionSession);
-  SetVTSessionProperty(_compressionSession, kVTCompressionPropertyKey_RealTime,
-                       _isLowLatencyEnabled);
+  SetVTSessionProperty(_compressionSession, kVTCompressionPropertyKey_RealTime, true);
   // SetVTSessionProperty(_compressionSession,
   // kVTCompressionPropertyKey_ProfileLevel, _profile);
   SetVTSessionProperty(_compressionSession, kVTCompressionPropertyKey_AllowFrameReordering, false);
@@ -531,32 +519,10 @@ void compressionOutputCallback(void* encoder, void* params, OSStatus status,
   }
 
   __block std::unique_ptr<webrtc::Buffer> buffer = std::make_unique<webrtc::Buffer>();
-  if (_useAnnexB) {
-    if (!webrtc::H265CMSampleBufferToAnnexBBuffer(sampleBuffer, isKeyframe, buffer.get())) {
-      RTC_LOG(LS_WARNING) << "Unable to parse H265 encoded buffer";
-      return;
-    }
-  } else {
-    buffer->SetSize(0);
-    CMBlockBufferRef blockBuffer = CMSampleBufferGetDataBuffer(sampleBuffer);
-    size_t currentStart = 0;
-    const size_t totalSize = CMBlockBufferGetDataLength(blockBuffer);
-    while (currentStart < totalSize) {
-      char* data = nullptr;
-      size_t length = 0;
-      OSStatus error =
-          CMBlockBufferGetDataPointer(blockBuffer, currentStart, &length, nullptr, &data);
-      if (error != noErr) {
-        RTC_LOG(LS_ERROR) << "H265 encoder: CMBlockBufferGetDataPointer failed with error "
-                          << error;
-        return;
-      }
-      if (length == 0) {
-        break;
-      }
-      buffer->AppendData(data, length);
-      currentStart += length;
-    }
+  // Always using AnnexB format for bitstream parsing and output
+  if (!webrtc::H265CMSampleBufferToAnnexBBuffer(sampleBuffer, isKeyframe, buffer.get())) {
+    RTC_LOG(LS_WARNING) << "Unable to parse H265 encoded buffer";
+    return;
   }
 
   RTC_OBJC_TYPE(RTCEncodedImage)* frame = [[RTC_OBJC_TYPE(RTCEncodedImage) alloc] init];
@@ -578,11 +544,10 @@ void compressionOutputCallback(void* encoder, void* params, OSStatus status,
                           : RTC_OBJC_TYPE(RTCVideoContentTypeUnspecified);
   frame.flags = webrtc::VideoSendTiming::kInvalid;
 
-  if (_useAnnexB) {
-    _h265BitstreamParser.ParseBitstream(*buffer);
-    auto qp = _h265BitstreamParser.GetLastSliceQp();
-    frame.qp = @(qp.value_or(0));
-  }
+  // Always using AnnexB format for QP parsing
+  _h265BitstreamParser.ParseBitstream(*buffer);
+  auto qp = _h265BitstreamParser.GetLastSliceQp();
+  frame.qp = @(qp.value_or(0));
 
   BOOL res = _callback(frame, [[RTC_OBJC_TYPE(RTCCodecSpecificInfoH265) alloc] init]);
   if (!res) {

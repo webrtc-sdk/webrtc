@@ -18,7 +18,5 @@ RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCVideoEncoderH265) : NSObject <RTC_OBJC_TYPE(RTCVideoEncoder)>
 
 - (instancetype)initWithCodecInfo:(RTC_OBJC_TYPE(RTCVideoCodecInfo) *)codecInfo;
-- (void)setLowLatency:(bool)enabled;
-- (void)setUseAnnexB:(bool)useAnnexB;
 - (void)flush;
 @end
