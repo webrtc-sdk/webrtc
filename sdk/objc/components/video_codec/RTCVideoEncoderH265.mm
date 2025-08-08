@@ -15,7 +15,7 @@
 #include <vector>
 
 #import "RTCCodecSpecificInfoH265.h"
-//#import "api/peerconnection/RTCRtpFragmentationHeader+Private.h"
+// #import "api/peerconnection/RTCRtpFragmentationHeader+Private.h"
 #import "api/peerconnection/RTCVideoCodecInfo+Private.h"
 #import "base/RTCI420Buffer.h"
 #import "base/RTCVideoFrame.h"
@@ -60,20 +60,11 @@ const int kHighh265QpThreshold = 39;
 // Struct that we pass to the encoder per frame to encode. We receive it again
 // in the encoder callback.
 struct API_AVAILABLE(ios(11.0)) RTC_OBJC_TYPE(RTCFrameEncodeParams) {
-  RTC_OBJC_TYPE( RTCFrameEncodeParams)(RTC_OBJC_TYPE (RTCVideoEncoderH265)* e,
-                       int32_t w,
-                       int32_t h,
-                       int64_t rtms,
-                       uint32_t ts,
-                       RTC_OBJC_TYPE(RTCVideoRotation) r)
-      : encoder(e),
-        width(w),
-        height(h),
-        render_time_ms(rtms),
-        timestamp(ts),
-        rotation(r) {}
+  RTC_OBJC_TYPE(RTCFrameEncodeParams)(RTC_OBJC_TYPE(RTCVideoEncoderH265) * e, int32_t w, int32_t h,
+                                      int64_t rtms, uint32_t ts, RTC_OBJC_TYPE(RTCVideoRotation) r)
+      : encoder(e), width(w), height(h), render_time_ms(rtms), timestamp(ts), rotation(r) {}
 
-  RTC_OBJC_TYPE (RTCVideoEncoderH265)* encoder;
+  RTC_OBJC_TYPE(RTCVideoEncoderH265) * encoder;
   int32_t width;
   int32_t height;
   int64_t render_time_ms;
@@ -84,15 +75,13 @@ struct API_AVAILABLE(ios(11.0)) RTC_OBJC_TYPE(RTCFrameEncodeParams) {
 // We receive I420Frames as input, but we need to feed CVPixelBuffers into the
 // encoder. This performs the copy and format conversion.
 // TODO(tkchin): See if encoder will accept i420 frames and compare performance.
-bool CopyVideoFrameToPixelBuffer(id<RTC_OBJC_TYPE (RTCI420Buffer)> frameBuffer,
+bool CopyVideoFrameToPixelBuffer(id<RTC_OBJC_TYPE(RTCI420Buffer)> frameBuffer,
                                  CVPixelBufferRef pixelBuffer) {
   RTC_DCHECK(pixelBuffer);
   RTC_DCHECK_EQ(CVPixelBufferGetPixelFormatType(pixelBuffer),
                 kCVPixelFormatType_420YpCbCr8BiPlanarFullRange);
-  RTC_DCHECK_EQ(CVPixelBufferGetHeightOfPlane(pixelBuffer, 0),
-                frameBuffer.height);
-  RTC_DCHECK_EQ(CVPixelBufferGetWidthOfPlane(pixelBuffer, 0),
-                frameBuffer.width);
+  RTC_DCHECK_EQ(CVPixelBufferGetHeightOfPlane(pixelBuffer, 0), frameBuffer.height);
+  RTC_DCHECK_EQ(CVPixelBufferGetWidthOfPlane(pixelBuffer, 0), frameBuffer.width);
 
   CVReturn cvRet = CVPixelBufferLockBaseAddress(pixelBuffer, 0);
   if (cvRet != kCVReturnSuccess) {
@@ -100,17 +89,15 @@ bool CopyVideoFrameToPixelBuffer(id<RTC_OBJC_TYPE (RTCI420Buffer)> frameBuffer,
     return false;
   }
 
-  uint8_t* dstY = reinterpret_cast<uint8_t*>(
-      CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0));
+  uint8_t* dstY = reinterpret_cast<uint8_t*>(CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0));
   int dstStrideY = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 0);
-  uint8_t* dstUV = reinterpret_cast<uint8_t*>(
-      CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 1));
+  uint8_t* dstUV = reinterpret_cast<uint8_t*>(CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 1));
   int dstStrideUV = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 1);
   // Convert I420 to NV12.
-  int ret = libyuv::I420ToNV12(
-      frameBuffer.dataY, frameBuffer.strideY, frameBuffer.dataU,
-      frameBuffer.strideU, frameBuffer.dataV, frameBuffer.strideV, dstY,
-      dstStrideY, dstUV, dstStrideUV, frameBuffer.width, frameBuffer.height);
+  int ret =
+      libyuv::I420ToNV12(frameBuffer.dataY, frameBuffer.strideY, frameBuffer.dataU,
+                         frameBuffer.strideU, frameBuffer.dataV, frameBuffer.strideV, dstY,
+                         dstStrideY, dstUV, dstStrideUV, frameBuffer.width, frameBuffer.height);
   CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
   if (ret) {
     RTC_LOG(LS_ERROR) << "Error converting I420 VideoFrame to NV12 :" << ret;
@@ -125,8 +112,7 @@ CVPixelBufferRef CreatePixelBuffer(CVPixelBufferPoolRef pixel_buffer_pool) {
     return nullptr;
   }
   CVPixelBufferRef pixel_buffer;
-  CVReturn ret = CVPixelBufferPoolCreatePixelBuffer(nullptr, pixel_buffer_pool,
-                                                    &pixel_buffer);
+  CVReturn ret = CVPixelBufferPoolCreatePixelBuffer(nullptr, pixel_buffer_pool, &pixel_buffer);
   if (ret != kCVReturnSuccess) {
     RTC_LOG(LS_ERROR) << "Failed to create pixel buffer: " << ret;
     // We probably want to drop frames here, since failure probably means
@@ -138,14 +124,11 @@ CVPixelBufferRef CreatePixelBuffer(CVPixelBufferPoolRef pixel_buffer_pool) {
 
 // This is the callback function that VideoToolbox calls when encode is
 // complete. From inspection this happens on its own queue.
-void compressionOutputCallback(void* encoder,
-                               void* params,
-                               OSStatus status,
-                               VTEncodeInfoFlags infoFlags,
-                               CMSampleBufferRef sampleBuffer)
+void compressionOutputCallback(void* encoder, void* params, OSStatus status,
+                               VTEncodeInfoFlags infoFlags, CMSampleBufferRef sampleBuffer)
     API_AVAILABLE(ios(11.0)) {
   RTC_CHECK(params);
-  std::unique_ptr<RTC_OBJC_TYPE (RTCFrameEncodeParams)> encodeParams(
+  std::unique_ptr<RTC_OBJC_TYPE(RTCFrameEncodeParams)> encodeParams(
       reinterpret_cast<RTC_OBJC_TYPE(RTCFrameEncodeParams)*>(params));
   RTC_CHECK(encodeParams->encoder);
   [encodeParams->encoder frameWasEncoded:status
@@ -160,7 +143,7 @@ void compressionOutputCallback(void* encoder,
 }  // namespace
 
 @implementation RTC_OBJC_TYPE (RTCVideoEncoderH265) {
-  RTC_OBJC_TYPE (RTCVideoCodecInfo)* _codecInfo;
+  RTC_OBJC_TYPE(RTCVideoCodecInfo) * _codecInfo;
   std::unique_ptr<webrtc::BitrateAdjuster> _bitrateAdjuster;
   uint32_t _targetBitrateBps;
   uint32_t _encoderBitrateBps;
@@ -185,7 +168,7 @@ void compressionOutputCallback(void* encoder,
 // drastically reduced bitrate, so we want to avoid that. In steady state
 // conditions, 0.95 seems to give us better overall bitrate over long periods
 // of time.
-- (instancetype)initWithCodecInfo:(RTC_OBJC_TYPE (RTCVideoCodecInfo)*)codecInfo {
+- (instancetype)initWithCodecInfo:(RTC_OBJC_TYPE(RTCVideoCodecInfo) *)codecInfo {
   NSParameterAssert(codecInfo);
   self = [super init];
   if (self) {
@@ -219,20 +202,18 @@ void compressionOutputCallback(void* encoder,
   return [self resetCompressionSession];
 }
 
-- (void)setUseAnnexB:(bool)useAnnexB
-{
-    _useAnnexB = useAnnexB;
-    _needsToSendDescription = !useAnnexB;
+- (void)setUseAnnexB:(bool)useAnnexB {
+  _useAnnexB = useAnnexB;
+  _needsToSendDescription = !useAnnexB;
 }
 
-- (void)setLowLatency:(bool)enabled
-{
-    _isLowLatencyEnabled = enabled;
+- (void)setLowLatency:(bool)enabled {
+  _isLowLatencyEnabled = enabled;
 }
 
-- (NSInteger)encode:(RTC_OBJC_TYPE (RTCVideoFrame) *)frame
-    codecSpecificInfo:(nullable id<RTC_OBJC_TYPE (RTCCodecSpecificInfo)>)codecSpecificInfo
-           frameTypes:(NSArray<NSNumber *> *)frameTypes {
+- (NSInteger)encode:(RTC_OBJC_TYPE(RTCVideoFrame) *)frame
+    codecSpecificInfo:(nullable id<RTC_OBJC_TYPE(RTCCodecSpecificInfo)>)codecSpecificInfo
+           frameTypes:(NSArray<NSNumber*>*)frameTypes {
   if (!_callback || !_compressionSession) {
     return WEBRTC_VIDEO_CODEC_UNINITIALIZED;
   }
@@ -250,18 +231,17 @@ void compressionOutputCallback(void* encoder,
     // Resetting the session when this happens fixes the issue.
     // In addition we request a keyframe so video can recover quickly.
     [self resetCompressionSession];
-    pixelBufferPool =
-        VTCompressionSessionGetPixelBufferPool(_compressionSession);
+    pixelBufferPool = VTCompressionSessionGetPixelBufferPool(_compressionSession);
     isKeyframeRequired = YES;
     RTC_LOG(LS_INFO) << "Resetting compression session due to invalid pool.";
   }
 #endif
 
   CVPixelBufferRef pixelBuffer = nullptr;
-  if ([frame.buffer isKindOfClass:[RTC_OBJC_TYPE (RTCCVPixelBuffer) class]]) {
+  if ([frame.buffer isKindOfClass:[RTC_OBJC_TYPE(RTCCVPixelBuffer) class]]) {
     // Native frame buffer
-    RTC_OBJC_TYPE (RTCCVPixelBuffer)* rtcPixelBuffer =
-        (RTC_OBJC_TYPE (RTCCVPixelBuffer)*)frame.buffer;
+    RTC_OBJC_TYPE(RTCCVPixelBuffer)* rtcPixelBuffer =
+        (RTC_OBJC_TYPE(RTCCVPixelBuffer)*)frame.buffer;
     if (![rtcPixelBuffer requiresCropping]) {
       // This pixel buffer might have a higher resolution than what the
       // compression session is configured to. The compression session can
@@ -278,16 +258,13 @@ void compressionOutputCallback(void* encoder,
       int dstWidth = CVPixelBufferGetWidth(pixelBuffer);
       int dstHeight = CVPixelBufferGetHeight(pixelBuffer);
       if ([rtcPixelBuffer requiresScalingToWidth:dstWidth height:dstHeight]) {
-        int size =
-            [rtcPixelBuffer bufferSizeForCroppingAndScalingToWidth:dstWidth
-                                                            height:dstHeight];
-        _nv12ScaleBuffer.resize(size);
-      } else {
-        _nv12ScaleBuffer.clear();
+        const int requiredSize = [rtcPixelBuffer bufferSizeForCroppingAndScalingToWidth:dstWidth
+                                                                                 height:dstHeight];
+        if (static_cast<int>(_nv12ScaleBuffer.size()) < requiredSize) {
+          _nv12ScaleBuffer.resize(requiredSize);
+        }
       }
-      _nv12ScaleBuffer.shrink_to_fit();
-      if (![rtcPixelBuffer cropAndScaleTo:pixelBuffer
-                           withTempBuffer:_nv12ScaleBuffer.data()]) {
+      if (![rtcPixelBuffer cropAndScaleTo:pixelBuffer withTempBuffer:_nv12ScaleBuffer.data()]) {
         return WEBRTC_VIDEO_CODEC_ERROR;
       }
     }
@@ -313,36 +290,40 @@ void compressionOutputCallback(void* encoder,
   // Check if we need a keyframe.
   if (!isKeyframeRequired && frameTypes) {
     for (NSNumber* frameType in frameTypes) {
-      if ((RTC_OBJC_TYPE(RTCFrameType))frameType.intValue == RTC_OBJC_TYPE(RTCFrameTypeVideoFrameKey)) {
+      if ((RTC_OBJC_TYPE(RTCFrameType))frameType.intValue ==
+          RTC_OBJC_TYPE(RTCFrameTypeVideoFrameKey)) {
         isKeyframeRequired = YES;
         break;
       }
     }
   }
 
-  CMTime presentationTimeStamp =
-      CMTimeMake(frame.timeStampNs / rtc::kNumNanosecsPerMillisec, 1000);
+  CMTime presentationTimeStamp = CMTimeMake(frame.timeStampNs / rtc::kNumNanosecsPerMillisec, 1000);
   CFDictionaryRef frameProperties = nullptr;
   if (isKeyframeRequired) {
-    CFTypeRef keys[] = {kVTEncodeFrameOptionKey_ForceKeyFrame};
-    CFTypeRef values[] = {kCFBooleanTrue};
-    frameProperties = CreateCFTypeDictionary(keys, values, 1);
+    // Reuse a static dictionary to avoid per-frame allocations.
+    static CFDictionaryRef forceKeyframeProps = []() {
+      CFTypeRef keys[] = {kVTEncodeFrameOptionKey_ForceKeyFrame};
+      CFTypeRef values[] = {kCFBooleanTrue};
+      CFDictionaryRef dict = CreateCFTypeDictionary(keys, values, 1);
+      // Intentionally leaked for process lifetime reuse.
+      return dict;
+    }();
+    frameProperties = forceKeyframeProps;
   }
 
   std::unique_ptr<RTC_OBJC_TYPE(RTCFrameEncodeParams)> encodeParams;
   encodeParams.reset(new RTC_OBJC_TYPE(RTCFrameEncodeParams)(
-      self, _width, _height, frame.timeStampNs / rtc::kNumNanosecsPerMillisec,
-      frame.timeStamp, frame.rotation));
+      self, _width, _height, frame.timeStampNs / rtc::kNumNanosecsPerMillisec, frame.timeStamp,
+      frame.rotation));
 
   // Update the bitrate if needed.
   [self setBitrateBps:_bitrateAdjuster->GetAdjustedBitrateBps()];
 
   OSStatus status = VTCompressionSessionEncodeFrame(
-      _compressionSession, pixelBuffer, presentationTimeStamp, kCMTimeInvalid,
-      frameProperties, encodeParams.release(), nullptr);
-  if (frameProperties) {
-    CFRelease(frameProperties);
-  }
+      _compressionSession, pixelBuffer, presentationTimeStamp, kCMTimeInvalid, frameProperties,
+      encodeParams.release(), nullptr);
+  // Do not release `frameProperties` when using the cached dictionary.
   if (pixelBuffer) {
     CVBufferRelease(pixelBuffer);
   }
@@ -395,21 +376,16 @@ void compressionOutputCallback(void* encoder,
   const size_t attributesSize = 3;
   CFTypeRef keys[attributesSize] = {
 #if defined(WEBRTC_MAC) || defined(WEBRTC_MAC_CATALYST)
-    kCVPixelBufferOpenGLCompatibilityKey,
+      kCVPixelBufferOpenGLCompatibilityKey,
 #elif defined(WEBRTC_IOS)
-    kCVPixelBufferOpenGLESCompatibilityKey,
+      kCVPixelBufferOpenGLESCompatibilityKey,
 #endif
-    kCVPixelBufferIOSurfacePropertiesKey,
-    kCVPixelBufferPixelFormatTypeKey
-  };
+      kCVPixelBufferIOSurfacePropertiesKey, kCVPixelBufferPixelFormatTypeKey};
   CFDictionaryRef ioSurfaceValue = CreateCFTypeDictionary(nullptr, nullptr, 0);
   int64_t nv12type = kCVPixelFormatType_420YpCbCr8BiPlanarFullRange;
-  CFNumberRef pixelFormat =
-      CFNumberCreate(nullptr, kCFNumberLongType, &nv12type);
-  CFTypeRef values[attributesSize] = {kCFBooleanTrue, ioSurfaceValue,
-                                      pixelFormat};
-  CFDictionaryRef sourceAttributes =
-      CreateCFTypeDictionary(keys, values, attributesSize);
+  CFNumberRef pixelFormat = CFNumberCreate(nullptr, kCFNumberLongType, &nv12type);
+  CFTypeRef values[attributesSize] = {kCFBooleanTrue, ioSurfaceValue, pixelFormat};
+  CFDictionaryRef sourceAttributes = CreateCFTypeDictionary(keys, values, attributesSize);
   if (ioSurfaceValue) {
     CFRelease(ioSurfaceValue);
     ioSurfaceValue = nullptr;
@@ -418,25 +394,28 @@ void compressionOutputCallback(void* encoder,
     CFRelease(pixelFormat);
     pixelFormat = nullptr;
   }
-  CFMutableDictionaryRef encoder_specs = CFDictionaryCreateMutable(nullptr, 2, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+  CFMutableDictionaryRef encoder_specs = CFDictionaryCreateMutable(
+      nullptr, 2, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
 #if defined(WEBRTC_MAC) && !defined(WEBRTC_IOS)
-  CFDictionarySetValue(encoder_specs, kVTVideoEncoderSpecification_EnableHardwareAcceleratedVideoEncoder, kCFBooleanTrue);
+  CFDictionarySetValue(encoder_specs,
+                       kVTVideoEncoderSpecification_EnableHardwareAcceleratedVideoEncoder,
+                       kCFBooleanTrue);
 #endif
-  OSStatus status = VTCompressionSessionCreate(
-      nullptr,  // use default allocator
-      _width, _height, kCMVideoCodecType_HEVC,
-      encoder_specs,  // use hardware accelerated encoder if available
-      sourceAttributes,
-      nullptr,  // use default compressed data allocator
-      compressionOutputCallback, nullptr, &_compressionSession);
+  OSStatus status =
+      VTCompressionSessionCreate(nullptr,  // use default allocator
+                                 _width, _height, kCMVideoCodecType_HEVC,
+                                 encoder_specs,  // use hardware accelerated encoder if available
+                                 sourceAttributes,
+                                 nullptr,  // use default compressed data allocator
+                                 compressionOutputCallback, nullptr, &_compressionSession);
   if (status != noErr) {
-    status = VTCompressionSessionCreate(
-        nullptr,  // use default allocator
-        _width, _height, kCMVideoCodecType_HEVC,
-        encoder_specs,  // use hardware accelerated encoder if available
-        sourceAttributes,
-        nullptr,  // use default compressed data allocator
-        compressionOutputCallback, nullptr, &_compressionSession);
+    status =
+        VTCompressionSessionCreate(nullptr,  // use default allocator
+                                   _width, _height, kCMVideoCodecType_HEVC,
+                                   encoder_specs,  // use hardware accelerated encoder if available
+                                   sourceAttributes,
+                                   nullptr,  // use default compressed data allocator
+                                   compressionOutputCallback, nullptr, &_compressionSession);
   }
   if (sourceAttributes) {
     CFRelease(sourceAttributes);
@@ -452,10 +431,9 @@ void compressionOutputCallback(void* encoder,
   }
 #if defined(WEBRTC_MAC) && !defined(WEBRTC_IOS)
   CFBooleanRef hwaccl_enabled = nullptr;
-  status = VTSessionCopyProperty(
-      _compressionSession,
-      kVTCompressionPropertyKey_UsingHardwareAcceleratedVideoEncoder, nullptr,
-      &hwaccl_enabled);
+  status = VTSessionCopyProperty(_compressionSession,
+                                 kVTCompressionPropertyKey_UsingHardwareAcceleratedVideoEncoder,
+                                 nullptr, &hwaccl_enabled);
   if (status == noErr && (CFBooleanGetValue(hwaccl_enabled))) {
     RTC_LOG(LS_INFO) << "Compression session created with hw accl enabled";
   } else {
@@ -473,13 +451,16 @@ void compressionOutputCallback(void* encoder,
   // SetVTSessionProperty(_compressionSession,
   // kVTCompressionPropertyKey_ProfileLevel, _profile);
   SetVTSessionProperty(_compressionSession, kVTCompressionPropertyKey_AllowFrameReordering, false);
+  // Reduce the encoder's internal buffering for lower latency if available.
+  // kVTCompressionPropertyKey_MaxFrameDelayCount is supported on macOS/iOS for HEVC.
+  SetVTSessionProperty(_compressionSession, kVTCompressionPropertyKey_MaxFrameDelayCount, 1);
   [self setEncoderBitrateBps:_targetBitrateBps];
 
   // Set a relatively large value for keyframe emission (7200 frames or 4 minutes).
   SetVTSessionProperty(_compressionSession, kVTCompressionPropertyKey_MaxKeyFrameInterval, 7200);
-  SetVTSessionProperty(_compressionSession, kVTCompressionPropertyKey_MaxKeyFrameIntervalDuration, 240);
-  OSStatus status =
-      VTCompressionSessionPrepareToEncodeFrames(_compressionSession);
+  SetVTSessionProperty(_compressionSession, kVTCompressionPropertyKey_MaxKeyFrameIntervalDuration,
+                       240);
+  OSStatus status = VTCompressionSessionPrepareToEncodeFrames(_compressionSession);
   if (status != noErr) {
     RTC_LOG(LS_ERROR) << "Compression session failed to prepare encode frames.";
   }
@@ -528,13 +509,11 @@ void compressionOutputCallback(void* encoder,
   }
 
   BOOL isKeyframe = NO;
-  CFArrayRef attachments =
-      CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, 0);
+  CFArrayRef attachments = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, 0);
   if (attachments != nullptr && CFArrayGetCount(attachments)) {
     CFDictionaryRef attachment =
         static_cast<CFDictionaryRef>(CFArrayGetValueAtIndex(attachments, 0));
-    isKeyframe =
-        !CFDictionaryContainsKey(attachment, kCMSampleAttachmentKey_NotSync);
+    isKeyframe = !CFDictionaryContainsKey(attachment, kCMSampleAttachmentKey_NotSync);
   }
 
   if (isKeyframe) {
@@ -551,20 +530,26 @@ void compressionOutputCallback(void* encoder,
     buffer->SetSize(0);
     CMBlockBufferRef blockBuffer = CMSampleBufferGetDataBuffer(sampleBuffer);
     size_t currentStart = 0;
-    size_t size = CMBlockBufferGetDataLength(blockBuffer);
-    while (currentStart < size) {
+    const size_t totalSize = CMBlockBufferGetDataLength(blockBuffer);
+    while (currentStart < totalSize) {
       char* data = nullptr;
-      size_t length;
-      if (auto error = CMBlockBufferGetDataPointer(blockBuffer, currentStart, &length, nullptr, &data)) {
-        RTC_LOG(LS_ERROR) << "H264 decoder: CMBlockBufferGetDataPointer failed with error " << error;
+      size_t length = 0;
+      OSStatus error =
+          CMBlockBufferGetDataPointer(blockBuffer, currentStart, &length, nullptr, &data);
+      if (error != noErr) {
+        RTC_LOG(LS_ERROR) << "H265 encoder: CMBlockBufferGetDataPointer failed with error "
+                          << error;
         return;
       }
-      buffer->AppendData(data, size);
-      currentStart += size;
+      if (length == 0) {
+        break;
+      }
+      buffer->AppendData(data, length);
+      currentStart += length;
     }
   }
 
-  RTC_OBJC_TYPE (RTCEncodedImage)* frame = [[RTC_OBJC_TYPE (RTCEncodedImage) alloc] init];
+  RTC_OBJC_TYPE(RTCEncodedImage)* frame = [[RTC_OBJC_TYPE(RTCEncodedImage) alloc] init];
   // This assumes ownership of `buffer` and is responsible for freeing it when done.
   frame.buffer = [[NSData alloc] initWithBytesNoCopy:buffer->data()
                                               length:buffer->size()
@@ -573,8 +558,8 @@ void compressionOutputCallback(void* encoder,
                                          }];
   frame.encodedWidth = width;
   frame.encodedHeight = height;
-  frame.frameType =
-      isKeyframe ? RTC_OBJC_TYPE(RTCFrameTypeVideoFrameKey) : RTC_OBJC_TYPE(RTCFrameTypeVideoFrameDelta);
+  frame.frameType = isKeyframe ? RTC_OBJC_TYPE(RTCFrameTypeVideoFrameKey)
+                               : RTC_OBJC_TYPE(RTCFrameTypeVideoFrameDelta);
   frame.captureTimeMs = renderTimeMs;
   frame.timeStamp = timestamp;
   frame.rotation = rotation;
@@ -584,12 +569,12 @@ void compressionOutputCallback(void* encoder,
   frame.flags = webrtc::VideoSendTiming::kInvalid;
 
   if (_useAnnexB) {
-      _h265BitstreamParser.ParseBitstream(*buffer);
-      auto qp = _h265BitstreamParser.GetLastSliceQp();
-      frame.qp = @(qp.value_or(0));
+    _h265BitstreamParser.ParseBitstream(*buffer);
+    auto qp = _h265BitstreamParser.GetLastSliceQp();
+    frame.qp = @(qp.value_or(0));
   }
 
-  BOOL res = _callback(frame, [[RTC_OBJC_TYPE (RTCCodecSpecificInfoH265) alloc] init]);
+  BOOL res = _callback(frame, [[RTC_OBJC_TYPE(RTCCodecSpecificInfoH265) alloc] init]);
   if (!res) {
     RTC_LOG(LS_ERROR) << "Encode callback failed.";
     return;
@@ -597,15 +582,14 @@ void compressionOutputCallback(void* encoder,
   _bitrateAdjuster->Update(frame.buffer.length);
 }
 
-- (RTC_OBJC_TYPE (RTCVideoEncoderQpThresholds)*)scalingSettings {
-  return [[RTC_OBJC_TYPE (RTCVideoEncoderQpThresholds) alloc]
+- (RTC_OBJC_TYPE(RTCVideoEncoderQpThresholds) *)scalingSettings {
+  return [[RTC_OBJC_TYPE(RTCVideoEncoderQpThresholds) alloc]
       initWithThresholdsLow:kLowh265QpThreshold
                        high:kHighh265QpThreshold];
 }
 
 - (void)flush {
-    if (_compressionSession)
-        VTCompressionSessionCompleteFrames(_compressionSession, kCMTimeInvalid);
+  if (_compressionSession) VTCompressionSessionCompleteFrames(_compressionSession, kCMTimeInvalid);
 }
 
 @end
