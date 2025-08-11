@@ -303,7 +303,7 @@ static NSUInteger _sharedMultiCamSessionCount = 0;
 #if TARGET_WATCH_DEVICE_ROTATION
 - (void)deviceOrientationDidChange:(NSNotification *)notification {
   [RTC_OBJC_TYPE(RTCDispatcher)
-      dispatchAsyncOnType:RTC_OBJC_TYPE(RTCDispatcherTypeCaptureSession)
+      dispatchAsyncOnType:RTC_OBJC_TYPE(RTCDispatcherTypeMain)
                     block:^{
                       [self updateOrientation];
                     }];

@@ -32,6 +32,7 @@
 #include "absl/types/variant.h"
 #include "api/array_view.h"
 #include "common_video/h264/h264_common.h"
+#include "common_video/h265/h265_common.h"
 #include "modules/rtp_rtcp/source/rtp_format_h264.h"
 #include "rtc_base/byte_buffer.h"
 #include "rtc_base/logging.h"
@@ -94,6 +95,40 @@ inline bool FrameIsH264(webrtc::TransformableFrameInterface* frame,
     default:
       return false;
   }
+}
+
+inline bool FrameIsH265(webrtc::TransformableFrameInterface* frame,
+                        webrtc::FrameCryptorTransformer::MediaType type) {
+  switch (type) {
+    case webrtc::FrameCryptorTransformer::MediaType::kVideoFrame: {
+      auto videoFrame =
+          static_cast<webrtc::TransformableVideoFrameInterface*>(frame);
+      return videoFrame->header().codec ==
+             webrtc::VideoCodecType::kVideoCodecH265;
+    }
+    default:
+      return false;
+  }
+}
+
+inline bool IsH265SliceNalu(webrtc::H265::NaluType nalu_type) {
+  // VCL NALUs (Video Coding Layer) - slice segments
+  return nalu_type == webrtc::H265::NaluType::kTrailN ||
+         nalu_type == webrtc::H265::NaluType::kTrailR ||
+         nalu_type == webrtc::H265::NaluType::kTsaN ||
+         nalu_type == webrtc::H265::NaluType::kTsaR ||
+         nalu_type == webrtc::H265::NaluType::kStsaN ||
+         nalu_type == webrtc::H265::NaluType::kStsaR ||
+         nalu_type == webrtc::H265::NaluType::kRadlN ||
+         nalu_type == webrtc::H265::NaluType::kRadlR ||
+         nalu_type == webrtc::H265::NaluType::kRaslN ||
+         nalu_type == webrtc::H265::NaluType::kRaslR ||
+         nalu_type == webrtc::H265::NaluType::kBlaWLp ||
+         nalu_type == webrtc::H265::NaluType::kBlaWRadl ||
+         nalu_type == webrtc::H265::NaluType::kBlaNLp ||
+         nalu_type == webrtc::H265::NaluType::kIdrWRadl ||
+         nalu_type == webrtc::H265::NaluType::kIdrNLp ||
+         nalu_type == webrtc::H265::NaluType::kCra;
 }
 
 inline bool NeedsRbspUnescaping(const uint8_t* frameData, size_t frameSize) {
@@ -161,6 +196,27 @@ uint8_t get_unencrypted_bytes(webrtc::TransformableFrameInterface* frame,
               return unencrypted_bytes;
             default:
               break;
+          }
+        }
+      } else if (videoFrame->header().codec ==
+                 webrtc::VideoCodecType::kVideoCodecH265) {
+        rtc::ArrayView<const uint8_t> data_in = frame->GetData();
+        std::vector<webrtc::H265::NaluIndex> nalu_indices =
+            webrtc::H265::FindNaluIndices(data_in);
+
+        int idx = 0;
+        for (const auto& index : nalu_indices) {
+          const uint8_t* slice = data_in.data() + index.payload_start_offset;
+          webrtc::H265::NaluType nalu_type =
+              webrtc::H265::ParseNaluType(slice[0]);
+          if (IsH265SliceNalu(nalu_type)) {
+            // H.265 has a 2-byte NALU header, so unencrypted bytes = offset + header size
+            unencrypted_bytes = index.payload_start_offset + webrtc::H265::kNaluHeaderSize;
+            RTC_LOG(LS_INFO)
+                << "H265 NonParameterSetNalu::payload_size: " << index.payload_size
+                << ", nalu_type " << static_cast<int>(nalu_type) << ", NaluIndex [" << idx++
+                << "] offset: " << index.payload_start_offset << ", unencrypted_bytes: " << unencrypted_bytes;
+            return unencrypted_bytes;
           }
         }
       }
@@ -413,6 +469,9 @@ void FrameCryptorTransformer::encryptFrame(
     if (FrameIsH264(frame.get(), type_)) {
       H264::WriteRbsp(data_without_header.data(), data_without_header.size(),
                       &data_out);
+    } else if (FrameIsH265(frame.get(), type_)) {
+      H265::WriteRbsp(data_without_header.data(), data_without_header.size(),
+                      &data_out);
     } else {
       data_out.AppendData(data_without_header);
       RTC_CHECK_EQ(data_out.size(), frame_header.size() +
@@ -561,6 +620,10 @@ void FrameCryptorTransformer::decryptFrame(
       NeedsRbspUnescaping(encrypted_buffer.data(), encrypted_buffer.size())) {
     encrypted_buffer.SetData(
         H264::ParseRbsp(encrypted_buffer.data(), encrypted_buffer.size()));
+  } else if (FrameIsH265(frame.get(), type_) &&
+             NeedsRbspUnescaping(encrypted_buffer.data(), encrypted_buffer.size())) {
+    encrypted_buffer.SetData(
+        H265::ParseRbsp(encrypted_buffer.data(), encrypted_buffer.size()));
   }
 
   rtc::Buffer encrypted_payload(encrypted_buffer.size() - ivLength - 2);
