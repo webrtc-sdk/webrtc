@@ -15,6 +15,8 @@
 #import "api/video_codec/RTCVideoCodecConstants.h"
 #import "api/video_codec/RTCVideoEncoderVP8.h"
 #import "api/video_codec/RTCVideoEncoderVP9.h"
+#import "RTCH265ProfileLevelId.h"
+#import "RTCVideoEncoderH265.h"
 #import "base/RTCVideoCodecInfo.h"
 
 #if defined(RTC_USE_LIBAOM_AV1_ENCODER)
@@ -75,6 +77,10 @@
   } else if ([info.name isEqualToString:RTC_CONSTANT_TYPE(RTCVideoCodecVp9Name)] &&
              [RTC_OBJC_TYPE(RTCVideoEncoderVP9) isSupported]) {
     return [RTC_OBJC_TYPE(RTCVideoEncoderVP9) vp9Encoder];
+  } else if (@available(iOS 11, *)) {
+    if ([info.name isEqualToString:RTC_CONSTANT_TYPE(RTCVideoCodecH265Name)]) {
+      return [[RTC_OBJC_TYPE(RTCVideoEncoderH265) alloc] initWithCodecInfo:info];
+    }
   }
 
 #if defined(RTC_USE_LIBAOM_AV1_ENCODER)

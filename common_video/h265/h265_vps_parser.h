@@ -21,12 +21,16 @@ namespace webrtc {
 // A class for parsing out video parameter set (VPS) data from an H265 NALU.
 class RTC_EXPORT H265VpsParser {
  public:
+    static constexpr uint32_t kMaxSubLayers = 7;
+
   // The parsed state of the VPS. Only some select values are stored.
   // Add more as they are actually needed.
   struct RTC_EXPORT VpsState {
     VpsState();
 
     uint32_t id = 0;
+    uint32_t vps_max_sub_layers_minus1 = 0;
+    uint32_t vps_max_num_reorder_pics[kMaxSubLayers] = {};
   };
 
   // Unpack RBSP and parse VPS state from the supplied buffer.

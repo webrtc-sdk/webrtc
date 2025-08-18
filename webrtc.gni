@@ -196,7 +196,7 @@ declare_args() {
   if (build_with_chromium) {
     rtc_use_h265 = enable_hevc_parser_and_hw_decoder
   } else {
-    rtc_use_h265 = proprietary_codecs
+    rtc_use_h265 = true
   }
 
   # Enable this flag to make webrtc::Mutex be implemented by absl::Mutex.

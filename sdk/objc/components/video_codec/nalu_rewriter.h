@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "common_video/h264/h264_common.h"
+#include "common_video/h265/h265_common.h"
 #include "modules/video_coding/codecs/h264/include/h264.h"
 #include "rtc_base/buffer.h"
 
@@ -43,6 +44,32 @@ bool H264AnnexBBufferToCMSampleBuffer(const uint8_t* annexb_buffer,
                                       CMSampleBufferRef* out_sample_buffer,
                                       CMMemoryPoolRef memory_pool);
 
+uint8_t ComputeH264ReorderSizeFromAnnexB(const uint8_t* annexb_buffer, size_t annexb_buffer_size);
+uint8_t ComputeH264ReorderSizeFromAVC(const uint8_t* avcdata, size_t avcdata_size);
+
+// Converts a sample buffer emitted from the VideoToolbox encoder into a buffer
+// suitable for RTP. The sample buffer is in avcc format whereas the rtp buffer
+// needs to be in Annex B format. Data is written directly to |annexb_buffer|.
+bool H265CMSampleBufferToAnnexBBuffer(CMSampleBufferRef avcc_sample_buffer,
+                                      bool is_keyframe,
+                                      rtc::Buffer* annexb_buffer);
+
+// Converts a buffer received from RTP into a sample buffer suitable for the
+// VideoToolbox decoder. The RTP buffer is in annex b format whereas the sample
+// buffer is in hvcc format.
+// If |is_keyframe| is true then |video_format| is ignored since the format will
+// be read from the buffer. Otherwise |video_format| must be provided.
+// Caller is responsible for releasing the created sample buffer.
+bool H265AnnexBBufferToCMSampleBuffer(const uint8_t* annexb_buffer,
+                                      size_t annexb_buffer_size,
+                                      CMVideoFormatDescriptionRef video_format,
+                                      CMSampleBufferRef* out_sample_buffer)
+    __OSX_AVAILABLE_STARTING(__MAC_10_12, __IPHONE_11_0);
+
+CMVideoFormatDescriptionRef CreateH265VideoFormatDescription(
+    const uint8_t* annexb_buffer,
+    size_t annexb_buffer_size);
+
 // Returns a video format description created from the sps/pps information in
 // the Annex B buffer. If there is no such information, nullptr is returned.
 // The caller is responsible for releasing the description.
@@ -65,6 +92,7 @@ class AnnexBBufferReader final {
   // Returns the number of unread NALU bytes, including the size of the header.
   // If the buffer has no remaining NALUs this will return zero.
   size_t BytesRemaining() const;
+  size_t BytesRemainingForAVC() const;
 
   // Reset the reader to start reading from the first NALU
   void SeekToStart();
@@ -74,6 +102,7 @@ class AnnexBBufferReader final {
   // Return true if a NALU of the desired type is found, false if we
   // reached the end instead
   bool SeekToNextNaluOfType(H264::NaluType type);
+  bool SeekToNextNaluOfType(H265::NaluType type);
 
  private:
   // Returns the the next offset that contains NALU data.
