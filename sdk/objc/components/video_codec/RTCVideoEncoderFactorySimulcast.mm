@@ -1,5 +1,7 @@
 #import <Foundation/Foundation.h>
 
+#import "RTCH264ProfileLevelId.h"
+#import "RTCH265ProfileLevelId.h"
 #import "RTCMacros.h"
 #import "RTCVideoCodecInfo.h"
 #import "RTCVideoEncoderFactorySimulcast.h"
@@ -56,6 +58,11 @@
          webrtc::LibaomAv1EncoderSupportedScalabilityModes());
     RTC_OBJC_TYPE(RTCVideoCodecInfo) *av1Codec = [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithNativeSdpVideoFormat: av1Format];
     [addingCodecs addObject: av1Codec];
+
+    // H265
+    auto *h265Codec = [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc]
+        initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecH265Name)];
+    [addingCodecs addObject:h265Codec];
 
     return [supportedCodecs arrayByAddingObjectsFromArray: addingCodecs];
 }
