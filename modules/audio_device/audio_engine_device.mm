@@ -2372,7 +2372,9 @@ void AudioEngineDevice::StartRenderLoop() {
   const double sample_rate = manual_render_rtc_format_.sampleRate;
   const size_t frames_per_buffer = static_cast<size_t>(sample_rate / 100);  // 10ms chunks
   const size_t buffer_size = frames_per_buffer * kAudioSampleSize;
-  const int sleep_ms = 5;  // Fixed sleep time
+  const int chunk_ms =
+      static_cast<int>(std::round(1000.0 * static_cast<double>(frames_per_buffer) / sample_rate));
+  int64_t next_wakeup_ms = rtc::TimeMillis();
 
   while (!render_thread_->IsQuitting()) {
     // Read (Output)
@@ -2384,6 +2386,7 @@ void AudioEngineDevice::StartRenderLoop() {
     int16_t* const read_rtc_buffer =
         static_cast<int16_t*>(static_cast<void*>(read_abl->mBuffers[0].mData));
 
+    // Call GetPlayoutData to pull frames into rtc audio stack even though we won't use it here.
     fine_audio_buffer_->GetPlayoutData(
         webrtc::ArrayView<int16_t>(read_rtc_buffer, frames_per_buffer), kFixedPlayoutDelayEstimate);
 
@@ -2411,7 +2414,12 @@ void AudioEngineDevice::StartRenderLoop() {
     }
 
     if (!render_thread_->IsQuitting()) {
-      render_thread_->SleepMs(sleep_ms);
+      next_wakeup_ms += chunk_ms;
+      const int64_t now_ms = rtc::TimeMillis();
+      const int64_t sleep_ms = next_wakeup_ms - now_ms;
+      if (sleep_ms > 0) {
+        render_thread_->SleepMs(static_cast<int>(sleep_ms));
+      }
     }
   }
 }
