@@ -38,6 +38,8 @@ class RTC_EXPORT H265BitstreamParser : public BitstreamParser {
   std::optional<int> GetLastSliceQp() const override;
 
   std::optional<uint32_t> GetLastSlicePpsId() const;
+  
+  bool GetLastHasBadRbsp() const;
 
   static std::optional<uint32_t> ParsePpsIdFromSliceSegmentLayerRbsp(
       ArrayView<const uint8_t> data,
@@ -70,6 +72,8 @@ class RTC_EXPORT H265BitstreamParser : public BitstreamParser {
   // Last parsed slice QP.
   std::optional<int32_t> last_slice_qp_delta_;
   std::optional<uint32_t> last_slice_pps_id_;
+  
+  bool lastHasBadRbsp_;
 };
 
 }  // namespace webrtc

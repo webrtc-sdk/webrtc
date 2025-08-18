@@ -90,8 +90,11 @@ H265BitstreamParser::Result H265BitstreamParser::ParseNonParameterSetNalu(
   last_slice_qp_delta_ = std::nullopt;
   last_slice_pps_id_ = std::nullopt;
   const std::vector<uint8_t> slice_rbsp = H265::ParseRbsp(source);
-  if (slice_rbsp.size() < H265::kNaluHeaderSize)
+  if (slice_rbsp.size() < H265::kNaluHeaderSize) {
+    RTC_LOG(LS_WARNING) << "slice_rbsp.size too small: " << slice_rbsp.size();
+    lastHasBadRbsp_ = true;
     return kInvalidStream;
+  }
 
   BitstreamReader slice_reader(slice_rbsp);
   slice_reader.ConsumeBits(H265::kNaluHeaderSize * 8);
@@ -637,6 +640,7 @@ std::optional<bool> H265BitstreamParser::IsFirstSliceSegmentInPic(
 }
 
 void H265BitstreamParser::ParseBitstream(ArrayView<const uint8_t> bitstream) {
+  lastHasBadRbsp_ = false;
   std::vector<H265::NaluIndex> nalu_indices = H265::FindNaluIndices(bitstream);
   for (const H265::NaluIndex& index : nalu_indices)
     ParseSlice(
@@ -665,6 +669,14 @@ std::optional<uint32_t> H265BitstreamParser::GetLastSlicePpsId() const {
   }
 
   return last_slice_pps_id_;
+}
+
+bool H265BitstreamParser::GetLastHasBadRbsp() const {
+  if (lastHasBadRbsp_) {
+    RTC_LOG(LS_ERROR) << "Bad Rbsp header!";
+    return true;
+  }
+  return lastHasBadRbsp_;
 }
 
 }  // namespace webrtc
