@@ -446,6 +446,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   webrtc::Thread* thread_;
   std::unique_ptr<webrtc::Thread> render_thread_;
   AVAudioPCMBuffer* render_buffer_;
+  AVAudioPCMBuffer* read_buffer_;
 
   const std::unique_ptr<TaskQueueFactory> task_queue_factory_;
   std::unique_ptr<AudioDeviceBuffer> audio_device_buffer_;
