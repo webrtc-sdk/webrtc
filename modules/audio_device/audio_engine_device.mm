@@ -2378,14 +2378,14 @@ void AudioEngineDevice::StartRenderLoop() {
     // Read (Output)
     RTC_DCHECK(read_buffer_ != nullptr);
     AudioBufferList* read_abl = const_cast<AudioBufferList*>(read_buffer_.audioBufferList);
+    read_abl->mBuffers[0].mDataByteSize = buffer_size;
 
     RTC_DCHECK(read_abl->mNumberBuffers == 1);
-    const int16_t* read_rtc_buffer =
-        static_cast<const int16_t*>(static_cast<const void*>(read_abl->mBuffers[0].mData));
+    int16_t* const read_rtc_buffer =
+        static_cast<int16_t*>(static_cast<void*>(read_abl->mBuffers[0].mData));
 
     fine_audio_buffer_->GetPlayoutData(
-        webrtc::ArrayView<const int16_t>(read_rtc_buffer, frames_per_buffer),
-        kFixedPlayoutDelayEstimate);
+        webrtc::ArrayView<int16_t>(read_rtc_buffer, frames_per_buffer), kFixedPlayoutDelayEstimate);
 
     // Render (Input)
     RTC_DCHECK(render_buffer_ != nullptr);
