@@ -1431,9 +1431,13 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
     render_thread_->Stop();
     render_thread_ = nullptr;
 
-    LOGI() << "Releasing render buffer...";
+    LOGI() << "Releasing manual render buffer...";
     RTC_DCHECK(render_buffer_ != nullptr);
     render_buffer_ = nullptr;
+
+    LOGI() << "Releasing manual read buffer...";
+    RTC_DCHECK(read_buffer_ != nullptr);
+    read_buffer_ = nullptr;
 
     if (observer_ != nullptr) {
       int32_t result = observer_->OnEngineDidStop(
@@ -1582,10 +1586,15 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
       }
     }
 
-    LOGI() << "Allocating render buffer...";
+    LOGI() << "Allocating manual render buffer...";
     RTC_DCHECK(render_buffer_ == nullptr);
     render_buffer_ = [[AVAudioPCMBuffer alloc] initWithPCMFormat:manual_render_rtc_format_
                                                    frameCapacity:kMaximumFramesPerBuffer];
+
+    LOGI() << "Allocating manual read buffer...";
+    RTC_DCHECK(read_buffer_ == nullptr);
+    read_buffer_ = [[AVAudioPCMBuffer alloc] initWithPCMFormat:manual_render_rtc_format_
+                                                 frameCapacity:kMaximumFramesPerBuffer];
 
     LOGI() << "Starting AVAudioEngine...";
     NSError* error = nil;
@@ -2363,20 +2372,36 @@ void AudioEngineDevice::StartRenderLoop() {
   const double sample_rate = manual_render_rtc_format_.sampleRate;
   const size_t frames_per_buffer = static_cast<size_t>(sample_rate / 100);  // 10ms chunks
   const size_t buffer_size = frames_per_buffer * kAudioSampleSize;
-  const int sleep_ms = 5;  // Fixed sleep time
+  const int chunk_ms =
+      static_cast<int>(std::round(1000.0 * static_cast<double>(frames_per_buffer) / sample_rate));
+  int64_t next_wakeup_ms = rtc::TimeMillis();
 
   while (!render_thread_->IsQuitting()) {
+    // Read (Output)
+    RTC_DCHECK(read_buffer_ != nullptr);
+    AudioBufferList* read_abl = const_cast<AudioBufferList*>(read_buffer_.audioBufferList);
+    read_abl->mBuffers[0].mDataByteSize = buffer_size;
+
+    RTC_DCHECK(read_abl->mNumberBuffers == 1);
+    int16_t* const read_rtc_buffer =
+        static_cast<int16_t*>(static_cast<void*>(read_abl->mBuffers[0].mData));
+
+    // Call GetPlayoutData to pull frames into rtc audio stack even though we won't use it here.
+    fine_audio_buffer_->GetPlayoutData(
+        webrtc::ArrayView<int16_t>(read_rtc_buffer, frames_per_buffer), kFixedPlayoutDelayEstimate);
+
+    // Render (Input)
     RTC_DCHECK(render_buffer_ != nullptr);
-    AudioBufferList* abl = const_cast<AudioBufferList*>(render_buffer_.audioBufferList);
-    abl->mBuffers[0].mDataByteSize = buffer_size;
+    AudioBufferList* render_abl = const_cast<AudioBufferList*>(render_buffer_.audioBufferList);
+    render_abl->mBuffers[0].mDataByteSize = buffer_size;
 
     OSStatus err = noErr;
-    AVAudioEngineManualRenderingStatus result = render_block_(frames_per_buffer, abl, &err);
+    AVAudioEngineManualRenderingStatus result = render_block_(frames_per_buffer, render_abl, &err);
 
     if (result == AVAudioEngineManualRenderingStatusSuccess) {
-      RTC_DCHECK(abl->mNumberBuffers == 1);
+      RTC_DCHECK(render_abl->mNumberBuffers == 1);
       const int16_t* rtc_buffer =
-          static_cast<const int16_t*>(static_cast<const void*>(abl->mBuffers[0].mData));
+          static_cast<const int16_t*>(static_cast<const void*>(render_abl->mBuffers[0].mData));
 
       const uint64_t capture_time = mach_absolute_time();
       const int64_t capture_time_ns = capture_time * machTickUnitsToNanoseconds_;
@@ -2389,7 +2414,12 @@ void AudioEngineDevice::StartRenderLoop() {
     }
 
     if (!render_thread_->IsQuitting()) {
-      render_thread_->SleepMs(sleep_ms);
+      next_wakeup_ms += chunk_ms;
+      const int64_t now_ms = rtc::TimeMillis();
+      const int64_t sleep_ms = next_wakeup_ms - now_ms;
+      if (sleep_ms > 0) {
+        render_thread_->SleepMs(static_cast<int>(sleep_ms));
+      }
     }
   }
 }
