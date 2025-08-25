@@ -35,6 +35,7 @@
 #include "common_video/h265/h265_common.h"
 #include "modules/rtp_rtcp/source/rtp_format_h264.h"
 #include "rtc_base/byte_buffer.h"
+#include "rtc_base/crypto_random.h"
 #include "rtc_base/logging.h"
 
 enum class EncryptOrDecrypt { kEncrypt = 0, kDecrypt };
@@ -728,8 +729,7 @@ void FrameCryptorTransformer::onFrameCryptionStateChanged(
 rtc::Buffer FrameCryptorTransformer::makeIv(uint32_t ssrc, uint32_t timestamp) {
   uint32_t send_count = 0;
   if (send_counts_.find(ssrc) == send_counts_.end()) {
-    srand((unsigned)time(NULL));
-    send_counts_[ssrc] = floor(rand() * 0xFFFF);
+    send_counts_[ssrc] = floor(CreateRandomNonZeroId() * 0xFFFF);
   } else {
     send_count = send_counts_[ssrc];
   }
@@ -757,9 +757,7 @@ DataPacketCryptor::DataPacketCryptor(
     Algorithm algorithm,
     webrtc::scoped_refptr<KeyProvider> key_provider)
     : algorithm_(algorithm),
-      key_provider_(key_provider),
-      key_index_(0),
-      enabled_cryption_(false) {
+      key_provider_(key_provider) {
   RTC_DCHECK(key_provider_ != nullptr);
 }
 
@@ -775,13 +773,11 @@ RTCErrorOr<std::vector<uint8_t>> DataPacketCryptor::Decrypt(
     const webrtc::scoped_refptr<EncryptedPacket> encryptedPacket) {}
 
 rtc::Buffer DataPacketCryptor::makeIv(uint32_t timestamp) {
-  if (send_count_ = 0) {
-    srand((unsigned)time(NULL));
-    send_count_ = floor(rand() * 0xFFFF);
+  if (send_count_ == 0) {
+    send_count_ = floor(CreateRandomNonZeroId() * 0xFFFF);
   }
   rtc::ByteBufferWriter buf;
-  srand((unsigned)time(NULL));
-  uint32_t random_u32 = rand();
+  uint32_t random_u32 = CreateRandomId();
   buf.WriteUInt32(random_u32);
   buf.WriteUInt32(timestamp);
   buf.WriteUInt32(timestamp - (send_count_ % 0xFFFF));
