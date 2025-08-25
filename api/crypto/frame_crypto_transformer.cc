@@ -753,4 +753,47 @@ uint8_t FrameCryptorTransformer::getIvSize() {
   }
 }
 
+
+
+DataPacketCryptor::DataPacketCryptor(Algorithm algorithm,
+                      webrtc::scoped_refptr<KeyProvider> key_provider):
+    algorithm_(algorithm),
+    key_provider_(key_provider),
+    key_index_(0),
+    enabled_cryption_(false) {
+  RTC_DCHECK(key_provider_ != nullptr);
+}
+
+DataPacketCryptor::~DataPacketCryptor() {
+
+}
+  
+std::vector<uint8_t> DataPacketCryptor::Encrypt(const std::string participant_id,
+                             const std::vector<uint8_t>& data) {
+
+}
+  
+std::vector<uint8_t> DataPacketCryptor::Decrypt(const std::string participant_id,
+                             const std::vector<uint8_t>& data) {
+
+}
+
+rtc::Buffer DataPacketCryptor::makeIv(uint32_t timestamp) {
+  if (send_count_ = 0) {
+    srand((unsigned)time(NULL));
+    send_count_ = floor(rand() * 0xFFFF);
+  }
+  rtc::ByteBufferWriter buf;
+  srand((unsigned)time(NULL));
+  uint32_t random_u32 = rand();
+  buf.WriteUInt32(random_u32);
+  buf.WriteUInt32(timestamp);
+  buf.WriteUInt32(timestamp - (send_count_ % 0xFFFF));
+  send_count_ += 1;
+
+  RTC_CHECK_EQ(buf.Length(), 12);
+
+  return rtc::Buffer(buf.Data(), buf.Length());
+}
+  
 }  // namespace webrtc

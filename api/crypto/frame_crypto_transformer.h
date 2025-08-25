@@ -376,6 +376,53 @@ class FrameCryptorTransformerObserver : public webrtc::RefCountInterface {
   virtual ~FrameCryptorTransformerObserver() {}
 };
 
+class RTC_EXPORT EncryptedPacket : public webrtc::RefCountInterface {
+ public:
+  EncryptedPacket() = default;
+  EncryptedPacket(std::vector<uint8_t> data,  std::vector<uint8_t> iv, uint8_t key_index)
+      : data(data), iv(iv), key_index(key_index) {}
+  ~EncryptedPacket() = default;
+
+  std::vector<uint8_t> data;
+  std::vector<uint8_t> iv;
+  uint8_t key_index = 0;
+};
+
+class RTC_EXPORT DataPacketCryptor : public webrtc::RefCountInterface {
+  public:
+    enum class Algorithm {
+      kAesGcm = 0,
+      kAesCbc,
+    };
+  
+    DataPacketCryptor(Algorithm algorithm,
+                      webrtc::scoped_refptr<KeyProvider> key_provider);
+    ~DataPacketCryptor();
+  
+    virtual webrtc::scoped_refptr<EncryptedPacket> Encrypt(const std::string participant_id,
+                                const std::vector<uint8_t>& data);
+  
+    virtual std::vector<uint8_t> Decrypt(const std::string participant_id,
+                                const webrtc::scoped_refptr<EncryptedPacket> encryptedPacket);
+
+    virtual void SetKeyIndex(int index) {
+      webrtc::MutexLock lock(&mutex_);
+      key_index_ = index;
+    }
+
+    virtual int key_index() const { return key_index_; }
+
+private:
+    rtc::Buffer makeIv(uint32_t timestamp);
+
+  private:
+    Algorithm algorithm_;
+    webrtc::scoped_refptr<KeyProvider> key_provider_;
+    uint32_t send_count_ = 0;
+    int key_index_ = 0;
+    mutable webrtc::Mutex mutex_;
+};
+
 class RTC_EXPORT FrameCryptorTransformer
     : public webrtc::RefCountedObject<webrtc::FrameTransformerInterface> {
  public:
