@@ -36,6 +36,7 @@
 #include "modules/rtp_rtcp/source/rtp_format_h264.h"
 #include "rtc_base/byte_buffer.h"
 #include "rtc_base/crypto_random.h"
+#include "rtc_base/time_utils.h"
 #include "rtc_base/logging.h"
 
 enum class EncryptOrDecrypt { kEncrypt = 0, kDecrypt };
@@ -211,12 +212,16 @@ uint8_t get_unencrypted_bytes(webrtc::TransformableFrameInterface* frame,
           webrtc::H265::NaluType nalu_type =
               webrtc::H265::ParseNaluType(slice[0]);
           if (IsH265SliceNalu(nalu_type)) {
-            // H.265 has a 2-byte NALU header, so unencrypted bytes = offset + header size
-            unencrypted_bytes = index.payload_start_offset + webrtc::H265::kNaluHeaderSize;
+            // H.265 has a 2-byte NALU header, so unencrypted bytes = offset +
+            // header size
+            unencrypted_bytes =
+                index.payload_start_offset + webrtc::H265::kNaluHeaderSize;
             RTC_LOG(LS_INFO)
-                << "H265 NonParameterSetNalu::payload_size: " << index.payload_size
-                << ", nalu_type " << static_cast<int>(nalu_type) << ", NaluIndex [" << idx++
-                << "] offset: " << index.payload_start_offset << ", unencrypted_bytes: " << unencrypted_bytes;
+                << "H265 NonParameterSetNalu::payload_size: "
+                << index.payload_size << ", nalu_type "
+                << static_cast<int>(nalu_type) << ", NaluIndex [" << idx++
+                << "] offset: " << index.payload_start_offset
+                << ", unencrypted_bytes: " << unencrypted_bytes;
             return unencrypted_bytes;
           }
         }
@@ -322,8 +327,8 @@ int AesEncryptDecrypt(EncryptOrDecrypt mode,
         RTC_LOG(LS_ERROR) << "Invalid AES-GCM key size.";
         return ErrorUnexpected;
       }
-      return AesGcmEncryptDecrypt(
-          mode, raw_key, data, tag_length_bits / 8, iv, additional_data, cipher, buffer);
+      return AesGcmEncryptDecrypt(mode, raw_key, data, tag_length_bits / 8, iv,
+                                  additional_data, cipher, buffer);
     }
     default:
       RTC_LOG(LS_ERROR) << "Unsupported algorithm.";
@@ -386,7 +391,8 @@ void FrameCryptorTransformer::Transform(
 void FrameCryptorTransformer::encryptFrame(
     std::unique_ptr<webrtc::TransformableFrameInterface> frame) {
   bool enabled_cryption = false;
-  webrtc::scoped_refptr<webrtc::TransformedFrameCallback> sink_callback = nullptr;
+  webrtc::scoped_refptr<webrtc::TransformedFrameCallback> sink_callback =
+      nullptr;
   {
     webrtc::MutexLock lock(&mutex_);
     enabled_cryption = enabled_cryption_;
@@ -411,7 +417,7 @@ void FrameCryptorTransformer::encryptFrame(
   if (data_in.size() == 0 || !enabled_cryption) {
     RTC_LOG(LS_WARNING) << "FrameCryptorTransformer::encryptFrame() "
                            "data_in.size() == 0 || enabled_cryption == false";
-    if(key_provider_->options().discard_frame_when_cryptor_not_ready) {
+    if (key_provider_->options().discard_frame_when_cryptor_not_ready) {
       return;
     }
     sink_callback->OnTransformedFrame(std::move(frame));
@@ -499,7 +505,8 @@ void FrameCryptorTransformer::encryptFrame(
 void FrameCryptorTransformer::decryptFrame(
     std::unique_ptr<webrtc::TransformableFrameInterface> frame) {
   bool enabled_cryption = false;
-  webrtc::scoped_refptr<webrtc::TransformedFrameCallback> sink_callback = nullptr;
+  webrtc::scoped_refptr<webrtc::TransformedFrameCallback> sink_callback =
+      nullptr;
   {
     webrtc::MutexLock lock(&mutex_);
     enabled_cryption = enabled_cryption_;
@@ -525,7 +532,7 @@ void FrameCryptorTransformer::decryptFrame(
   if (data_in.size() == 0 || !enabled_cryption) {
     RTC_LOG(LS_WARNING) << "FrameCryptorTransformer::decryptFrame() "
                            "data_in.size() == 0 || enabled_cryption == false";
-    if(key_provider_->options().discard_frame_when_cryptor_not_ready) {
+    if (key_provider_->options().discard_frame_when_cryptor_not_ready) {
       return;
     }
 
@@ -586,8 +593,8 @@ void FrameCryptorTransformer::decryptFrame(
                          ? key_provider_->GetSharedKey(participant_id_)
                          : key_provider_->GetKey(participant_id_);
 
-  if (0 > key_index || key_index >= key_provider_->options().key_ring_size || key_handler == nullptr ||
-      key_handler->GetKeySet(key_index) == nullptr) {
+  if (0 > key_index || key_index >= key_provider_->options().key_ring_size ||
+      key_handler == nullptr || key_handler->GetKeySet(key_index) == nullptr) {
     RTC_LOG(LS_INFO) << "FrameCryptorTransformer::decryptFrame() no keys, or "
                         "key_index["
                      << key_index << "] out of range for participant "
@@ -622,7 +629,8 @@ void FrameCryptorTransformer::decryptFrame(
     encrypted_buffer.SetData(
         H264::ParseRbsp(encrypted_buffer.data(), encrypted_buffer.size()));
   } else if (FrameIsH265(frame.get(), type_) &&
-             NeedsRbspUnescaping(encrypted_buffer.data(), encrypted_buffer.size())) {
+             NeedsRbspUnescaping(encrypted_buffer.data(),
+                                 encrypted_buffer.size())) {
     encrypted_buffer.SetData(
         H265::ParseRbsp(encrypted_buffer.data(), encrypted_buffer.size()));
   }
@@ -754,10 +762,9 @@ uint8_t FrameCryptorTransformer::getIvSize() {
 }
 
 DataPacketCryptor::DataPacketCryptor(
-    Algorithm algorithm,
+    FrameCryptorTransformer::Algorithm algorithm,
     webrtc::scoped_refptr<KeyProvider> key_provider)
-    : algorithm_(algorithm),
-      key_provider_(key_provider) {
+    : algorithm_(algorithm), key_provider_(key_provider) {
   RTC_DCHECK(key_provider_ != nullptr);
 }
 
@@ -766,7 +773,42 @@ DataPacketCryptor::~DataPacketCryptor() {}
 RTCErrorOr<webrtc::scoped_refptr<EncryptedPacket>> DataPacketCryptor::Encrypt(
     const std::string participant_id,
     int key_index,
-    const std::vector<uint8_t>& data) {}
+    const std::vector<uint8_t>& data) {
+  auto key_handler = key_provider_->options().shared_key
+                         ? key_provider_->GetSharedKey(participant_id)
+                         : key_provider_->GetKey(participant_id);
+
+  if (key_handler == nullptr || key_handler->GetKeySet(key_index) == nullptr) {
+    RTC_LOG(LS_INFO) << "DataPacketCryptor::Encrypt() no keys, or "
+                        "key_index["
+                     << key_index << "] out of range for participant "
+                     << participant_id;
+    return RTCError(RTCErrorType::INVALID_PARAMETER,
+                    "key_index[" + std::to_string(key_index) +
+                        "] out of range for participant " + participant_id);
+  }
+
+  auto key_set = key_handler->GetKeySet(key_index);
+  auto timestamp = Timestamp::Millis(
+                       rtc::TimeMillis())
+                       .ms();  // use current time millis as timestamp
+  auto iv = makeIv(timestamp);  // for data packets, ssrc is always 0
+
+  std::vector<uint8_t> buffer;
+  rtc::Buffer payload(data.data(), data.size());
+  auto frame_header = rtc::Buffer(0);  // no frame header for data packets
+  if (AesEncryptDecrypt(EncryptOrDecrypt::kEncrypt, algorithm_,
+                        key_set->encryption_key, iv, frame_header, payload,
+                        &buffer) == Success) {
+    webrtc::scoped_refptr<EncryptedPacket> encryptedPacket =
+        webrtc::make_ref_counted<EncryptedPacket>(
+            buffer, std::vector<uint8_t>(iv.begin(), iv.end()), key_index);
+    return encryptedPacket;
+  }
+
+  return RTCError(RTCErrorType::INTERNAL_ERROR,
+                  "DataPacketCryptor::Encrypt() failed");
+}
 
 RTCErrorOr<std::vector<uint8_t>> DataPacketCryptor::Decrypt(
     const std::string participant_id,

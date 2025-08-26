@@ -494,12 +494,7 @@ class RTC_EXPORT EncryptedPacket : public webrtc::RefCountInterface {
 
 class RTC_EXPORT DataPacketCryptor : public webrtc::RefCountInterface {
  public:
-  enum class Algorithm {
-    kAesGcm = 0,
-    kAesCbc,
-  };
-
-  DataPacketCryptor(Algorithm algorithm,
+  DataPacketCryptor(FrameCryptorTransformer::Algorithm algorithm,
                     webrtc::scoped_refptr<KeyProvider> key_provider);
   ~DataPacketCryptor();
 
@@ -516,7 +511,7 @@ class RTC_EXPORT DataPacketCryptor : public webrtc::RefCountInterface {
   rtc::Buffer makeIv(uint32_t timestamp);
 
  private:
-  Algorithm algorithm_;
+  FrameCryptorTransformer::Algorithm algorithm_;
   webrtc::scoped_refptr<KeyProvider> key_provider_;
   uint32_t send_count_ = 0;
   mutable webrtc::Mutex mutex_;
