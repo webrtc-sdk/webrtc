@@ -630,6 +630,7 @@ if (rtc_include_tests && !build_with_chromium) {
     deps = [
       "api:compile_all_headers",
       "api:rtc_api_unittests",
+      "api/crypto:crypto_unittests",
       "api/audio:audio_api_unittests",
       "api/audio_codecs/test:audio_codecs_api_unittests",
       "api/numerics:numerics_unittests",

@@ -112,6 +112,7 @@ class MockAudioProcessing : public AudioProcessing {
   MOCK_METHOD(size_t, num_output_channels, (), (const, override));
   MOCK_METHOD(size_t, num_reverse_channels, (), (const, override));
   MOCK_METHOD(void, set_output_will_be_muted, (bool muted), (override));
+  MOCK_METHOD(bool, get_output_will_be_muted, (), (override));
   MOCK_METHOD(void, SetRuntimeSetting, (RuntimeSetting setting), (override));
   MOCK_METHOD(bool, PostRuntimeSetting, (RuntimeSetting setting), (override));
   MOCK_METHOD(int,
