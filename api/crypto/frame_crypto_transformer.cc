@@ -36,8 +36,8 @@
 #include "modules/rtp_rtcp/source/rtp_format_h264.h"
 #include "rtc_base/byte_buffer.h"
 #include "rtc_base/crypto_random.h"
-#include "rtc_base/time_utils.h"
 #include "rtc_base/logging.h"
+#include "rtc_base/time_utils.h"
 
 enum class EncryptOrDecrypt { kEncrypt = 0, kDecrypt };
 
@@ -784,14 +784,14 @@ RTCErrorOr<webrtc::scoped_refptr<EncryptedPacket>> DataPacketCryptor::Encrypt(
                      << key_index << "] out of range for participant "
                      << participant_id;
     return RTCError(RTCErrorType::INVALID_PARAMETER,
-                    "key_index[" + std::to_string(key_index) +
+                    "DataPacketCryptor::Encrypt() no keys, or key_index[" +
+                        std::to_string(key_index) +
                         "] out of range for participant " + participant_id);
   }
 
   auto key_set = key_handler->GetKeySet(key_index);
-  auto timestamp = Timestamp::Millis(
-                       rtc::TimeMillis())
-                       .ms();  // use current time millis as timestamp
+  auto timestamp = Timestamp::Millis(rtc::TimeMillis())
+                       .ms();   // use current time millis as timestamp
   auto iv = makeIv(timestamp);  // for data packets, ssrc is always 0
 
   std::vector<uint8_t> buffer;
@@ -812,7 +812,89 @@ RTCErrorOr<webrtc::scoped_refptr<EncryptedPacket>> DataPacketCryptor::Encrypt(
 
 RTCErrorOr<std::vector<uint8_t>> DataPacketCryptor::Decrypt(
     const std::string participant_id,
-    const webrtc::scoped_refptr<EncryptedPacket> encryptedPacket) {}
+    const webrtc::scoped_refptr<EncryptedPacket> encryptedPacket) {
+  auto key_handler = key_provider_->options().shared_key
+                         ? key_provider_->GetSharedKey(participant_id)
+                         : key_provider_->GetKey(participant_id);
+  int key_index = encryptedPacket->key_index;
+  if (key_handler == nullptr || key_handler->GetKeySet(key_index) == nullptr) {
+    RTC_LOG(LS_INFO) << "DataPacketCryptor::Decrypt() no keys, or "
+                        "key_index["
+                     << key_index << "] out of range for participant "
+                     << participant_id;
+    return RTCError(RTCErrorType::INVALID_PARAMETER,
+                    "DataPacketCryptor::Decrypt() no keys, or key_index[" +
+                        std::to_string(key_index) +
+                        "] out of range for participant " + participant_id);
+  }
+  
+  std::vector<uint8_t> buffer;
+  rtc::Buffer encrypted_payload(encryptedPacket->data.data(),
+                                encryptedPacket->data.size());
+  rtc::Buffer iv(encryptedPacket->iv.data(), encryptedPacket->iv.size());
+  auto frame_header = rtc::Buffer(0);  // no frame header for data packets
+
+  auto key_set = key_handler->GetKeySet(key_index);
+  auto initialKeyMaterial = key_set->material;
+  bool decryption_success = false;
+
+  if (AesEncryptDecrypt(EncryptOrDecrypt::kDecrypt, algorithm_,
+                        key_set->encryption_key, iv, frame_header,
+                        encrypted_payload, &buffer) == Success) {
+    decryption_success = true;
+  } else {
+    RTC_LOG(LS_WARNING) << "DataPacketCryptor::Decrypt() failed";
+    webrtc::scoped_refptr<ParticipantKeyHandler::KeySet> ratcheted_key_set;
+    auto currentKeyMaterial = key_set->material;
+    int ratchet_count = 0;
+    if (key_provider_->options().ratchet_window_size > 0) {
+      while (ratchet_count < key_provider_->options().ratchet_window_size) {
+        ratchet_count++;
+
+        RTC_LOG(LS_INFO) << "ratcheting key attempt " << ratchet_count << " of "
+                         << key_provider_->options().ratchet_window_size;
+
+        auto new_material = key_handler->RatchetKeyMaterial(currentKeyMaterial);
+        ratcheted_key_set = key_handler->DeriveKeys(
+            new_material, key_provider_->options().ratchet_salt, 128);
+
+        if (AesEncryptDecrypt(EncryptOrDecrypt::kDecrypt, algorithm_,
+                              ratcheted_key_set->encryption_key, iv,
+                              frame_header, encrypted_payload,
+                              &buffer) == Success) {
+          RTC_LOG(LS_INFO) << "DataPacketCryptor::Decrypt() "
+                              "ratcheted to key_index="
+                           << static_cast<int>(key_index);
+          decryption_success = true;
+          // success, so we set the new key
+          key_handler->SetKeyFromMaterial(new_material, key_index);
+          key_handler->SetHasValidKey();
+          break;
+        }
+        // for the next ratchet attempt
+        currentKeyMaterial = new_material;
+      }
+
+      /* Since the key it is first send and only afterwards actually used for
+        encrypting, there were situations when the decrypting failed due to the
+        fact that the received frame was not encrypted yet and ratcheting, of
+        course, did not solve the problem. So if we fail RATCHET_WINDOW_SIZE
+        times, we come back to the initial key.
+       */
+      if (!decryption_success ||
+          ratchet_count >= key_provider_->options().ratchet_window_size) {
+        key_handler->SetKeyFromMaterial(initialKeyMaterial, key_index);
+      }
+    }
+  }
+
+  if (decryption_success) {
+    return buffer;
+  }
+
+  return RTCError(RTCErrorType::INTERNAL_ERROR,
+                  "DataPacketCryptor::Decrypt() failed");
+}
 
 rtc::Buffer DataPacketCryptor::makeIv(uint32_t timestamp) {
   if (send_count_ == 0) {

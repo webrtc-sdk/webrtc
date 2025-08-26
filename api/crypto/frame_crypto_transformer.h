@@ -52,10 +52,10 @@ struct KeyProviderOptions {
   bool discard_frame_when_cryptor_not_ready;
   KeyProviderOptions()
       : shared_key(false),
-      ratchet_window_size(0),
-      failure_tolerance(-1),
-      key_ring_size(DEFAULT_KEYRING_SIZE),
-      discard_frame_when_cryptor_not_ready(false) {}
+        ratchet_window_size(0),
+        failure_tolerance(-1),
+        key_ring_size(DEFAULT_KEYRING_SIZE),
+        discard_frame_when_cryptor_not_ready(false) {}
   KeyProviderOptions(KeyProviderOptions& copy)
       : shared_key(copy.shared_key),
         ratchet_salt(copy.ratchet_salt),
@@ -111,7 +111,7 @@ class ParticipantKeyHandler : public webrtc::RefCountInterface {
   ParticipantKeyHandler(KeyProvider* key_provider)
       : key_provider_(key_provider) {
     int key_ring_size = key_provider_->options().key_ring_size;
-    if(key_ring_size <= 0) {
+    if (key_ring_size <= 0) {
       key_ring_size = DEFAULT_KEYRING_SIZE;
     } else if (key_ring_size > (int)MAX_KEYRING_SIZE) {
       // Keyring size needs to be between 1 and 256
@@ -170,8 +170,8 @@ class ParticipantKeyHandler : public webrtc::RefCountInterface {
   }
 
   webrtc::scoped_refptr<KeySet> DeriveKeys(std::vector<uint8_t> password,
-                                        std::vector<uint8_t> ratchet_salt,
-                                        unsigned int optional_length_bits) {
+                                           std::vector<uint8_t> ratchet_salt,
+                                           unsigned int optional_length_bits) {
     std::vector<uint8_t> derived_key;
     if (DerivePBKDF2KeyFromRawKey(password, ratchet_salt, optional_length_bits,
                                   &derived_key) == 0) {
@@ -304,7 +304,7 @@ class DefaultKeyProviderImpl : public KeyProvider {
 
     if (keys_.find(participant_id) == keys_.end()) {
       keys_[participant_id] =
-        webrtc::make_ref_counted<ParticipantKeyHandler>(this);
+          webrtc::make_ref_counted<ParticipantKeyHandler>(this);
     }
 
     auto key_handler = keys_[participant_id];
@@ -427,7 +427,8 @@ class RTC_EXPORT FrameCryptorTransformer
 
  protected:
   virtual void RegisterTransformedFrameCallback(
-      webrtc::scoped_refptr<webrtc::TransformedFrameCallback> callback) override {
+      webrtc::scoped_refptr<webrtc::TransformedFrameCallback> callback)
+      override {
     webrtc::MutexLock lock(&sink_mutex_);
     sink_callback_ = callback;
   }
@@ -479,11 +480,12 @@ class RTC_EXPORT FrameCryptorTransformer
   FrameCryptionState last_dec_error_ = FrameCryptionState::kNew;
 };
 
-
 class RTC_EXPORT EncryptedPacket : public webrtc::RefCountInterface {
  public:
   EncryptedPacket() = default;
-  EncryptedPacket(std::vector<uint8_t> data,  std::vector<uint8_t> iv, uint8_t key_index)
+  EncryptedPacket(std::vector<uint8_t> data,
+                  std::vector<uint8_t> iv,
+                  uint8_t key_index)
       : data(data), iv(iv), key_index(key_index) {}
   ~EncryptedPacket() = default;
 
