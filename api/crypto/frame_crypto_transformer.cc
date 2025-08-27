@@ -843,7 +843,8 @@ RTCErrorOr<std::vector<uint8_t>> DataPacketCryptor::Decrypt(
                         encrypted_payload, &buffer) == Success) {
     decryption_success = true;
   } else {
-    RTC_LOG(LS_WARNING) << "DataPacketCryptor::Decrypt() failed";
+    RTC_LOG(LS_WARNING) << "DataPacketCryptor::Decrypt() failed with key_index "
+                        << static_cast<int>(key_index);
     webrtc::scoped_refptr<ParticipantKeyHandler::KeySet> ratcheted_key_set;
     auto currentKeyMaterial = key_set->material;
     int ratchet_count = 0;
@@ -862,7 +863,7 @@ RTCErrorOr<std::vector<uint8_t>> DataPacketCryptor::Decrypt(
                               ratcheted_key_set->encryption_key, iv,
                               frame_header, encrypted_payload,
                               &buffer) == Success) {
-          RTC_LOG(LS_INFO) << "DataPacketCryptor::Decrypt() "
+          RTC_LOG(LS_INFO) << "DataPacketCryptor::Decrypt() successfully "
                               "ratcheted to key_index="
                            << static_cast<int>(key_index);
           decryption_success = true;
