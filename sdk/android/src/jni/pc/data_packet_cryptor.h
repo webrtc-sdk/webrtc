@@ -25,25 +25,9 @@
 namespace webrtc {
 namespace jni {
 
-webrtc::FrameCryptorTransformer::Algorithm AlgorithmFromIndex(int index);
-
-ScopedJavaLocalRef<jobject> NativeToJavaFrameCryptor(
+ScopedJavaLocalRef<jobject> NativeToJavaDataPacketCryptor(
     JNIEnv* env,
-    rtc::scoped_refptr<FrameCryptorTransformer> cryptor);
-
-class FrameCryptorObserverJni : public FrameCryptorTransformerObserver {
- public:
-  FrameCryptorObserverJni(JNIEnv* jni, const JavaRef<jobject>& j_observer);
-  ~FrameCryptorObserverJni() override;
-
- protected:
-  void OnFrameCryptionStateChanged(const std::string participant_id,
-                                   FrameCryptionState state) override;
-
- private:
-  const ScopedJavaGlobalRef<jobject> j_observer_global_;
-  const ScopedJavaGlobalRef<jobject> j_observer_;
-};
+    rtc::scoped_refptr<DataPacketCryptor> cryptor);
 
 }  // namespace jni
 }  // namespace webrtc
