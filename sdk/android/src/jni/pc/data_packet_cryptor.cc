@@ -13,18 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "sdk/android/src/jni/pc/frame_cryptor.h"
+#include "sdk/android/src/jni/pc/data_packet_cryptor.h"
 
-#include "api/rtp_receiver_interface.h"
-#include "api/rtp_sender_interface.h"
 #include "rtc_base/ref_counted_object.h"
-#include "sdk/android/generated_peerconnection_jni/FrameCryptorFactory_jni.h"
-#include "sdk/android/generated_peerconnection_jni/FrameCryptor_jni.h"
+#include "sdk/android/generated_peerconnection_jni/DataPacketCryptorFactory_jni.h"
+#include "sdk/android/generated_peerconnection_jni/DataPacketCryptor_jni.h"
 #include "sdk/android/native_api/jni/java_types.h"
 #include "sdk/android/src/jni/jni_helpers.h"
-#include "sdk/android/src/jni/pc/frame_cryptor_key_provider.h"
 #include "sdk/android/src/jni/pc/frame_cryptor.h"
-#include "sdk/android/src/jni/pc/owned_factory_and_threads.h"
+#include "sdk/android/src/jni/pc/frame_cryptor_key_provider.h"
 
 namespace webrtc {
 namespace jni {
@@ -40,49 +37,56 @@ ScopedJavaLocalRef<jobject> NativeToJavaDataPacketCryptor(
                                        jlongFromPointer(cryptor.release()));
 }
 
-static void JNI_DataPacketCryptor_Encrypt(
-    JNIEnv* jni,
+static jni_zero::ScopedJavaLocalRef<jobject> JNI_DataPacketCryptor_Encrypt(
+    JNIEnv* env,
     jlong j_data_cryptor_pointer,
-    jstring j_participant_id,
+    const jni_zero::JavaParamRef<jstring>& j_participant_id,
     int key_index,
     const jni_zero::JavaParamRef<jbyteArray>& j_data) {
-  std::string participant_id =
-      JavaToNativeString(jni, jni_zero::JavaParamRef<jstring>(jni, j_participant_id));
-  std::vector<int8_t> data = JavaToNativeByteArray(jni, j_data);
+  auto participant_id =
+      JavaToNativeString(env, jni_zero::JavaParamRef<jstring>(env, j_participant_id));
+  auto data = JavaToNativeByteArray(env, j_data);
 
   RTCErrorOr<scoped_refptr<EncryptedPacket>> result =
       reinterpret_cast<DataPacketCryptor*>(j_data_cryptor_pointer)
-          ->Encrypt(participant_id, key_index, j_data);
+          ->Encrypt(participant_id, key_index, std::vector<uint8_t>(data.begin(), data.end()));
   if (!result.ok()) {
     RTC_LOG(LS_ERROR) << "Failed to encrypt payload: " << result.error().message();
     return nullptr;
   } else {
     auto packet = result.value();
-    std::vector<int8_t> int8tData =
-        std::vector<int8_t>(packet.data.begin(), packet.data.end());
-    std::vector<int8_t> int8tIv =
-        std::vector<int8_t>(packet.iv.begin(), packet.iv.end());
-    ScopedJavaLocalRef<jbyteArray> j_data = NativeToJavaByteArray(env, rtc::ArrayView<int8_t>(int8tData));
-    ScopedJavaLocalRef<jbyteArray> j_iv = NativeToJavaByteArray(env, rtc::ArrayView<int8_t>(int8tIv));
-    return Java_EncryptedPacket_Constructor(env, j_data, j_iv, packet.key_index);;
+    auto int8tData =
+        std::vector<int8_t>(packet->data.begin(), packet->data.end());
+    auto int8tIv =
+        std::vector<int8_t>(packet->iv.begin(), packet->iv.end());
+    auto j_data = NativeToJavaByteArray(env, rtc::ArrayView<int8_t>(int8tData));
+    auto j_iv = NativeToJavaByteArray(env, rtc::ArrayView<int8_t>(int8tIv));
+    return Java_EncryptedPacket_Constructor(env, j_data, j_iv, packet->key_index);;
   }
 }
 
-static void JNI_DataPacketCryptor_Decrypt(
-    JNIEnv* jni,
+static jni_zero::ScopedJavaLocalRef<jbyteArray> JNI_DataPacketCryptor_Decrypt(
+    JNIEnv* env,
     jlong j_data_cryptor_pointer,
-    jstring j_participant_id,
+    const jni_zero::JavaParamRef<jstring>& j_participant_id,
     int key_index,
-    const jni_zero::JavaParamRef<jbyteArray>& j_data) {
-  std::string participant_id =
-      JavaToNativeString(jni, jni_zero::JavaParamRef<jstring>(jni, j_participant_id));
-  std::vector<int8_t> data = JavaToNativeByteArray(jni, j_data);
+    const jni_zero::JavaParamRef<jbyteArray>& j_data,
+    const jni_zero::JavaParamRef<jbyteArray>& j_iv) {
+  auto participant_id =
+      JavaToNativeString(env, jni_zero::JavaParamRef<jstring>(env, j_participant_id));
+  auto data = JavaToNativeByteArray(env, j_data);
+  auto iv = JavaToNativeByteArray(env, j_iv);
 
-  RTCErrorOr<scoped_refptr<EncryptedPacket>> result =
+  auto encrypted_packet = webrtc::make_ref_counted<EncryptedPacket>(
+      std::vector<uint8_t>(data.begin(), data.end()),
+      std::vector<uint8_t>(iv.begin(), iv.end()),
+      key_index);
+
+  auto result =
       reinterpret_cast<DataPacketCryptor*>(j_data_cryptor_pointer)
-          ->Decrypt(participant_id, key_index, j_data);
+          ->Decrypt(participant_id, encrypted_packet);
   if (!result.ok()) {
-    RTC_LOG(LS_ERROR) << "Failed to encrypt payload: " << result.error().message();
+    RTC_LOG(LS_ERROR) << "Failed to decrypt payload: " << result.error().message();
     return nullptr;
   } else {
     auto decryptedData = result.value();
@@ -90,6 +94,20 @@ static void JNI_DataPacketCryptor_Decrypt(
         std::vector<int8_t>(decryptedData.begin(), decryptedData.end());
     return NativeToJavaByteArray(env, rtc::ArrayView<int8_t>(int8tDecryptedData));
   }
+}
+
+static ScopedJavaLocalRef<jobject>
+JNI_DataPacketCryptorFactory_CreateDataPacketCryptor(
+    JNIEnv* env,
+    jint j_algorithm_index,
+    jlong j_key_provider) {
+  auto keyProvider =
+      reinterpret_cast<webrtc::DefaultKeyProviderImpl*>(j_key_provider);
+  auto data_packet_cryptor = make_ref_counted<DataPacketCryptor>(
+      AlgorithmFromIndex(j_algorithm_index),
+      rtc::scoped_refptr<webrtc::KeyProvider>(keyProvider));
+
+  return NativeToJavaDataPacketCryptor(env, data_packet_cryptor);
 }
 
 }  // namespace jni

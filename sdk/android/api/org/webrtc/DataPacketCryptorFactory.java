@@ -17,9 +17,9 @@
 package org.webrtc;
 
 public class DataPacketCryptorFactory {
-    public static DataPacketCryptor createDataPacketCryptor(PeerConnectionFactory factory, FrameCryptorAlgorithm algorithm, FrameCryptorKeyProvider keyProvider) {
-        return nativeCreateDataPacketCryptor(factory.getNativeOwnedFactoryAndThreads(), algorithm.getValue(), keyProvider.getNativeKeyProvider());
+    public static DataPacketCryptor createDataPacketCryptor(FrameCryptorAlgorithm algorithm, FrameCryptorKeyProvider keyProvider) {
+        return nativeCreateDataPacketCryptor(algorithm.getValue(), keyProvider.getNativeKeyProvider());
     }
 
-    private static native DataPacketCryptor nativeCreateDataPacketCryptor(long factory, int value, long keyProvider);
+    private static native DataPacketCryptor nativeCreateDataPacketCryptor(int value, long keyProvider);
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package livekit.org.webrtc;
+package org.webrtc;
 
 public class DataPacketCryptor {
 
@@ -34,9 +34,9 @@ public class DataPacketCryptor {
         return nativeEncrypt(nativePtr, participantId, keyIndex, data);
     }
 
-    public byte[] decrypt(String participantId, int keyIndex, byte[] data) {
+    public byte[] decrypt(String participantId, EncryptedPacket packet) {
         checkDataPacketCryptorExists();
-        return nativeDecrypt(nativePtr, participantId, keyIndex, data);
+        return nativeDecrypt(nativePtr, participantId, packet.keyIndex, packet.payload, packet.iv);
     }
 
     public void dispose() {
@@ -66,5 +66,5 @@ public class DataPacketCryptor {
 
     private static native EncryptedPacket nativeEncrypt(long dataCryptorPointer, String participantId, int keyIndex, byte[] data);
 
-    private static native byte[] nativeDecrypt(long dataCryptorPointer, String participantId, int keyIndex, byte[] data);
+    private static native byte[] nativeDecrypt(long dataCryptorPointer, String participantId, int keyIndex, byte[] data, byte[] iv);
 }

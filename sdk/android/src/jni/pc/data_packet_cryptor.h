@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef SDK_ANDROID_SRC_JNI_PC_FRAME_CRYPTOR_H_
-#define SDK_ANDROID_SRC_JNI_PC_FRAME_CRYPTOR_H_
+#ifndef SDK_ANDROID_SRC_JNI_PC_DATA_PACKET_CRYPTOR_H_
+#define SDK_ANDROID_SRC_JNI_PC_DATA_PACKET_CRYPTOR_H_
 
 #include <jni.h>
 
@@ -32,4 +32,4 @@ ScopedJavaLocalRef<jobject> NativeToJavaDataPacketCryptor(
 }  // namespace jni
 }  // namespace webrtc
 
-#endif  // SDK_ANDROID_SRC_JNI_PC_FRAME_CRYPTOR_H_
+#endif  // SDK_ANDROID_SRC_JNI_PC_DATA_PACKET_CRYPTOR_H_
