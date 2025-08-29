@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef SDK_ANDROID_SRC_JNI_PC_FRAME_CRYPTOR_H_
-#define SDK_ANDROID_SRC_JNI_PC_FRAME_CRYPTOR_H_
+#ifndef SDK_ANDROID_SRC_JNI_PC_DATA_PACKET_CRYPTOR_H_
+#define SDK_ANDROID_SRC_JNI_PC_DATA_PACKET_CRYPTOR_H_
 
 #include <jni.h>
 
@@ -25,27 +25,11 @@
 namespace webrtc {
 namespace jni {
 
-webrtc::FrameCryptorTransformer::Algorithm AlgorithmFromIndex(int index);
-
-ScopedJavaLocalRef<jobject> NativeToJavaFrameCryptor(
+ScopedJavaLocalRef<jobject> NativeToJavaDataPacketCryptor(
     JNIEnv* env,
-    rtc::scoped_refptr<FrameCryptorTransformer> cryptor);
-
-class FrameCryptorObserverJni : public FrameCryptorTransformerObserver {
- public:
-  FrameCryptorObserverJni(JNIEnv* jni, const JavaRef<jobject>& j_observer);
-  ~FrameCryptorObserverJni() override;
-
- protected:
-  void OnFrameCryptionStateChanged(const std::string participant_id,
-                                   FrameCryptionState state) override;
-
- private:
-  const ScopedJavaGlobalRef<jobject> j_observer_global_;
-  const ScopedJavaGlobalRef<jobject> j_observer_;
-};
+    rtc::scoped_refptr<DataPacketCryptor> cryptor);
 
 }  // namespace jni
 }  // namespace webrtc
 
-#endif  // SDK_ANDROID_SRC_JNI_PC_FRAME_CRYPTOR_H_
+#endif  // SDK_ANDROID_SRC_JNI_PC_DATA_PACKET_CRYPTOR_H_
