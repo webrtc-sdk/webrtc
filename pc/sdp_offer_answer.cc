@@ -5184,6 +5184,7 @@ void SdpOfferAnswerHandler::RemoveStoppedTransceivers() {
     }
     // Ensure channel teardown before dropping the last reference.
     if (transceiver->internal()->channel()) {
+      RTC_LOG(LS_INFO) << "Clearing channel before removing transceiver";
       transceiver->internal()->ClearChannel();
     }
     transceivers()->Remove(transceiver);

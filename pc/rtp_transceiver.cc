@@ -188,8 +188,8 @@ RtpTransceiver::~RtpTransceiver() {
   // TODO(tommi): On Android, when running PeerConnectionClientTest (e.g.
   // PeerConnectionClientTest#testCameraSwitch), the instance doesn't get
   // deleted on `thread_`. See if we can fix that.
+  RTC_DCHECK_RUN_ON(thread_);
   if (!stopped_) {
-    RTC_DCHECK_RUN_ON(thread_);
     StopInternal();
   }
 
