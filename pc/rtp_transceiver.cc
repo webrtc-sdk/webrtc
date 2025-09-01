@@ -391,6 +391,7 @@ void RtpTransceiver::DeleteChannel() {
     // be.
     channel_to_delete.reset();
   });
+  channel_ = nullptr;
 }
 
 void RtpTransceiver::AddSender(
