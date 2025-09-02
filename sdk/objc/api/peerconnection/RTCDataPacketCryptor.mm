@@ -78,13 +78,17 @@
   std::vector<uint8_t> payloadPacket(bytes, bytes + data.length);
 
   // Encrypt the packet
+  os_unfair_lock_lock(&_lock);
   auto nativePacket = _data_packet_cryptor->Encrypt(participantId.UTF8String, keyIndex, payloadPacket);
   if (!nativePacket.ok()) {
+    os_unfair_lock_unlock(&_lock);
     RTCLogError(@"Failed to encrypt data for %@: %s",
                 participantId,
                 nativePacket.error().message());
     return nil;
   }
+  os_unfair_lock_unlock(&_lock);
+
   // Convert std::vector<uint8_t> to NSData
   NSData *packetData = [NSData dataWithBytes:nativePacket.value()->data.data() length:nativePacket.value()->data.size()];
   NSData *ivData = [NSData dataWithBytes:nativePacket.value()->iv.data() length:nativePacket.value()->iv.size()];
