@@ -68,3 +68,18 @@ rtc_source_set("frame_encryptor_interface") {
     "../../rtc_base:refcount",
   ]
 }
+
+  rtc_library("crypto_unittests") {
+    testonly = true
+
+    sources = [
+      "frame_crypto_transformer_unittest.cc",
+    ]
+
+    deps = [
+      ":crypto",
+      ":frame_crypto_transformer",
+      "//testing/gtest",
+      "../../test:test_support",
+    ]
+  }

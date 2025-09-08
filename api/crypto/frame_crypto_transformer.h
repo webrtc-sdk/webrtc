@@ -20,9 +20,10 @@
 #include <unordered_map>
 
 #include "api/frame_transformer_interface.h"
+#include "api/make_ref_counted.h"
+#include "api/rtc_error.h"
 #include "api/task_queue/pending_task_safety_flag.h"
 #include "api/task_queue/task_queue_base.h"
-#include "api/make_ref_counted.h"
 #include "rtc_base/buffer.h"
 #include "rtc_base/synchronization/mutex.h"
 #include "rtc_base/system/rtc_export.h"
@@ -51,10 +52,10 @@ struct KeyProviderOptions {
   bool discard_frame_when_cryptor_not_ready;
   KeyProviderOptions()
       : shared_key(false),
-      ratchet_window_size(0),
-      failure_tolerance(-1),
-      key_ring_size(DEFAULT_KEYRING_SIZE),
-      discard_frame_when_cryptor_not_ready(false) {}
+        ratchet_window_size(0),
+        failure_tolerance(-1),
+        key_ring_size(DEFAULT_KEYRING_SIZE),
+        discard_frame_when_cryptor_not_ready(false) {}
   KeyProviderOptions(KeyProviderOptions& copy)
       : shared_key(copy.shared_key),
         ratchet_salt(copy.ratchet_salt),
@@ -110,7 +111,7 @@ class ParticipantKeyHandler : public webrtc::RefCountInterface {
   ParticipantKeyHandler(KeyProvider* key_provider)
       : key_provider_(key_provider) {
     int key_ring_size = key_provider_->options().key_ring_size;
-    if(key_ring_size <= 0) {
+    if (key_ring_size <= 0) {
       key_ring_size = DEFAULT_KEYRING_SIZE;
     } else if (key_ring_size > (int)MAX_KEYRING_SIZE) {
       // Keyring size needs to be between 1 and 256
@@ -169,8 +170,8 @@ class ParticipantKeyHandler : public webrtc::RefCountInterface {
   }
 
   webrtc::scoped_refptr<KeySet> DeriveKeys(std::vector<uint8_t> password,
-                                        std::vector<uint8_t> ratchet_salt,
-                                        unsigned int optional_length_bits) {
+                                           std::vector<uint8_t> ratchet_salt,
+                                           unsigned int optional_length_bits) {
     std::vector<uint8_t> derived_key;
     if (DerivePBKDF2KeyFromRawKey(password, ratchet_salt, optional_length_bits,
                                   &derived_key) == 0) {
@@ -303,7 +304,7 @@ class DefaultKeyProviderImpl : public KeyProvider {
 
     if (keys_.find(participant_id) == keys_.end()) {
       keys_[participant_id] =
-        webrtc::make_ref_counted<ParticipantKeyHandler>(this);
+          webrtc::make_ref_counted<ParticipantKeyHandler>(this);
     }
 
     auto key_handler = keys_[participant_id];
@@ -426,7 +427,8 @@ class RTC_EXPORT FrameCryptorTransformer
 
  protected:
   virtual void RegisterTransformedFrameCallback(
-      webrtc::scoped_refptr<webrtc::TransformedFrameCallback> callback) override {
+      webrtc::scoped_refptr<webrtc::TransformedFrameCallback> callback)
+      override {
     webrtc::MutexLock lock(&sink_mutex_);
     sink_callback_ = callback;
   }
@@ -476,6 +478,45 @@ class RTC_EXPORT FrameCryptorTransformer
   webrtc::scoped_refptr<FrameCryptorTransformerObserver> observer_;
   FrameCryptionState last_enc_error_ = FrameCryptionState::kNew;
   FrameCryptionState last_dec_error_ = FrameCryptionState::kNew;
+};
+
+class RTC_EXPORT EncryptedPacket : public webrtc::RefCountInterface {
+ public:
+  EncryptedPacket() = default;
+  EncryptedPacket(std::vector<uint8_t> data,
+                  std::vector<uint8_t> iv,
+                  uint8_t key_index)
+      : data(data), iv(iv), key_index(key_index) {}
+  ~EncryptedPacket() = default;
+
+  std::vector<uint8_t> data;
+  std::vector<uint8_t> iv;
+  uint8_t key_index = 0;
+};
+
+class RTC_EXPORT DataPacketCryptor : public webrtc::RefCountInterface {
+ public:
+  DataPacketCryptor(FrameCryptorTransformer::Algorithm algorithm,
+                    webrtc::scoped_refptr<KeyProvider> key_provider);
+  ~DataPacketCryptor();
+
+  virtual RTCErrorOr<webrtc::scoped_refptr<EncryptedPacket>> Encrypt(
+      const std::string participant_id,
+      int key_index,
+      const std::vector<uint8_t>& data);
+
+  virtual RTCErrorOr<std::vector<uint8_t>> Decrypt(
+      const std::string participant_id,
+      const webrtc::scoped_refptr<EncryptedPacket> encryptedPacket);
+
+ private:
+  rtc::Buffer makeIv(uint32_t timestamp);
+
+ private:
+  FrameCryptorTransformer::Algorithm algorithm_;
+  webrtc::scoped_refptr<KeyProvider> key_provider_;
+  uint32_t send_count_ = 0;
+  mutable webrtc::Mutex mutex_;
 };
 
 }  // namespace webrtc
