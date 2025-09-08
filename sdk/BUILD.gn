@@ -1621,6 +1621,7 @@ if (is_ios || is_mac) {
           "objc/api/peerconnection/RTCCryptoOptions.h",
           "objc/api/peerconnection/RTCDataChannel.h",
           "objc/api/peerconnection/RTCDataChannelConfiguration.h",
+          "objc/api/peerconnection/RTCDataPacketCryptor.h",
           "objc/api/peerconnection/RTCDtmfSender.h",
           "objc/api/peerconnection/RTCFrameCryptor.h",
           "objc/api/peerconnection/RTCFrameCryptorKeyProvider.h",
