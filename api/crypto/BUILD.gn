@@ -88,4 +88,16 @@ if (rtc_include_tests) {
       deps += [ "//third_party/boringssl" ]
     }
   }
+  rtc_library("crypto_unittests") {
+    testonly = true
+    sources = [
+      "frame_crypto_transformer_unittest.cc",
+    ]
+    deps = [
+      ":crypto",
+      ":frame_crypto_transformer",
+      "//testing/gtest",
+      "../../test:test_support",
+    ]
+  }
 }

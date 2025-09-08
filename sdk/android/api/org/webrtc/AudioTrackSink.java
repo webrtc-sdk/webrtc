@@ -13,7 +13,7 @@ package org.webrtc;
 import java.nio.ByteBuffer;
 
 /**
- * Java version of rtc::AudioTrackSinkInterface.
+ * Java version of webrtc::AudioTrackSinkInterface.
  */
 public interface AudioTrackSink {
   /**
