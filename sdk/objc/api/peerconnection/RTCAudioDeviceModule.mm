@@ -381,6 +381,36 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 
 #pragma mark - Unique to AudioEngineDevice
 
+- (NSInteger)setAudioEngineIOPermissions:(RTC_OBJC_TYPE(RTCAudioEngineIOPermissions))permissions {
+  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  if (module == nullptr) return -1;
+
+  return _workerThread->BlockingCall([module, permissions] {
+    int32_t result =
+        module->ModifyEngineState([permissions](webrtc::AudioEngineDevice::EngineState state)
+                                      -> webrtc::AudioEngineDevice::EngineState {
+          state.input_allowed = permissions.isInputAllowed;
+          state.output_allowed = permissions.isOutputAllowed;
+          return state;
+        });
+
+    return result;
+  });
+}
+
+- (RTC_OBJC_TYPE(RTCAudioEngineIOPermissions))audioEngineIOPermissions {
+  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  if (module == nullptr) return RTC_OBJC_TYPE(RTCAudioEngineIOPermissions)(YES, YES);
+
+  return _workerThread->BlockingCall([module] {
+    webrtc::AudioEngineDevice::EngineState state = {};
+    int32_t result = module->GetEngineState(&state);
+    if (result != 0) return RTC_OBJC_TYPE(RTCAudioEngineIOPermissions)(YES, YES);
+
+    return RTC_OBJC_TYPE(RTCAudioEngineIOPermissions)(state.input_allowed, state.output_allowed);
+  });
+}
+
 - (BOOL)isRecordingAlwaysPreparedMode {
   webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
   if (module == nullptr) return NO;
