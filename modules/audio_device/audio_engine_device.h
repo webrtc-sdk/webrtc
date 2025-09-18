@@ -121,8 +121,8 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
     bool output_enabled = false;
     bool output_running = false;
 
-    bool output_allowed = true;
-    bool input_allowed = true;
+    bool output_available = true;
+    bool input_available = true;
 
     // Output will be enabled when input is enabled
     bool input_follow_mode = true;
@@ -149,7 +149,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
     bool operator==(const EngineState& rhs) const {
       return input_enabled == rhs.input_enabled && input_running == rhs.input_running &&
              output_enabled == rhs.output_enabled && output_running == rhs.output_running &&
-             input_allowed == rhs.input_allowed && output_allowed == rhs.output_allowed &&
+             input_available == rhs.input_available && output_available == rhs.output_available &&
              input_follow_mode == rhs.input_follow_mode &&
              input_enabled_persistent_mode == rhs.input_enabled_persistent_mode &&
              input_muted == rhs.input_muted && is_interrupted == rhs.is_interrupted &&
@@ -169,23 +169,23 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
     bool IsOutputEnabled() const {
       bool result = IsOutputInputLinked() ? (IsInputEnabled() || output_enabled) : output_enabled;
-      return output_allowed && result;
+      return output_available && result;
     }
 
     bool IsOutputRunning() const {
       bool result = IsOutputInputLinked() ? (IsInputRunning() || output_running) : output_running;
-      return output_allowed && result;
+      return output_available && result;
     }
 
     bool IsInputEnabled() const {
       bool result = !(mute_mode == MuteMode::RestartEngine && input_muted) &&
                     (input_enabled || input_enabled_persistent_mode);
-      return input_allowed && result;
+      return input_available && result;
     }
 
     bool IsInputRunning() const {
       bool result = !(mute_mode == MuteMode::RestartEngine && input_muted) && input_running;
-      return input_allowed && result;
+      return input_available && result;
     }
 
     bool IsAnyEnabled() const { return IsInputEnabled() || IsOutputEnabled(); }
@@ -303,6 +303,9 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   int32_t SetEngineState(EngineState enable);
   int32_t GetEngineState(EngineState* enabled);
 
+  int32_t SetEngineAvailability(bool input_available, bool output_available);
+  int32_t EngineAvailability(bool* input_available, bool* output_available);
+
   int32_t SetObserver(AudioDeviceObserver* observer) override;
 
   int32_t SetManualRenderingMode(bool enable);
@@ -330,8 +333,6 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   int32_t VoiceProcessingAGCEnabled(bool* enabled);
 
   int32_t InitAndStartRecording();
-
-  int32_t ModifyEngineState(std::function<EngineState(EngineState)> state_transform);
 
  private:
   struct EngineStateUpdate {
@@ -413,6 +414,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   EngineState engine_state_ RTC_GUARDED_BY(thread_);
 
   bool IsMicrophonePermissionGranted();
+  int32_t ModifyEngineState(std::function<EngineState(EngineState)> state_transform);
 
   int32_t ApplyDeviceEngineState(EngineStateUpdate state);
   int32_t ApplyManualEngineState(EngineStateUpdate state);

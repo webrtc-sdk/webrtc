@@ -50,9 +50,9 @@ typedef struct {
 } RTC_OBJC_TYPE(RTCAudioEngineState);
 
 typedef struct {
-  BOOL isInputAllowed;
-  BOOL isOutputAllowed;
-} RTC_OBJC_TYPE(RTCAudioEngineIOPermissions);
+  BOOL isInputAvailable;
+  BOOL isOutputAvailable;
+} RTC_OBJC_TYPE(RTCAudioEngineAvailability);
 
 RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCAudioEngineInputMixerNodeKey);
 
@@ -146,7 +146,7 @@ RTC_OBJC_EXPORT
 
 - (NSInteger)initAndStartRecording;
 
-- (NSInteger)setAudioEngineIOPermissions:(RTC_OBJC_TYPE(RTCAudioEngineIOPermissions))permissions;
+- (NSInteger)setEngineAvailability:(RTC_OBJC_TYPE(RTCAudioEngineAvailability))availability;
 
 // For testing purposes
 @property(nonatomic, readonly) BOOL isPlayoutInitialized;
@@ -192,7 +192,7 @@ RTC_OBJC_EXPORT
 /// enabled. Enabled by default when VPIO is enabled.
 @property(nonatomic, assign, getter=isVoiceProcessingAGCEnabled) BOOL voiceProcessingAGCEnabled;
 
-@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioEngineIOPermissions) audioEngineIOPermissions;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioEngineAvailability) engineAvailability;
 
 @end
 
