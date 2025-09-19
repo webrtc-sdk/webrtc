@@ -1111,6 +1111,33 @@ int32_t AudioEngineDevice::SetVoiceProcessingAGCEnabled(bool enable) {
   return result;
 }
 
+int32_t AudioEngineDevice::SetEngineAvailability(bool input_available, bool output_available) {
+  RTC_DCHECK_RUN_ON(thread_);
+  LOGI() << "SetEngineAvailability: " << input_available << " " << output_available;
+
+  int32_t result =
+      ModifyEngineState([input_available, output_available](EngineState state) -> EngineState {
+        state.input_available = input_available;
+        state.output_available = output_available;
+        return state;
+      });
+
+  return result;
+}
+
+int32_t AudioEngineDevice::EngineAvailability(bool* input_available, bool* output_available) {
+  RTC_DCHECK_RUN_ON(thread_);
+
+  if (input_available == nullptr || output_available == nullptr) {
+    return -1;
+  }
+
+  *input_available = engine_state_.input_available;
+  *output_available = engine_state_.output_available;
+
+  return 0;
+}
+
 int32_t AudioEngineDevice::ManualRenderingMode(bool* enabled) {
   LOGI() << "ManualRenderingMode";
   RTC_DCHECK_RUN_ON(thread_);

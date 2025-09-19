@@ -41,13 +41,18 @@ typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCAudioEngineMuteMode)) {
 };
 
 typedef struct {
-  bool outputEnabled;
-  bool outputRunning;
-  bool inputEnabled;
-  bool inputRunning;
-  bool inputMuted;
+  BOOL outputEnabled;
+  BOOL outputRunning;
+  BOOL inputEnabled;
+  BOOL inputRunning;
+  BOOL inputMuted;
   RTC_OBJC_TYPE(RTCAudioEngineMuteMode) muteMode;
 } RTC_OBJC_TYPE(RTCAudioEngineState);
+
+typedef struct {
+  BOOL isInputAvailable;
+  BOOL isOutputAvailable;
+} RTC_OBJC_TYPE(RTCAudioEngineAvailability);
 
 RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCAudioEngineInputMixerNodeKey);
 
@@ -141,6 +146,8 @@ RTC_OBJC_EXPORT
 
 - (NSInteger)initAndStartRecording;
 
+- (NSInteger)setEngineAvailability:(RTC_OBJC_TYPE(RTCAudioEngineAvailability))availability;
+
 // For testing purposes
 @property(nonatomic, readonly) BOOL isPlayoutInitialized;
 @property(nonatomic, readonly) BOOL isRecordingInitialized;
@@ -184,6 +191,8 @@ RTC_OBJC_EXPORT
 /// Indicates whether Automatic Gain Control (AGC) is enabled. Requires Voice-Processing I/O to be
 /// enabled. Enabled by default when VPIO is enabled.
 @property(nonatomic, assign, getter=isVoiceProcessingAGCEnabled) BOOL voiceProcessingAGCEnabled;
+
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioEngineAvailability) engineAvailability;
 
 @end
 
