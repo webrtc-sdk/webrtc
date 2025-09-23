@@ -94,7 +94,11 @@ enum AudioEngineErrorCode {
 
   // Voice processing errors
   kAudioEngineVoiceProcessingError = -8000,
-  kAudioEngineAGCError = -8001
+  kAudioEngineAGCError = -8001,
+
+  // Permission and session errors
+  kAudioEngineErrorInsufficientDevicePermission = -9000,
+  kAudioEngineErrorAudioSessionCategoryRecordingRequired = -9001
 };
 
 class FineAudioBuffer;
@@ -414,6 +418,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   EngineState engine_state_ RTC_GUARDED_BY(thread_);
 
   bool IsMicrophonePermissionGranted();
+  bool EnsureMicrophonePermissionSync();
   int32_t ModifyEngineState(std::function<EngineState(EngineState)> state_transform);
 
   int32_t ApplyDeviceEngineState(EngineStateUpdate state);
