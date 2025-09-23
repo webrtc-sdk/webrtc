@@ -1367,7 +1367,7 @@ int32_t AudioEngineDevice::ModifyEngineState(
              << shutdown_result;
     }
     EngineStateUpdate startup_state = state;                 // Copy current state
-    shutdown_state.prev = {};                                //
+    startup_state.prev = {};                                 // Reset prev state to default
     startup_result = ApplyManualEngineState(startup_state);  // Start manual mode
     if (startup_result != 0) {
       LOGE() << "ModifyEngineState: Failed to start manual mode, error: " << startup_result;
@@ -1381,7 +1381,7 @@ int32_t AudioEngineDevice::ModifyEngineState(
              << shutdown_result;
     }
     EngineStateUpdate startup_state = state;                 // Copy current state
-    shutdown_state.prev = {};                                //
+    startup_state.prev = {};                                 // Reset prev state to default
     startup_result = ApplyDeviceEngineState(startup_state);  // Start device mode
     if (startup_result != 0) {
       LOGE() << "ModifyEngineState: Failed to start device mode, error: " << startup_result;
