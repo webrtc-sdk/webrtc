@@ -252,7 +252,7 @@ int32_t AudioEngineDevice::Init() {
                                    &runLoop);
   if (err != noErr) {
     LOGE() << "AudioObjectSetPropertyData failed with error: " << err;
-    return -1;
+    return kAudioEngineInitError;
   }
 
   // Listen for any device changes.
@@ -261,7 +261,7 @@ int32_t AudioEngineDevice::Init() {
                                        &objectListenerProc, this);
   if (err != noErr) {
     LOGE() << "AudioObjectAddPropertyListener failed with error: " << err;
-    return -1;
+    return kAudioEngineInitError;
   }
 
   // Listen for default output device change.
@@ -270,7 +270,7 @@ int32_t AudioEngineDevice::Init() {
                                        &objectListenerProc, this);
   if (err != noErr) {
     LOGE() << "AudioObjectAddPropertyListener failed with error: " << err;
-    return -1;
+    return kAudioEngineInitError;
   }
 
   // Listen for default input device change.
@@ -279,7 +279,7 @@ int32_t AudioEngineDevice::Init() {
                                        &objectListenerProc, this);
   if (err != noErr) {
     LOGE() << "AudioObjectAddPropertyListener failed with error: " << err;
-    return -1;
+    return kAudioEngineInitError;
   }
 
   UpdateAllDeviceIDs();
@@ -309,7 +309,7 @@ int32_t AudioEngineDevice::Terminate() {
                                           &objectListenerProc, this);
   if (err != noErr) {
     LOGE() << "AudioObjectRemovePropertyListener failed with error: " << err;
-    return -1;
+    return kAudioEngineTerminateError;
   }
 
   propertyAddress.mSelector = kAudioHardwarePropertyDefaultOutputDevice;
@@ -317,7 +317,7 @@ int32_t AudioEngineDevice::Terminate() {
                                           &objectListenerProc, this);
   if (err != noErr) {
     LOGE() << "AudioObjectRemovePropertyListener failed with error: " << err;
-    return -1;
+    return kAudioEngineTerminateError;
   }
 
   propertyAddress.mSelector = kAudioHardwarePropertyDefaultInputDevice;
@@ -325,7 +325,7 @@ int32_t AudioEngineDevice::Terminate() {
                                           &objectListenerProc, this);
   if (err != noErr) {
     LOGE() << "AudioObjectRemovePropertyListener failed with error: " << err;
-    return -1;
+    return kAudioEngineTerminateError;
   }
 #endif
 
@@ -1436,6 +1436,17 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
   RTC_DCHECK_RUN_ON(thread_);
   RTC_DCHECK(engine_device_ == nullptr);
 
+  std::vector<std::function<void()>> rollback_actions;
+
+  auto rollback = [&](int32_t result) {
+    // Execute rollback actions in reverse order (LIFO)
+    for (auto it = rollback_actions.rbegin(); it != rollback_actions.rend(); ++it) {
+      (*it)();
+    }
+
+    return result;
+  };
+
   auto outputNode = [this, state]() {
     RTC_DCHECK_RUN_ON(thread_);
     RTC_DCHECK(engine_manual_input_ != nil);
@@ -1466,7 +1477,7 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
           engine_manual_input_, state.next.IsOutputEnabled(), state.next.IsInputEnabled());
       if (result != 0) {
         LOGE() << "Call to OnEngineDidStop returned error: " << result;
-        return result;
+        return rollback(result);
       }
     }
   }
@@ -1494,6 +1505,12 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
     RTC_DCHECK(engine_manual_input_ == nullptr);
     engine_manual_input_ = [[AVAudioEngine alloc] init];
 
+    rollback_actions.push_back([this]() {
+      RTC_DCHECK_RUN_ON(thread_);
+      LOGI() << "Rolling back create AVAudioEngine (Manual)...";
+      engine_manual_input_ = nil;
+    });
+
     NSError* error = nil;
     BOOL result =
         [engine_manual_input_ enableManualRenderingMode:AVAudioEngineManualRenderingModeRealtime
@@ -1502,13 +1519,14 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
                                                   error:&error];
     if (!result) {
       LOGE() << "Failed to set rendering mode (Manual): " << error.localizedDescription.UTF8String;
+      return rollback(kAudioEngineManualRenderingError);
     }
 
     if (observer_ != nullptr) {
       int32_t result = observer_->OnEngineDidCreate(engine_manual_input_);
       if (result != 0) {
         LOGE() << "Call to OnEngineDidCreate returned error: " << result;
-        return result;
+        return rollback(result);
       }
     }
   }
@@ -1520,7 +1538,7 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
         engine_manual_input_, state.next.IsOutputEnabled(), state.next.IsInputEnabled());
     if (result != 0) {
       LOGE() << "Call to OnEngineWillEnable returned error: " << result;
-      return result;
+      return rollback(result);
     }
   }
 
@@ -1532,6 +1550,12 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
     audio_device_buffer_->SetPlayoutChannels(manual_render_rtc_format_.channelCount);
     RTC_DCHECK(audio_device_buffer_ != nullptr);
     fine_audio_buffer_.reset(new FineAudioBuffer(audio_device_buffer_.get()));
+
+    rollback_actions.push_back([this]() {
+      RTC_DCHECK_RUN_ON(thread_);
+      LOGI() << "Rolling back output setup (Manual)...";
+      fine_audio_buffer_.reset();
+    });
 
   } else if (state.prev.IsOutputEnabled() && !state.next.IsOutputEnabled()) {
     LOGI() << "Disabling output for AVAudioEngine (Manual)...";
@@ -1547,6 +1571,12 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
     RTC_DCHECK(audio_device_buffer_ != nullptr);
     fine_audio_buffer_.reset(new FineAudioBuffer(audio_device_buffer_.get()));
 
+    rollback_actions.push_back([this]() {
+      RTC_DCHECK_RUN_ON(thread_);
+      LOGI() << "Rolling back input setup (Manual)...";
+      fine_audio_buffer_.reset();
+    });
+
     if (this->observer_ != nullptr) {
       NSDictionary* context = @{};
       int32_t result = this->observer_->OnEngineWillConnectInput(
@@ -1554,7 +1584,7 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
           context);
       if (result != 0) {
         LOGE() << "Call to OnEngineWillConnectInput returned error: " << result;
-        return result;
+        return rollback(result);
       }
     }
 
@@ -1572,7 +1602,7 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
         engine_manual_input_, state.next.IsOutputEnabled(), state.next.IsInputEnabled());
     if (result != 0) {
       LOGE() << "Call to OnEngineDidDisable returned error: " << result;
-      return result;
+      return rollback(result);
     }
   }
 
@@ -1585,6 +1615,14 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
     LOGI() << "Starting playout buffer (Manual)...";
     audio_device_buffer_->StartPlayout();
     fine_audio_buffer_->ResetPlayout();
+
+    rollback_actions.push_back([this]() {
+      RTC_DCHECK_RUN_ON(thread_);
+      LOGI() << "Rolling back playout buffer start (Manual)...";
+      if (audio_device_buffer_->IsPlaying()) {
+        audio_device_buffer_->StopPlayout();
+      }
+    });
   }
 
   // Start recording buffer if input is running
@@ -1596,6 +1634,14 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
     LOGI() << "Starting record buffer (Manual)...";
     audio_device_buffer_->StartRecording();
     fine_audio_buffer_->ResetRecord();
+
+    rollback_actions.push_back([this]() {
+      RTC_DCHECK_RUN_ON(thread_);
+      LOGI() << "Rolling back record buffer start (Manual)...";
+      if (audio_device_buffer_->IsRecording()) {
+        audio_device_buffer_->StopRecording();
+      }
+    });
   }
 
   if (state.next.IsAnyRunning() && !state.prev.IsAnyRunning()) {
@@ -1604,7 +1650,7 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
           engine_manual_input_, state.next.IsOutputEnabled(), state.next.IsInputEnabled());
       if (result != 0) {
         LOGE() << "Call to OnEngineWillStart returned error: " << result;
-        return result;
+        return rollback(result);
       }
     }
 
@@ -1613,10 +1659,22 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
     render_buffer_ = [[AVAudioPCMBuffer alloc] initWithPCMFormat:manual_render_rtc_format_
                                                    frameCapacity:kMaximumFramesPerBuffer];
 
+    rollback_actions.push_back([this]() {
+      RTC_DCHECK_RUN_ON(thread_);
+      LOGI() << "Rolling back render buffer allocation (Manual)...";
+      render_buffer_ = nullptr;
+    });
+
     LOGI() << "Allocating read buffer (Manual)...";
     RTC_DCHECK(read_buffer_ == nullptr);
     read_buffer_ = [[AVAudioPCMBuffer alloc] initWithPCMFormat:manual_render_rtc_format_
                                                  frameCapacity:kMaximumFramesPerBuffer];
+
+    rollback_actions.push_back([this]() {
+      RTC_DCHECK_RUN_ON(thread_);
+      LOGI() << "Rolling back read buffer allocation (Manual)...";
+      read_buffer_ = nullptr;
+    });
 
     LOGI() << "Starting AVAudioEngine (Manual)...";
     NSError* error = nil;
@@ -1625,7 +1683,16 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
     if (!start_result) {
       LOGE() << "Failed to start engine after " << kStartEngineMaxRetries << " attempts";
       DebugAudioEngine();
+      return rollback(kAudioEnginePlayoutStartError);
     }
+
+    rollback_actions.push_back([this]() {
+      RTC_DCHECK_RUN_ON(thread_);
+      LOGI() << "Rolling back engine start (Manual)...";
+      if (engine_manual_input_ != nil && engine_manual_input_.running) {
+        [engine_manual_input_ stop];
+      }
+    });
 
     // Assign manual rendering block
     render_block_ = engine_manual_input_.manualRenderingBlock;
@@ -1638,6 +1705,15 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
     render_thread_->SetName("render_thread", nullptr);
     render_thread_->Start();
     render_thread_->PostTask([this] { this->StartRenderLoop(); });
+
+    rollback_actions.push_back([this]() {
+      RTC_DCHECK_RUN_ON(thread_);
+      LOGI() << "Rolling back render thread start (Manual)...";
+      if (render_thread_ != nullptr) {
+        render_thread_->Stop();
+        render_thread_ = nullptr;
+      }
+    });
   }
 
   if (state.prev.IsAnyEnabled() && !state.next.IsAnyEnabled()) {
@@ -1645,7 +1721,7 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
       int32_t result = observer_->OnEngineWillRelease(engine_manual_input_);
       if (result != 0) {
         LOGE() << "Call to OnEngineWillRelease returned error: " << result;
-        return result;
+        return rollback(result);
       }
     }
     LOGI() << "Releasing AVAudioEngine (Manual)...";
@@ -1662,8 +1738,9 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   std::vector<std::function<void()>> rollback_actions;
 
   auto rollback = [&](int32_t result) {
-    for (auto& action : rollback_actions) {
-      action();
+    // Execute rollback actions in reverse order (LIFO)
+    for (auto it = rollback_actions.rbegin(); it != rollback_actions.rend(); ++it) {
+      (*it)();
     }
 
     return result;
@@ -1761,7 +1838,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
 
     engine_device_ = [[AVAudioEngine alloc] init];
 
-    rollback_actions.push_back([=, this]() {
+    rollback_actions.push_back([this]() {
       RTC_DCHECK_RUN_ON(thread_);
       LOGI() << "Rolling back create AVAudioEngine (device)...";
       engine_device_ = nil;
@@ -1915,6 +1992,12 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     RTC_DCHECK(audio_device_buffer_ != nullptr);
     fine_audio_buffer_.reset(new FineAudioBuffer(audio_device_buffer_.get()));
 
+    rollback_actions.push_back([this]() {
+      RTC_DCHECK_RUN_ON(thread_);
+      LOGI() << "Rolling back output fine audio buffer setup (Device)...";
+      fine_audio_buffer_.reset();
+    });
+
     AVAudioFormat* rtc_output_format =
         [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatInt16
                                          sampleRate:engine_output_format.sampleRate
@@ -1938,6 +2021,19 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     source_node_ = [[AVAudioSourceNode alloc] initWithFormat:rtc_output_format
                                                  renderBlock:source_block];
     [engine_device_ attachNode:source_node_];
+
+    rollback_actions.push_back([this]() {
+      RTC_DCHECK_RUN_ON(thread_);
+      LOGI() << "Rolling back source node setup (Device)...";
+      if (source_node_ != nil && [engine_device_.attachedNodes containsObject:source_node_]) {
+        @try {
+          [engine_device_ detachNode:source_node_];
+        } @catch (NSException* exception) {
+          LOGW() << "Failed to detach source node during rollback: " << exception.reason.UTF8String;
+        }
+      }
+      source_node_ = nil;
+    });
 
     [engine_device_ connect:source_node_
                          to:engine_device_.mainMixerNode
@@ -2018,6 +2114,21 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     input_mixer_node_ = [[AVAudioMixerNode alloc] init];
     [engine_device_ attachNode:input_mixer_node_];
 
+    rollback_actions.push_back([this]() {
+      RTC_DCHECK_RUN_ON(thread_);
+      LOGI() << "Rolling back input mixer node setup (Device)...";
+      if (input_mixer_node_ != nil &&
+          [engine_device_.attachedNodes containsObject:input_mixer_node_]) {
+        @try {
+          [engine_device_ detachNode:input_mixer_node_];
+        } @catch (NSException* exception) {
+          LOGW() << "Failed to detach input mixer node during rollback: "
+                 << exception.reason.UTF8String;
+        }
+      }
+      input_mixer_node_ = nil;
+    });
+
     // When VoiceProcessingIO is enabled, channels must be reduced from Mac's default 9 channels
     // to 2 or lower.
     AVAudioFormat* engine_input_format = [[AVAudioFormat alloc]
@@ -2037,17 +2148,41 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     RTC_DCHECK(audio_device_buffer_ != nullptr);
     fine_audio_buffer_.reset(new FineAudioBuffer(audio_device_buffer_.get()));
 
+    rollback_actions.push_back([this]() {
+      RTC_DCHECK_RUN_ON(thread_);
+      LOGI() << "Rolling back input fine audio buffer setup (Device)...";
+      fine_audio_buffer_.reset();
+    });
+
     // Prepare Float32 -> Int16 converter.
     if (converter_ref_ == nullptr) {
       OSStatus err = AudioConverterNew(engine_input_format.streamDescription,
                                        rtc_input_format.streamDescription, &converter_ref_);
-      RTC_DCHECK(err == noErr);
+      if (err != noErr) {
+        LOGE() << "Failed to create audio converter, error: " << err;
+        return rollback(kAudioEngineDeviceFormatError);
+      }
+
+      rollback_actions.push_back([this]() {
+        RTC_DCHECK_RUN_ON(thread_);
+        LOGI() << "Rolling back audio converter setup (Device)...";
+        if (converter_ref_ != nullptr) {
+          AudioConverterDispose(converter_ref_);
+          converter_ref_ = nullptr;
+        }
+      });
     }
 
     // Prepare buffer for Int16 converter.
     if (converter_buffer_ == nil) {
       converter_buffer_ = [[AVAudioPCMBuffer alloc] initWithPCMFormat:rtc_input_format
                                                         frameCapacity:kMaximumFramesPerBuffer];
+
+      rollback_actions.push_back([this]() {
+        RTC_DCHECK_RUN_ON(thread_);
+        LOGI() << "Rolling back converter buffer setup (Device)...";
+        converter_buffer_ = nil;
+      });
     }
 
     // Convert to Int16 buffers within the sink block.
@@ -2112,6 +2247,19 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
 
     sink_node_ = [[AVAudioSinkNode alloc] initWithReceiverBlock:sink_block];
     [engine_device_ attachNode:sink_node_];
+
+    rollback_actions.push_back([this]() {
+      RTC_DCHECK_RUN_ON(thread_);
+      LOGI() << "Rolling back sink node setup (Device)...";
+      if (sink_node_ != nil && [engine_device_.attachedNodes containsObject:sink_node_]) {
+        @try {
+          [engine_device_ detachNode:sink_node_];
+        } @catch (NSException* exception) {
+          LOGW() << "Failed to detach sink node during rollback: " << exception.reason.UTF8String;
+        }
+      }
+      sink_node_ = nil;
+    });
 
     [engine_device_ connect:input_mixer_node_ to:sink_node_ format:engine_input_format];
 
@@ -2183,7 +2331,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   if (state.next.mute_mode == MuteMode::VoiceProcessing && state.next.IsInputEnabled() &&
       inputNode().voiceProcessingEnabled &&
       inputNode().voiceProcessingInputMuted != state.next.input_muted) {
-    LOGI() << "Update mute (voice processing) runtime update" << state.next.input_muted;
+    LOGI() << "Update mute (voice processing) runtime update: " << state.next.input_muted;
     inputNode().voiceProcessingInputMuted = state.next.input_muted;
   }
 
@@ -2195,7 +2343,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     // Only update if the volume has changed.
     float mixer_volume = state.next.input_muted ? 0.0f : 1.0f;
     if (input_mixer_node_.outputVolume != mixer_volume) {
-      LOGI() << "Update mute (input mixer) runtime update" << state.next.input_muted;
+      LOGI() << "Update mute (input mixer) runtime update: " << state.next.input_muted;
       input_mixer_node_.outputVolume = mixer_volume;
     }
   }
@@ -2259,7 +2407,8 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
                                             kAudioUnitScope_Global, 1, &input_device_id,
                                             sizeof(input_device_id));
         if (err != noErr) {
-          LOGE() << "Failed to set input device: " << input_device_id;
+          LOGE() << "Failed to set input device: " << input_device_id << ", error: " << err;
+          return rollback(kAudioEngineRecordingDeviceNotAvailableError);
         }
       }
     }
@@ -2277,7 +2426,8 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
                                             kAudioUnitScope_Global, 0, &output_deviceId,
                                             sizeof(output_deviceId));
         if (err != noErr) {
-          LOGE() << "Failed to set output device: " << output_deviceId;
+          LOGE() << "Failed to set output device: " << output_deviceId << ", error: " << err;
+          return rollback(kAudioEnginePlayoutDeviceNotAvailableError);
         }
       }
     }
@@ -2295,6 +2445,14 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     LOGI() << "Starting Playout buffer...";
     audio_device_buffer_->StartPlayout();
     fine_audio_buffer_->ResetPlayout();
+
+    rollback_actions.push_back([this]() {
+      RTC_DCHECK_RUN_ON(thread_);
+      LOGI() << "Rolling back playout buffer start (Device)...";
+      if (audio_device_buffer_->IsPlaying()) {
+        audio_device_buffer_->StopPlayout();
+      }
+    });
   }
 
   // --------------------------------------------------------------------------------------------
@@ -2308,6 +2466,14 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     LOGI() << "Starting Record buffer...";
     audio_device_buffer_->StartRecording();
     fine_audio_buffer_->ResetRecord();
+
+    rollback_actions.push_back([this]() {
+      RTC_DCHECK_RUN_ON(thread_);
+      LOGI() << "Rolling back record buffer start (Device)...";
+      if (audio_device_buffer_->IsRecording()) {
+        audio_device_buffer_->StopRecording();
+      }
+    });
   }
 
   // --------------------------------------------------------------------------------------------
@@ -2370,6 +2536,14 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       }
 
       if (start_result) {
+        rollback_actions.push_back([this]() {
+          RTC_DCHECK_RUN_ON(thread_);
+          LOGI() << "Rolling back engine start (Device)...";
+          if (engine_device_ != nil && engine_device_.running) {
+            [engine_device_ stop];
+          }
+        });
+
         RTC_DCHECK(configuration_observer_ == nullptr);
         // Add observer for configuration changes
         NSNotificationCenter* center = [NSNotificationCenter defaultCenter];
@@ -2386,9 +2560,22 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
                       }
                     }];
 
+        rollback_actions.push_back([this]() {
+          RTC_DCHECK_RUN_ON(thread_);
+          LOGI() << "Rolling back configuration observer (Device)...";
+          if (configuration_observer_ != nullptr) {
+            NSNotificationCenter* center = [NSNotificationCenter defaultCenter];
+            [center removeObserver:(__bridge_transfer id)configuration_observer_
+                              name:AVAudioEngineConfigurationChangeNotification
+                            object:engine_device_];
+            configuration_observer_ = nil;
+          }
+        });
+
       } else {
         LOGE() << "Failed to start engine after " << kStartEngineMaxRetries << " attempts";
         DebugAudioEngine();
+        return rollback(kAudioEnginePlayoutStartError);
       }
     }
   }
