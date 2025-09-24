@@ -1471,6 +1471,24 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
     }
   }
 
+  if (!state.next.IsOutputEnabled() && audio_device_buffer_->IsPlaying()) {
+    LOGI() << "Stopping playout buffer (Manual)...";
+    if (engine_device_ != nullptr) {
+      // Rendering must be stopped first.
+      RTC_DCHECK(!engine_device_.running);
+    }
+    audio_device_buffer_->StopPlayout();
+  }
+
+  if (!state.next.IsInputEnabled() && audio_device_buffer_->IsRecording()) {
+    LOGI() << "Stopping record buffer (Manual)...";
+    if (engine_device_ != nullptr) {
+      // Rendering must be stopped first.
+      RTC_DCHECK(!engine_device_.running);
+    }
+    audio_device_buffer_->StopRecording();
+  }
+
   if (state.next.IsAnyEnabled() && !state.prev.IsAnyEnabled()) {
     LOGI() << "Creating AVAudioEngine (Manual)...";
     RTC_DCHECK(engine_manual_input_ == nullptr);
@@ -1493,24 +1511,6 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
         return result;
       }
     }
-  }
-
-  if (!state.next.IsOutputEnabled() && audio_device_buffer_->IsPlaying()) {
-    LOGI() << "Stopping playout buffer (Manual)...";
-    if (engine_device_ != nullptr) {
-      // Rendering must be stopped first.
-      RTC_DCHECK(!engine_device_.running);
-    }
-    audio_device_buffer_->StopPlayout();
-  }
-
-  if (!state.next.IsInputEnabled() && audio_device_buffer_->IsRecording()) {
-    LOGI() << "Stopping record buffer (Manual)...";
-    if (engine_device_ != nullptr) {
-      // Rendering must be stopped first.
-      RTC_DCHECK(!engine_device_.running);
-    }
-    audio_device_buffer_->StopRecording();
   }
 
   if (state.DidAnyEnable() && observer_ != nullptr) {
@@ -1793,7 +1793,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   // --------------------------------------------------------------------------------------------
   // Step: Check microphone permission and audio session category
   //
-  if (state.DidAnyEnable() && state.next.render_mode == RenderMode::Device) {
+  if (state.DidAnyEnable()) {
     // Safety checks for device rendering mode with recording enabled
     // At this point mic permissions / session should be configured for recording.
     if (state.DidEnableInput()) {
@@ -1808,9 +1808,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     }
 
 #if !TARGET_OS_OSX
-    AVAudioSession* session = [AVAudioSession sharedInstance];
-    NSString* category = session.category;
-
+    NSString* category = [AVAudioSession sharedInstance].category;
     bool isCategoryValid = IsAudioSessionCategoryValid(category, state.next.IsInputEnabled(),
                                                        state.next.IsOutputEnabled());
     LOGI() << "AudioEngine pre-enable check, audio session category: " << isCategoryValid ? "true"
