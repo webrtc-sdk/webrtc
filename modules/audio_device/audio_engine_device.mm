@@ -1816,7 +1816,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     LOGI() << "AudioEngine pre-enable check, audio session category: " << isCategoryValid ? "true"
                                                                                           : "false";
     if (!isCategoryValid) {
-      return rollback(kAudioEngineErrorAudioSessionCategoryRecordingRequired);
+      return rollback(kAudioEngineErrorAudioSessionInvalidCategory);
     }
 #endif
   }

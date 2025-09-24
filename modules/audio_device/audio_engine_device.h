@@ -98,7 +98,7 @@ enum AudioEngineErrorCode {
 
   // Permission and session errors
   kAudioEngineErrorInsufficientDevicePermission = -9000,
-  kAudioEngineErrorAudioSessionCategoryRecordingRequired = -9001
+  kAudioEngineErrorAudioSessionInvalidCategory = -9001
 };
 
 class FineAudioBuffer;
