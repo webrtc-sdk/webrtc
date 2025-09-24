@@ -417,8 +417,6 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
   EngineState engine_state_ RTC_GUARDED_BY(thread_);
 
-  bool IsMicrophonePermissionGranted();
-  bool EnsureMicrophonePermissionSync();
   int32_t ModifyEngineState(std::function<EngineState(EngineState)> state_transform);
 
   int32_t ApplyDeviceEngineState(EngineStateUpdate state);
@@ -446,6 +444,13 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   std::vector<std::string> input_device_labels_;
 #endif
 
+  bool IsMicrophonePermissionGranted();
+  bool EnsureMicrophonePermissionSync();
+
+#if !TARGET_OS_OSX
+  bool IsAudioSessionCategoryValid(NSString* category, bool is_input_enabled,
+                                   bool is_output_enabled);
+#endif
   void DebugAudioEngine();
 
   void StartRenderLoop();

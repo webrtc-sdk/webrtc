@@ -1324,38 +1324,6 @@ void AudioEngineDevice::ReconfigureEngine() {
   }));
 }
 
-bool AudioEngineDevice::IsMicrophonePermissionGranted() {
-  AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio];
-  return status == AVAuthorizationStatusAuthorized;
-}
-
-bool AudioEngineDevice::EnsureMicrophonePermissionSync() {
-  AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio];
-
-  if (status == AVAuthorizationStatusAuthorized) {
-    return true;
-  }
-
-  if (status == AVAuthorizationStatusNotDetermined) {
-    // Request permission synchronously - this will block WebRTC's worker thread
-    // but this is acceptable since instantiating AVAudioInputNode would block anyway
-    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
-    __block BOOL granted = NO;
-
-    [AVCaptureDevice requestAccessForMediaType:AVMediaTypeAudio
-                             completionHandler:^(BOOL granted_inner) {
-                               granted = granted_inner;
-                               dispatch_semaphore_signal(semaphore);
-                             }];
-
-    dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
-    return granted;
-  }
-
-  // Status is denied or restricted
-  return false;
-}
-
 int32_t AudioEngineDevice::ModifyEngineState(
     std::function<EngineState(EngineState)> state_transform) {
   RTC_DCHECK_RUN_ON(thread_);
@@ -1745,6 +1713,30 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   }
 
   // --------------------------------------------------------------------------------------------
+  // Step: Stop playout buffer
+  //
+  if (!state.next.IsOutputEnabled() && audio_device_buffer_->IsPlaying()) {
+    LOGI() << "Stopping Playout buffer...";
+    if (engine_device_ != nullptr) {
+      // Rendering must be stopped first.
+      RTC_DCHECK(!engine_device_.running);
+    }
+    audio_device_buffer_->StopPlayout();
+  }
+
+  // --------------------------------------------------------------------------------------------
+  // Step: Stop recording buffer
+  //
+  if (!state.next.IsInputEnabled() && audio_device_buffer_->IsRecording()) {
+    LOGI() << "Stopping Record buffer...";
+    if (engine_device_ != nullptr) {
+      // Rendering must be stopped first.
+      RTC_DCHECK(!engine_device_.running);
+    }
+    audio_device_buffer_->StopRecording();
+  }
+
+  // --------------------------------------------------------------------------------------------
   // Step: Recreate AVAudioEngine
   //
   if (state.IsEngineRecreateRequired()) {
@@ -1757,6 +1749,37 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       }
     }
     engine_device_ = nil;
+  }
+
+  // --------------------------------------------------------------------------------------------
+  // Step: Check microphone permission and audio session category
+  //
+  if (state.DidAnyEnable() && state.next.render_mode == RenderMode::Device) {
+    // Safety checks for device rendering mode with recording enabled
+    // At this point mic permissions / session should be configured for recording.
+    if (state.DidEnableInput()) {
+      LOGI() << "Checking microphone permission...";
+      // Attempt to acquire mic permissions at this point to return an erorr early.
+      bool isAuthorized = EnsureMicrophonePermissionSync();
+      LOGI() << "AudioEngine pre-enable check, device permission: "
+             << (isAuthorized ? "true" : "false");
+      if (!isAuthorized) {
+        return rollback(kAudioEngineErrorInsufficientDevicePermission);
+      }
+    }
+
+#if !TARGET_OS_OSX
+    AVAudioSession* session = [AVAudioSession sharedInstance];
+    NSString* category = session.category;
+
+    bool isCategoryValid = IsAudioSessionCategoryValid(category, state.next.IsInputEnabled(),
+                                                       state.next.IsOutputEnabled());
+    LOGI() << "AudioEngine pre-enable check, audio session category: " << isCategoryValid ? "true"
+                                                                                          : "false";
+    if (!isCategoryValid) {
+      return rollback(kAudioEngineErrorAudioSessionCategoryRecordingRequired);
+    }
+#endif
   }
 
   // --------------------------------------------------------------------------------------------
@@ -1785,59 +1808,9 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   }
 
   // --------------------------------------------------------------------------------------------
-  // Step: Stop playout buffer
-  //
-  if (!state.next.IsOutputEnabled() && audio_device_buffer_->IsPlaying()) {
-    LOGI() << "Stopping Playout buffer...";
-    if (engine_device_ != nullptr) {
-      // Rendering must be stopped first.
-      RTC_DCHECK(!engine_device_.running);
-    }
-    audio_device_buffer_->StopPlayout();
-  }
-
-  // --------------------------------------------------------------------------------------------
-  // Step: Stop recording buffer
-  //
-  if (!state.next.IsInputEnabled() && audio_device_buffer_->IsRecording()) {
-    LOGI() << "Stopping Record buffer...";
-    if (engine_device_ != nullptr) {
-      // Rendering must be stopped first.
-      RTC_DCHECK(!engine_device_.running);
-    }
-    audio_device_buffer_->StopRecording();
-  }
-
-  // --------------------------------------------------------------------------------------------
   // Step: Trigger "engine will enable" event
   //
   if (state.DidAnyEnable() && observer_ != nullptr) {
-    // Safety checks for device rendering mode with recording enabled
-    // At this point mic permissions / session should be configured for recording.
-    if (state.next.IsInputEnabled() && state.next.render_mode == RenderMode::Device) {
-      // Attempt to acquire mic permissions at this point to return an erorr early.
-      bool isAuthorized = EnsureMicrophonePermissionSync();
-      LOGI() << "AudioEngine pre-enable check, device permission: "
-             << (isAuthorized ? "true" : "false");
-      if (!isAuthorized) {
-        return rollback(kAudioEngineErrorInsufficientDevicePermission);
-      }
-
-#if !TARGET_OS_OSX
-      // Additional check for audio session category on non-macOS platforms.
-      AVAudioSession* session = [AVAudioSession sharedInstance];
-      NSString* category = session.category;
-
-      // Check if category supports recording
-      bool isCategoryValid = [category isEqualToString:AVAudioSessionCategoryPlayAndRecord] ||
-                             [category isEqualToString:AVAudioSessionCategoryRecord];
-      LOGI() << "AudioEngine pre-enable check, audio session category: " << category.UTF8String;
-      if (!isCategoryValid) {
-        return rollback(kAudioEngineErrorAudioSessionCategoryRecordingRequired);
-      }
-#endif
-    }
-
     // Invoke here before configuring nodes. In iOS, session configuration is required before
     // enabling AGC, muted talker etc.
     int32_t result = observer_->OnEngineWillEnable(engine_device_, state.next.IsOutputEnabled(),
@@ -2542,6 +2515,74 @@ void AudioEngineDevice::UpdateAllDeviceIDs() {
   }
 }
 
+#endif
+
+// ----------------------------------------------------------------------------------------------------
+// Private - Microphone permission
+
+bool AudioEngineDevice::IsMicrophonePermissionGranted() {
+  AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio];
+  return status == AVAuthorizationStatusAuthorized;
+}
+
+bool AudioEngineDevice::EnsureMicrophonePermissionSync() {
+  AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio];
+
+  if (status == AVAuthorizationStatusAuthorized) {
+    return true;
+  }
+
+  if (status == AVAuthorizationStatusNotDetermined) {
+    // Request permission synchronously - this will block WebRTC's worker thread
+    // but this is acceptable since instantiating AVAudioInputNode would block anyway
+    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
+    __block BOOL granted = NO;
+
+    [AVCaptureDevice requestAccessForMediaType:AVMediaTypeAudio
+                             completionHandler:^(BOOL granted_inner) {
+                               granted = granted_inner;
+                               dispatch_semaphore_signal(semaphore);
+                             }];
+
+    dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
+    return granted;
+  }
+
+  // Status is denied or restricted
+  return false;
+}
+
+// ----------------------------------------------------------------------------------------------------
+// Private - Audio session
+
+#if !TARGET_OS_OSX
+bool AudioEngineDevice::IsAudioSessionCategoryValid(NSString* category, bool is_input_enabled,
+                                                    bool is_output_enabled) {
+  // Categories that support both recording and playback
+  if (is_input_enabled && is_output_enabled) {
+    return [category isEqualToString:AVAudioSessionCategoryPlayAndRecord] ||
+           [category isEqualToString:AVAudioSessionCategoryMultiRoute];
+  }
+
+  // Categories that support recording only
+  if (is_input_enabled && !is_output_enabled) {
+    return [category isEqualToString:AVAudioSessionCategoryRecord] ||
+           [category isEqualToString:AVAudioSessionCategoryPlayAndRecord] ||
+           [category isEqualToString:AVAudioSessionCategoryMultiRoute];
+  }
+
+  // Categories that support playback only
+  if (!is_input_enabled && is_output_enabled) {
+    return [category isEqualToString:AVAudioSessionCategoryAmbient] ||
+           [category isEqualToString:AVAudioSessionCategorySoloAmbient] ||
+           [category isEqualToString:AVAudioSessionCategoryPlayback] ||
+           [category isEqualToString:AVAudioSessionCategoryPlayAndRecord] ||
+           [category isEqualToString:AVAudioSessionCategoryMultiRoute];
+  }
+
+  // Neither input nor output enabled - any category is valid
+  return true;
+}
 #endif
 
 // ----------------------------------------------------------------------------------------------------
