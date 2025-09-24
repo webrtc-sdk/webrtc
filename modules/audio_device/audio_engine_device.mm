@@ -1752,37 +1752,6 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   }
 
   // --------------------------------------------------------------------------------------------
-  // Step: Check microphone permission and audio session category
-  //
-  if (state.DidAnyEnable() && state.next.render_mode == RenderMode::Device) {
-    // Safety checks for device rendering mode with recording enabled
-    // At this point mic permissions / session should be configured for recording.
-    if (state.DidEnableInput()) {
-      LOGI() << "Checking microphone permission...";
-      // Attempt to acquire mic permissions at this point to return an erorr early.
-      bool isAuthorized = EnsureMicrophonePermissionSync();
-      LOGI() << "AudioEngine pre-enable check, device permission: "
-             << (isAuthorized ? "true" : "false");
-      if (!isAuthorized) {
-        return rollback(kAudioEngineErrorInsufficientDevicePermission);
-      }
-    }
-
-#if !TARGET_OS_OSX
-    AVAudioSession* session = [AVAudioSession sharedInstance];
-    NSString* category = session.category;
-
-    bool isCategoryValid = IsAudioSessionCategoryValid(category, state.next.IsInputEnabled(),
-                                                       state.next.IsOutputEnabled());
-    LOGI() << "AudioEngine pre-enable check, audio session category: " << isCategoryValid ? "true"
-                                                                                          : "false";
-    if (!isCategoryValid) {
-      return rollback(kAudioEngineErrorAudioSessionCategoryRecordingRequired);
-    }
-#endif
-  }
-
-  // --------------------------------------------------------------------------------------------
   // Step: Create AVAudioEngine
   //
   if (state.next.IsAnyEnabled() &&
@@ -1819,6 +1788,37 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       LOGE() << "Call to OnEngineWillEnable returned error: " << result;
       return rollback(result);
     }
+  }
+
+  // --------------------------------------------------------------------------------------------
+  // Step: Check microphone permission and audio session category
+  //
+  if (state.DidAnyEnable() && state.next.render_mode == RenderMode::Device) {
+    // Safety checks for device rendering mode with recording enabled
+    // At this point mic permissions / session should be configured for recording.
+    if (state.DidEnableInput()) {
+      LOGI() << "Checking microphone permission...";
+      // Attempt to acquire mic permissions at this point to return an erorr early.
+      bool isAuthorized = EnsureMicrophonePermissionSync();
+      LOGI() << "AudioEngine pre-enable check, device permission: "
+             << (isAuthorized ? "true" : "false");
+      if (!isAuthorized) {
+        return rollback(kAudioEngineErrorInsufficientDevicePermission);
+      }
+    }
+
+#if !TARGET_OS_OSX
+    AVAudioSession* session = [AVAudioSession sharedInstance];
+    NSString* category = session.category;
+
+    bool isCategoryValid = IsAudioSessionCategoryValid(category, state.next.IsInputEnabled(),
+                                                       state.next.IsOutputEnabled());
+    LOGI() << "AudioEngine pre-enable check, audio session category: " << isCategoryValid ? "true"
+                                                                                          : "false";
+    if (!isCategoryValid) {
+      return rollback(kAudioEngineErrorAudioSessionCategoryRecordingRequired);
+    }
+#endif
   }
 
   // --------------------------------------------------------------------------------------------
