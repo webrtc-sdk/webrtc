@@ -180,10 +180,9 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
             factory.signalingThread, [participantId stdString], mediaType,
             [self algorithmFromEnum:algorithm], keyProvider.nativeKeyProvider));
 
-    factory.signalingThread->BlockingCall([self, nativeRtpReceiver] {
-      // Must be called on signal thread
-      nativeRtpReceiver->SetDepacketizerToDecoderFrameTransformer(_frame_crypto_transformer);
-    });
+    // Does not need to be called on the signaling thread, as its implementation already switches to
+    // the worker thread internally.
+    nativeRtpReceiver->SetDepacketizerToDecoderFrameTransformer(_frame_crypto_transformer);
 
     _frame_crypto_transformer->SetEnabled(false);
     _frame_crypto_transformer->RegisterFrameCryptorTransformerObserver(_observer);
