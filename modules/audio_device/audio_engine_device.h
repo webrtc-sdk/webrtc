@@ -94,7 +94,11 @@ enum AudioEngineErrorCode {
 
   // Voice processing errors
   kAudioEngineVoiceProcessingError = -8000,
-  kAudioEngineAGCError = -8001
+  kAudioEngineAGCError = -8001,
+
+  // Permission and session errors
+  kAudioEngineErrorInsufficientDevicePermission = -9000,
+  kAudioEngineErrorAudioSessionInvalidCategory = -9001
 };
 
 class FineAudioBuffer;
@@ -121,8 +125,9 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
     bool output_enabled = false;
     bool output_running = false;
 
-    // Output will be enabled when input is enabled
-    bool input_follow_mode = true;
+    bool output_available = true;
+    bool input_available = true;
+
     bool input_enabled_persistent_mode = false;
 
     bool input_muted = true;
@@ -146,7 +151,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
     bool operator==(const EngineState& rhs) const {
       return input_enabled == rhs.input_enabled && input_running == rhs.input_running &&
              output_enabled == rhs.output_enabled && output_running == rhs.output_running &&
-             input_follow_mode == rhs.input_follow_mode &&
+             input_available == rhs.input_available && output_available == rhs.output_available &&
              input_enabled_persistent_mode == rhs.input_enabled_persistent_mode &&
              input_muted == rhs.input_muted && is_interrupted == rhs.is_interrupted &&
              render_mode == rhs.render_mode && mute_mode == rhs.mute_mode &&
@@ -161,35 +166,68 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
     bool operator!=(const EngineState& rhs) const { return !(*this == rhs); }
 
-    bool IsOutputInputLinked() const { return input_follow_mode && voice_processing_enabled; }
+    // AUDIO STATE LOGIC
+    //
+    // Device Mode:
+    // - Output follows input only when voice_processing_enabled=true (for AEC)
+    // - Input respects mute mode restrictions (RestartEngine + input_muted)
+    // - Independent operation when voice processing is disabled
+    //
+    // Manual Mode:
+    // - Bidirectional coupling: if ANY component is enabled/running, BOTH are considered
+    // enabled/running
+    // - No mute mode restrictions (manual control bypasses automatic muting)
+    // - Required for AVAudioEngine graph connectivity (input must connect to output)
+    //
+    // All modes respect availability flags (input_available/output_available)
 
     bool IsOutputEnabled() const {
-      return IsOutputInputLinked() ? (IsInputEnabled() || output_enabled) : output_enabled;
+      if (!output_available) return false;
+
+      switch (render_mode) {
+        case RenderMode::Device:
+          return voice_processing_enabled ? (IsInputEnabled() || output_enabled) : output_enabled;
+        case RenderMode::Manual:
+          return output_enabled || input_enabled || input_enabled_persistent_mode;
+      }
     }
 
     bool IsOutputRunning() const {
-      return IsOutputInputLinked() ? (IsInputRunning() || output_running) : output_running;
+      if (!output_available) return false;
+
+      switch (render_mode) {
+        case RenderMode::Device:
+          return voice_processing_enabled ? (IsInputRunning() || output_running) : output_running;
+        case RenderMode::Manual:
+          return output_running || input_running;
+      }
     }
 
     bool IsInputEnabled() const {
-      return !(mute_mode == MuteMode::RestartEngine && input_muted) &&
-             (input_enabled || input_enabled_persistent_mode);
+      if (!input_available) return false;
+
+      switch (render_mode) {
+        case RenderMode::Device:
+          return !(mute_mode == MuteMode::RestartEngine && input_muted) &&
+                 (input_enabled || input_enabled_persistent_mode);
+        case RenderMode::Manual:
+          return input_enabled || input_enabled_persistent_mode || output_enabled;
+      }
     }
 
     bool IsInputRunning() const {
-      return !(mute_mode == MuteMode::RestartEngine && input_muted) && input_running;
+      if (!input_available) return false;
+
+      switch (render_mode) {
+        case RenderMode::Device:
+          return !(mute_mode == MuteMode::RestartEngine && input_muted) && input_running;
+        case RenderMode::Manual:
+          return input_running || output_running;
+      }
     }
 
     bool IsAnyEnabled() const { return IsInputEnabled() || IsOutputEnabled(); }
     bool IsAnyRunning() const { return IsInputRunning() || IsOutputRunning(); }
-
-    bool IsAllEnabled() const {
-      return IsOutputInputLinked() ? IsInputEnabled() : IsInputEnabled() && output_enabled;
-    }
-
-    bool IsAllRunning() const {
-      return IsOutputInputLinked() ? input_running : input_running && output_running;
-    }
 
     bool IsOutputDefaultDevice() const {
 #if TARGET_OS_OSX
@@ -303,6 +341,9 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   int32_t SetEngineState(EngineState enable);
   int32_t GetEngineState(EngineState* enabled);
 
+  int32_t SetEngineAvailability(bool input_available, bool output_available);
+  int32_t EngineAvailability(bool* input_available, bool* output_available);
+
   int32_t SetObserver(AudioDeviceObserver* observer) override;
 
   int32_t SetManualRenderingMode(bool enable);
@@ -410,8 +451,8 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
   EngineState engine_state_ RTC_GUARDED_BY(thread_);
 
-  bool IsMicrophonePermissionGranted();
   int32_t ModifyEngineState(std::function<EngineState(EngineState)> state_transform);
+
   int32_t ApplyDeviceEngineState(EngineStateUpdate state);
   int32_t ApplyManualEngineState(EngineStateUpdate state);
 
@@ -437,6 +478,13 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   std::vector<std::string> input_device_labels_;
 #endif
 
+  bool IsMicrophonePermissionGranted();
+  bool EnsureMicrophonePermissionSync();
+
+#if !TARGET_OS_OSX
+  bool IsAudioSessionCategoryValid(NSString* category, bool is_input_enabled,
+                                   bool is_output_enabled);
+#endif
   void DebugAudioEngine();
 
   void StartRenderLoop();
