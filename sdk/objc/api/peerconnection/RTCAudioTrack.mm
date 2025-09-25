@@ -66,8 +66,6 @@
 }
 
 - (void)dealloc {
-  // [self removeAllRenderers];
-
   // No need to switch threads when removing all renderers here;
   // just remove each sink from the native audio track directly.
   for (RTC_OBJC_TYPE(RTCAudioRendererAdapter) * adapter in _adapters) {
