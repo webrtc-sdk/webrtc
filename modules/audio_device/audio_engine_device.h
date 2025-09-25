@@ -128,8 +128,6 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
     bool output_available = true;
     bool input_available = true;
 
-    // Output will be enabled when input is enabled
-    bool input_follow_mode = true;
     bool input_enabled_persistent_mode = false;
 
     bool input_muted = true;
@@ -154,7 +152,6 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
       return input_enabled == rhs.input_enabled && input_running == rhs.input_running &&
              output_enabled == rhs.output_enabled && output_running == rhs.output_running &&
              input_available == rhs.input_available && output_available == rhs.output_available &&
-             input_follow_mode == rhs.input_follow_mode &&
              input_enabled_persistent_mode == rhs.input_enabled_persistent_mode &&
              input_muted == rhs.input_muted && is_interrupted == rhs.is_interrupted &&
              render_mode == rhs.render_mode && mute_mode == rhs.mute_mode &&
@@ -169,27 +166,64 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
     bool operator!=(const EngineState& rhs) const { return !(*this == rhs); }
 
-    bool IsOutputInputLinked() const { return input_follow_mode && voice_processing_enabled; }
+    // AUDIO STATE LOGIC
+    //
+    // Device Mode:
+    // - Output follows input only when voice_processing_enabled=true (for AEC)
+    // - Input respects mute mode restrictions (RestartEngine + input_muted)
+    // - Independent operation when voice processing is disabled
+    //
+    // Manual Mode:
+    // - Bidirectional coupling: if ANY component is enabled/running, BOTH are considered
+    // enabled/running
+    // - No mute mode restrictions (manual control bypasses automatic muting)
+    // - Required for AVAudioEngine graph connectivity (input must connect to output)
+    //
+    // All modes respect availability flags (input_available/output_available)
 
     bool IsOutputEnabled() const {
-      bool result = IsOutputInputLinked() ? (IsInputEnabled() || output_enabled) : output_enabled;
-      return output_available && result;
+      if (!output_available) return false;
+
+      switch (render_mode) {
+        case RenderMode::Device:
+          return voice_processing_enabled ? (IsInputEnabled() || output_enabled) : output_enabled;
+        case RenderMode::Manual:
+          return output_enabled || input_enabled || input_enabled_persistent_mode;
+      }
     }
 
     bool IsOutputRunning() const {
-      bool result = IsOutputInputLinked() ? (IsInputRunning() || output_running) : output_running;
-      return output_available && result;
+      if (!output_available) return false;
+
+      switch (render_mode) {
+        case RenderMode::Device:
+          return voice_processing_enabled ? (IsInputRunning() || output_running) : output_running;
+        case RenderMode::Manual:
+          return output_running || input_running;
+      }
     }
 
     bool IsInputEnabled() const {
-      bool result = !(mute_mode == MuteMode::RestartEngine && input_muted) &&
-                    (input_enabled || input_enabled_persistent_mode);
-      return input_available && result;
+      if (!input_available) return false;
+
+      switch (render_mode) {
+        case RenderMode::Device:
+          return !(mute_mode == MuteMode::RestartEngine && input_muted) &&
+                 (input_enabled || input_enabled_persistent_mode);
+        case RenderMode::Manual:
+          return input_enabled || input_enabled_persistent_mode || output_enabled;
+      }
     }
 
     bool IsInputRunning() const {
-      bool result = !(mute_mode == MuteMode::RestartEngine && input_muted) && input_running;
-      return input_available && result;
+      if (!input_available) return false;
+
+      switch (render_mode) {
+        case RenderMode::Device:
+          return !(mute_mode == MuteMode::RestartEngine && input_muted) && input_running;
+        case RenderMode::Manual:
+          return input_running || output_running;
+      }
     }
 
     bool IsAnyEnabled() const { return IsInputEnabled() || IsOutputEnabled(); }
