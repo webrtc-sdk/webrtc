@@ -478,8 +478,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   std::vector<std::string> input_device_labels_;
 #endif
 
-  bool IsMicrophonePermissionGranted();
-  bool EnsureMicrophonePermissionSync();
+  bool IsMicrophonePermissionAuthorized();
 
 #if !TARGET_OS_OSX
   bool IsAudioSessionCategoryValid(NSString* category, bool is_input_enabled,
