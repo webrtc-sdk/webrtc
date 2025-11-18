@@ -1759,7 +1759,6 @@ bool WebRtcVoiceSendChannel::MuteStream(uint32_t ssrc, bool muted) {
       if (adm) {
         RTC_LOG(LS_INFO) << "WebRtcVoiceSendChannel::MuteStream: ADM:"
                          << is_all_muted;
-        adm->SetMicrophoneMute(is_all_muted);
 
         if (adm->IsStopOnMuteModeEnabled()) {
           if (!is_all_muted && !adm->Recording()) {
@@ -1769,6 +1768,8 @@ bool WebRtcVoiceSendChannel::MuteStream(uint32_t ssrc, bool muted) {
           } else if (is_all_muted && adm->Recording()) {
             adm->StopRecording();
           }
+        } else {
+          adm->SetMicrophoneMute(is_all_muted);
         }
       }
     }
