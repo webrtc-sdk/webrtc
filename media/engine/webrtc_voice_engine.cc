@@ -1762,10 +1762,12 @@ bool WebRtcVoiceSendChannel::MuteStream(uint32_t ssrc, bool muted) {
         adm->SetMicrophoneMute(is_all_muted);
 
         if (adm->IsStopOnMuteModeEnabled()) {
-          if (is_all_muted) {
+          if (!is_all_muted && !adm->Recording()) {
+            if (adm->InitRecording() == 0) {
+              adm->StartRecording();
+            }
+          } else if (is_all_muted && adm->Recording()) {
             adm->StopRecording();
-          } else {
-            adm->StartRecording();
           }
         }
       }
