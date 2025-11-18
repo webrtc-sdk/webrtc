@@ -372,6 +372,8 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
   int32_t InitAndStartRecording();
 
+  bool IsStopOnMuteModeEnabled() const override;
+
  private:
   struct EngineStateUpdate {
     EngineState prev;
