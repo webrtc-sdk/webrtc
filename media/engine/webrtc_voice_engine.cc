@@ -536,10 +536,17 @@ void WebRtcVoiceEngine::Init() {
   // Set default engine options.
   {
     AudioOptions options;
+#if defined(WEBRTC_ANDROID)
+    options.echo_cancellation = true;
+    options.auto_gain_control = true;
+    options.noise_suppression = true;
+    options.highpass_filter = true;
+#else
     options.echo_cancellation = false;
     options.auto_gain_control = false;
     options.noise_suppression = false;
     options.highpass_filter = false;
+#endif
     options.stereo_swapping = false;
     options.audio_jitter_buffer_max_packets = 200;
     options.audio_jitter_buffer_fast_accelerate = false;
