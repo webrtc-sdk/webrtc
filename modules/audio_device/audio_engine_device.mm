@@ -88,6 +88,10 @@ AudioEngineDevice::AudioEngineDevice(const Environment& env, bool voice_processi
   engine_state_.voice_processing_bypassed = voice_processing_bypassed;
 }
 
+bool AudioEngineDevice::IsStopOnMuteModeEnabled() const {
+  return false;
+}
+
 AudioEngineDevice::~AudioEngineDevice() {
   RTC_DCHECK_RUN_ON(thread_);
 

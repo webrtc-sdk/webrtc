@@ -177,6 +177,9 @@ class AudioDeviceModule : public RefCountInterface {
   // not be present in the stats.
   virtual std::optional<Stats> GetStats() const { return std::nullopt; }
 
+  // Whether to stop recording when all streams are muted.
+  virtual bool IsStopOnMuteModeEnabled() const { return true; }
+
 // Only supported on iOS.
 #if defined(WEBRTC_IOS)
   virtual int GetPlayoutAudioParameters(AudioParameters* params) const = 0;
