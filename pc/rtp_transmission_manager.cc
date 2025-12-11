@@ -323,8 +323,7 @@ RtpTransmissionManager::CreateAndAddTransceiver(
   // could be invalid, but should not cause a crash).
   RTC_DCHECK(!FindSenderById(sender->id()));
   std::vector<RtpHeaderExtensionCapability> header_extensions;
-  if (!env_.field_trials().IsDisabled(
-          "WebRTC-HeaderExtensionNegotiateMemory")) {
+  if (env_.field_trials().IsEnabled("WebRTC-HeaderExtensionNegotiateMemory")) {
     // If we have already negotiated header extensions for this type,
     // reuse the negotiated state for new transceivers of the same type.
     for (const auto& transceiver : transceivers()->List()) {
