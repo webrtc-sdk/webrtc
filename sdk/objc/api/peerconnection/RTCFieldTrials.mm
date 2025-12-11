@@ -12,6 +12,7 @@
 
 #import <os/lock.h>
 #include <memory>
+#include <vector>
 #import "base/RTCLogging.h"
 
 #include "system_wrappers/include/field_trial.h"
@@ -26,8 +27,10 @@ NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialUseNWPathMonitor) = @"WebRTC-Netw
 NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialEnabledValue) = @"Enabled";
 
 // InitFieldTrialsFromString stores the char*, so the char array must outlive
-// the application.
+// the application. Keep all historical strings alive to avoid races where
+// other threads read the previous pointer while we are updating it.
 static char *gFieldTrialInitString = nullptr;
+static std::vector<std::unique_ptr<char[]>> gFieldTrialStorage;
 static os_unfair_lock fieldTrialLock = OS_UNFAIR_LOCK_INIT;
 
 void RTC_OBJC_TYPE(RTCInitFieldTrialDictionary)(NSDictionary<NSString *, NSString *> *fieldTrials) {
@@ -50,13 +53,8 @@ void RTC_OBJC_TYPE(RTCInitFieldTrialDictionary)(NSDictionary<NSString *, NSStrin
 
   // Locking before modifying global variable
   os_unfair_lock_lock(&fieldTrialLock);
-  if (gFieldTrialInitString != nullptr) {
-    delete[] gFieldTrialInitString;
-    gFieldTrialInitString = nullptr;
-  }
-
-  gFieldTrialInitString = new char[len];
-  bool success = [fieldTrialInitString getCString:gFieldTrialInitString
+  auto newString = std::make_unique<char[]>(len);
+  bool success = [fieldTrialInitString getCString:newString.get()
                                         maxLength:len
                                          encoding:NSUTF8StringEncoding];
   if (!success) {
@@ -65,6 +63,10 @@ void RTC_OBJC_TYPE(RTCInitFieldTrialDictionary)(NSDictionary<NSString *, NSStrin
     return;
   }
 
+  // Keep the buffer alive for the remainder of the process lifetime to avoid
+  // use-after-free if other threads are still reading the old pointer.
+  gFieldTrialInitString = newString.get();
   webrtc::field_trial::InitFieldTrialsFromString(gFieldTrialInitString);
+  gFieldTrialStorage.emplace_back(std::move(newString));
   os_unfair_lock_unlock(&fieldTrialLock);
 }
