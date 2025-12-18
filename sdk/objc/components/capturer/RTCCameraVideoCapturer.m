@@ -506,21 +506,24 @@ static NSUInteger _sharedMultiCamSessionCount = 0;
 #pragma mark - Private
 
 - (AVCaptureSession *)createCaptureSession {
+  AVCaptureSession *result = nil;
 #if TARGET_MULTICAM_CAPABLE
   if (AVCaptureMultiCamSession.isMultiCamSupported) {
     // AVCaptureMultiCamSession exists and device supports multi-cam.
     if (_sharedMultiCamSession == nil) {
       _sharedMultiCamSession = [[AVCaptureMultiCamSession alloc] init];
     }
-    return _sharedMultiCamSession;
+    result = _sharedMultiCamSession;
   } else {
     // AVCaptureMultiCamSession exists but device doesn't support multi-cam.
-    return [[AVCaptureSession alloc] init];
+    result = [[AVCaptureSession alloc] init];
   }
 #else
   // AVCaptureMultiCamSession doesn't exist with this platform, use AVCaptureSession.
-  return [[AVCaptureSession alloc] init];
+  result = [[AVCaptureSession alloc] init];
 #endif
+  result.automaticallyConfiguresApplicationAudioSession = false;
+  return result;
 }
 
 - (BOOL)isUsingSelfCreatedMultiCamSession {
