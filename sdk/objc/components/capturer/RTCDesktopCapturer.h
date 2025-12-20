@@ -43,9 +43,11 @@ RTC_OBJC_EXPORT
 
 @property(nonatomic, readonly) RTC_OBJC_TYPE(RTCDesktopSource) *source;
 
-- (instancetype)initWithSource:(RTC_OBJC_TYPE(RTCDesktopSource) *)source delegate:(__weak id<RTC_OBJC_TYPE(RTCDesktopCapturerDelegate)>)delegate captureDelegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)captureDelegate;
+- (instancetype)initWithSource:(RTC_OBJC_TYPE(RTCDesktopSource) *)source delegate:(__weak id<RTC_OBJC_TYPE(RTCDesktopCapturerDelegate)>)delegate captureDelegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)captureDelegate
+                    showCursor:(BOOL)showCursor;
 
-- (instancetype)initWithDefaultScreen:(__weak id<RTC_OBJC_TYPE(RTCDesktopCapturerDelegate)>)delegate captureDelegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)captureDelegate;
+- (instancetype)initWithDefaultScreen:(__weak id<RTC_OBJC_TYPE(RTCDesktopCapturerDelegate)>)delegate captureDelegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)captureDelegate
+                           showCursor:(BOOL)showCursor;
 
 - (void)startCapture;
 
