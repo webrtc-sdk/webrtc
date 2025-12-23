@@ -522,7 +522,11 @@ static NSUInteger _sharedMultiCamSessionCount = 0;
   // AVCaptureMultiCamSession doesn't exist with this platform, use AVCaptureSession.
   result = [[AVCaptureSession alloc] init];
 #endif
-  result.automaticallyConfiguresApplicationAudioSession = false;
+#if (TARGET_OS_IOS || TARGET_OS_TV || TARGET_OS_MACCATALYST) && !TARGET_OS_VISION
+  if (@available(iOS 7.0, tvOS 17.0, macCatalyst 14.0, *)) {
+    result.automaticallyConfiguresApplicationAudioSession = false;
+  }
+#endif
   return result;
 }
 
