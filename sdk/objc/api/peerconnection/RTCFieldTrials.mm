@@ -30,8 +30,13 @@ NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialEnabledValue) = @"Enabled";
 // the application. Keep all historical strings alive to avoid races where
 // other threads read the previous pointer while we are updating it.
 static char *gFieldTrialInitString = nullptr;
-static std::vector<std::unique_ptr<char[]>> gFieldTrialStorage;
 static os_unfair_lock fieldTrialLock = OS_UNFAIR_LOCK_INIT;
+
+// Leaky storage avoids exit-time destructors in this target.
+static std::vector<std::unique_ptr<char[]>> &FieldTrialStorage() {
+  static auto *storage = new std::vector<std::unique_ptr<char[]>>();
+  return *storage;
+}
 
 void RTC_OBJC_TYPE(RTCInitFieldTrialDictionary)(NSDictionary<NSString *, NSString *> *fieldTrials) {
   if (!fieldTrials) {
@@ -67,6 +72,6 @@ void RTC_OBJC_TYPE(RTCInitFieldTrialDictionary)(NSDictionary<NSString *, NSStrin
   // use-after-free if other threads are still reading the old pointer.
   gFieldTrialInitString = newString.get();
   webrtc::field_trial::InitFieldTrialsFromString(gFieldTrialInitString);
-  gFieldTrialStorage.emplace_back(std::move(newString));
+  FieldTrialStorage().emplace_back(std::move(newString));
   os_unfair_lock_unlock(&fieldTrialLock);
 }
