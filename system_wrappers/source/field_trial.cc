@@ -11,6 +11,8 @@
 
 #include <stddef.h>
 
+#include <memory>
+#include <vector>
 #include <map>
 #include <string>
 #include <utility>
@@ -165,8 +167,15 @@ void InitFieldTrialsFromString(const char* trials_string) {
   if (trials_string) {
     RTC_DCHECK(FieldTrialsStringIsValidInternal(trials_string))
         << "Invalid field trials string:" << trials_string;
-  };
-  trials_init_string = trials_string;
+    
+    // Persistent storage to ensure pointers remain valid for concurrent readers.
+    // We never remove strings from here to avoid use-after-free races.
+    static auto* storage = new std::vector<std::unique_ptr<std::string>>();
+    storage->push_back(std::make_unique<std::string>(trials_string));
+    trials_init_string = storage->back()->c_str();
+  } else {
+    trials_init_string = NULL;
+  }
 }
 
 const char* GetFieldTrialString() {
