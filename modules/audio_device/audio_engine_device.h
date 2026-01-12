@@ -148,8 +148,8 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
     bool voice_processing_enabled = true;
     bool voice_processing_bypassed = false;
     bool voice_processing_agc_enabled = true;
-    bool advanced_ducking = true;
-    AudioDuckingLevel ducking_level = AudioDuckingLevelDefault;
+    bool advanced_ducking = false;
+    AudioDuckingLevel ducking_level = AudioDuckingLevelMin;
 
     uint32_t output_device_id = 0;  // kAudioObjectUnknown
     uint32_t input_device_id = 0;   // kAudioObjectUnknown
