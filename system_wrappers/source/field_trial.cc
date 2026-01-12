@@ -7,32 +7,43 @@
 // be found in the AUTHORS file in the root of the source tree.
 //
 
-#include "system_wrappers/include/field_trial.h"
-
 #include <stddef.h>
 
 #include <map>
+#include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "absl/algorithm/container.h"
 #include "absl/strings/string_view.h"
+#include "absl/synchronization/mutex.h"
 #include "experiments/registered_field_trials.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/containers/flat_set.h"
 #include "rtc_base/logging.h"
 #include "rtc_base/string_encode.h"
+#include "system_wrappers/include/field_trial.h"
 
 // Simple field trial implementation, which allows client to
 // specify desired flags in InitFieldTrialsFromString.
 namespace webrtc {
 namespace field_trial {
 
-static const char* trials_init_string = NULL;
-
 namespace {
 
 constexpr char kPersistentStringSeparator = '/';
+
+struct TrialsState {
+  absl::Mutex mutex;
+  std::vector<std::unique_ptr<std::string>> storage ABSL_GUARDED_BY(mutex);
+  const char* trials_init_string ABSL_GUARDED_BY(mutex) = NULL;
+};
+
+TrialsState& GetTrialsState() {
+  static auto* state = new TrialsState();
+  return *state;
+}
 
 flat_set<std::string>& TestKeys() {
   static auto* test_keys = new flat_set<std::string>();
@@ -48,15 +59,13 @@ flat_set<std::string>& TestKeys() {
 //  E.g. invalid config:
 //    "WebRTC-experiment1/Enabled"  (note missing / separator at the end).
 bool FieldTrialsStringIsValidInternal(const absl::string_view trials) {
-  if (trials.empty())
-    return true;
+  if (trials.empty()) return true;
 
   size_t next_item = 0;
   std::map<absl::string_view, absl::string_view> field_trials;
   while (next_item < trials.length()) {
     size_t name_end = trials.find(kPersistentStringSeparator, next_item);
-    if (name_end == trials.npos || next_item == name_end)
-      return false;
+    if (name_end == trials.npos || next_item == name_end) return false;
     size_t group_name_end =
         trials.find(kPersistentStringSeparator, name_end + 1);
     if (group_name_end == trials.npos || name_end + 1 == group_name_end)
@@ -127,12 +136,16 @@ std::string FindFullName(absl::string_view name) {
       << name << " is not registered, see g3doc/field-trials.md.";
 #endif
 
-  if (trials_init_string == NULL)
-    return std::string();
+  const char* trials_string_ptr = NULL;
+  {
+    TrialsState& state = GetTrialsState();
+    absl::MutexLock lock(&state.mutex);
+    trials_string_ptr = state.trials_init_string;
+  }
+  if (trials_string_ptr == NULL) return std::string();
 
-  absl::string_view trials_string(trials_init_string);
-  if (trials_string.empty())
-    return std::string();
+  absl::string_view trials_string(trials_string_ptr);
+  if (trials_string.empty()) return std::string();
 
   size_t next_item = 0;
   while (next_item < trials_string.length()) {
@@ -152,8 +165,7 @@ std::string FindFullName(absl::string_view name) {
         field_name_end + 1, field_value_end - field_name_end - 1);
     next_item = field_value_end + 1;
 
-    if (name == field_name)
-      return std::string(field_value);
+    if (name == field_name) return std::string(field_value);
   }
   return std::string();
 }
@@ -162,15 +174,25 @@ std::string FindFullName(absl::string_view name) {
 // Optionally initialize field trial from a string.
 void InitFieldTrialsFromString(const char* trials_string) {
   RTC_LOG(LS_INFO) << "Setting field trial string:" << trials_string;
+  TrialsState& state = GetTrialsState();
+  absl::MutexLock lock(&state.mutex);
   if (trials_string) {
     RTC_DCHECK(FieldTrialsStringIsValidInternal(trials_string))
         << "Invalid field trials string:" << trials_string;
-  };
-  trials_init_string = trials_string;
+
+    // Persistent storage to ensure pointers remain valid for concurrent
+    // readers. We never remove strings from here to avoid use-after-free races.
+    state.storage.push_back(std::make_unique<std::string>(trials_string));
+    state.trials_init_string = state.storage.back()->c_str();
+  } else {
+    state.trials_init_string = NULL;
+  }
 }
 
 const char* GetFieldTrialString() {
-  return trials_init_string;
+  TrialsState& state = GetTrialsState();
+  absl::MutexLock lock(&state.mutex);
+  return state.trials_init_string;
 }
 
 FieldTrialsAllowedInScopeForTesting::FieldTrialsAllowedInScopeForTesting(
