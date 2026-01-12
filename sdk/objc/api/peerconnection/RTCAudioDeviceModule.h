@@ -40,6 +40,15 @@ typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCAudioEngineMuteMode)) {
   RTC_OBJC_TYPE(RTCAudioEngineMuteModeInputMixer) = 2,
 };
 
+// Ducking level for voice processing.
+// Maps to AVAudioVoiceProcessingOtherAudioDuckingLevel (iOS 17.0+, macOS 14.0+).
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCAudioEngineDuckingLevel)) {
+  RTC_OBJC_TYPE(RTCAudioEngineDuckingLevelDefault) = 0,
+  RTC_OBJC_TYPE(RTCAudioEngineDuckingLevelMin) = 1,
+  RTC_OBJC_TYPE(RTCAudioEngineDuckingLevelMid) = 2,
+  RTC_OBJC_TYPE(RTCAudioEngineDuckingLevelMax) = 3,
+};
+
 typedef struct {
   BOOL outputEnabled;
   BOOL outputRunning;
@@ -173,8 +182,8 @@ RTC_OBJC_EXPORT
 // Advanced other audio ducking.
 @property(nonatomic, assign, getter=isAdvancedDuckingEnabled) BOOL advancedDuckingEnabled;
 
-// Audio ducking level. See `AVAudioVoiceProcessingOtherAudioDuckingLevel` enum for valid values.
-@property(nonatomic, assign) NSInteger duckingLevel;
+// Audio ducking level. Maps to AVAudioVoiceProcessingOtherAudioDuckingLevel (iOS 17.0+, macOS 14.0+).
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCAudioEngineDuckingLevel) duckingLevel;
 
 @property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioEngineMuteMode) muteMode;
 - (NSInteger)setMuteMode:(RTC_OBJC_TYPE(RTCAudioEngineMuteMode))mode;

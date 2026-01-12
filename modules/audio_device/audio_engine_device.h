@@ -117,6 +117,15 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
     InputMixer = 2,
   };
 
+  // Ducking level for voice processing.
+  // Maps to AVAudioVoiceProcessingOtherAudioDuckingLevel (iOS 17.0+, macOS 14.0+).
+  enum AudioDuckingLevel {
+    AudioDuckingLevelDefault = 0,
+    AudioDuckingLevelMin = 1,
+    AudioDuckingLevelMid = 2,
+    AudioDuckingLevelMax = 3,
+  };
+
   // Represents the state of the audio engine, including input/output status,
   // rendering mode, and various configuration flags.
   struct EngineState {
@@ -140,7 +149,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
     bool voice_processing_bypassed = false;
     bool voice_processing_agc_enabled = true;
     bool advanced_ducking = true;
-    long ducking_level = 0;  // 0 = Default
+    AudioDuckingLevel ducking_level = AudioDuckingLevelDefault;
 
     uint32_t output_device_id = 0;  // kAudioObjectUnknown
     uint32_t input_device_id = 0;   // kAudioObjectUnknown
@@ -355,8 +364,8 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   int32_t SetAdvancedDucking(bool enable);
   int32_t AdvancedDucking(bool* enabled);
 
-  int32_t SetDuckingLevel(long level);
-  int32_t DuckingLevel(long* level);
+  int32_t SetDuckingLevel(AudioDuckingLevel level);
+  int32_t DuckingLevel(AudioDuckingLevel* level);
 
   int32_t SetInitRecordingPersistentMode(bool enable);
   int32_t InitRecordingPersistentMode(bool* enabled);
