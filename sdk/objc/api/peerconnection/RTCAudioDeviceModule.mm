@@ -37,6 +37,36 @@ inline RTC_OBJC_TYPE(RTCAudioEngineMuteMode)
   return static_cast<RTC_OBJC_TYPE(RTCAudioEngineMuteMode)>(mode);
 }
 
+// Maps between RTCAudioDuckingLevel and AudioDuckingLevel.
+// Uses explicit mapping to avoid assuming integer values match between enums.
+inline webrtc::AudioEngineDevice::AudioDuckingLevel DuckingLevelToRTC(
+    RTC_OBJC_TYPE(RTCAudioDuckingLevel) level) {
+  switch (level) {
+    case RTC_OBJC_TYPE(RTCAudioDuckingLevelDefault):
+      return webrtc::AudioEngineDevice::AudioDuckingLevelDefault;
+    case RTC_OBJC_TYPE(RTCAudioDuckingLevelMin):
+      return webrtc::AudioEngineDevice::AudioDuckingLevelMin;
+    case RTC_OBJC_TYPE(RTCAudioDuckingLevelMid):
+      return webrtc::AudioEngineDevice::AudioDuckingLevelMid;
+    case RTC_OBJC_TYPE(RTCAudioDuckingLevelMax):
+      return webrtc::AudioEngineDevice::AudioDuckingLevelMax;
+  }
+}
+
+inline RTC_OBJC_TYPE(RTCAudioDuckingLevel)
+    DuckingLevelToObjC(webrtc::AudioEngineDevice::AudioDuckingLevel level) {
+  switch (level) {
+    case webrtc::AudioEngineDevice::AudioDuckingLevelDefault:
+      return RTC_OBJC_TYPE(RTCAudioDuckingLevelDefault);
+    case webrtc::AudioEngineDevice::AudioDuckingLevelMin:
+      return RTC_OBJC_TYPE(RTCAudioDuckingLevelMin);
+    case webrtc::AudioEngineDevice::AudioDuckingLevelMid:
+      return RTC_OBJC_TYPE(RTCAudioDuckingLevelMid);
+    case webrtc::AudioEngineDevice::AudioDuckingLevelMax:
+      return RTC_OBJC_TYPE(RTCAudioDuckingLevelMax);
+  }
+}
+
 class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
  public:
   AudioDeviceObserver(RTC_OBJC_TYPE(RTCAudioDeviceModule) * adm) { adm_ = adm; }
@@ -459,21 +489,23 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
       [module, enabled] { return module->SetAdvancedDucking(enabled) == 0; });
 }
 
-- (NSInteger)duckingLevel {
-  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
-  if (module == nullptr) return 0;
+- (RTC_OBJC_TYPE(RTCAudioDuckingLevel))duckingLevel {
+  webrtc::AudioEngineDevice* module = dynamic_cast<webrtc::AudioEngineDevice*>(_native.get());
+  if (module == nullptr) return RTC_OBJC_TYPE(RTCAudioDuckingLevelDefault);
 
   return _workerThread->BlockingCall([module] {
-    long value = false;
-    return module->DuckingLevel(&value) == 0 ? value : 0;
+    webrtc::AudioEngineDevice::AudioDuckingLevel value;
+    return module->DuckingLevel(&value) == 0 ? DuckingLevelToObjC(value)
+                                             : RTC_OBJC_TYPE(RTCAudioDuckingLevelDefault);
   });
 }
 
-- (void)setDuckingLevel:(NSInteger)value {
-  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+- (void)setDuckingLevel:(RTC_OBJC_TYPE(RTCAudioDuckingLevel))value {
+  webrtc::AudioEngineDevice* module = dynamic_cast<webrtc::AudioEngineDevice*>(_native.get());
   if (module == nullptr) return;
 
-  _workerThread->BlockingCall([module, value] { return module->SetDuckingLevel(value) == 0; });
+  _workerThread->BlockingCall(
+      [module, value] { return module->SetDuckingLevel(DuckingLevelToRTC(value)) == 0; });
 }
 
 - (RTC_OBJC_TYPE(RTCAudioEngineMuteMode))muteMode {

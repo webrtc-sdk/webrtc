@@ -59,6 +59,26 @@ const useconds_t kStartEngineRetryDelayMs = 100;
 const size_t kMaximumFramesPerBuffer = 3072;
 const size_t kAudioSampleSize = 2;  // Signed 16-bit integer
 
+// Maps AudioDuckingLevel to AVAudioVoiceProcessingOtherAudioDuckingLevel.
+// Uses explicit mapping to avoid assuming integer values match between enums.
+// Not available on tvOS.
+#if !TARGET_OS_TV
+API_AVAILABLE(ios(17.0), macos(14.0), macCatalyst(17.0), visionos(1.0))
+AVAudioVoiceProcessingOtherAudioDuckingLevel ToAVDuckingLevel(
+    AudioEngineDevice::AudioDuckingLevel level) {
+  switch (level) {
+    case AudioEngineDevice::AudioDuckingLevelDefault:
+      return AVAudioVoiceProcessingOtherAudioDuckingLevelDefault;
+    case AudioEngineDevice::AudioDuckingLevelMin:
+      return AVAudioVoiceProcessingOtherAudioDuckingLevelMin;
+    case AudioEngineDevice::AudioDuckingLevelMid:
+      return AVAudioVoiceProcessingOtherAudioDuckingLevelMid;
+    case AudioEngineDevice::AudioDuckingLevelMax:
+      return AVAudioVoiceProcessingOtherAudioDuckingLevelMax;
+  }
+}
+#endif
+
 AudioEngineDevice::AudioEngineDevice(const Environment& env, bool voice_processing_bypassed)
     : task_queue_factory_(CreateDefaultTaskQueueFactory()), initialized_(false) {
   LOGI() << "voice_processing_bypassed " << voice_processing_bypassed;
@@ -1231,9 +1251,9 @@ int32_t AudioEngineDevice::AdvancedDucking(bool* enabled) {
   return 0;
 }
 
-int32_t AudioEngineDevice::SetDuckingLevel(long level) {
+int32_t AudioEngineDevice::SetDuckingLevel(AudioDuckingLevel level) {
   RTC_DCHECK_RUN_ON(thread_);
-  LOGI() << "SetDuckingLevel: " << level;
+  LOGI() << "SetDuckingLevel: " << static_cast<int>(level);
 
   int32_t result = ModifyEngineState([level](EngineState state) -> EngineState {
     state.ducking_level = level;
@@ -1243,7 +1263,7 @@ int32_t AudioEngineDevice::SetDuckingLevel(long level) {
   return result;
 }
 
-int32_t AudioEngineDevice::DuckingLevel(long* level) {
+int32_t AudioEngineDevice::DuckingLevel(AudioDuckingLevel* level) {
   LOGI() << "DuckingLevel";
   RTC_DCHECK_RUN_ON(thread_);
 
@@ -1252,7 +1272,7 @@ int32_t AudioEngineDevice::DuckingLevel(long* level) {
   }
 
   *level = engine_state_.ducking_level;
-  LOGI() << "DuckingLevel value: " << *level;
+  LOGI() << "DuckingLevel value: " << static_cast<int>(*level);
 
   return 0;
 }
@@ -2365,8 +2385,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     if (@available(iOS 17.0, macCatalyst 17.0, macOS 14.0, visionOS 1.0, *)) {
       AVAudioVoiceProcessingOtherAudioDuckingConfiguration ducking_config;
       ducking_config.enableAdvancedDucking = state.next.advanced_ducking;
-      ducking_config.duckingLevel =
-          (AVAudioVoiceProcessingOtherAudioDuckingLevel)state.next.ducking_level;
+      ducking_config.duckingLevel = ToAVDuckingLevel(state.next.ducking_level);
 
       LOGI() << "setVoiceProcessingOtherAudioDuckingConfiguration";
       inputNode().voiceProcessingOtherAudioDuckingConfiguration = ducking_config;
