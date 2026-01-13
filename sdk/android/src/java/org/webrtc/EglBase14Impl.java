@@ -118,8 +118,7 @@ class EglBase14Impl implements EglBase14 {
 
       synchronized (EglBase.lock) {
         if (!EGL14.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)) {
-          throw new GLException(EGL14.eglGetError(),
-              "eglMakeCurrent failed: 0x" + Integer.toHexString(EGL14.eglGetError()));
+          throwEglException(EGL14.eglGetError(), "eglMakeCurrent failed");
         }
       }
       currentSurface = eglSurface;
@@ -129,8 +128,7 @@ class EglBase14Impl implements EglBase14 {
       synchronized (EglBase.lock) {
         if (!EGL14.eglMakeCurrent(
                 eglDisplay, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_CONTEXT)) {
-          throw new GLException(EGL14.eglGetError(),
-              "eglDetachCurrent failed: 0x" + Integer.toHexString(EGL14.eglGetError()));
+          throwEglException(EGL14.eglGetError(), "eglDetachCurrent failed");
         }
       }
       currentSurface = EGL14.EGL_NO_SURFACE;
@@ -173,8 +171,7 @@ class EglBase14Impl implements EglBase14 {
     eglSurface = EGL14.eglCreateWindowSurface(
         eglConnection.getDisplay(), eglConnection.getConfig(), surface, surfaceAttribs, 0);
     if (eglSurface == EGL14.EGL_NO_SURFACE) {
-      throw new GLException(EGL14.eglGetError(),
-          "Failed to create window surface: 0x" + Integer.toHexString(EGL14.eglGetError()));
+      throwEglException(EGL14.eglGetError(), "Failed to create window surface");
     }
   }
 
@@ -193,9 +190,8 @@ class EglBase14Impl implements EglBase14 {
     eglSurface = EGL14.eglCreatePbufferSurface(
         eglConnection.getDisplay(), eglConnection.getConfig(), surfaceAttribs, 0);
     if (eglSurface == EGL14.EGL_NO_SURFACE) {
-      throw new GLException(EGL14.eglGetError(),
-          "Failed to create pixel buffer surface with size " + width + "x" + height + ": 0x"
-              + Integer.toHexString(EGL14.eglGetError()));
+      throwEglException(EGL14.eglGetError(),
+          "Failed to create pixel buffer surface with size " + width + "x" + height);
     }
   }
 
@@ -289,13 +285,11 @@ class EglBase14Impl implements EglBase14 {
   private static EGLDisplay getEglDisplay() {
     EGLDisplay eglDisplay = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY);
     if (eglDisplay == EGL14.EGL_NO_DISPLAY) {
-      throw new GLException(EGL14.eglGetError(),
-          "Unable to get EGL14 display: 0x" + Integer.toHexString(EGL14.eglGetError()));
+      throwEglException(EGL14.eglGetError(), "Unable to get EGL14 display");
     }
     int[] version = new int[2];
     if (!EGL14.eglInitialize(eglDisplay, version, 0, version, 1)) {
-      throw new GLException(EGL14.eglGetError(),
-          "Unable to initialize EGL14: 0x" + Integer.toHexString(EGL14.eglGetError()));
+      throwEglException(EGL14.eglGetError(), "Unable to initialize EGL14");
     }
     return eglDisplay;
   }
@@ -306,8 +300,7 @@ class EglBase14Impl implements EglBase14 {
     int[] numConfigs = new int[1];
     if (!EGL14.eglChooseConfig(
             eglDisplay, configAttributes, 0, configs, 0, configs.length, numConfigs, 0)) {
-      throw new GLException(EGL14.eglGetError(),
-          "eglChooseConfig failed: 0x" + Integer.toHexString(EGL14.eglGetError()));
+      throwEglException(EGL14.eglGetError(), "eglChooseConfig failed");
     }
     if (numConfigs[0] <= 0) {
       throw new RuntimeException("Unable to find any matching EGL config");
@@ -332,9 +325,12 @@ class EglBase14Impl implements EglBase14 {
       eglContext = EGL14.eglCreateContext(eglDisplay, eglConfig, rootContext, contextAttributes, 0);
     }
     if (eglContext == EGL14.EGL_NO_CONTEXT) {
-      throw new GLException(EGL14.eglGetError(),
-          "Failed to create EGL context: 0x" + Integer.toHexString(EGL14.eglGetError()));
+      throwEglException(EGL14.eglGetError(), "Failed to create EGL context");
     }
     return eglContext;
+  }
+
+  private static void throwEglException(int error, String message) {
+      throw new GLException(error, message + ": 0x" + Integer.toHexString(error));
   }
 }
