@@ -61,6 +61,8 @@ const size_t kAudioSampleSize = 2;  // Signed 16-bit integer
 
 // Maps AudioDuckingLevel to AVAudioVoiceProcessingOtherAudioDuckingLevel.
 // Uses explicit mapping to avoid assuming integer values match between enums.
+// Not available on tvOS.
+#if !TARGET_OS_TV
 API_AVAILABLE(ios(17.0), macos(14.0), macCatalyst(17.0), visionos(1.0))
 AVAudioVoiceProcessingOtherAudioDuckingLevel ToAVDuckingLevel(
     AudioEngineDevice::AudioDuckingLevel level) {
@@ -75,6 +77,7 @@ AVAudioVoiceProcessingOtherAudioDuckingLevel ToAVDuckingLevel(
       return AVAudioVoiceProcessingOtherAudioDuckingLevelMax;
   }
 }
+#endif
 
 AudioEngineDevice::AudioEngineDevice(bool voice_processing_bypassed)
     : task_queue_factory_(CreateDefaultTaskQueueFactory()), initialized_(false) {
