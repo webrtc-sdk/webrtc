@@ -1478,7 +1478,8 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
     return engine_manual_input_.outputNode;
   };
 
-  if (state.prev.IsAnyRunning() && !state.next.IsAnyRunning()) {
+  if (state.prev.IsAnyRunning() &&
+      (!state.next.IsAnyRunning() || state.DidBeginInterruption())) {
     LOGI() << "Stopping AVAudioEngine (Manual)...";
     RTC_DCHECK(engine_manual_input_ != nil);
     [engine_manual_input_ stop];
@@ -1668,7 +1669,8 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
     });
   }
 
-  if (state.next.IsAnyRunning() && !state.prev.IsAnyRunning()) {
+  if (state.next.IsAnyRunning() &&
+      (!state.prev.IsAnyRunning() || state.DidEndInterruption())) {
     if (observer_ != nullptr) {
       int32_t result = observer_->OnEngineWillStart(
           engine_manual_input_, state.next.IsOutputEnabled(), state.next.IsInputEnabled());
