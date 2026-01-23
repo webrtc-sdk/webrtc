@@ -1984,8 +1984,35 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   // --------------------------------------------------------------------------------------------
   // Step: Enable output
   //
-  if (state.next.IsOutputEnabled() &&
-      (!state.prev.IsOutputEnabled() || state.IsEngineRecreateRequired())) {
+  // For interruption recovery, we only need to call the observer callback.
+  // Skip recovery if engine recreate is required (nodes would be invalid).
+  bool is_output_interruption_recovery =
+      state.DidEndInterruption() && state.prev.IsOutputEnabled() && source_node_ != nil &&
+      !state.IsEngineRecreateRequired();
+
+  if (is_output_interruption_recovery) {
+    LOGI() << "Output interruption recovery - calling observer to refresh connections...";
+    RTC_DCHECK(!engine_device_.running);
+
+    AVAudioFormat* output_node_format = [outputNode() outputFormatForBus:0];
+    AVAudioFormat* engine_output_format = [[AVAudioFormat alloc]
+        initWithCommonFormat:output_node_format.commonFormat
+                  sampleRate:output_node_format.sampleRate
+                    channels:1
+                 interleaved:output_node_format.interleaved];
+
+    if (this->observer_ != nullptr) {
+      NSDictionary* context = @{};
+      int32_t result =
+          this->observer_->OnEngineWillConnectOutput(engine_device_, engine_device_.mainMixerNode,
+                                                     outputNode(), engine_output_format, context);
+      if (result != 0) {
+        LOGE() << "Call to OnEngineWillConnectOutput (recovery) returned error: " << result;
+        return rollback(result);
+      }
+    }
+  } else if (state.next.IsOutputEnabled() &&
+             (!state.prev.IsOutputEnabled() || state.IsEngineRecreateRequired())) {
     LOGI() << "Enabling output for AVAudioEngine...";
     RTC_DCHECK(!engine_device_.running);
 
@@ -2105,8 +2132,37 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   // --------------------------------------------------------------------------------------------
   // Step: Enable input
   //
-  if (state.next.IsInputEnabled() &&
-      (!state.prev.IsInputEnabled() || state.IsEngineRecreateRequired())) {
+  // For interruption recovery, we only need to call the observer callback to let it refresh
+  // connections. The nodes are already set up.
+  // Skip recovery if engine recreate is required (nodes would be invalid).
+  bool is_input_interruption_recovery =
+      state.DidEndInterruption() && state.prev.IsInputEnabled() && input_mixer_node_ != nil &&
+      !state.IsEngineRecreateRequired();
+
+  if (is_input_interruption_recovery) {
+    LOGI() << "Input interruption recovery - calling observer to refresh connections...";
+    RTC_DCHECK(!engine_device_.running);
+
+    AVAudioFormat* input_node_format = [inputNode() outputFormatForBus:0];
+    AVAudioFormat* engine_input_format = [[AVAudioFormat alloc]
+        initWithCommonFormat:input_node_format.commonFormat
+                  sampleRate:input_node_format.sampleRate
+                    channels:1
+                 interleaved:input_node_format.interleaved];
+
+    if (observer_ != nullptr) {
+      NSDictionary* context = @{
+        kAudioEngineInputMixerNodeKey : input_mixer_node_,
+      };
+      int32_t result = observer_->OnEngineWillConnectInput(
+          engine_device_, inputNode(), input_mixer_node_, engine_input_format, context);
+      if (result != 0) {
+        LOGE() << "Call to OnEngineWillConnectInput (recovery) returned error: " << result;
+        return rollback(result);
+      }
+    }
+  } else if (state.next.IsInputEnabled() &&
+             (!state.prev.IsInputEnabled() || state.IsEngineRecreateRequired())) {
     LOGI() << "Enabling input for AVAudioEngine...";
     RTC_DCHECK(!engine_device_.running);
 
