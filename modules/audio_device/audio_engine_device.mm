@@ -1801,6 +1801,55 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       configuration_observer_ = nil;
     }
 
+    // Detach all nodes before stopping engine to invalidate audio callbacks.
+    // This prevents race conditions where callbacks access the aggregate device
+    // after it's been destroyed (fixes Mac Catalyst crash on disconnect).
+    LOGI() << "Detaching nodes before engine stop...";
+
+    // Detach source node (output)
+    if (source_node_ != nil) {
+      @try {
+        if ([engine_device_.attachedNodes containsObject:source_node_]) {
+          [engine_device_ detachNode:source_node_];
+        }
+      } @catch (NSException* exception) {
+        LOGW() << "Failed to detach source node before stop: " << exception.reason.UTF8String;
+      }
+      source_node_ = nil;
+    }
+
+    // Detach sink node (input)
+    if (sink_node_ != nil) {
+      @try {
+        if ([engine_device_.attachedNodes containsObject:sink_node_]) {
+          [engine_device_ detachNode:sink_node_];
+        }
+      } @catch (NSException* exception) {
+        LOGW() << "Failed to detach sink node before stop: " << exception.reason.UTF8String;
+      }
+      sink_node_ = nil;
+    }
+
+    // Detach input mixer node
+    if (input_mixer_node_ != nil) {
+      @try {
+        if ([engine_device_.attachedNodes containsObject:input_mixer_node_]) {
+          [engine_device_ detachNode:input_mixer_node_];
+        }
+      } @catch (NSException* exception) {
+        LOGW() << "Failed to detach input mixer node before stop: " << exception.reason.UTF8String;
+      }
+      input_mixer_node_ = nil;
+    }
+
+    // Dispose audio converter used by sink callback (Float32 -> Int16).
+    // Must be done after detaching sink node to avoid race with callback.
+    if (converter_ref_ != nullptr) {
+      AudioConverterDispose(converter_ref_);
+      converter_ref_ = nullptr;
+    }
+    converter_buffer_ = nil;
+
     [engine_device_ stop];
 
     if (observer_ != nullptr) {
