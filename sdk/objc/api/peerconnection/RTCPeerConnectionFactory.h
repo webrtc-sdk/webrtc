@@ -27,6 +27,7 @@ NS_ASSUME_NONNULL_BEGIN
 @class RTC_OBJC_TYPE(RTCPeerConnectionFactoryOptions);
 @class RTC_OBJC_TYPE(RTCAudioDeviceModule);
 @class RTC_OBJC_TYPE(RTCRtpCapabilities);
+@class RTC_OBJC_TYPE(RTCPushAudioSource);
 
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCRtpMediaType));
 
@@ -95,6 +96,12 @@ RTC_OBJC_EXPORT
 /** Initialize an RTCAudioTrack with a source and an id. */
 - (RTC_OBJC_TYPE(RTCAudioTrack) *)audioTrackWithSource:(RTC_OBJC_TYPE(RTCAudioSource) *)source
                                                trackId:(NSString *)trackId;
+
+/** Initialize an RTCAudioTrack with a push audio source and an id.
+ * Used for stereo app audio during screen sharing.
+ */
+- (RTC_OBJC_TYPE(RTCAudioTrack) *)audioTrackWithPushSource:(RTC_OBJC_TYPE(RTCPushAudioSource) *)source
+                                                   trackId:(NSString *)trackId;
 
 /** Initialize a generic RTCVideoSource. The RTCVideoSource should be
  * passed to a RTCVideoCapturer implementation, e.g.

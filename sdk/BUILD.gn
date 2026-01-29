@@ -500,6 +500,8 @@ if (is_ios || is_mac) {
         "objc/native/src/objc_audio_device.mm",
         "objc/native/src/objc_audio_device_delegate.h",
         "objc/native/src/objc_audio_device_delegate.mm",
+        "objc/native/src/push_audio_source.cc",
+        "objc/native/src/push_audio_source.h",
       ]
 
       deps = [
@@ -1045,6 +1047,9 @@ if (is_ios || is_mac) {
         "objc/api/peerconnection/RTCAudioSource+Private.h",
         "objc/api/peerconnection/RTCAudioSource.h",
         "objc/api/peerconnection/RTCAudioSource.mm",
+        "objc/api/peerconnection/RTCPushAudioSource+Private.h",
+        "objc/api/peerconnection/RTCPushAudioSource.h",
+        "objc/api/peerconnection/RTCPushAudioSource.mm",
         "objc/api/peerconnection/RTCAudioTrack+Private.h",
         "objc/api/peerconnection/RTCAudioTrack.h",
         "objc/api/peerconnection/RTCAudioTrack.mm",
@@ -1468,6 +1473,7 @@ if (is_ios || is_mac) {
           "objc/api/peerconnection/RTCAudioDeviceModule.h",
           "objc/api/peerconnection/RTCIODevice.h",
           "objc/api/peerconnection/RTCAudioSource.h",
+          "objc/api/peerconnection/RTCPushAudioSource.h",
           "objc/api/peerconnection/RTCAudioTrack.h",
           "objc/api/peerconnection/RTCConfiguration.h",
           "objc/api/peerconnection/RTCDataChannel.h",
@@ -1615,6 +1621,7 @@ if (is_ios || is_mac) {
           "objc/api/peerconnection/RTCAudioDeviceModule.h",
           "objc/api/peerconnection/RTCIODevice.h",
           "objc/api/peerconnection/RTCAudioSource.h",
+          "objc/api/peerconnection/RTCPushAudioSource.h",
           "objc/api/peerconnection/RTCAudioTrack.h",
           "objc/api/peerconnection/RTCCertificate.h",
           "objc/api/peerconnection/RTCConfiguration.h",

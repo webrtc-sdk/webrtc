@@ -15,6 +15,7 @@
 
 #import "RTCAudioRenderer.h"
 #import "RTCAudioSource+Private.h"
+#import "RTCPushAudioSource+Private.h"
 #import "RTCMediaStreamTrack+Private.h"
 #import "RTCPeerConnectionFactory+Private.h"
 #import "api/RTCAudioRendererAdapter+Private.h"
@@ -45,6 +46,22 @@
     _source = source;
   }
 
+  return self;
+}
+
+- (instancetype)initWithFactory:
+                    (RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
+                     pushSource:(RTC_OBJC_TYPE(RTCPushAudioSource) *)source
+                        trackId:(NSString *)trackId {
+  RTC_DCHECK(factory);
+  RTC_DCHECK(source);
+  RTC_DCHECK(trackId.length);
+
+  std::string nativeId = [NSString stdStringForString:trackId];
+  webrtc::scoped_refptr<webrtc::AudioTrackInterface> track =
+      factory.nativeFactory->CreateAudioTrack(nativeId, source.nativeAudioSource.get());
+  self = [self initWithFactory:factory nativeTrack:track type:RTC_OBJC_TYPE(RTCMediaStreamTrackTypeAudio)];
+  // Note: _source is not set as RTCPushAudioSource is a different type
   return self;
 }
 

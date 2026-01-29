@@ -16,6 +16,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @class RTC_OBJC_TYPE(RTCPeerConnectionFactory);
+@class RTC_OBJC_TYPE(RTCPushAudioSource);
 @interface RTC_OBJC_TYPE (RTCAudioTrack) ()
 
     /** AudioTrackInterface created or passed in at construction. */
@@ -27,6 +28,14 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype)initWithFactory:
                     (RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
                          source:(RTC_OBJC_TYPE(RTCAudioSource) *)source
+                        trackId:(NSString *)trackId;
+
+/** Initialize an RTCAudioTrack with a push audio source.
+ * Used for stereo app audio during screen sharing.
+ */
+- (instancetype)initWithFactory:
+                    (RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
+                     pushSource:(RTC_OBJC_TYPE(RTCPushAudioSource) *)source
                         trackId:(NSString *)trackId;
 
 @end

@@ -20,6 +20,7 @@
 
 #import "RTCAudioSource+Private.h"
 #import "RTCAudioTrack+Private.h"
+#import "RTCPushAudioSource+Private.h"
 #import "RTCMediaConstraints+Private.h"
 #import "RTCMediaStream+Private.h"
 #import "RTCPeerConnection+Private.h"
@@ -387,6 +388,11 @@
 - (RTC_OBJC_TYPE(RTCAudioTrack) *)audioTrackWithSource:(RTC_OBJC_TYPE(RTCAudioSource) *)source
                                                trackId:(NSString *)trackId {
   return [[RTC_OBJC_TYPE(RTCAudioTrack) alloc] initWithFactory:self source:source trackId:trackId];
+}
+
+- (RTC_OBJC_TYPE(RTCAudioTrack) *)audioTrackWithPushSource:(RTC_OBJC_TYPE(RTCPushAudioSource) *)source
+                                                   trackId:(NSString *)trackId {
+  return [[RTC_OBJC_TYPE(RTCAudioTrack) alloc] initWithFactory:self pushSource:source trackId:trackId];
 }
 
 - (RTC_OBJC_TYPE(RTCVideoSource) *)videoSource {
