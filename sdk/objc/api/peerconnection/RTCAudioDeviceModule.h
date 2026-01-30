@@ -201,6 +201,12 @@ RTC_OBJC_EXPORT
 /// enabled. Enabled by default when VPIO is enabled.
 @property(nonatomic, assign, getter=isVoiceProcessingAGCEnabled) BOOL voiceProcessingAGCEnabled;
 
+/// Indicates whether stereo playout is enabled. Defaults to true for AudioEngine ADM.
+@property(nonatomic, assign, getter=isStereoPlayoutEnabled) BOOL stereoPlayoutEnabled;
+
+/// Indicates whether stereo recording is enabled. Defaults to true for AudioEngine ADM.
+@property(nonatomic, assign, getter=isStereoRecordingEnabled) BOOL stereoRecordingEnabled;
+
 @property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioEngineAvailability) engineAvailability;
 
 /// Push external audio (e.g., stereo app audio during screen sharing) directly to the

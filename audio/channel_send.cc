@@ -455,6 +455,14 @@ int32_t ChannelSend::SendRtpAudio(AudioFrameType frameType,
     return -1;
   }
 
+  static int log_count = 0;
+  if (!payload.empty() && ++log_count % 1000 == 0) {
+    RTC_LOG(LS_INFO) << "ChannelSend::SendRtpAudio: SSRC=" << rtp_rtcp_->SSRC()
+                     << " payloadSize=" << payload.size()
+                     << " rtp_ts=" << rtp_timestamp_without_offset
+                     << " capture_ts=" << absolute_capture_timestamp_ms;
+  }
+
   // RTCPSender has it's own copy of the timestamp offset, added in
   // RTCPSender::BuildSR, hence we must not add the in the offset for the above
   // call.

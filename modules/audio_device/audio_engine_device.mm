@@ -101,11 +101,13 @@ AudioEngineDevice::AudioEngineDevice(bool voice_processing_bypassed)
   // Manual rendering formats are fixed to 48k for now.
   manual_render_rtc_format_ = [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatInt16
                                                                sampleRate:48000
-                                                                 channels:1
+                                                                 channels:2
                                                               interleaved:YES];
 
   // Initial engine state
   engine_state_.voice_processing_bypassed = voice_processing_bypassed;
+  engine_state_.playout_stereo = true;
+  engine_state_.record_stereo = true;
 }
 
 bool AudioEngineDevice::IsStopOnMuteModeEnabled() const {
@@ -673,26 +675,30 @@ int32_t AudioEngineDevice::StereoPlayoutIsAvailable(bool* available) const {
     return -1;
   }
 
-  *available = false;
+  *available = true;
 
   return 0;
 }
 
 int32_t AudioEngineDevice::SetStereoPlayout(bool enable) {
-  LOGW() << "SetStereoPlayout: Not implemented, value:" << enable;
+  LOGI() << "SetStereoPlayout value: " << enable;
 
-  audio_device_buffer_->SetPlayoutChannels(1);
+  int32_t result = ModifyEngineState([enable](EngineState state) -> EngineState {
+    state.playout_stereo = enable;
+    return state;
+  });
 
-  return 0;
+  return result;
 }
 
 int32_t AudioEngineDevice::StereoPlayout(bool* enabled) const {
+  RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "StereoPlayout";
   if (enabled == nullptr) {
     return -1;
   }
 
-  *enabled = false;
+  *enabled = engine_state_.playout_stereo;
 
   return 0;
 }
@@ -706,26 +712,30 @@ int32_t AudioEngineDevice::StereoRecordingIsAvailable(bool* available) const {
     return -1;
   }
 
-  *available = false;
+  *available = true;
 
   return 0;
 }
 
 int32_t AudioEngineDevice::SetStereoRecording(bool enable) {
-  LOGW() << "SetStereoRecording: Not implemented, value: " << enable;
+  LOGI() << "SetStereoRecording value: " << enable;
 
-  audio_device_buffer_->SetRecordingChannels(1);
+  int32_t result = ModifyEngineState([enable](EngineState state) -> EngineState {
+    state.record_stereo = enable;
+    return state;
+  });
 
-  return 0;
+  return result;
 }
 
 int32_t AudioEngineDevice::StereoRecording(bool* enabled) const {
+  RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "StereoRecording";
   if (enabled == nullptr) {
     return -1;
   }
 
-  *enabled = false;
+  *enabled = engine_state_.record_stereo;
 
   return 0;
 }
@@ -2051,10 +2061,11 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       return rollback(kAudioEnginePlayoutDeviceNotAvailableError);
     }
 
+    int num_channels = state.next.playout_stereo ? 2 : 1;
     AVAudioFormat* engine_output_format = [[AVAudioFormat alloc]
         initWithCommonFormat:output_node_format.commonFormat  // Usually float32
                   sampleRate:output_node_format.sampleRate
-                    channels:1
+                    channels:num_channels
                  interleaved:output_node_format.interleaved];
 
     audio_device_buffer_->SetPlayoutSampleRate(engine_output_format.sampleRate);
@@ -2071,7 +2082,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     AVAudioFormat* rtc_output_format =
         [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatInt16
                                          sampleRate:engine_output_format.sampleRate
-                                           channels:1
+                                           channels:num_channels
                                         interleaved:YES];
 
     AVAudioSourceNodeRenderBlock source_block =
@@ -2082,7 +2093,8 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
           int16_t* dest_buffer = (int16_t*)outputData->mBuffers[0].mData;
 
           fine_audio_buffer_->GetPlayoutData(
-              webrtc::ArrayView<int16_t>(static_cast<int16_t*>(dest_buffer), frameCount),
+              webrtc::ArrayView<int16_t>(static_cast<int16_t*>(dest_buffer),
+                                         frameCount * num_channels),
               kFixedPlayoutDelayEstimate);
 
           return noErr;
@@ -2199,18 +2211,19 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       input_mixer_node_ = nil;
     });
 
+    int num_channels = state.next.record_stereo ? 2 : 1;
     // When VoiceProcessingIO is enabled, channels must be reduced from Mac's default 9 channels
     // to 2 or lower.
     AVAudioFormat* engine_input_format = [[AVAudioFormat alloc]
         initWithCommonFormat:input_node_format.commonFormat  // Usually float32
                   sampleRate:input_node_format.sampleRate
-                    channels:1
+                    channels:num_channels
                  interleaved:input_node_format.interleaved];
 
     AVAudioFormat* rtc_input_format =
         [[AVAudioFormat alloc] initWithCommonFormat:AVAudioPCMFormatInt16
                                          sampleRate:engine_input_format.sampleRate
-                                           channels:1
+                                           channels:num_channels
                                         interleaved:YES];
 
     audio_device_buffer_->SetRecordingSampleRate(rtc_input_format.sampleRate);
@@ -2280,8 +2293,8 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
           const int64_t capture_time_ns = timestamp->mHostTime * machTickUnitsToNanoseconds_;
 
           fine_audio_buffer_->DeliverRecordedData(
-              webrtc::ArrayView<const int16_t>(rtc_buffer, frameCount), kFixedRecordDelayEstimate,
-              capture_time_ns);
+              webrtc::ArrayView<const int16_t>(rtc_buffer, frameCount * num_channels),
+              kFixedRecordDelayEstimate, capture_time_ns);
 
           return noErr;
         };
@@ -2678,16 +2691,18 @@ void AudioEngineDevice::StartRenderLoop() {
 
   const double sample_rate = manual_render_rtc_format_.sampleRate;
   const size_t frames_per_buffer = static_cast<size_t>(sample_rate / 100);  // 10ms chunks
-  const size_t buffer_size = frames_per_buffer * kAudioSampleSize;
   const int chunk_ms =
       static_cast<int>(std::round(1000.0 * static_cast<double>(frames_per_buffer) / sample_rate));
   int64_t next_wakeup_ms = rtc::TimeMillis();
 
   while (!render_thread_->IsQuitting()) {
+    const size_t num_channels = manual_render_rtc_format_.channelCount;
+    const size_t total_samples = frames_per_buffer * num_channels;
+
     // Read (Output)
     RTC_DCHECK(read_buffer_ != nullptr);
     AudioBufferList* read_abl = const_cast<AudioBufferList*>(read_buffer_.audioBufferList);
-    read_abl->mBuffers[0].mDataByteSize = buffer_size;
+    read_abl->mBuffers[0].mDataByteSize = total_samples * kAudioSampleSize;
 
     RTC_DCHECK(read_abl->mNumberBuffers == 1);
     int16_t* const read_rtc_buffer =
@@ -2695,12 +2710,12 @@ void AudioEngineDevice::StartRenderLoop() {
 
     // Call GetPlayoutData to pull frames into rtc audio stack even though we won't use it here.
     fine_audio_buffer_->GetPlayoutData(
-        webrtc::ArrayView<int16_t>(read_rtc_buffer, frames_per_buffer), kFixedPlayoutDelayEstimate);
+        webrtc::ArrayView<int16_t>(read_rtc_buffer, total_samples), kFixedPlayoutDelayEstimate);
 
     // Render (Input)
     RTC_DCHECK(render_buffer_ != nullptr);
     AudioBufferList* render_abl = const_cast<AudioBufferList*>(render_buffer_.audioBufferList);
-    render_abl->mBuffers[0].mDataByteSize = buffer_size;
+    render_abl->mBuffers[0].mDataByteSize = total_samples * kAudioSampleSize;
 
     OSStatus err = noErr;
     AVAudioEngineManualRenderingStatus result = render_block_(frames_per_buffer, render_abl, &err);
@@ -2714,7 +2729,7 @@ void AudioEngineDevice::StartRenderLoop() {
       const int64_t capture_time_ns = capture_time * machTickUnitsToNanoseconds_;
 
       fine_audio_buffer_->DeliverRecordedData(
-          webrtc::ArrayView<const int16_t>(rtc_buffer, frames_per_buffer),
+          webrtc::ArrayView<const int16_t>(rtc_buffer, total_samples),
           kFixedRecordDelayEstimate, capture_time_ns);
     } else {
       LOGW() << "Render error: " << err << " frames: " << frames_per_buffer;

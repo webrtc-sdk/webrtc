@@ -1052,6 +1052,14 @@ class WebRtcVoiceSendChannel::WebRtcAudioSendStream : public AudioSource::Sink {
     RTC_DCHECK_EQ(16, bits_per_sample);
     RTC_CHECK_RUNS_SERIALIZED(&audio_capture_race_checker_);
     RTC_DCHECK(stream_);
+
+    static int log_count = 0;
+    if (++log_count % 1000 == 0) {
+      RTC_LOG(LS_INFO) << "WebRtcAudioSendStream::OnData: rate=" << sample_rate
+                       << " channels=" << number_of_channels
+                       << " frames=" << number_of_frames;
+    }
+
     std::unique_ptr<AudioFrame> audio_frame(new AudioFrame());
     audio_frame->UpdateFrame(
         audio_frame->timestamp_, static_cast<const int16_t*>(audio_data),
@@ -1062,6 +1070,10 @@ class WebRtcVoiceSendChannel::WebRtcAudioSendStream : public AudioSource::Sink {
     if (absolute_capture_timestamp_ms) {
       audio_frame->set_absolute_capture_timestamp_ms(
           *absolute_capture_timestamp_ms);
+    } else {
+      // If no capture timestamp is provided, use current time.
+      // This is important for the pacer and other timing-related components.
+      audio_frame->set_absolute_capture_timestamp_ms(rtc::TimeMillis());
     }
     stream_->SendAudioData(std::move(audio_frame));
     TRACE_EVENT_END1("webrtc", "WebRtcAudioSendStream::OnData",
@@ -1186,8 +1198,15 @@ class WebRtcVoiceSendChannel::WebRtcAudioSendStream : public AudioSource::Sink {
       const AudioSendStream::Config::SendCodecSpec& send_codec_spec) {
     RTC_DCHECK_RUN_ON(&worker_thread_checker_);
     config_.send_codec_spec = send_codec_spec;
+
+    // Force stereo parameter for push sources if the codec supports it.
+    // This ensures the encoder is initialized as stereo.
+    if (config_.bypass_adm && config_.send_codec_spec->format.num_channels == 2) {
+      config_.send_codec_spec->format.parameters["stereo"] = "1";
+    }
+
     auto info =
-        config_.encoder_factory->QueryAudioEncoder(send_codec_spec.format);
+        config_.encoder_factory->QueryAudioEncoder(config_.send_codec_spec->format);
     RTC_DCHECK(info);
     // If a specific target bitrate has been set for the stream, use that as
     // the new default bitrate when computing send bitrate.
@@ -1206,12 +1225,17 @@ class WebRtcVoiceSendChannel::WebRtcAudioSendStream : public AudioSource::Sink {
     UpdateAllowedBitrateRange();
 
     // Encoder will only use two channels if the stereo parameter is set.
-    const auto& it = send_codec_spec.format.parameters.find("stereo");
-    if (it != send_codec_spec.format.parameters.end() && it->second == "1") {
+    const auto& it = config_.send_codec_spec->format.parameters.find("stereo");
+    bool stereo_allowed = (it != config_.send_codec_spec->format.parameters.end() && it->second == "1");
+    if (stereo_allowed || (config_.bypass_adm && config_.send_codec_spec->format.num_channels == 2)) {
       num_encoded_channels_ = 2;
     } else {
       num_encoded_channels_ = 1;
     }
+    RTC_LOG(LS_INFO) << "WebRtcAudioSendStream::UpdateSendCodecSpec: "
+                     << config_.send_codec_spec->format.name << " channels=" << config_.send_codec_spec->format.num_channels
+                     << " encoded_channels=" << num_encoded_channels_
+                     << " bypass_adm=" << config_.bypass_adm;
   }
 
   void UpdateAudioNetworkAdaptorConfig() {

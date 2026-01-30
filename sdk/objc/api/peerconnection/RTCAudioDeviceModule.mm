@@ -581,6 +581,28 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
       [module, enabled] { return module->SetVoiceProcessingAGCEnabled(enabled) == 0; });
 }
 
+- (BOOL)isStereoPlayoutEnabled {
+  return _workerThread->BlockingCall([self] {
+    bool value = false;
+    return _native->StereoPlayoutIsAvailable(&value) == 0 ? value : NO;
+  });
+}
+
+- (void)setStereoPlayoutEnabled:(BOOL)enabled {
+  _workerThread->BlockingCall([self, enabled] { _native->SetStereoPlayout(enabled); });
+}
+
+- (BOOL)isStereoRecordingEnabled {
+  return _workerThread->BlockingCall([self] {
+    bool value = false;
+    return _native->StereoRecordingIsAvailable(&value) == 0 ? value : NO;
+  });
+}
+
+- (void)setStereoRecordingEnabled:(BOOL)enabled {
+  _workerThread->BlockingCall([self, enabled] { _native->SetStereoRecording(enabled); });
+}
+
 - (NSInteger)pushExternalAudioData:(const int16_t *)data
                         sampleRate:(int)sampleRate
                           channels:(size_t)channels

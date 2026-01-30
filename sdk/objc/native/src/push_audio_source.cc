@@ -22,6 +22,8 @@
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
 
+#include "rtc_base/time_utils.h"
+
 namespace webrtc {
 
 rtc::scoped_refptr<PushAudioSource> PushAudioSource::Create(
@@ -52,6 +54,10 @@ void PushAudioSource::RemoveSink(AudioTrackSinkInterface* sink) {
 const AudioOptions PushAudioSource::options() const {
   AudioOptions options;
   options.bypass_adm = true;
+  options.echo_cancellation = false;
+  options.auto_gain_control = false;
+  options.noise_suppression = false;
+  options.highpass_filter = false;
   return options;
 }
 
@@ -69,9 +75,10 @@ void PushAudioSource::PushData(const void* audio_data,
   {
     MutexLock lock(&sink_lock_);
     num_sinks = sinks_.size();
+    int64_t capture_time_ms = rtc::TimeMillis();
     for (auto* sink : sinks_) {
       sink->OnData(audio_data, bits_per_sample, sample_rate, number_of_channels,
-                   number_of_frames, /*absolute_capture_timestamp_ms=*/std::nullopt);
+                   number_of_frames, capture_time_ms);
     }
   }
 

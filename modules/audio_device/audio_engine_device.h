@@ -137,6 +137,9 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
     bool output_available = true;
     bool input_available = true;
 
+    bool playout_stereo = false;
+    bool record_stereo = false;
+
     bool input_enabled_persistent_mode = false;
 
     bool input_muted = true;
@@ -161,6 +164,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
       return input_enabled == rhs.input_enabled && input_running == rhs.input_running &&
              output_enabled == rhs.output_enabled && output_running == rhs.output_running &&
              input_available == rhs.input_available && output_available == rhs.output_available &&
+             playout_stereo == rhs.playout_stereo && record_stereo == rhs.record_stereo &&
              input_enabled_persistent_mode == rhs.input_enabled_persistent_mode &&
              input_muted == rhs.input_muted && is_interrupted == rhs.is_interrupted &&
              render_mode == rhs.render_mode && mute_mode == rhs.mute_mode &&
@@ -438,10 +442,14 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
     bool DidUpdateMuteMode() const { return prev.mute_mode != next.mute_mode; }
 
+    bool DidUpdateStereo() const {
+      return prev.playout_stereo != next.playout_stereo || prev.record_stereo != next.record_stereo;
+    }
+
     bool IsEngineRestartRequired() const {
       return DidUpdateAudioGraph() ||
              // Voice processing enable state updates
-             DidUpdateVoiceProcessingEnabled();
+             DidUpdateVoiceProcessingEnabled() || DidUpdateStereo();
     }
 
     bool IsEngineRecreateRequired() const {

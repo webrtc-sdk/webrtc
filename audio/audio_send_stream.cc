@@ -387,16 +387,13 @@ void AudioSendStream::SendAudioData(std::unique_ptr<AudioFrame> audio_frame) {
   double duration = static_cast<double>(audio_frame->samples_per_channel_) /
                     audio_frame->sample_rate_hz_;
   {
-    // Note: SendAudioData() passes the frame further down the pipeline and it
-    // may eventually get sent. But this method is invoked even if we are not
-    // connected, as long as we have an AudioSendStream (created as a result of
-    // an O/A exchange). This means that we are calculating audio levels whether
-    // or not we are sending samples.
-    // TODO(https://crbug.com/webrtc/10771): All "media-source" related stats
-    // should move from send-streams to the local audio sources or tracks; a
-    // send-stream should not be required to read the microphone audio levels.
     MutexLock lock(&audio_level_lock_);
     audio_level_.ComputeLevel(*audio_frame, duration);
+
+    static int log_count = 0;
+    if (++log_count % 1000 == 0) {
+      RTC_LOG(LS_INFO) << "AudioSendStream::SendAudioData: level=" << audio_level_.LevelFullRange();
+    }
   }
   channel_send_->ProcessAndEncodeAudio(std::move(audio_frame));
 }
@@ -566,7 +563,7 @@ void AudioSendStream::StoreEncoderProperties(int sample_rate_hz,
                                              size_t num_channels) {
   encoder_sample_rate_hz_ = sample_rate_hz;
   encoder_num_channels_ = num_channels;
-  if (sending_) {
+  if (sending_ && !config_.bypass_adm) {
     // Update AudioState's information about the stream.
     audio_state()->AddSendingStream(this, sample_rate_hz, num_channels);
   }
