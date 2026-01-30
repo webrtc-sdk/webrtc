@@ -17,6 +17,7 @@
 #include "sdk/objc/native/src/push_audio_source.h"
 
 #include "rtc_base/checks.h"
+#include "rtc_base/logging.h"
 
 namespace webrtc {
 
@@ -43,6 +44,7 @@ void PushAudioSource::AddSink(AudioTrackSinkInterface* sink) {
   MutexLock lock(&sink_lock_);
   RTC_DCHECK(std::find(sinks_.begin(), sinks_.end(), sink) == sinks_.end());
   sinks_.push_back(sink);
+  RTC_LOG(LS_INFO) << "PushAudioSource::AddSink - total sinks: " << sinks_.size();
 }
 
 void PushAudioSource::RemoveSink(AudioTrackSinkInterface* sink) {
@@ -57,6 +59,15 @@ void PushAudioSource::PushData(const void* audio_data,
                                 size_t number_of_channels,
                                 size_t number_of_frames) {
   MutexLock lock(&sink_lock_);
+  static int push_count = 0;
+  push_count++;
+  if (push_count <= 5 || push_count % 100 == 0) {
+    RTC_LOG(LS_INFO) << "PushAudioSource::PushData #" << push_count
+                     << " - sinks: " << sinks_.size()
+                     << ", channels: " << number_of_channels
+                     << ", frames: " << number_of_frames
+                     << ", rate: " << sample_rate;
+  }
   for (auto* sink : sinks_) {
     // Pass audio data to each sink with no capture timestamp
     // (app audio doesn't have a meaningful capture time)

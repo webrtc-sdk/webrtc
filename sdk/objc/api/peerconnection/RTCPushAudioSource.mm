@@ -19,6 +19,7 @@
 #import <AVFoundation/AVFoundation.h>
 
 #include "sdk/objc/native/src/push_audio_source.h"
+#include "rtc_base/logging.h"
 
 #include <algorithm>
 #include <cmath>
@@ -58,7 +59,14 @@
 }
 
 - (void)pushPCMBuffer:(AVAudioPCMBuffer *)buffer {
+  static int pushCount = 0;
+  pushCount++;
+
   if (!buffer || !_nativeSource) {
+    if (pushCount <= 5) {
+      RTC_LOG(LS_WARNING) << "pushPCMBuffer: early return - buffer=" << (buffer ? "yes" : "no")
+                          << ", nativeSource=" << (_nativeSource ? "yes" : "no");
+    }
     return;
   }
 
@@ -67,7 +75,17 @@
   AVAudioFrameCount frames = buffer.frameLength;
   double sampleRate = format.sampleRate;
 
+  if (pushCount <= 5) {
+    RTC_LOG(LS_INFO) << "pushPCMBuffer #" << pushCount
+                     << ": format=" << (int)format.commonFormat
+                     << ", channels=" << channels
+                     << ", frames=" << frames
+                     << ", sampleRate=" << sampleRate
+                     << ", isInterleaved=" << (format.isInterleaved ? "yes" : "no");
+  }
+
   if (frames == 0) {
+    RTC_LOG(LS_WARNING) << "pushPCMBuffer: frames == 0, returning";
     return;
   }
 
@@ -77,6 +95,7 @@
 
   if (format.commonFormat == AVAudioPCMFormatFloat32) {
     if (!buffer.floatChannelData) {
+      RTC_LOG(LS_WARNING) << "pushPCMBuffer: Float32 format but floatChannelData is null";
       return;
     }
 
@@ -101,6 +120,7 @@
     }
   } else if (format.commonFormat == AVAudioPCMFormatInt16) {
     if (!buffer.int16ChannelData) {
+      RTC_LOG(LS_WARNING) << "pushPCMBuffer: Int16 format but int16ChannelData is null";
       return;
     }
 
@@ -115,10 +135,13 @@
       }
     }
   } else {
-    // Unsupported format
+    RTC_LOG(LS_WARNING) << "pushPCMBuffer: Unsupported format: " << (int)format.commonFormat;
     return;
   }
 
+  if (pushCount <= 5) {
+    RTC_LOG(LS_INFO) << "pushPCMBuffer: calling PushData with " << sampleCount << " samples";
+  }
   _nativeSource->PushData(int16Buffer.data(), 16, static_cast<int>(sampleRate),
                           channels, frames);
 }
