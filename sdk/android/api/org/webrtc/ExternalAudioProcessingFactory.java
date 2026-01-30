@@ -57,7 +57,7 @@ public class ExternalAudioProcessingFactory implements AudioProcessingFactory {
   }
 
   @Override
-  public long createNative() {
+  public long createNative(long webrtcEnvRef) {
     if(apmPtr == 0) {
       apmPtr = nativeGetDefaultApm();
     }

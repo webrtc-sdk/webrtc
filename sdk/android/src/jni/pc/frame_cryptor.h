@@ -27,7 +27,7 @@ namespace jni {
 
 ScopedJavaLocalRef<jobject> NativeToJavaFrameCryptor(
     JNIEnv* env,
-    rtc::scoped_refptr<FrameCryptorTransformer> cryptor);
+    webrtc::scoped_refptr<FrameCryptorTransformer> cryptor);
 
 class FrameCryptorObserverJni : public FrameCryptorTransformerObserver {
  public:

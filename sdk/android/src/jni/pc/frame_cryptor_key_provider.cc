@@ -24,7 +24,7 @@ namespace jni {
 
 ScopedJavaLocalRef<jobject> NativeToJavaFrameCryptorKeyProvider(
     JNIEnv* env,
-    rtc::scoped_refptr<webrtc::DefaultKeyProviderImpl> key_provider) {
+    webrtc::scoped_refptr<webrtc::DefaultKeyProviderImpl> key_provider) {
   if (!key_provider)
     return nullptr;
   // Sender is now owned by the Java object, and will be freed from
@@ -53,7 +53,7 @@ JNI_FrameCryptorKeyProvider_RatchetSharedKey(
   auto newKey = key_provider->RatchetSharedKey(j_index);
   std::vector<int8_t> int8tKey =
       std::vector<int8_t>(newKey.begin(), newKey.end());
-  return NativeToJavaByteArray(env, rtc::ArrayView<int8_t>(int8tKey));
+  return NativeToJavaByteArray(env, webrtc::ArrayView<int8_t>(int8tKey));
 }
 
 static ScopedJavaLocalRef<jbyteArray>
@@ -65,7 +65,7 @@ JNI_FrameCryptorKeyProvider_ExportSharedKey(
       reinterpret_cast<webrtc::DefaultKeyProviderImpl*>(keyProviderPointer);
   auto key = key_provider->ExportSharedKey(j_index);
   std::vector<int8_t> int8tKey = std::vector<int8_t>(key.begin(), key.end());
-  return NativeToJavaByteArray(env, rtc::ArrayView<int8_t>(int8tKey));
+  return NativeToJavaByteArray(env, webrtc::ArrayView<int8_t>(int8tKey));
 }
 
 static jboolean JNI_FrameCryptorKeyProvider_SetKey(
@@ -93,7 +93,7 @@ JNI_FrameCryptorKeyProvider_RatchetKey(
   auto newKey = key_provider->RatchetKey(participant_id, j_index);
   std::vector<int8_t> int8tKey =
       std::vector<int8_t>(newKey.begin(), newKey.end());
-  return NativeToJavaByteArray(env, rtc::ArrayView<int8_t>(int8tKey));
+  return NativeToJavaByteArray(env, webrtc::ArrayView<int8_t>(int8tKey));
 }
 
 static ScopedJavaLocalRef<jbyteArray>
@@ -107,7 +107,7 @@ JNI_FrameCryptorKeyProvider_ExportKey(
       reinterpret_cast<webrtc::DefaultKeyProviderImpl*>(keyProviderPointer);
   auto key = key_provider->ExportKey(participant_id, j_index);
   std::vector<int8_t> int8tKey = std::vector<int8_t>(key.begin(), key.end());
-  return NativeToJavaByteArray(env, rtc::ArrayView<int8_t>(int8tKey));
+  return NativeToJavaByteArray(env, webrtc::ArrayView<int8_t>(int8tKey));
 }
 
 static void JNI_FrameCryptorKeyProvider_SetSifTrailer(

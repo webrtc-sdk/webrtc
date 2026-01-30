@@ -27,7 +27,7 @@ namespace jni {
 
 ScopedJavaLocalRef<jobject> NativeToJavaFrameCryptorKeyProvider(
     JNIEnv* env,
-    rtc::scoped_refptr<webrtc::DefaultKeyProviderImpl> cryptor);
+    webrtc::scoped_refptr<webrtc::DefaultKeyProviderImpl> cryptor);
 
 }  // namespace jni
 }  // namespace webrtc

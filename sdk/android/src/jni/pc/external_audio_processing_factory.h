@@ -56,10 +56,10 @@ class ExternalAudioProcessingFactory : public webrtc::RefCountInterface {
     return render_pre_processor_;
   }
 
-  rtc::scoped_refptr<webrtc::AudioProcessing> apm() { return apm_; }
+  webrtc::scoped_refptr<webrtc::AudioProcessing> apm() { return apm_; }
 
  private:
-  rtc::scoped_refptr<webrtc::AudioProcessing> apm_;
+  webrtc::scoped_refptr<webrtc::AudioProcessing> apm_;
   ExternalAudioProcessor* capture_post_processor_;
   ExternalAudioProcessor* render_pre_processor_;
 };
