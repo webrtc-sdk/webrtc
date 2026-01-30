@@ -16,6 +16,9 @@
 
 #include "sdk/objc/native/src/push_audio_source.h"
 
+#include <algorithm>
+
+#include "api/audio_options.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
 
@@ -24,25 +27,18 @@ namespace webrtc {
 rtc::scoped_refptr<PushAudioSource> PushAudioSource::Create(
     int /*sample_rate*/,
     int /*channels*/) {
-  // Note: sample_rate and channels parameters are kept for API compatibility
-  // but not stored, as the actual format is determined by each PushData call.
   return rtc::make_ref_counted<PushAudioSource>();
 }
 
 PushAudioSource::PushAudioSource() = default;
+PushAudioSource::~PushAudioSource() = default;
 
-void PushAudioSource::RegisterObserver(ObserverInterface* /*observer*/) {
-  // State is always kLive - no need to notify observers
-}
-
-void PushAudioSource::UnregisterObserver(ObserverInterface* /*observer*/) {
-  // State is always kLive - no need to notify observers
-}
+void PushAudioSource::RegisterObserver(ObserverInterface* /*observer*/) {}
+void PushAudioSource::UnregisterObserver(ObserverInterface* /*observer*/) {}
 
 void PushAudioSource::AddSink(AudioTrackSinkInterface* sink) {
   RTC_DCHECK(sink);
   MutexLock lock(&sink_lock_);
-  RTC_DCHECK(std::find(sinks_.begin(), sinks_.end(), sink) == sinks_.end());
   sinks_.push_back(sink);
   RTC_LOG(LS_INFO) << "PushAudioSource::AddSink - total sinks: " << sinks_.size();
 }
@@ -53,26 +49,38 @@ void PushAudioSource::RemoveSink(AudioTrackSinkInterface* sink) {
   sinks_.remove(sink);
 }
 
+const AudioOptions PushAudioSource::options() const {
+  AudioOptions options;
+  options.bypass_adm = true;
+  return options;
+}
+
 void PushAudioSource::PushData(const void* audio_data,
                                 int bits_per_sample,
                                 int sample_rate,
                                 size_t number_of_channels,
                                 size_t number_of_frames) {
-  MutexLock lock(&sink_lock_);
-  static int push_count = 0;
-  push_count++;
-  if (push_count <= 5 || push_count % 100 == 0) {
-    RTC_LOG(LS_INFO) << "PushAudioSource::PushData #" << push_count
-                     << " - sinks: " << sinks_.size()
-                     << ", channels: " << number_of_channels
-                     << ", frames: " << number_of_frames
-                     << ", rate: " << sample_rate;
+  push_count_++;
+
+  size_t num_sinks = 0;
+  // Forward to all sinks. In a standard PeerConnection setup, one of these sinks
+  // will be the LocalAudioSinkAdapter created by AudioRtpSender, which feeds
+  // the encoding pipeline.
+  {
+    MutexLock lock(&sink_lock_);
+    num_sinks = sinks_.size();
+    for (auto* sink : sinks_) {
+      sink->OnData(audio_data, bits_per_sample, sample_rate, number_of_channels,
+                   number_of_frames, /*absolute_capture_timestamp_ms=*/std::nullopt);
+    }
   }
-  for (auto* sink : sinks_) {
-    // Pass audio data to each sink with no capture timestamp
-    // (app audio doesn't have a meaningful capture time)
-    sink->OnData(audio_data, bits_per_sample, sample_rate, number_of_channels,
-                 number_of_frames, /*absolute_capture_timestamp_ms=*/std::nullopt);
+
+  if (push_count_ <= 5 || push_count_ % 1000 == 0) {
+    RTC_LOG(LS_INFO) << "PushAudioSource::PushData #" << push_count_
+                     << " sinks=" << num_sinks
+                     << " rate=" << sample_rate
+                     << " channels=" << number_of_channels
+                     << " frames=" << number_of_frames;
   }
 }
 

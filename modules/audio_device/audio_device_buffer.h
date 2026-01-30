@@ -88,6 +88,9 @@ class AudioDeviceBuffer {
 
   int32_t RegisterAudioCallback(AudioTransport* audio_callback);
 
+  // Returns the registered audio transport callback (may be null).
+  AudioTransport* audio_transport() const { return audio_transport_cb_; }
+
   void StartPlayout();
   void StartRecording();
   void StopPlayout();

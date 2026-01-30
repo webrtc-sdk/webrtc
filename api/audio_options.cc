@@ -58,6 +58,7 @@ void AudioOptions::SetAll(const AudioOptions& change) {
   SetFrom(&audio_network_adaptor, change.audio_network_adaptor);
   SetFrom(&audio_network_adaptor_config, change.audio_network_adaptor_config);
   SetFrom(&init_recording_on_send, change.init_recording_on_send);
+  SetFrom(&bypass_adm, change.bypass_adm);
 }
 
 bool AudioOptions::operator==(const AudioOptions& o) const {
@@ -76,7 +77,8 @@ bool AudioOptions::operator==(const AudioOptions& o) const {
              o.audio_jitter_buffer_min_delay_ms &&
          audio_network_adaptor == o.audio_network_adaptor &&
          audio_network_adaptor_config == o.audio_network_adaptor_config &&
-         init_recording_on_send == o.init_recording_on_send;
+         init_recording_on_send == o.init_recording_on_send &&
+         bypass_adm == o.bypass_adm;
 }
 
 std::string AudioOptions::ToString() const {
@@ -100,6 +102,7 @@ std::string AudioOptions::ToString() const {
                 audio_jitter_buffer_min_delay_ms);
   ToStringIfSet(&result, "audio_network_adaptor", audio_network_adaptor);
   ToStringIfSet(&result, "init_recording_on_send", init_recording_on_send);
+  ToStringIfSet(&result, "bypass_adm", bypass_adm);
   result << "}";
   return result.str();
 }

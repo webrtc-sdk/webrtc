@@ -323,6 +323,15 @@ void AudioSendStream::ConfigureStream(
 
   if (sending_) {
     ReconfigureBitrateObserver(new_config);
+
+    if (!first_time && new_config.bypass_adm != old_config.bypass_adm) {
+      if (new_config.bypass_adm) {
+        audio_state()->RemoveSendingStream(this);
+      } else {
+        audio_state()->AddSendingStream(this, encoder_sample_rate_hz_,
+                                        encoder_num_channels_);
+      }
+    }
   }
 
   config_ = new_config;
@@ -348,8 +357,13 @@ void AudioSendStream::Start() {
   }
   channel_send_->StartSend();
   sending_ = true;
-  audio_state()->AddSendingStream(this, encoder_sample_rate_hz_,
-                                  encoder_num_channels_);
+  if (!config_.bypass_adm) {
+    RTC_LOG(LS_INFO) << "AudioSendStream::Start: Registering with AudioState (ADM active)";
+    audio_state()->AddSendingStream(this, encoder_sample_rate_hz_,
+                                    encoder_num_channels_);
+  } else {
+    RTC_LOG(LS_INFO) << "AudioSendStream::Start: Bypassing AudioState registration (ADM inactive)";
+  }
 }
 
 void AudioSendStream::Stop() {
@@ -361,7 +375,9 @@ void AudioSendStream::Stop() {
   RemoveBitrateObserver();
   channel_send_->StopSend();
   sending_ = false;
-  audio_state()->RemoveSendingStream(this);
+  if (!config_.bypass_adm) {
+    audio_state()->RemoveSendingStream(this);
+  }
 }
 
 void AudioSendStream::SendAudioData(std::unique_ptr<AudioFrame> audio_frame) {

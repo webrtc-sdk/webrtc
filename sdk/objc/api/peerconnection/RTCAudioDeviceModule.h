@@ -203,6 +203,18 @@ RTC_OBJC_EXPORT
 
 @property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioEngineAvailability) engineAvailability;
 
+/// Push external audio (e.g., stereo app audio during screen sharing) directly to the
+/// encoding pipeline. This bypasses the ADM's normal capture path and voice processing.
+/// @param data Pointer to interleaved int16 audio samples
+/// @param sampleRate Audio sample rate in Hz
+/// @param channels Number of audio channels (e.g., 2 for stereo)
+/// @param frames Number of audio frames
+/// @return 0 on success, negative error code on failure
+- (NSInteger)pushExternalAudioData:(const int16_t *)data
+                        sampleRate:(int)sampleRate
+                          channels:(size_t)channels
+                            frames:(size_t)frames;
+
 @end
 
 NS_ASSUME_NONNULL_END

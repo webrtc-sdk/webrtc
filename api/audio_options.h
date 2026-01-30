@@ -66,6 +66,8 @@ struct RTC_EXPORT AudioOptions {
   // true.
   // TODO(webrtc:13566): Remove this option. See issue for details.
   std::optional<bool> init_recording_on_send;
+  // Bypasses the AudioDeviceModule completely. Used for push-based audio sources.
+  std::optional<bool> bypass_adm;
 };
 
 }  //  namespace webrtc

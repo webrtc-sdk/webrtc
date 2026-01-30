@@ -159,6 +159,9 @@ class AudioSendStream : public AudioSender {
     // Track ID as specified during track creation.
     std::string track_id;
 
+    // Bypasses the AudioDeviceModule completely. Used for push-based audio sources.
+    bool bypass_adm = false;
+
     // Per PeerConnection crypto options.
     webrtc::CryptoOptions crypto_options;
 

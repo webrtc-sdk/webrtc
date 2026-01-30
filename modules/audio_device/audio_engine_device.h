@@ -383,6 +383,15 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
   bool IsStopOnMuteModeEnabled() const override;
 
+  // Push external audio (e.g., app audio during screen sharing) directly to the
+  // encoding pipeline. This bypasses the ADM's normal capture path and voice
+  // processing. Audio is delivered as interleaved int16 samples.
+  // Returns 0 on success, negative error code on failure.
+  int32_t PushExternalAudio(const int16_t* audio_data,
+                            int sample_rate,
+                            size_t number_of_channels,
+                            size_t number_of_frames);
+
  private:
   struct EngineStateUpdate {
     EngineState prev;

@@ -581,6 +581,19 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
       [module, enabled] { return module->SetVoiceProcessingAGCEnabled(enabled) == 0; });
 }
 
+- (NSInteger)pushExternalAudioData:(const int16_t *)data
+                        sampleRate:(int)sampleRate
+                          channels:(size_t)channels
+                            frames:(size_t)frames {
+  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  if (module == nullptr) return -1;
+
+  return _workerThread->BlockingCall(
+      [module, data, sampleRate, channels, frames] {
+        return module->PushExternalAudio(data, sampleRate, channels, frames);
+      });
+}
+
 #pragma mark - Private
 
 - (NSArray<RTC_OBJC_TYPE(RTCIODevice) *> *)_outputDevices {

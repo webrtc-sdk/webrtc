@@ -1226,6 +1226,52 @@ int32_t AudioEngineDevice::InitAndStartRecording() {
   return result;
 }
 
+int32_t AudioEngineDevice::PushExternalAudio(const int16_t* audio_data,
+                                              int sample_rate,
+                                              size_t number_of_channels,
+                                              size_t number_of_frames) {
+  // Deliver external audio directly to the audio transport callback, bypassing
+  // the ADM's normal capture path and mono configuration.
+  // This is used for stereo app audio during screen sharing.
+  if (!audio_device_buffer_) {
+    LOGW() << "PushExternalAudio: audio_device_buffer_ is null";
+    return kAudioEngineNotInitializedError;
+  }
+
+  // Get the audio transport callback - this is what delivers audio to the encoder
+  AudioTransport* transport = audio_device_buffer_->audio_transport();
+  if (!transport) {
+    LOGW() << "PushExternalAudio: audio_transport is null";
+    return kAudioEngineNotInitializedError;
+  }
+
+  // Calculate parameters
+  const size_t bytes_per_frame = number_of_channels * sizeof(int16_t);
+  const uint32_t total_delay_ms = 0;  // No delay for external audio
+  const bool key_pressed = false;
+  uint32_t new_mic_level = 0;
+
+  // Estimate capture time
+  const uint64_t capture_time = mach_absolute_time();
+  const int64_t capture_time_ns = capture_time * machTickUnitsToNanoseconds_;
+
+  // Call the audio transport directly with stereo parameters
+  int32_t result = transport->RecordedDataIsAvailable(
+      audio_data,
+      number_of_frames,
+      bytes_per_frame,
+      number_of_channels,
+      sample_rate,
+      total_delay_ms,
+      0,  // clock_drift
+      0,  // current_mic_level
+      key_pressed,
+      new_mic_level,
+      capture_time_ns);
+
+  return result >= 0 ? kAudioEngineNoError : kAudioEngineUnknownError;
+}
+
 int32_t AudioEngineDevice::SetAdvancedDucking(bool enable) {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "SetAdvancedDucking: " << enable;

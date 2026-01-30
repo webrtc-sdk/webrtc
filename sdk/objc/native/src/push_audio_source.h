@@ -17,6 +17,7 @@
 #ifndef SDK_OBJC_NATIVE_SRC_PUSH_AUDIO_SOURCE_H_
 #define SDK_OBJC_NATIVE_SRC_PUSH_AUDIO_SOURCE_H_
 
+#include <atomic>
 #include <list>
 #include <optional>
 
@@ -25,13 +26,13 @@
 
 namespace webrtc {
 
-// Audio source that allows pushing PCM data directly, bypassing ADM.
+// Audio source that allows pushing PCM data directly, bypassing ADM completely.
 // Used for stereo app audio during screen sharing.
 //
-// This source maintains a list of audio sinks and fans out pushed audio
-// data to all registered sinks. Unlike LocalAudioSource which relies on
-// the AudioDeviceModule for capture, PushAudioSource accepts PCM data
-// directly via PushData(), preserving the original channel count (stereo).
+// This source implements AudioSourceInterface to provide:
+// - Track creation compatibility
+// - Local monitoring sinks (via AudioTrackSinkInterface)
+// - Custom AudioOptions (to signal bypass_adm)
 class PushAudioSource : public AudioSourceInterface {
  public:
   static rtc::scoped_refptr<PushAudioSource> Create(int sample_rate,
@@ -41,13 +42,15 @@ class PushAudioSource : public AudioSourceInterface {
   void RegisterObserver(ObserverInterface* observer) override;
   void UnregisterObserver(ObserverInterface* observer) override;
 
-  // AudioSourceInterface implementation
+  // AudioSourceInterface implementation (for track creation)
   SourceState state() const override { return kLive; }
   bool remote() const override { return false; }
   void AddSink(AudioTrackSinkInterface* sink) override;
   void RemoveSink(AudioTrackSinkInterface* sink) override;
+  const AudioOptions options() const override;
 
-  // Push PCM data to all registered sinks.
+  // Push PCM data directly. It will be forwarded to all sinks, including
+  // the one created by AudioRtpSender to feed the encoding pipeline.
   // audio_data: Pointer to interleaved PCM samples
   // bits_per_sample: Typically 16
   // sample_rate: e.g., 48000
@@ -61,11 +64,15 @@ class PushAudioSource : public AudioSourceInterface {
 
  protected:
   PushAudioSource();
-  ~PushAudioSource() override = default;
+  ~PushAudioSource() override;
 
  private:
+  // For sinks (AudioTrackSinkInterface)
   Mutex sink_lock_;
   std::list<AudioTrackSinkInterface*> sinks_ RTC_GUARDED_BY(sink_lock_);
+
+  // Debug counters
+  std::atomic<uint64_t> push_count_{0};
 };
 
 }  // namespace webrtc

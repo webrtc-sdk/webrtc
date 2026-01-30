@@ -829,6 +829,7 @@ class WebRtcVoiceSendChannel::WebRtcAudioSendStream : public AudioSource::Sink {
       int max_send_bitrate_bps,
       int rtcp_report_interval_ms,
       const std::optional<std::string>& audio_network_adaptor_config,
+      bool bypass_adm,
       Call* call,
       Transport* send_transport,
       const scoped_refptr<AudioEncoderFactory>& encoder_factory,
@@ -855,9 +856,12 @@ class WebRtcVoiceSendChannel::WebRtcAudioSendStream : public AudioSource::Sink {
     config_.frame_encryptor = frame_encryptor;
     config_.crypto_options = crypto_options;
     config_.rtcp_report_interval_ms = rtcp_report_interval_ms;
+    config_.bypass_adm = bypass_adm;
     rtp_parameters_.encodings[0].ssrc = ssrc;
     rtp_parameters_.rtcp.cname = c_name;
     rtp_parameters_.header_extensions = extensions;
+
+    RTC_LOG(LS_INFO) << "WebRtcAudioSendStream created with bypass_adm=" << bypass_adm;
 
     audio_network_adaptor_config_from_options_ = audio_network_adaptor_config;
     UpdateAudioNetworkAdaptorConfig();
@@ -934,6 +938,17 @@ class WebRtcVoiceSendChannel::WebRtcAudioSendStream : public AudioSource::Sink {
     audio_network_adaptor_config_from_options_ = audio_network_adaptor_config;
     UpdateAudioNetworkAdaptorConfig();
     UpdateAllowedBitrateRange();
+    ReconfigureAudioSendStream(nullptr);
+  }
+
+  void SetOptions(const AudioOptions& options) {
+    RTC_DCHECK_RUN_ON(&worker_thread_checker_);
+    if (config_.bypass_adm == options.bypass_adm.value_or(false)) {
+      return;
+    }
+    config_.bypass_adm = options.bypass_adm.value_or(false);
+    RTC_LOG(LS_INFO) << "WebRtcAudioSendStream::SetOptions: bypass_adm changed to "
+                     << config_.bypass_adm;
     ReconfigureAudioSendStream(nullptr);
   }
 
@@ -1286,6 +1301,7 @@ bool WebRtcVoiceSendChannel::SetOptions(const AudioOptions& options) {
       GetAudioNetworkAdaptorConfig(options_);
   for (auto& it : send_streams_) {
     it.second->SetAudioNetworkAdaptorConfig(audio_network_adaptor_config);
+    it.second->SetOptions(options_);
   }
 
   RTC_LOG(LS_INFO) << "Set voice send channel options. Current options: "
@@ -1586,8 +1602,8 @@ bool WebRtcVoiceSendChannel::AddSendStream(const StreamParams& sp) {
       ssrc, mid_, sp.cname, sp.id, send_codec_spec_, ExtmapAllowMixed(),
       send_rtp_extensions_, max_send_bitrate_bps_,
       audio_config_.rtcp_report_interval_ms, audio_network_adaptor_config,
-      call_, transport(), engine()->encoder_factory_, codec_pair_id_, nullptr,
-      crypto_options_);
+      options_.bypass_adm.value_or(false), call_, transport(),
+      engine()->encoder_factory_, codec_pair_id_, nullptr, crypto_options_);
   send_streams_.insert(std::make_pair(ssrc, stream));
   if (ssrc_list_changed_callback_) {
     std::set<uint32_t> ssrcs_in_use;

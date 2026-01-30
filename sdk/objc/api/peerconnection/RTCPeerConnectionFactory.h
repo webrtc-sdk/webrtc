@@ -101,7 +101,8 @@ RTC_OBJC_EXPORT
  * Used for stereo app audio during screen sharing.
  */
 - (RTC_OBJC_TYPE(RTCAudioTrack) *)audioTrackWithPushSource:(RTC_OBJC_TYPE(RTCPushAudioSource) *)source
-                                                   trackId:(NSString *)trackId;
+                                                   trackId:(NSString *)trackId
+    NS_SWIFT_NAME(audioTrack(withPush:trackId:));
 
 /** Initialize a generic RTCVideoSource. The RTCVideoSource should be
  * passed to a RTCVideoCapturer implementation, e.g.
