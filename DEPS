@@ -69,7 +69,7 @@ vars = {
 
 deps = {
   'src/build':
-    'https://github.com/webrtc-sdk/build@01021e6c12636951a6b4e5342e16b2101b352367',
+  'https://chromium.googlesource.com/chromium/src/build@1bd2ee1a985e60cd0ea2d44502d3b3d8e1d7456d',
   'src/buildtools':
     'https://chromium.googlesource.com/chromium/src/buildtools@aec4f3c79e5af648386819cbe7f6e67206385ece',
   # Gradle 6.6.1. Used for testing Android Studio project generation for WebRTC.

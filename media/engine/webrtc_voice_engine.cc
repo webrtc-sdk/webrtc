@@ -606,15 +606,11 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
   RTC_LOG(LS_INFO) << "WebRtcVoiceEngine::ApplyOptions: "
                    << options_in.ToString();
   AudioOptions options = options_in;  // The options are modified below.
-  // Set and adjust echo canceller options.
-  // Use desktop AEC by default, when not using hardware AEC.
-  bool use_mobile_software_aec = false;
 
   // Skip AEC AGC NS option manipulation for iOS adn macOS.
 #if !(defined(WEBRTC_IOS) || defined(WEBRTC_MAC))
 
 #if defined(WEBRTC_ANDROID)
-  use_mobile_software_aec = true;
   // Turn off the gain control if specified by the field trial.
   // The purpose of the field trial is to reduce the amount of resampling
   // performed inside the audio processing module on mobile platforms by

@@ -540,7 +540,7 @@ bool PeerConnectionInterface::RTCConfiguration::operator==(
          port_allocator_config.max_port == o.port_allocator_config.max_port &&
          port_allocator_config.flags == o.port_allocator_config.flags &&
          pacer_burst_interval == o.pacer_burst_interval &&
-         always_negotiate_data_channels == o.always_negotiate_data_channels;
+         always_negotiate_data_channels == o.always_negotiate_data_channels &&
          enable_any_address_ports == o.enable_any_address_ports;
 }
 
