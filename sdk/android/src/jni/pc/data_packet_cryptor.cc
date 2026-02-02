@@ -44,7 +44,7 @@ static jni_zero::ScopedJavaLocalRef<jobject> JNI_DataPacketCryptor_Encrypt(
     int key_index,
     const jni_zero::JavaParamRef<jbyteArray>& j_data) {
   auto participant_id =
-      JavaToNativeString(env, jni_zero::JavaParamRef<jstring>(env, j_participant_id));
+      JavaToNativeString(env, j_participant_id);
   auto data = JavaToNativeByteArray(env, j_data);
 
   RTCErrorOr<scoped_refptr<EncryptedPacket>> result =
@@ -59,9 +59,9 @@ static jni_zero::ScopedJavaLocalRef<jobject> JNI_DataPacketCryptor_Encrypt(
         std::vector<int8_t>(packet->data.begin(), packet->data.end());
     auto int8tIv =
         std::vector<int8_t>(packet->iv.begin(), packet->iv.end());
-    auto j_data = NativeToJavaByteArray(env, webrtc::ArrayView<int8_t>(int8tData));
+    auto j_data_out = NativeToJavaByteArray(env, webrtc::ArrayView<int8_t>(int8tData));
     auto j_iv = NativeToJavaByteArray(env, webrtc::ArrayView<int8_t>(int8tIv));
-    return Java_EncryptedPacket_Constructor(env, j_data, j_iv, packet->key_index);;
+    return Java_EncryptedPacket_Constructor(env, j_data_out, j_iv, packet->key_index);;
   }
 }
 
@@ -73,7 +73,7 @@ static jni_zero::ScopedJavaLocalRef<jbyteArray> JNI_DataPacketCryptor_Decrypt(
     const jni_zero::JavaParamRef<jbyteArray>& j_data,
     const jni_zero::JavaParamRef<jbyteArray>& j_iv) {
   auto participant_id =
-      JavaToNativeString(env, jni_zero::JavaParamRef<jstring>(env, j_participant_id));
+      JavaToNativeString(env, j_participant_id);
   auto data = JavaToNativeByteArray(env, j_data);
   auto iv = JavaToNativeByteArray(env, j_iv);
 
