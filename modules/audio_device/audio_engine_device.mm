@@ -1277,6 +1277,32 @@ int32_t AudioEngineDevice::DuckingLevel(AudioDuckingLevel* level) {
   return 0;
 }
 
+int32_t AudioEngineDevice::SetOutputRunningPersistentMode(bool enable) {
+  RTC_DCHECK_RUN_ON(thread_);
+  LOGI() << "SetOutputRunningPersistentMode: " << enable;
+
+  int32_t result = ModifyEngineState([enable](EngineState state) -> EngineState {
+    state.output_running_persistent_mode = enable;
+    return state;
+  });
+
+  return result;
+}
+
+int32_t AudioEngineDevice::OutputRunningPersistentMode(bool* enabled) {
+  LOGI() << "OutputRunningPersistentMode";
+  RTC_DCHECK_RUN_ON(thread_);
+
+  if (enabled == nullptr) {
+    return -1;
+  }
+
+  *enabled = engine_state_.output_running_persistent_mode;
+  LOGI() << "OutputRunningPersistentMode value: " << *enabled;
+
+  return 0;
+}
+
 int32_t AudioEngineDevice::SetInitRecordingPersistentMode(bool enable) {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "SetInitRecordingPersistentMode: " << enable;

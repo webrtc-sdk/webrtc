@@ -136,6 +136,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
     bool output_available = true;
     bool input_available = true;
 
+    bool output_running_persistent_mode = false;
     bool input_enabled_persistent_mode = false;
 
     bool input_muted = true;
@@ -160,6 +161,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
       return input_enabled == rhs.input_enabled && input_running == rhs.input_running &&
              output_enabled == rhs.output_enabled && output_running == rhs.output_running &&
              input_available == rhs.input_available && output_available == rhs.output_available &&
+             output_running_persistent_mode == rhs.output_running_persistent_mode &&
              input_enabled_persistent_mode == rhs.input_enabled_persistent_mode &&
              input_muted == rhs.input_muted && is_interrupted == rhs.is_interrupted &&
              render_mode == rhs.render_mode && mute_mode == rhs.mute_mode &&
@@ -190,6 +192,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
     bool IsOutputEnabled() const {
       if (!output_available) return false;
+      if (output_running_persistent_mode) return true;
 
       switch (render_mode) {
         case RenderMode::Device:
@@ -201,6 +204,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
     bool IsOutputRunning() const {
       if (!output_available) return false;
+      if (output_running_persistent_mode) return true;
 
       switch (render_mode) {
         case RenderMode::Device:
@@ -218,7 +222,8 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
           return !(mute_mode == MuteMode::RestartEngine && input_muted) &&
                  (input_enabled || input_enabled_persistent_mode);
         case RenderMode::Manual:
-          return input_enabled || input_enabled_persistent_mode || output_enabled;
+          return (input_enabled || input_enabled_persistent_mode) ||
+                 (output_enabled || output_running_persistent_mode);
       }
     }
 
@@ -229,7 +234,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
         case RenderMode::Device:
           return !(mute_mode == MuteMode::RestartEngine && input_muted) && input_running;
         case RenderMode::Manual:
-          return input_running || output_running;
+          return input_running || (output_running || output_running_persistent_mode);
       }
     }
 
@@ -364,6 +369,9 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
   int32_t SetDuckingLevel(AudioDuckingLevel level);
   int32_t DuckingLevel(AudioDuckingLevel* level);
+
+  int32_t SetOutputRunningPersistentMode(bool enable);
+  int32_t OutputRunningPersistentMode(bool* enabled);
 
   int32_t SetInitRecordingPersistentMode(bool enable);
   int32_t InitRecordingPersistentMode(bool* enabled);
