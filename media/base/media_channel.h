@@ -1009,10 +1009,6 @@ class VideoMediaReceiveChannelInterface : public MediaReceiveChannelInterface {
   // Clear recordable encoded frame callback for `ssrc`
   virtual void ClearRecordableEncodedFrameCallback(uint32_t ssrc) = 0;
   virtual bool GetStats(VideoMediaReceiveInfo* stats) = 0;
-  virtual void SetReceiverFeedbackParameters(bool lntf_enabled,
-                                             bool nack_enabled,
-                                             webrtc::RtcpMode rtcp_mode,
-                                             std::optional<int> rtx_time) = 0;
   virtual bool AddDefaultRecvStreamForTesting(
       const webrtc::StreamParams& sp) = 0;
   virtual void StartReceive(uint32_t ssrc) {}
