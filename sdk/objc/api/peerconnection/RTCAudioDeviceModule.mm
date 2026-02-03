@@ -453,6 +453,24 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
       [module, enabled] { return module->SetInitRecordingPersistentMode(enabled); });
 }
 
+- (BOOL)isOutputAlwaysRunningMode {
+  webrtc::AudioEngineDevice* module = dynamic_cast<webrtc::AudioEngineDevice*>(_native.get());
+  if (module == nullptr) return NO;
+
+  return _workerThread->BlockingCall([module] {
+    bool value = false;
+    return module->OutputRunningPersistentMode(&value) == 0 ? value : NO;
+  });
+}
+
+- (NSInteger)setOutputAlwaysRunningMode:(BOOL)enabled {
+  webrtc::AudioEngineDevice* module = dynamic_cast<webrtc::AudioEngineDevice*>(_native.get());
+  if (module == nullptr) return -1;
+
+  return _workerThread->BlockingCall(
+      [module, enabled] { return module->SetOutputRunningPersistentMode(enabled); });
+}
+
 - (BOOL)isManualRenderingMode {
   webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
   if (module == nullptr) return NO;
