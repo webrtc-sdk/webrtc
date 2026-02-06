@@ -129,7 +129,7 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
 @end
 
 RTC_OBJC_EXPORT
-@interface RTC_OBJC_TYPE (RTCAudioDeviceModule) : NSObject
+@interface RTC_OBJC_TYPE(RTCAudioDeviceModule) : NSObject
 
 @property(nonatomic, readonly) NSArray<RTC_OBJC_TYPE(RTCIODevice) *> *outputDevices;
 @property(nonatomic, readonly) NSArray<RTC_OBJC_TYPE(RTCIODevice) *> *inputDevices;

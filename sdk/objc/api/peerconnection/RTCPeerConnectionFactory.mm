@@ -83,6 +83,7 @@
 }
 
 @synthesize nativeFactory = _nativeFactory;
+@synthesize audioDeviceModule = _audioDeviceModule;
 
 - (instancetype)init {
   webrtc::PeerConnectionFactoryDependencies dependencies;
