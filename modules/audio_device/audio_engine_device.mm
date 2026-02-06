@@ -1536,12 +1536,12 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
     });
 
     NSError* error = nil;
-    BOOL result =
+    BOOL res =
         [engine_manual_input_ enableManualRenderingMode:AVAudioEngineManualRenderingModeRealtime
                                                  format:manual_render_rtc_format_
                                       maximumFrameCount:kMaximumFramesPerBuffer
                                                   error:&error];
-    if (!result) {
+    if (!res) {
       LOGE() << "Failed to set rendering mode (Manual): " << error.localizedDescription.UTF8String;
       return rollback(kAudioEngineManualRenderingError);
     }
