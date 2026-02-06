@@ -41,7 +41,7 @@ ObjCVideoTrackSource::ObjCVideoTrackSource(const Environment &env,
       is_screencast_(is_screencast) {}
 
 ObjCVideoTrackSource::ObjCVideoTrackSource(const Environment &env,
-                                           RTCObjCVideoSourceAdapter *adapter)
+                                           RTC_OBJC_TYPE(RTCObjCVideoSourceAdapter) *adapter)
     : env_(env), adapter_(adapter), is_screencast_(false) {
   adapter_.objCVideoTrackSource = this;
 }
