@@ -139,6 +139,44 @@
 #endif
 }
 
+- (instancetype)
+    initWithAudioDeviceModuleType:(RTC_OBJC_TYPE(RTCAudioDeviceModuleType))audioDeviceModuleType
+            bypassVoiceProcessing:(BOOL)bypassVoiceProcessing
+                   encoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoEncoderFactory)>)encoderFactory
+                   decoderFactory:(nullable id<RTC_OBJC_TYPE(RTCVideoDecoderFactory)>)decoderFactory
+            audioProcessingModule:
+                (nullable id<RTC_OBJC_TYPE(RTCAudioProcessingModule)>)audioProcessingModule {
+#ifdef HAVE_NO_MEDIA
+  return [self initWithNoMedia];
+#else
+  std::unique_ptr<webrtc::VideoEncoderFactory> native_encoder_factory;
+  std::unique_ptr<webrtc::VideoDecoderFactory> native_decoder_factory;
+  if (encoderFactory) {
+    native_encoder_factory = webrtc::ObjCToNativeVideoEncoderFactory(encoderFactory);
+  }
+  if (decoderFactory) {
+    native_decoder_factory = webrtc::ObjCToNativeVideoDecoderFactory(decoderFactory);
+  }
+
+  if ([audioProcessingModule isKindOfClass:[RTC_OBJC_TYPE(RTCDefaultAudioProcessingModule) class]]) {
+    _defaultAudioProcessingModule = (RTC_OBJC_TYPE(RTCDefaultAudioProcessingModule) *)audioProcessingModule;
+  } else {
+    _defaultAudioProcessingModule = [[RTC_OBJC_TYPE(RTCDefaultAudioProcessingModule) alloc] init];
+  }
+
+  return [self
+      initWithNativeAudioEncoderFactory:webrtc::CreateBuiltinAudioEncoderFactory()
+              nativeAudioDecoderFactory:webrtc::CreateBuiltinAudioDecoderFactory()
+              nativeVideoEncoderFactory:std::move(native_encoder_factory)
+              nativeVideoDecoderFactory:std::move(native_decoder_factory)
+                      audioDeviceModule:nullptr
+                  audioProcessingModule:_defaultAudioProcessingModule.nativeAudioProcessingModule
+               networkControllerFactory:nullptr
+                  audioDeviceModuleType:audioDeviceModuleType
+                  bypassVoiceProcessing:bypassVoiceProcessing];
+#endif
+}
+
 - (instancetype)initWithNativeDependencies:
     (webrtc::PeerConnectionFactoryDependencies &)dependencies {
   self = [super init];

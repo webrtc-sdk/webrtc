@@ -2880,17 +2880,18 @@ void AudioEngineDevice::DebugAudioEngine() {
       }
     }
   };
+  if(@available(macOS 10.15, iOS 13.0, tvOS 13.0, *)) {
+    NSArray<AVAudioNode*>* attachedNodes = [engine_device_.attachedNodes allObjects];
+    LOGI() << "==================================================";
+    LOGI() << "DebugAudioEngine attached nodes: " << attachedNodes.count;
 
-  NSArray<AVAudioNode*>* attachedNodes = [engine_device_.attachedNodes allObjects];
-  LOGI() << "==================================================";
-  LOGI() << "DebugAudioEngine attached nodes: " << attachedNodes.count;
+    for (NSUInteger i = 0; i < attachedNodes.count; i++) {
+      AVAudioNode* node = attachedNodes[i];
+      print_node(node, 0);
+    }
 
-  for (NSUInteger i = 0; i < attachedNodes.count; i++) {
-    AVAudioNode* node = attachedNodes[i];
-    print_node(node, 0);
+    LOGI() << "==================================================";
   }
-
-  LOGI() << "==================================================";
 }
 
 }  // namespace webrtc

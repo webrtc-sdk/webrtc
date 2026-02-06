@@ -137,8 +137,8 @@ RTC_OBJC_EXPORT
 @property(nonatomic, readonly) BOOL playing;
 @property(nonatomic, readonly) BOOL recording;
 
-@property(nonatomic, assign) RTC_OBJC_TYPE(RTCIODevice) * outputDevice;
-@property(nonatomic, assign) RTC_OBJC_TYPE(RTCIODevice) * inputDevice;
+@property(nonatomic, strong) RTC_OBJC_TYPE(RTCIODevice) * outputDevice;
+@property(nonatomic, strong) RTC_OBJC_TYPE(RTCIODevice) * inputDevice;
 
 // Executes low-level API's in sequence to switch the device
 // Use outputDevice / inputDevice property unless you need to know if setting the device is

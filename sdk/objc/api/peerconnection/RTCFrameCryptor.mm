@@ -141,7 +141,7 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
 
     factory.signalingThread->BlockingCall([self, nativeRtpSender] {
       // Must be called on signal thread
-      nativeRtpSender->SetEncoderToPacketizerFrameTransformer(_frame_crypto_transformer);
+      nativeRtpSender->SetFrameTransformer(_frame_crypto_transformer);
     });
 
     _frame_crypto_transformer->SetEnabled(false);
@@ -182,7 +182,7 @@ void RTCFrameCryptorDelegateAdapter::OnFrameCryptionStateChanged(const std::stri
 
     // Does not need to be called on the signaling thread, as its implementation already switches to
     // the worker thread internally.
-    nativeRtpReceiver->SetDepacketizerToDecoderFrameTransformer(_frame_crypto_transformer);
+    nativeRtpReceiver->SetFrameTransformer(_frame_crypto_transformer);
 
     _frame_crypto_transformer->SetEnabled(false);
     _frame_crypto_transformer->RegisterFrameCryptorTransformerObserver(_observer);
