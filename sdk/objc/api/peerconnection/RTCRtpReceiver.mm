@@ -38,7 +38,7 @@ void RtpReceiverDelegateAdapter::OnFirstPacketReceived(
 
 void RtpReceiverDelegateAdapter::OnFirstPacketReceivedAfterReceptiveChange(
     webrtc::MediaType media_type) {
-  RTCRtpMediaType packet_media_type =
+  RTC_OBJC_TYPE(RTCRtpMediaType) packet_media_type =
       [RTC_OBJC_TYPE(RTCRtpReceiver) mediaTypeForNativeMediaType:media_type];
   RTC_OBJC_TYPE(RTCRtpReceiver) *receiver = receiver_;
   if ([receiver.delegate

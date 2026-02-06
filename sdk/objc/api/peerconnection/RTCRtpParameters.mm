@@ -95,7 +95,7 @@
   switch (degradationPreference) {
     case RTC_OBJC_TYPE(RTCDegradationPreferenceMaintainFramerateAndResolution):
       return webrtc::DegradationPreference::MAINTAIN_FRAMERATE_AND_RESOLUTION;
-    case RTCDegradationPreferenceMaintainFramerate:
+    case RTC_OBJC_TYPE(RTCDegradationPreferenceMaintainFramerate):
       return webrtc::DegradationPreference::MAINTAIN_FRAMERATE;
     case RTC_OBJC_TYPE(RTCDegradationPreferenceMaintainResolution):
       return webrtc::DegradationPreference::MAINTAIN_RESOLUTION;

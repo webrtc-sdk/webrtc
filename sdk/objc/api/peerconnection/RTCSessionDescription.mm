@@ -103,18 +103,18 @@
   }
 }
 
-+ (RTCSdpType)typeForSdpType:(webrtc::SdpType)type {
++ (RTC_OBJC_TYPE(RTCSdpType))typeForSdpType:(webrtc::SdpType)type {
   if (type == webrtc::SdpType::kOffer) {
-    return RTCSdpTypeOffer;
+    return RTC_OBJC_TYPE(RTCSdpTypeOffer);
   } else if (type == webrtc::SdpType::kPrAnswer) {
-    return RTCSdpTypePrAnswer;
+    return RTC_OBJC_TYPE(RTCSdpTypePrAnswer);
   } else if (type == webrtc::SdpType::kAnswer) {
-    return RTCSdpTypeAnswer;
+    return RTC_OBJC_TYPE(RTCSdpTypeAnswer);
   } else if (type == webrtc::SdpType::kRollback) {
-    return RTCSdpTypeRollback;
+    return RTC_OBJC_TYPE(RTCSdpTypeRollback);
   } else {
     RTC_DCHECK_NOTREACHED();
-    return RTCSdpTypeOffer;
+    return RTC_OBJC_TYPE(RTCSdpTypeOffer);
   }
 }
 
