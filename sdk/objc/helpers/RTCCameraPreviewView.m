@@ -54,6 +54,7 @@
     return;
   }
   _captureSession = captureSession;
+#if !TARGET_OS_TV
   [RTC_OBJC_TYPE(RTCDispatcher)
       dispatchAsyncOnType:RTC_OBJC_TYPE(RTCDispatcherTypeMain)
                     block:^{
@@ -63,16 +64,15 @@
                           dispatchAsyncOnType:RTC_OBJC_TYPE(RTCDispatcherTypeCaptureSession)
                                         block:^{
                                           previewLayer.session = captureSession;
-#if !TARGET_OS_TV
                                           [RTC_OBJC_TYPE(RTCDispatcher)
                                               dispatchAsyncOnType:RTC_OBJC_TYPE(RTCDispatcherTypeMain)
                                                             block:^{
                                                               [self
                                                                   setCorrectVideoOrientation];
                                                             }];
-#endif
                                         }];
                     }];
+#endif
 }
 
 #if !TARGET_OS_TV
