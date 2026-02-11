@@ -206,13 +206,13 @@
     if (!dependencies.env.has_value()) {
       dependencies.env = webrtc::CreateEnvironment();
     }
-    _env = dependencies.env;
     if (dependencies.network_monitor_factory == nullptr &&
-        _env->field_trials().IsEnabled("WebRTC-Network-UseNWPathMonitor")) {
+        dependencies.env->field_trials().IsEnabled("WebRTC-Network-UseNWPathMonitor")) {
       dependencies.network_monitor_factory =
           webrtc::CreateNetworkMonitorFactory();
     }
 
+    _env = dependencies.env;
     _nativeFactory =
         webrtc::CreateModularPeerConnectionFactory(std::move(dependencies));
     NSAssert(_nativeFactory, @"Failed to initialize PeerConnectionFactory!");
@@ -386,6 +386,7 @@
     webrtc::EnableMedia(dependencies);
     dependencies.event_log_factory = std::make_unique<webrtc::RtcEventLogFactory>();
     dependencies.network_controller_factory = std::move(networkControllerFactory);
+    _env = dependencies.env;
     _nativeFactory = webrtc::CreateModularPeerConnectionFactory(std::move(dependencies));
     NSAssert(_nativeFactory, @"Failed to initialize PeerConnectionFactory!");
   }
