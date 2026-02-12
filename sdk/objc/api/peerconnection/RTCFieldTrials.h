@@ -19,6 +19,7 @@ RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialFlexFec03Key);
 RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialH264HighProfileKey);
 RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialMinimizeResamplingOnMobileKey);
 RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialUseNWPathMonitor);
+RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialIceHandshakeDtlsKey);
 
 /** The valid value for field trials above. */
 RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialEnabledValue);

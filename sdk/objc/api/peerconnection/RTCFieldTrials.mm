@@ -23,6 +23,7 @@ NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialH264HighProfileKey) = @"WebRTC-H2
 NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialMinimizeResamplingOnMobileKey) =
     @"WebRTC-Audio-MinimizeResamplingOnMobile";
 NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialUseNWPathMonitor) = @"WebRTC-Network-UseNWPathMonitor";
+NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialIceHandshakeDtlsKey) = @"WebRTC-IceHandshakeDtls";
 NSString *const RTC_CONSTANT_TYPE(RTCFieldTrialEnabledValue) = @"Enabled";
 
 // InitFieldTrialsFromString stores the char*, so the char array must outlive

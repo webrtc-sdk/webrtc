@@ -41,6 +41,7 @@
 #include "api/audio/builtin_audio_processing_builder.h"
 #include "api/audio/create_audio_device_module.h"
 #include "api/environment/environment_factory.h"
+#include "api/field_trials.h"
 #include "api/audio_codecs/builtin_audio_decoder_factory.h"
 #include "api/audio_codecs/builtin_audio_encoder_factory.h"
 #include "api/create_modular_peer_connection_factory.h"
@@ -71,6 +72,11 @@
 #import "sdk/objc/native/api/audio_device_module.h"
 #endif
 
+static webrtc::Environment CreateDefaultEnvironment() {
+  return webrtc::CreateEnvironment(
+      std::make_unique<webrtc::FieldTrials>("WebRTC-IceHandshakeDtls/Enabled/"));
+}
+
 @implementation RTC_OBJC_TYPE (RTCPeerConnectionFactory) {
   std::optional<webrtc::Environment> _env;
   std::unique_ptr<webrtc::Thread> _networkThread;
@@ -95,7 +101,7 @@
       [[RTC_OBJC_TYPE(RTCVideoEncoderFactoryH264) alloc] init]);
   dependencies.video_decoder_factory = webrtc::ObjCToNativeVideoDecoderFactory(
       [[RTC_OBJC_TYPE(RTCVideoDecoderFactoryH264) alloc] init]);
-  dependencies.env = webrtc::CreateEnvironment();
+  dependencies.env = CreateDefaultEnvironment();
 #ifdef WEBRTC_IOS
   dependencies.adm = webrtc::CreateAudioDeviceModule(*dependencies.env);
 #endif
@@ -116,7 +122,7 @@
   return [self initWithNoMedia];
 #else
   webrtc::PeerConnectionFactoryDependencies dependencies;
-  dependencies.env = webrtc::CreateEnvironment();
+  dependencies.env = CreateDefaultEnvironment();
   dependencies.audio_encoder_factory =
       webrtc::CreateBuiltinAudioEncoderFactory();
   dependencies.audio_decoder_factory =
@@ -204,7 +210,7 @@
     dependencies.worker_thread = _workerThread.get();
     dependencies.signaling_thread = _signalingThread.get();
     if (!dependencies.env.has_value()) {
-      dependencies.env = webrtc::CreateEnvironment();
+      dependencies.env = CreateDefaultEnvironment();
     }
     if (dependencies.network_monitor_factory == nullptr &&
         dependencies.env->field_trials().IsEnabled("WebRTC-Network-UseNWPathMonitor")) {
@@ -346,7 +352,7 @@
   self = [self initNative];
   if (self) {
     webrtc::PeerConnectionFactoryDependencies dependencies;
-    dependencies.env = webrtc::CreateEnvironment();
+    dependencies.env = CreateDefaultEnvironment();
     dependencies.network_thread = _networkThread.get();
     dependencies.worker_thread = _workerThread.get();
     dependencies.signaling_thread = _signalingThread.get();
