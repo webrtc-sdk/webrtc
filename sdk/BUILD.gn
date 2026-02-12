@@ -1236,6 +1236,7 @@ if (is_ios || is_mac) {
         "../api/crypto:frame_crypto_transformer",
         "../api:dtmf_sender_interface",
         "../api:enable_media",
+        "../api:field_trials",
         "../api:field_trials_view",
         "../api:jsep",
         "../api:legacy_stats_types",
