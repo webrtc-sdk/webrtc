@@ -828,6 +828,14 @@ int32_t LibaomAv1Encoder::Encode(
         encoder_settings_.spatialLayers[last_active_layer_].height);
   }
 
+  // Ensure frame dimensions match encoder config. cfg_.g_w/g_h may have been
+  // changed by AdjustScalingFactorsForTopActiveLayer() in SetRates() while the
+  // video pipeline still delivers frames at the original resolution.
+  if (scaled_image->width() != static_cast<int>(cfg_.g_w) ||
+      scaled_image->height() != static_cast<int>(cfg_.g_h)) {
+    scaled_image = scaled_image->Scale(cfg_.g_w, cfg_.g_h);
+  }
+
   scoped_refptr<VideoFrameBuffer> mapped_buffer;
   if (scaled_image->type() != VideoFrameBuffer::Type::kNative) {
     // `buffer` is already mapped.
