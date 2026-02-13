@@ -1036,6 +1036,14 @@ EncodeResult LibaomAv1Encoder::DoEncode(
   output.encode_time = realtime_clock_->CurrentTime() - start_time;
 
   if (output.status_code != AOM_CODEC_OK) {
+    const char* detail = aom_codec_error_detail(&ctx_);
+    RTC_LOG(LS_ERROR) << "aom_codec_encode failed: "
+                      << aom_codec_err_to_string(output.status_code)
+                      << (detail ? detail : "")
+                      << " img=" << frame_for_encode_->d_w << "x"
+                      << frame_for_encode_->d_h
+                      << " cfg=" << cfg_.g_w << "x" << cfg_.g_h
+                      << " pts=" << timestamp_ << " dur=" << duration;
     return output;
   }
 
