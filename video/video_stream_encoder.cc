@@ -2176,6 +2176,27 @@ void VideoStreamEncoder::EncodeVideoFrame(const VideoFrame& video_frame,
     }
   }
 
+  // Scale to mapped_resolution if the encoder expects a different resolution
+  // than the incoming frame. This handles cases where the encoder dynamically
+  // adjusts its expected resolution (e.g., AV1 SVC layer deactivation via
+  // AdjustScalingFactorsForTopActiveLayer) but PrepareMappedBufferAsync is
+  // not implemented by the frame buffer.
+  if (info.mapped_resolution.has_value()) {
+    int mapped_w = info.mapped_resolution->width;
+    int mapped_h = info.mapped_resolution->height;
+    // Clamp: never upscale beyond frame dimensions.
+    mapped_w = std::min(mapped_w, out_frame.width());
+    mapped_h = std::min(mapped_h, out_frame.height());
+    if (out_frame.width() != mapped_w || out_frame.height() != mapped_h) {
+      auto scaled = out_frame.video_frame_buffer()->Scale(mapped_w, mapped_h);
+      if (scaled) {
+        out_frame.set_video_frame_buffer(scaled);
+        out_frame.clear_update_rect();
+        accumulated_update_rect_is_valid_ = false;
+      }
+    }
+  }
+
   if (!accumulated_update_rect_is_valid_) {
     out_frame.clear_update_rect();
   } else if (!accumulated_update_rect_.IsEmpty() &&
@@ -2197,8 +2218,11 @@ void VideoStreamEncoder::EncodeVideoFrame(const VideoFrame& video_frame,
   stream_resource_manager_.OnEncodeStarted(out_frame, time_when_posted_us);
 
   // The encoder should get the size that it expects.
-  RTC_DCHECK(send_codec_.width <= out_frame.width() &&
-             send_codec_.height <= out_frame.height())
+  // Relax DCHECK when encoder reports mapped_resolution smaller than codec
+  // config (e.g., AV1 SVC layer deactivation).
+  RTC_DCHECK(info.mapped_resolution.has_value() ||
+             (send_codec_.width <= out_frame.width() &&
+              send_codec_.height <= out_frame.height()))
       << "Encoder configured to " << send_codec_.width << "x"
       << send_codec_.height << " received a too small frame "
       << out_frame.width() << "x" << out_frame.height();
