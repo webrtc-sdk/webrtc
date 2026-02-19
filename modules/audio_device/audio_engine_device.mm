@@ -1791,24 +1791,25 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       (!state.next.IsAnyRunning() || state.IsEngineRestartRequired() ||
        state.DidBeginInterruption() || state.IsEngineRecreateRequired())) {
     LOGI() << "Stopping AVAudioEngine...";
-    RTC_DCHECK(engine_device_ != nil);
 
     if (configuration_observer_ != nullptr) {
       NSNotificationCenter* center = [NSNotificationCenter defaultCenter];
       [center removeObserver:(__bridge_transfer id)configuration_observer_
                         name:AVAudioEngineConfigurationChangeNotification
-                      object:engine_device_];
+                      object:nil];
       configuration_observer_ = nil;
     }
 
-    [engine_device_ stop];
+    if (engine_device_ != nil) {
+      [engine_device_ stop];
 
-    if (observer_ != nullptr) {
-      int32_t result = observer_->OnEngineDidStop(engine_device_, state.next.IsOutputEnabled(),
-                                                  state.next.IsInputEnabled());
-      if (result != 0) {
-        LOGE() << "Call to OnEngineDidStop returned error: " << result;
-        return rollback(result);
+      if (observer_ != nullptr) {
+        int32_t result = observer_->OnEngineDidStop(engine_device_, state.next.IsOutputEnabled(),
+                                                    state.next.IsInputEnabled());
+        if (result != 0) {
+          LOGE() << "Call to OnEngineDidStop returned error: " << result;
+          return rollback(result);
+        }
       }
     }
   }
@@ -1816,7 +1817,8 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   // --------------------------------------------------------------------------------------------
   // Step: Stop playout buffer
   //
-  if (!state.next.IsOutputEnabled() && audio_device_buffer_->IsPlaying()) {
+  if ((!state.next.IsOutputEnabled() || state.IsEngineRecreateRequired()) &&
+      audio_device_buffer_->IsPlaying()) {
     LOGI() << "Stopping Playout buffer...";
     if (engine_device_ != nullptr) {
       // Rendering must be stopped first.
@@ -1828,7 +1830,8 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   // --------------------------------------------------------------------------------------------
   // Step: Stop recording buffer
   //
-  if (!state.next.IsInputEnabled() && audio_device_buffer_->IsRecording()) {
+  if ((!state.next.IsInputEnabled() || state.IsEngineRecreateRequired()) &&
+      audio_device_buffer_->IsRecording()) {
     LOGI() << "Stopping Record buffer...";
     if (engine_device_ != nullptr) {
       // Rendering must be stopped first.
@@ -1842,13 +1845,28 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   //
   if (state.IsEngineRecreateRequired()) {
     LOGI() << "Recreate required, releasing AVAudioEngine...";
-    if (observer_ != nullptr) {
+    if (observer_ != nullptr && engine_device_ != nil) {
       int32_t result = observer_->OnEngineWillRelease(engine_device_);
       if (result != 0) {
         LOGE() << "Call to OnEngineWillRelease returned error: " << result;
         return rollback(result);
       }
     }
+
+#if TARGET_OS_OSX
+    if (state.DidUpdateVoiceProcessingEnabled() && engine_device_ != nil) {
+      AVAudioInputNode* input_node = engine_device_.inputNode;
+      AVAudioOutputNode* output_node = engine_device_.outputNode;
+
+      if (input_node != nil && input_node.audioUnit != nullptr) {
+        AudioOutputUnitStop(input_node.audioUnit);
+      }
+      if (output_node != nil && output_node.audioUnit != nullptr) {
+        AudioOutputUnitStop(output_node.audioUnit);
+      }
+    }
+#endif
+
     engine_device_ = nil;
   }
 
@@ -2418,19 +2436,26 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   if (state.next.IsAnyEnabled() &&
       (!state.prev.IsAnyEnabled() || state.IsEngineRecreateRequired())) {
     if (state.next.IsInputEnabled()) {
-      uint32_t input_device_id = state.next.input_device_id;
-      if (input_device_id == kAudioObjectUnknown) {
+      uint32_t requested_input_device_id = state.next.input_device_id;
+
+      AudioUnit input_unit = inputNode().audioUnit;
+
+      if (requested_input_device_id == kAudioObjectUnknown) {
+        // For default routing, avoid forcing kAudioOutputUnitProperty_CurrentDevice. On macOS this
+        // can fail during VoiceProcessingIO reconfiguration and the engine already follows the
+        // system default route.
         LOGI() << "Using default input device";
       } else {
-        auto input_device_name = mac_audio_utils::GetDeviceName(input_device_id);
+        auto input_device_name = mac_audio_utils::GetDeviceName(requested_input_device_id);
         LOGI() << "Setting input device: " << input_device_name.value_or("Unknown") << " ("
-               << input_device_id << ")";
-        AudioUnit inputUnit = inputNode().audioUnit;
-        OSStatus err = AudioUnitSetProperty(inputUnit, kAudioOutputUnitProperty_CurrentDevice,
-                                            kAudioUnitScope_Global, 1, &input_device_id,
-                                            sizeof(input_device_id));
-        if (err != noErr) {
-          LOGE() << "Failed to set input device: " << input_device_id << ", error: " << err;
+               << requested_input_device_id << ")";
+
+        OSStatus set_input_err = AudioUnitSetProperty(
+            input_unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 1,
+            &requested_input_device_id, sizeof(requested_input_device_id));
+        if (set_input_err != noErr) {
+          LOGE() << "Failed to set input device: requested=" << requested_input_device_id
+                 << ", error: " << set_input_err;
           return rollback(kAudioEngineRecordingDeviceNotAvailableError);
         }
       }

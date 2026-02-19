@@ -17,7 +17,6 @@
 #ifndef SDK_OBJC_NATIVE_SRC_AUDIO_AUDIO_DEVICE_AUDIOENGINE_H_
 #define SDK_OBJC_NATIVE_SRC_AUDIO_AUDIO_DEVICE_AUDIOENGINE_H_
 
-#include <atomic>
 #include <memory>
 
 #include "api/scoped_refptr.h"
@@ -178,7 +177,8 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
     // AUDIO STATE LOGIC
     //
     // Device Mode:
-    // - Output follows input only when voice_processing_enabled=true (for AEC)
+    // - On macOS, output follows input to keep AVAudioEngine IO active for capture.
+    // - On other platforms, output follows input only when voice_processing_enabled=true (for AEC)
     // - Input respects mute mode restrictions (RestartEngine + input_muted)
     // - Independent operation when voice processing is disabled
     //
@@ -195,7 +195,13 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
       switch (render_mode) {
         case RenderMode::Device:
+#if TARGET_OS_OSX
+          // Keep an active output graph while input is enabled; otherwise, capture callbacks can
+          // stall after VP reconfiguration on macOS.
+          return IsInputEnabled() || output_enabled;
+#else
           return voice_processing_enabled ? (IsInputEnabled() || output_enabled) : output_enabled;
+#endif
         case RenderMode::Manual:
           return output_enabled || input_enabled || input_enabled_persistent_mode;
       }
@@ -206,7 +212,11 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
       switch (render_mode) {
         case RenderMode::Device:
+#if TARGET_OS_OSX
+          return IsInputRunning() || output_running;
+#else
           return voice_processing_enabled ? (IsInputRunning() || output_running) : output_running;
+#endif
         case RenderMode::Manual:
           return output_running || input_running;
       }
@@ -429,11 +439,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
     bool DidUpdateMuteMode() const { return prev.mute_mode != next.mute_mode; }
 
-    bool IsEngineRestartRequired() const {
-      return DidUpdateAudioGraph() ||
-             // Voice processing enable state updates
-             DidUpdateVoiceProcessingEnabled();
-    }
+    bool IsEngineRestartRequired() const { return DidUpdateAudioGraph(); }
 
     bool IsEngineRecreateRequired() const {
       // Device id specified
@@ -448,7 +454,11 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
       bool special_case = (prev.IsOutputEnabled() && next.IsOutputEnabled()) &&
                           (prev.IsInputEnabled() && !next.IsInputEnabled());
 
-      return device || default_device || special_case;
+      // Toggling voice processing requires a full engine recreate to ensure
+      // a clean audio hardware state.
+      bool voice_processing = DidUpdateVoiceProcessingEnabled();
+
+      return device || default_device || special_case || voice_processing;
     }
 
     bool DidEnableManualRenderingMode() const {
