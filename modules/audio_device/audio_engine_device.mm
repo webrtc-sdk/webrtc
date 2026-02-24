@@ -1759,6 +1759,86 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   RTC_DCHECK_RUN_ON(thread_);
   RTC_DCHECK(engine_manual_input_ == nullptr);
 
+  // --- Diagnostic: state transition summary ---
+  auto mute_mode_str = [](MuteMode m) -> const char* {
+    switch (m) {
+      case MuteMode::VoiceProcessing: return "VP";
+      case MuteMode::RestartEngine: return "Restart";
+      case MuteMode::InputMixer: return "Mixer";
+    }
+    return "?";
+  };
+
+  auto render_mode_str = [](RenderMode m) -> const char* {
+    switch (m) {
+      case RenderMode::Device: return "Device";
+      case RenderMode::Manual: return "Manual";
+    }
+    return "?";
+  };
+
+  auto log_engine_state = [&](const char* label, const EngineState& s) {
+    LOGI() << label << ": "
+           << "in=" << s.input_enabled << "/" << s.input_running
+           << " out=" << s.output_enabled << "/" << s.output_running
+           << " persistent=" << s.input_enabled_persistent_mode
+           << " muted=" << s.input_muted
+           << " vp=" << s.voice_processing_enabled
+           << " vpBypass=" << s.voice_processing_bypassed
+           << " agc=" << s.voice_processing_agc_enabled
+           << " mute_mode=" << mute_mode_str(s.mute_mode)
+           << " render=" << render_mode_str(s.render_mode)
+           << " interrupted=" << s.is_interrupted
+           << " in_avail=" << s.input_available
+           << " out_avail=" << s.output_available
+           << " inDev=" << s.input_device_id
+           << " outDev=" << s.output_device_id
+           << " defInUpd=" << s.default_input_device_update_count
+           << " defOutUpd=" << s.default_output_device_update_count
+           << " | IsInEnabled=" << s.IsInputEnabled()
+           << " IsOutEnabled=" << s.IsOutputEnabled()
+           << " IsInRunning=" << s.IsInputRunning()
+           << " IsOutRunning=" << s.IsOutputRunning();
+  };
+
+  log_engine_state(" [State] prev", state.prev);
+  log_engine_state(" [State] next", state.next);
+
+  LOGI() << " [State] decisions: "
+         << "restart=" << state.IsEngineRestartRequired()
+         << " recreate=" << state.IsEngineRecreateRequired()
+         << " graphChanged=" << state.DidUpdateAudioGraph()
+         << " vpChanged=" << state.DidUpdateVoiceProcessingEnabled()
+         << " muteChanged=" << state.DidUpdateMuteMode()
+         << " interrupted=" << state.DidBeginInterruption()
+         << " uninterrupted=" << state.DidEndInterruption()
+         << " inDevChanged=" << state.DidUpdateInputDevice()
+         << " outDevChanged=" << state.DidUpdateOutputDevice()
+         << " defInDevChanged=" << state.DidUpdateDefaultInputDevice()
+         << " defOutDevChanged=" << state.DidUpdateDefaultOutputDevice();
+
+  // Log actual hardware state if engine exists
+  if (engine_device_ != nil) {
+    LOGI() << " [HW] engine: running=" << engine_device_.running
+           << " attachedNodes=" << engine_device_.attachedNodes.count;
+    if (state.prev.IsInputEnabled() || state.next.IsInputEnabled()) {
+      @try {
+        AVAudioInputNode* inode = engine_device_.inputNode;
+        LOGI() << " [HW] inputNode: vpEnabled=" << inode.voiceProcessingEnabled
+               << " vpMuted=" << inode.voiceProcessingInputMuted
+               << " vpBypassed=" << inode.voiceProcessingBypassed
+               << " vpAGC=" << inode.voiceProcessingAGCEnabled;
+      } @catch (NSException*) {
+        LOGI() << " [HW] inputNode: <unavailable>";
+      }
+    }
+    if (input_mixer_node_ != nil) {
+      LOGI() << " [HW] mixerNode: volume=" << input_mixer_node_.outputVolume;
+    }
+  } else {
+    LOGI() << " [HW] engine: nil";
+  }
+
   std::vector<std::function<void()>> rollback_actions;
 
   auto rollback = [&](int32_t result) {
@@ -2645,6 +2725,31 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
 
     LOGI() << "Releasing AVAudioEngine...";
     engine_device_ = nil;
+  }
+
+  // --- Diagnostic: final state after apply ---
+  if (engine_device_ != nil) {
+    LOGI() << " [Post] engine: running=" << engine_device_.running;
+    if (state.next.IsInputEnabled()) {
+      @try {
+        AVAudioInputNode* inode = engine_device_.inputNode;
+        LOGI() << " [Post] inputNode: vpEnabled=" << inode.voiceProcessingEnabled
+               << " vpMuted=" << inode.voiceProcessingInputMuted
+               << " vpBypassed=" << inode.voiceProcessingBypassed
+               << " vpAGC=" << inode.voiceProcessingAGCEnabled;
+      } @catch (NSException*) {
+        LOGI() << " [Post] inputNode: <unavailable>";
+      }
+    }
+    if (input_mixer_node_ != nil) {
+      LOGI() << " [Post] mixerNode: volume=" << input_mixer_node_.outputVolume;
+    }
+    if (audio_device_buffer_ != nullptr) {
+      LOGI() << " [Post] buffer: playing=" << audio_device_buffer_->IsPlaying()
+             << " recording=" << audio_device_buffer_->IsRecording();
+    }
+  } else {
+    LOGI() << " [Post] engine: nil";
   }
 
   return 0;
