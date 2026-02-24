@@ -2309,7 +2309,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     RTC_DCHECK(!engine_device_.running);
 
     // If disabling input, always unmute the voice-processing input mute.
-    if (inputNode().voiceProcessingEnabled && inputNode().voiceProcessingInputMuted) {
+    if (state.prev.voice_processing_enabled && inputNode().voiceProcessingInputMuted) {
       LOGI() << "Update mute (voice processing) unmuting vp for stop-recording";
       inputNode().voiceProcessingInputMuted = false;
     }
@@ -2369,7 +2369,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   // Step: Run-time mute toggling if vp mode.
   //
   if (state.next.mute_mode == MuteMode::VoiceProcessing && state.next.IsInputEnabled() &&
-      inputNode().voiceProcessingEnabled &&
+      state.next.voice_processing_enabled &&
       inputNode().voiceProcessingInputMuted != state.next.input_muted) {
     LOGI() << "Update mute (voice processing) runtime update: " << state.next.input_muted;
     inputNode().voiceProcessingInputMuted = state.next.input_muted;
@@ -2392,7 +2392,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   // Step: Configure other audio ducking
   //
 #if !TARGET_OS_TV
-  if (state.next.IsInputEnabled() && inputNode().voiceProcessingEnabled &&
+  if (state.next.IsInputEnabled() && state.next.voice_processing_enabled &&
       (!state.prev.IsInputEnabled() ||
        (state.prev.advanced_ducking != state.next.advanced_ducking ||
         state.prev.ducking_level != state.next.ducking_level))) {
@@ -2412,7 +2412,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   // --------------------------------------------------------------------------------------------
   // Step: Bypass voice processing
   //
-  if (state.next.IsInputEnabled() && inputNode().voiceProcessingEnabled &&
+  if (state.next.IsInputEnabled() && state.next.voice_processing_enabled &&
       inputNode().voiceProcessingBypassed != state.next.voice_processing_bypassed) {
     LOGI() << "setting voiceProcessingBypassed: " << state.next.voice_processing_bypassed;
     inputNode().voiceProcessingBypassed = state.next.voice_processing_bypassed;
@@ -2421,7 +2421,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   // --------------------------------------------------------------------------------------------
   // Step: Configure AGC
   //
-  if (state.next.IsInputEnabled() && inputNode().voiceProcessingEnabled &&
+  if (state.next.IsInputEnabled() && state.next.voice_processing_enabled &&
       inputNode().voiceProcessingAGCEnabled != state.next.voice_processing_agc_enabled) {
     LOGI() << "setting voiceProcessingAGCEnabled: " << state.next.voice_processing_agc_enabled;
     inputNode().voiceProcessingAGCEnabled = state.next.voice_processing_agc_enabled;
