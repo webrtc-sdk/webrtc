@@ -2366,24 +2366,27 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   }
 
   // --------------------------------------------------------------------------------------------
-  // Step: Run-time mute toggling if vp mode.
+  // Step: Run-time mute toggling (voice processing).
+  // VP mute should be on ONLY when VoiceProcessing mode is active AND input is muted.
   //
-  if (state.next.mute_mode == MuteMode::VoiceProcessing && state.next.IsInputEnabled() &&
-      state.next.voice_processing_enabled &&
-      inputNode().voiceProcessingInputMuted != state.next.input_muted) {
-    LOGI() << "Update mute (voice processing) runtime update: " << state.next.input_muted;
-    inputNode().voiceProcessingInputMuted = state.next.input_muted;
+  if (state.next.IsInputEnabled() && state.next.voice_processing_enabled) {
+    bool should_vp_mute =
+        (state.next.mute_mode == MuteMode::VoiceProcessing) && state.next.input_muted;
+    if (inputNode().voiceProcessingInputMuted != should_vp_mute) {
+      LOGI() << "Update mute (voice processing): " << should_vp_mute;
+      inputNode().voiceProcessingInputMuted = should_vp_mute;
+    }
   }
 
   // --------------------------------------------------------------------------------------------
-  // Step: Run-time mute toggling if mixer mute mode.
+  // Step: Run-time mute toggling (input mixer).
+  // Mixer volume should be 0 ONLY when InputMixer mode is active AND input is muted.
   //
-  if (state.next.mute_mode == MuteMode::InputMixer && state.next.IsInputEnabled() &&
-      input_mixer_node_ != nil) {
-    // Only update if the volume has changed.
-    float mixer_volume = state.next.input_muted ? 0.0f : 1.0f;
+  if (state.next.IsInputEnabled() && input_mixer_node_ != nil) {
+    float mixer_volume =
+        (state.next.mute_mode == MuteMode::InputMixer && state.next.input_muted) ? 0.0f : 1.0f;
     if (input_mixer_node_.outputVolume != mixer_volume) {
-      LOGI() << "Update mute (input mixer) runtime update: " << state.next.input_muted;
+      LOGI() << "Update mute (input mixer): " << (mixer_volume == 0.0f);
       input_mixer_node_.outputVolume = mixer_volume;
     }
   }
