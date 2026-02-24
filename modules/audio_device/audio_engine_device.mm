@@ -1853,7 +1853,6 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       }
     }
 
-#if TARGET_OS_OSX
     if (state.DidUpdateVoiceProcessingEnabled() && engine_device_ != nil) {
       AVAudioInputNode* input_node = engine_device_.inputNode;
       AVAudioOutputNode* output_node = engine_device_.outputNode;
@@ -1865,7 +1864,6 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
         AudioOutputUnitStop(output_node.audioUnit);
       }
     }
-#endif
 
     engine_device_ = nil;
   }
