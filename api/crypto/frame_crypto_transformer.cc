@@ -241,7 +241,8 @@ int DeriveHkdfSha256FromSecret(const std::vector<uint8_t>& secret,
                                unsigned int optional_length_bits,
                                std::vector<uint8_t>& derived_key) {
   size_t key_size_bytes = optional_length_bits / 8;
-  std::vector<uint8_t> info;
+  // Use 128 bytes of zeros to padded as info.
+  auto info = std::vector<uint8_t>(128, 0);
   derived_key.resize(key_size_bytes);
   if (::HKDF((uint8_t *)derived_key.data(), key_size_bytes, EVP_sha256(), secret.data(),
              secret.size(), salt.data(), salt.size(), info.data(), info.size()) != 1) {
