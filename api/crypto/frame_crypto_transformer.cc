@@ -249,6 +249,7 @@ int DeriveHkdfSha256FromSecret(const std::vector<uint8_t>& secret,
     RTC_LOG(LS_ERROR) << "Failed to derive HkdfSha256 key from secret.";
     return ErrorUnexpected;
   }
+
   RTC_LOG(LS_INFO) << "secret "
                    << to_uint8_list(secret.data(), secret.size()) << " len "
                    << secret.size() << " slat << "
@@ -362,6 +363,27 @@ int AesEncryptDecrypt(EncryptOrDecrypt mode,
   }
 }
 namespace webrtc {
+
+int ParticipantKeyHandler::DoKeyDerivation(const std::vector<uint8_t>& key,
+                      const std::vector<uint8_t>& salt,
+                      unsigned int optional_length_bits,
+                      std::vector<uint8_t>& derived_key) {
+  RTC_DCHECK_GT(optional_length_bits, 8);
+  RTC_DCHECK_EQ(optional_length_bits % 8, 0);
+  switch (key_provider_->options().key_derivation_algorithm)
+  {
+  case KeyDerivationAlgorithm::kPBKDF2:
+    return DerivePBKDF2KeyFromRawKey(key,salt, optional_length_bits, derived_key);
+  case KeyDerivationAlgorithm::kHKDF:
+    return DeriveHkdfSha256FromSecret(key,salt, optional_length_bits, derived_key);
+  default:
+    break;
+  }
+
+  RTC_LOG(LS_ERROR) << "Invalid key derivation algorithm !";
+
+  return OperationError;
+}
 
 FrameCryptorTransformer::FrameCryptorTransformer(
     rtc::Thread* signaling_thread,
