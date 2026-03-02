@@ -17,8 +17,10 @@
 #include "api/crypto/frame_crypto_transformer.h"
 
 #include <openssl/aes.h>
+#include <openssl/digest.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
+#include <openssl/hkdf.h>
 #include <openssl/pem.h>
 #include <openssl/rand.h>
 
@@ -234,16 +236,39 @@ uint8_t get_unencrypted_bytes(webrtc::TransformableFrameInterface* frame,
   return unencrypted_bytes;
 }
 
+int DeriveHkdfSha256FromSecret(const std::vector<uint8_t>& secret,
+                               const std::vector<uint8_t>& salt,
+                               unsigned int optional_length_bits,
+                               std::vector<uint8_t>& derived_key) {
+  size_t key_size_bytes = optional_length_bits / 8;
+  std::vector<uint8_t> info;
+  derived_key.resize(key_size_bytes);
+  if (::HKDF((uint8_t *)derived_key.data(), key_size_bytes, EVP_sha256(), secret.data(),
+             secret.size(), salt.data(), salt.size(), info.data(), info.size()) != 1) {
+    RTC_LOG(LS_ERROR) << "Failed to derive HkdfSha256 key from secret.";
+    return ErrorUnexpected;
+  }
+  RTC_LOG(LS_INFO) << "secret "
+                   << to_uint8_list(secret.data(), secret.size()) << " len "
+                   << secret.size() << " slat << "
+                   << to_uint8_list(salt.data(), salt.size()) << " len "
+                   << salt.size() << "\n derived_key "
+                   << to_uint8_list(derived_key.data(), derived_key.size())
+                   << " len " << derived_key.size();
+
+  return Success;
+}
+
 int DerivePBKDF2KeyFromRawKey(const std::vector<uint8_t> raw_key,
                               const std::vector<uint8_t>& salt,
                               unsigned int optional_length_bits,
-                              std::vector<uint8_t>* derived_key) {
+                              std::vector<uint8_t>& derived_key) {
   size_t key_size_bytes = optional_length_bits / 8;
-  derived_key->resize(key_size_bytes);
+  derived_key.resize(key_size_bytes);
 
   if (PKCS5_PBKDF2_HMAC((const char*)raw_key.data(), raw_key.size(),
                         salt.data(), salt.size(), 100000, EVP_sha256(),
-                        key_size_bytes, derived_key->data()) != 1) {
+                        key_size_bytes, derived_key.data()) != 1) {
     RTC_LOG(LS_ERROR) << "Failed to derive AES key from password.";
     return ErrorUnexpected;
   }
@@ -253,8 +278,8 @@ int DerivePBKDF2KeyFromRawKey(const std::vector<uint8_t> raw_key,
                    << raw_key.size() << " slat << "
                    << to_uint8_list(salt.data(), salt.size()) << " len "
                    << salt.size() << "\n derived_key "
-                   << to_uint8_list(derived_key->data(), derived_key->size())
-                   << " len " << derived_key->size();
+                   << to_uint8_list(derived_key.data(), derived_key.size())
+                   << " len " << derived_key.size();
 
   return Success;
 }

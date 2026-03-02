@@ -29,6 +29,11 @@
 #include "rtc_base/system/rtc_export.h"
 #include "rtc_base/thread.h"
 
+int DeriveHkdfSha256FromSecret(const std::vector<uint8_t>& secret,
+                               const std::vector<uint8_t>& salt,
+                               unsigned int optional_length_bits,
+                               std::vector<uint8_t>* derived_key);
+
 int DerivePBKDF2KeyFromRawKey(const std::vector<uint8_t> raw_key,
                               const std::vector<uint8_t>& salt,
                               unsigned int optional_length_bits,
@@ -139,7 +144,7 @@ class ParticipantKeyHandler : public webrtc::RefCountInterface {
     std::vector<uint8_t> new_material;
     if (DerivePBKDF2KeyFromRawKey(current_material,
                                   key_provider_->options().ratchet_salt, 256,
-                                  &new_material) != 0) {
+                                  new_material) != 0) {
       return std::vector<uint8_t>();
     }
     SetKeyFromMaterial(new_material,
@@ -163,7 +168,7 @@ class ParticipantKeyHandler : public webrtc::RefCountInterface {
     std::vector<uint8_t> new_material;
     if (DerivePBKDF2KeyFromRawKey(current_material,
                                   key_provider_->options().ratchet_salt, 256,
-                                  &new_material) != 0) {
+                                  new_material) != 0) {
       return std::vector<uint8_t>();
     }
     return new_material;
@@ -174,7 +179,7 @@ class ParticipantKeyHandler : public webrtc::RefCountInterface {
                                            unsigned int optional_length_bits) {
     std::vector<uint8_t> derived_key;
     if (DerivePBKDF2KeyFromRawKey(password, ratchet_salt, optional_length_bits,
-                                  &derived_key) == 0) {
+                                  derived_key) == 0) {
       return webrtc::make_ref_counted<KeySet>(password, derived_key);
     }
     return nullptr;
