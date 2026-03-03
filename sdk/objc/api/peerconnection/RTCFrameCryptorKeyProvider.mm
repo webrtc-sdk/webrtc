@@ -64,6 +64,24 @@
                    failureTolerance:(int)failureTolerance
                         keyRingSize:(int)keyRingSize
     discardFrameWhenCryptorNotReady:(BOOL)discardFrameWhenCryptorNotReady {
+  return [self initWithRatchetSalt:salt
+                  ratchetWindowSize:windowSize
+                      sharedKeyMode:sharedKey
+                uncryptedMagicBytes:uncryptedMagicBytes
+                   failureTolerance:-1
+                   keyRingSize:keyRingSize
+                   discardFrameWhenCryptorNotReady:discardFrameWhenCryptorNotReady
+                   keyDerivationAlgorithm:RTC_OBJC_TYPE(RTCKeyDerivationAlgorithm)::RTCKeyDerivationAlgorithmPBKDF2];
+}
+
+- (instancetype)initWithRatchetSalt:(NSData *)salt
+                  ratchetWindowSize:(int)windowSize
+                      sharedKeyMode:(BOOL)sharedKey
+                uncryptedMagicBytes:(nullable NSData *)uncryptedMagicBytes
+                   failureTolerance:(int)failureTolerance
+                        keyRingSize:(int)keyRingSize
+    discardFrameWhenCryptorNotReady:(BOOL)discardFrameWhenCryptorNotReady
+             keyDerivationAlgorithm:(RTC_OBJC_TYPE(RTCKeyDerivationAlgorithm))keyDerivationAlgorithm {
   self = [super init];
   if (self) {
     webrtc::KeyProviderOptions options;
@@ -78,6 +96,7 @@
       options.uncrypted_magic_bytes = std::vector<uint8_t>((const uint8_t *)uncryptedMagicBytes.bytes,
                                                           ((const uint8_t *)uncryptedMagicBytes.bytes) + uncryptedMagicBytes.length);
     }
+    options.key_derivation_algorithm = (webrtc::KeyDerivationAlgorithm)keyDerivationAlgorithm;
     _nativeKeyProvider = webrtc::make_ref_counted<webrtc::DefaultKeyProviderImpl>(options);
   }
   return self;
