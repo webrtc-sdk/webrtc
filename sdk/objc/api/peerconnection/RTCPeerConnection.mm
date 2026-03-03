@@ -604,7 +604,9 @@ void PeerConnectionDelegateAdapter::OnRemoveTrack(
 }
 
 - (void)close {
-  _peerConnection->Close();
+  _peerConnection->signaling_thread()->BlockingCall([self] {
+    _peerConnection->Close();
+  });
 }
 
 - (void)addIceCandidate:(RTC_OBJC_TYPE(RTCIceCandidate) *)candidate {
