@@ -174,8 +174,10 @@ webrtc::KeyDerivationAlgorithm KeyDerivationAlgorithmFromIndex(int index) {
   switch (index) {
     case 0:
       return webrtc::KeyDerivationAlgorithm::kPBKDF2;
-    default:
+    case 1:
       return webrtc::KeyDerivationAlgorithm::kHKDF;
+    default:
+      return webrtc::KeyDerivationAlgorithm::kPBKDF2;
   }
 }
 
