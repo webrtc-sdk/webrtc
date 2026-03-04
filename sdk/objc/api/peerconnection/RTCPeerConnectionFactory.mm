@@ -72,9 +72,14 @@
 #import "sdk/objc/native/api/audio_device_module.h"
 #endif
 
+static NSString *gFieldTrials = nil;
+
 static webrtc::Environment CreateDefaultEnvironment() {
-  return webrtc::CreateEnvironment(
-      std::make_unique<webrtc::FieldTrials>("WebRTC-IceHandshakeDtls/Enabled/"));
+  if (gFieldTrials != nil && gFieldTrials.length > 0) {
+    return webrtc::CreateEnvironment(
+        std::make_unique<webrtc::FieldTrials>(gFieldTrials.stdString));
+  }
+  return webrtc::CreateEnvironment();
 }
 
 @implementation RTC_OBJC_TYPE (RTCPeerConnectionFactory) {
@@ -526,6 +531,10 @@ static webrtc::Environment CreateDefaultEnvironment() {
 - (void)stopAecDump {
   _nativeFactory->StopAecDump();
   _hasStartedAecDump = NO;
+}
+
++ (void)configureFieldTrials:(nullable NSString *)fieldTrials {
+  gFieldTrials = [fieldTrials copy];
 }
 
 - (webrtc::Thread *)signalingThread {
