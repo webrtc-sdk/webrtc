@@ -71,7 +71,7 @@
                    failureTolerance:-1
                    keyRingSize:keyRingSize
                    discardFrameWhenCryptorNotReady:discardFrameWhenCryptorNotReady
-                   keyDerivationAlgorithm:RTC_OBJC_TYPE(RTCKeyDerivationAlgorithm)::RTCKeyDerivationAlgorithmPBKDF2];
+                   keyDerivationAlgorithm:RTC_OBJC_TYPE(RTCKeyDerivationAlgorithm)::RTC_OBJC_TYPE(RTCKeyDerivationAlgorithmPBKDF2)];
 }
 
 - (instancetype)initWithRatchetSalt:(NSData *)salt
