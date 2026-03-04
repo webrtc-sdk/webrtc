@@ -40,5 +40,5 @@ public class FrameCryptorFactory {
       long rtpReceiver, String participantId, int algorithm, long nativeFrameCryptorKeyProvider);
 
   private static native FrameCryptorKeyProvider nativeCreateFrameCryptorKeyProvider(
-      boolean sharedKey, byte[] ratchetSalt, int ratchetWindowSize, byte[] uncryptedMagicBytes, int failureTolerance, int keyRingSize, boolean discardFrameWhenCryptorNotReady);
+      boolean sharedKey, byte[] ratchetSalt, int ratchetWindowSize, byte[] uncryptedMagicBytes, int failureTolerance, int keyRingSize, boolean discardFrameWhenCryptorNotReady, int keyDerivationAlgorithm);
 }
