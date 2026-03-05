@@ -2513,6 +2513,26 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   if (state.next.IsAnyRunning()) {
     if (!state.prev.IsAnyRunning() || state.DidEndInterruption() ||
         state.IsEngineRestartRequired() || state.IsEngineRecreateRequired()) {
+#if defined(WEBRTC_IOS)
+      // Set preferred I/O buffer duration to match WebRTC's expected buffer size.
+      // Without this, iOS may negotiate a buffer larger than AVAudioEngine's
+      // internal MaximumFramesPerSlice, causing kAudioUnitErr_TooManyFramesToProcess (-10874).
+      {
+        RTC_OBJC_TYPE(RTCAudioSession)* session =
+            [RTC_OBJC_TYPE(RTCAudioSession) sharedInstance];
+        RTC_OBJC_TYPE(RTCAudioSessionConfiguration)* webRTCConfig =
+            [RTC_OBJC_TYPE(RTCAudioSessionConfiguration) webRTCConfiguration];
+        [session lockForConfiguration];
+        NSError* bufferError = nil;
+        if (![session setPreferredIOBufferDuration:webRTCConfig.ioBufferDuration
+                                             error:&bufferError]) {
+          LOGW() << "Failed to set preferred IO buffer duration: "
+                 << (bufferError != nil ? bufferError.localizedDescription.UTF8String : "unknown");
+        }
+        [session unlockForConfiguration];
+      }
+#endif
+
       if (observer_ != nullptr) {
         int32_t result = observer_->OnEngineWillStart(engine_device_, state.next.IsOutputEnabled(),
                                                       state.next.IsInputEnabled());
