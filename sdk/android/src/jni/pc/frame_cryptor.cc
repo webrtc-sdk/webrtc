@@ -170,6 +170,17 @@ JNI_FrameCryptorFactory_CreateFrameCryptorForRtpSender(
   return NativeToJavaFrameCryptor(env, frame_crypto_transformer);
 }
 
+webrtc::KeyDerivationAlgorithm KeyDerivationAlgorithmFromIndex(int index) {
+  switch (index) {
+    case 0:
+      return webrtc::KeyDerivationAlgorithm::kPBKDF2;
+    case 1:
+      return webrtc::KeyDerivationAlgorithm::kHKDF;
+    default:
+      return webrtc::KeyDerivationAlgorithm::kPBKDF2;
+  }
+}
+
 static ScopedJavaLocalRef<jobject>
 JNI_FrameCryptorFactory_CreateFrameCryptorKeyProvider(
     JNIEnv* env,
@@ -179,7 +190,8 @@ JNI_FrameCryptorFactory_CreateFrameCryptorKeyProvider(
     const JavaParamRef<jbyteArray>& j_uncryptedMagicBytes,
     jint j_failureTolerance,
     jint j_keyRingSize,
-    jboolean j_discardFrameWhenCryptorNotReady) {
+    jboolean j_discardFrameWhenCryptorNotReady,
+    jint j_keyDerivationAlgorithmIndex) {
   auto ratchetSalt = JavaToNativeByteArray(env, j_ratchetSalt);
   KeyProviderOptions options;
   options.ratchet_salt =
@@ -192,6 +204,7 @@ JNI_FrameCryptorFactory_CreateFrameCryptorKeyProvider(
   options.failure_tolerance = j_failureTolerance;
   options.key_ring_size = j_keyRingSize;
   options.discard_frame_when_cryptor_not_ready = j_discardFrameWhenCryptorNotReady;
+  options.key_derivation_algorithm = KeyDerivationAlgorithmFromIndex(j_keyDerivationAlgorithmIndex);
   return NativeToJavaFrameCryptorKeyProvider(
       env, rtc::make_ref_counted<webrtc::DefaultKeyProviderImpl>(options));
 }
