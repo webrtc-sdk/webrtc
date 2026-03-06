@@ -29,17 +29,17 @@
 #include "rtc_base/system/rtc_export.h"
 #include "rtc_base/thread.h"
 
-int DerivePBKDF2KeyFromRawKey(const std::vector<uint8_t> raw_key,
-                              const std::vector<uint8_t>& salt,
-                              unsigned int optional_length_bits,
-                              std::vector<uint8_t>* derived_key);
-
 namespace webrtc {
 
 const size_t DEFAULT_KEYRING_SIZE = 16;
 const size_t MAX_KEYRING_SIZE = 255;
 
 class ParticipantKeyHandler;
+
+enum KeyDerivationAlgorithm {
+  kPBKDF2 = 0,
+  kHKDF,
+};
 
 struct KeyProviderOptions {
   bool shared_key;
@@ -50,19 +50,22 @@ struct KeyProviderOptions {
   // key ring size should be between 1 and 255
   int key_ring_size;
   bool discard_frame_when_cryptor_not_ready;
+  KeyDerivationAlgorithm key_derivation_algorithm;
   KeyProviderOptions()
       : shared_key(false),
         ratchet_window_size(0),
         failure_tolerance(-1),
         key_ring_size(DEFAULT_KEYRING_SIZE),
-        discard_frame_when_cryptor_not_ready(false) {}
+        discard_frame_when_cryptor_not_ready(false),
+        key_derivation_algorithm(kPBKDF2) {}
   KeyProviderOptions(KeyProviderOptions& copy)
       : shared_key(copy.shared_key),
         ratchet_salt(copy.ratchet_salt),
         uncrypted_magic_bytes(copy.uncrypted_magic_bytes),
         ratchet_window_size(copy.ratchet_window_size),
         failure_tolerance(copy.failure_tolerance),
-        key_ring_size(copy.key_ring_size) {}
+        key_ring_size(copy.key_ring_size),
+        key_derivation_algorithm(copy.key_derivation_algorithm) {}
 };
 
 class KeyProvider : public webrtc::RefCountInterface {
@@ -137,9 +140,9 @@ class ParticipantKeyHandler : public webrtc::RefCountInterface {
     }
     auto current_material = key_set->material;
     std::vector<uint8_t> new_material;
-    if (DerivePBKDF2KeyFromRawKey(current_material,
+    if (DoKeyDerivation(current_material,
                                   key_provider_->options().ratchet_salt, 256,
-                                  &new_material) != 0) {
+                                  new_material) != 0) {
       return std::vector<uint8_t>();
     }
     SetKeyFromMaterial(new_material,
@@ -161,9 +164,9 @@ class ParticipantKeyHandler : public webrtc::RefCountInterface {
   std::vector<uint8_t> RatchetKeyMaterial(
       std::vector<uint8_t> current_material) {
     std::vector<uint8_t> new_material;
-    if (DerivePBKDF2KeyFromRawKey(current_material,
+    if (DoKeyDerivation(current_material,
                                   key_provider_->options().ratchet_salt, 256,
-                                  &new_material) != 0) {
+                                  new_material) != 0) {
       return std::vector<uint8_t>();
     }
     return new_material;
@@ -173,8 +176,8 @@ class ParticipantKeyHandler : public webrtc::RefCountInterface {
                                            std::vector<uint8_t> ratchet_salt,
                                            unsigned int optional_length_bits) {
     std::vector<uint8_t> derived_key;
-    if (DerivePBKDF2KeyFromRawKey(password, ratchet_salt, optional_length_bits,
-                                  &derived_key) == 0) {
+    if (DoKeyDerivation(password, ratchet_salt, optional_length_bits,
+                                  derived_key) == 0) {
       return webrtc::make_ref_counted<KeySet>(password, derived_key);
     }
     return nullptr;
@@ -215,6 +218,11 @@ class ParticipantKeyHandler : public webrtc::RefCountInterface {
     return false;
   }
 
+private:
+  int DoKeyDerivation(const std::vector<uint8_t>& secret,
+                      const std::vector<uint8_t>& salt,
+                      unsigned int optional_length_bits,
+                      std::vector<uint8_t>& derived_key);
  private:
   bool has_valid_key_ = false;
   int decryption_failure_count_ = 0;

@@ -20,6 +20,11 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+typedef NS_ENUM(NSUInteger, RTC_OBJC_TYPE(RTCKeyDerivationAlgorithm)) {
+  RTC_OBJC_TYPE(RTCKeyDerivationAlgorithmPBKDF2) = 0,
+  RTC_OBJC_TYPE(RTCKeyDerivationAlgorithmHKDF),
+};
+
 RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCFrameCryptorKeyProvider) : NSObject
 
@@ -56,6 +61,15 @@ RTC_OBJC_EXPORT
                    failureTolerance:(int)failureTolerance
                         keyRingSize:(int)keyRingSize
     discardFrameWhenCryptorNotReady:(BOOL)discardFrameWhenCryptorNotReady;    
+
+- (instancetype)initWithRatchetSalt:(NSData *)salt
+                  ratchetWindowSize:(int)windowSize
+                      sharedKeyMode:(BOOL)sharedKey
+                uncryptedMagicBytes:(nullable NSData *)uncryptedMagicBytes
+                   failureTolerance:(int)failureTolerance
+                        keyRingSize:(int)keyRingSize
+    discardFrameWhenCryptorNotReady:(BOOL)discardFrameWhenCryptorNotReady
+             keyDerivationAlgorithm:(RTC_OBJC_TYPE(RTCKeyDerivationAlgorithm))keyDerivationAlgorithm;
 
 @end
 

@@ -301,6 +301,7 @@ if (is_android) {
       "api/org/webrtc/FrameCryptor.java",
       "api/org/webrtc/FrameCryptorAlgorithm.java",
       "api/org/webrtc/FrameCryptorFactory.java",
+      "api/org/webrtc/FrameCryptorKeyDerivationAlgorithm.java",
       "api/org/webrtc/FrameCryptorKeyProvider.java",
       "api/org/webrtc/FrameDecryptor.java",
       "api/org/webrtc/FrameEncryptor.java",
