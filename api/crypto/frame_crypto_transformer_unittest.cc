@@ -210,4 +210,35 @@ TEST(DataPacketCryptor, IVGeneration) {
   EXPECT_NE(encrypted_data.value()->iv, encrypted_data2.value()->iv);
 }
 
+TEST(KeyProvider, KeyDerivationAlgorithm) {
+    auto key_options = KeyProviderOptions();
+  key_options.ratchet_salt =
+      std::vector<uint8_t>({0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07});
+  key_options.key_derivation_algorithm = KeyDerivationAlgorithm::kHKDF;
+  auto key_provider =
+      webrtc::make_ref_counted<DefaultKeyProviderImpl>(key_options);
+
+  std::string participant_id = "participant_1";
+  key_provider->SetKey(participant_id, 0,
+                       std::vector<uint8_t>{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+                                            11, 12, 13, 14, 15});
+  auto data_packet_cryptor = webrtc::make_ref_counted<DataPacketCryptor>(
+      FrameCryptorTransformer::Algorithm::kAesGcm, key_provider);
+  EXPECT_NE(data_packet_cryptor, nullptr);
+  SleepMs(200);
+  auto encrypted_data = data_packet_cryptor->Encrypt(
+      participant_id, 0,
+      std::vector<uint8_t>(
+          {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}));
+  EXPECT_TRUE(encrypted_data.ok());
+  SleepMs(200);  // ensure different timestamp for IV generation
+  auto encrypted_data2 = data_packet_cryptor->Encrypt(
+      participant_id, 0,
+      std::vector<uint8_t>(
+          {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}));
+  EXPECT_TRUE(encrypted_data2.ok());
+
+  EXPECT_NE(encrypted_data.value()->iv, encrypted_data2.value()->iv);
+}
+
 }  // namespace webrtc
