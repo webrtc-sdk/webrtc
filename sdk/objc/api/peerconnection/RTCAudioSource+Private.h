@@ -34,6 +34,6 @@
       initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
     nativeMediaSource:
         (webrtc::scoped_refptr<webrtc::MediaSourceInterface>)nativeMediaSource
-                 type:(RTCMediaSourceType)type NS_UNAVAILABLE;
+                 type:(RTC_OBJC_TYPE(RTCMediaSourceType))type NS_UNAVAILABLE;
 
 @end

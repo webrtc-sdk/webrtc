@@ -29,4 +29,6 @@ RTC_OBJC_EXPORT
 
 + (bool)isSupported;
 
++ (nonnull NSArray<NSString *> *)scalabilityModes;
+
 @end

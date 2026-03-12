@@ -43,8 +43,8 @@ extern "C" {
   webrtc::PeerConnectionFactoryDependencies default_deps;
   RTC_UNUSED([[[[factoryMock expect] andReturn:factoryMock]
       ignoringNonObjectArgs] initWithMediaAndDependencies:default_deps]);
-  RTCPeerConnectionFactoryBuilder* builder =
-      [[RTCPeerConnectionFactoryBuilder alloc] init];
+  RTC_OBJC_TYPE(RTCPeerConnectionFactoryBuilder)* builder =
+      [[RTC_OBJC_TYPE(RTCPeerConnectionFactoryBuilder) alloc] init];
   RTC_OBJC_TYPE(RTCPeerConnectionFactory)* peerConnectionFactory =
       [builder createPeerConnectionFactory];
   EXPECT_TRUE(peerConnectionFactory != nil);
@@ -58,8 +58,8 @@ extern "C" {
   webrtc::PeerConnectionFactoryDependencies default_deps;
   RTC_UNUSED([[[[factoryMock expect] andReturn:factoryMock]
       ignoringNonObjectArgs] initWithMediaAndDependencies:default_deps]);
-  RTCPeerConnectionFactoryBuilder* builder =
-      [RTCPeerConnectionFactoryBuilder builder];
+  RTC_OBJC_TYPE(RTCPeerConnectionFactoryBuilder)* builder =
+      [RTC_OBJC_TYPE(RTCPeerConnectionFactoryBuilder) builder];
   __block int calledAdmBuilder = 0;
   [builder setAudioDeviceModuleBuilder:^(const webrtc::Environment& env) {
     calledAdmBuilder++;
@@ -79,8 +79,8 @@ extern "C" {
   webrtc::PeerConnectionFactoryDependencies default_deps;
   RTC_UNUSED([[[[factoryMock expect] andReturn:factoryMock]
       ignoringNonObjectArgs] initWithMediaAndDependencies:default_deps]);
-  RTCPeerConnectionFactoryBuilder* builder =
-      [RTCPeerConnectionFactoryBuilder defaultBuilder];
+  RTC_OBJC_TYPE(RTCPeerConnectionFactoryBuilder)* builder =
+      [RTC_OBJC_TYPE(RTCPeerConnectionFactoryBuilder) defaultBuilder];
   RTC_OBJC_TYPE(RTCPeerConnectionFactory)* peerConnectionFactory =
       [builder createPeerConnectionFactory];
   EXPECT_TRUE(peerConnectionFactory != nil);

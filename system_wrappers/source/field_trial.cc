@@ -7,19 +7,24 @@
 // be found in the AUTHORS file in the root of the source tree.
 //
 
-#include "system_wrappers/include/field_trial.h"
+#include <stddef.h>
 
-#include <cstddef>
 #include <map>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "absl/algorithm/container.h"
 #include "absl/strings/string_view.h"
 #include "api/environment/deprecated_global_field_trials.h"
+#include "absl/synchronization/mutex.h"
+#include "experiments/registered_field_trials.h"
 #include "rtc_base/checks.h"
+#include "rtc_base/containers/flat_set.h"
 #include "rtc_base/logging.h"
 #include "rtc_base/string_encode.h"
+#include "system_wrappers/include/field_trial.h"
 
 // Simple field trial implementation, which allows client to
 // specify desired flags in InitFieldTrialsFromString.
@@ -28,6 +33,17 @@ namespace field_trial {
 namespace {
 
 constexpr char kPersistentStringSeparator = '/';
+
+struct TrialsState {
+  absl::Mutex mutex;
+  std::vector<std::unique_ptr<std::string>> storage ABSL_GUARDED_BY(mutex);
+  const char* trials_init_string ABSL_GUARDED_BY(mutex) = NULL;
+};
+
+TrialsState& GetTrialsState() {
+  static auto* state = new TrialsState();
+  return *state;
+}
 
 // Validates the given field trial string.
 //  E.g.:
@@ -38,8 +54,7 @@ constexpr char kPersistentStringSeparator = '/';
 //  E.g. invalid config:
 //    "WebRTC-experiment1/Enabled"  (note missing / separator at the end).
 bool FieldTrialsStringIsValidInternal(const absl::string_view trials) {
-  if (trials.empty())
-    return true;
+  if (trials.empty()) return true;
 
   size_t next_item = 0;
   std::map<absl::string_view, absl::string_view> field_trials;
@@ -105,14 +120,70 @@ std::string MergeFieldTrialsStrings(absl::string_view first,
   return merged;
 }
 
+#ifndef WEBRTC_EXCLUDE_FIELD_TRIAL_DEFAULT
+std::string FindFullName(absl::string_view name) {
+#if WEBRTC_STRICT_FIELD_TRIALS == 1
+  RTC_DCHECK(absl::c_linear_search(kRegisteredFieldTrials, name) ||
+             TestKeys().contains(name))
+      << name << " is not registered, see g3doc/field-trials.md.";
+#elif WEBRTC_STRICT_FIELD_TRIALS == 2
+  RTC_LOG_IF(LS_WARNING,
+             !(absl::c_linear_search(kRegisteredFieldTrials, name) ||
+               TestKeys().contains(name)))
+      << name << " is not registered, see g3doc/field-trials.md.";
+#endif
+
+  const char* trials_string_ptr = NULL;
+  {
+    TrialsState& state = GetTrialsState();
+    absl::MutexLock lock(&state.mutex);
+    trials_string_ptr = state.trials_init_string;
+  }
+  if (trials_string_ptr == NULL) return std::string();
+
+  absl::string_view trials_string(trials_string_ptr);
+  if (trials_string.empty()) return std::string();
+
+  size_t next_item = 0;
+  while (next_item < trials_string.length()) {
+    // Find next name/value pair in field trial configuration string.
+    size_t field_name_end =
+        trials_string.find(kPersistentStringSeparator, next_item);
+    if (field_name_end == trials_string.npos || field_name_end == next_item)
+      break;
+    size_t field_value_end =
+        trials_string.find(kPersistentStringSeparator, field_name_end + 1);
+    if (field_value_end == trials_string.npos ||
+        field_value_end == field_name_end + 1)
+      break;
+    absl::string_view field_name =
+        trials_string.substr(next_item, field_name_end - next_item);
+    absl::string_view field_value = trials_string.substr(
+        field_name_end + 1, field_value_end - field_name_end - 1);
+    next_item = field_value_end + 1;
+
+    if (name == field_name) return std::string(field_value);
+  }
+  return std::string();
+}
+#endif  // WEBRTC_EXCLUDE_FIELD_TRIAL_DEFAULT
+
 // Optionally initialize field trial from a string.
 void InitFieldTrialsFromString(const char* trials_string) {
   RTC_LOG(LS_INFO) << "Setting field trial string:" << trials_string;
+  TrialsState& state = GetTrialsState();
+  absl::MutexLock lock(&state.mutex);
   if (trials_string) {
     RTC_DCHECK(FieldTrialsStringIsValidInternal(trials_string))
         << "Invalid field trials string:" << trials_string;
-  };
-  DeprecatedGlobalFieldTrials::Set(trials_string);
+
+    // Persistent storage to ensure pointers remain valid for concurrent
+    // readers. We never remove strings from here to avoid use-after-free races.
+    state.storage.push_back(std::make_unique<std::string>(trials_string));
+    state.trials_init_string = state.storage.back()->c_str();
+  } else {
+    state.trials_init_string = NULL;
+  }
 }
 
 }  // namespace field_trial

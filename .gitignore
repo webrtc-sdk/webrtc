@@ -74,3 +74,9 @@
 /.vscode
 !webrtc/*
 rust-project.json
+/tmp.patch
+/out-release
+/out-debug
+/node_modules
+/libwebrtc
+/args.txt

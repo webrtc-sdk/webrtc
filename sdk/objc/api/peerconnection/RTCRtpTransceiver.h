@@ -14,17 +14,19 @@
 #import "RTCRtpSender.h"
 #import "sdk/objc/base/RTCMacros.h"
 
+@class RTC_OBJC_TYPE(RTCRtpCodecCapability);
+
 NS_ASSUME_NONNULL_BEGIN
 
-extern NSString *const kRTCRtpTransceiverErrorDomain;
+extern NSString *const RTC_CONSTANT_TYPE(RTCRtpTransceiverErrorDomain);
 
 /** https://w3c.github.io/webrtc-pc/#dom-rtcrtptransceiverdirection */
-typedef NS_ENUM(NSInteger, RTCRtpTransceiverDirection) {
-  RTCRtpTransceiverDirectionSendRecv,
-  RTCRtpTransceiverDirectionSendOnly,
-  RTCRtpTransceiverDirectionRecvOnly,
-  RTCRtpTransceiverDirectionInactive,
-  RTCRtpTransceiverDirectionStopped
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCRtpTransceiverDirection)) {
+  RTC_OBJC_TYPE(RTCRtpTransceiverDirectionSendRecv),
+  RTC_OBJC_TYPE(RTCRtpTransceiverDirectionSendOnly),
+  RTC_OBJC_TYPE(RTCRtpTransceiverDirectionRecvOnly),
+  RTC_OBJC_TYPE(RTCRtpTransceiverDirectionInactive),
+  RTC_OBJC_TYPE(RTCRtpTransceiverDirectionStopped)
 };
 
 /** Structure for initializing an RTCRtpTransceiver in a call to
@@ -35,7 +37,7 @@ RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCRtpTransceiverInit) : NSObject
 
 /** Direction of the RTCRtpTransceiver. See RTCRtpTransceiver.direction. */
-@property(nonatomic) RTCRtpTransceiverDirection direction;
+@property(nonatomic) RTC_OBJC_TYPE(RTCRtpTransceiverDirection) direction;
 
 /** The added RTCRtpTransceiver will be added to these streams. */
 @property(nonatomic) NSArray<NSString *> *streamIds;
@@ -70,7 +72,7 @@ RTC_OBJC_EXPORT
     /** Media type of the transceiver. The sender and receiver will also have
      * this type.
      */
-    @property(nonatomic, readonly) RTCRtpMediaType mediaType;
+    @property(nonatomic, readonly) RTC_OBJC_TYPE(RTCRtpMediaType) mediaType;
 
 /** The mid attribute is the mid negotiated and present in the local and
  *  remote descriptions. Before negotiation is complete, the mid value may be
@@ -105,7 +107,9 @@ RTC_OBJC_EXPORT
  *  transceiver, which will be used in calls to createOffer and createAnswer.
  *  https://w3c.github.io/webrtc-pc/#dom-rtcrtptransceiver-direction
  */
-@property(nonatomic, readonly) RTCRtpTransceiverDirection direction;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCRtpTransceiverDirection) direction;
+
+@property(nonatomic, copy) NSArray<RTC_OBJC_TYPE(RTCRtpCodecCapability) *> *codecPreferences;
 
 /** It will contain all the RTP header extensions that are supported.
  *  The direction attribute for all extensions that are mandatory to use MUST be
@@ -127,7 +131,7 @@ RTC_OBJC_EXPORT
  *  present and this method returns NO.
  *  https://w3c.github.io/webrtc-pc/#dom-rtcrtptransceiver-currentdirection
  */
-- (BOOL)currentDirection:(RTCRtpTransceiverDirection *)currentDirectionOut;
+- (BOOL)currentDirection:(RTC_OBJC_TYPE(RTCRtpTransceiverDirection) *)currentDirectionOut;
 
 /** The stop method irreversibly stops the RTCRtpTransceiver. The sender of
  *  this transceiver will no longer send, the receiver will no longer receive.
@@ -162,8 +166,7 @@ RTC_OBJC_EXPORT
  *  descriptions as sendrecv, sendonly, recvonly, or inactive.
  *  https://w3c.github.io/webrtc-pc/#dom-rtcrtptransceiver-direction
  */
-- (void)setDirection:(RTCRtpTransceiverDirection)direction
-               error:(NSError **)error;
+- (void)setDirection:(RTC_OBJC_TYPE(RTCRtpTransceiverDirection))direction error:(NSError **)error;
 
 @end
 

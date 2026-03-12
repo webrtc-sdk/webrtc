@@ -607,6 +607,8 @@ class WebRtcVideoReceiveChannel : public MediaChannelUtil,
       scoped_refptr<FrameTransformerInterface> frame_transformer) override;
   std::vector<RtpSource> GetSources(uint32_t ssrc) const override;
 
+  void StartReceive(uint32_t ssrc) override;
+  void StopReceive(uint32_t ssrc) override;
  private:
   class WebRtcVideoReceiveStream;
   struct ChangedReceiverParameters {

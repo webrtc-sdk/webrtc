@@ -46,9 +46,12 @@ class AudioDeviceModuleImpl : public AudioDeviceModuleForTest {
 
   static absl_nullable scoped_refptr<AudioDeviceModuleImpl> Create(
       const Environment& env,
-      AudioLayer audio_layer);
+      AudioLayer audio_layer, 
+      bool bypass_voice_processing);
 
-  AudioDeviceModuleImpl(const Environment& env, AudioLayer audio_layer);
+  AudioDeviceModuleImpl(const Environment& env,
+                        AudioLayer audio_layer,
+                        bool bypass_voice_processing = false);
   // If `create_detached` is true, created ADM can be used on another thread
   // compared to the one on which it was created. It's useful for testing.
   AudioDeviceModuleImpl(const Environment& env,
@@ -160,6 +163,10 @@ class AudioDeviceModuleImpl : public AudioDeviceModuleForTest {
   int GetRecordAudioParameters(AudioParameters* params) const override;
 #endif  // WEBRTC_IOS
 
+  int32_t SetObserver(AudioDeviceObserver* observer) override;
+  int32_t GetPlayoutDevice() const override;
+  int32_t GetRecordingDevice() const override;
+
   AudioDeviceBuffer* GetAudioDeviceBuffer() { return &audio_device_buffer_; }
 
   int RestartPlayoutInternally() override { return -1; }
@@ -174,6 +181,9 @@ class AudioDeviceModuleImpl : public AudioDeviceModuleForTest {
   AudioLayer audio_layer_;
   PlatformType platform_type_ = kPlatformNotSupported;
   bool initialized_ = false;
+#if defined(WEBRTC_IOS)
+  bool bypass_voice_processing_;
+#endif
   AudioDeviceBuffer audio_device_buffer_;
   std::unique_ptr<AudioDeviceGeneric> audio_device_;
 };

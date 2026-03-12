@@ -22,7 +22,7 @@ class AudioSessionObserver {
   virtual void OnInterruptionBegin() = 0;
 
   // Called when audio session interruption ends.
-  virtual void OnInterruptionEnd() = 0;
+  virtual void OnInterruptionEnd(bool should_resume) = 0;
 
   // Called when audio route changes.
   virtual void OnValidRouteChange() = 0;

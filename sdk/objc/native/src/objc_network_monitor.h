@@ -59,7 +59,7 @@ class ObjCNetworkMonitor : public webrtc::NetworkMonitorInterface,
   std::map<std::string, webrtc::AdapterType, webrtc::AbslStringViewCmp>
       adapter_type_by_name_ RTC_GUARDED_BY(thread_);
   webrtc::scoped_refptr<PendingTaskSafetyFlag> safety_flag_;
-  RTCNetworkMonitor* network_monitor_ = nil;
+  RTC_OBJC_TYPE(RTCNetworkMonitor) * network_monitor_ = nil;
 };
 
 }  // namespace webrtc

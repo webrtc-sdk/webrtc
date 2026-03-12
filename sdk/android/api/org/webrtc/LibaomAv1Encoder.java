@@ -9,6 +9,7 @@
  */
 
 package org.webrtc;
+import java.util.List;
 
 public class LibaomAv1Encoder extends WrappedNativeVideoEncoder {
   @Override
@@ -22,4 +23,10 @@ public class LibaomAv1Encoder extends WrappedNativeVideoEncoder {
   public boolean isHardwareEncoder() {
     return false;
   }
+
+  static List<String> scalabilityModes() {
+    return nativeGetSupportedScalabilityModes();
+  }
+
+  static native List<String> nativeGetSupportedScalabilityModes();
 }

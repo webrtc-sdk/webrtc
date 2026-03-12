@@ -16,6 +16,7 @@
 #import "base/RTCVideoEncoder.h"
 #import "base/RTCVideoEncoderFactory.h"
 #import "components/video_codec/RTCCodecSpecificInfoH264+Private.h"
+#import "components/video_codec/RTCCodecSpecificInfoH265+Private.h"
 #import "sdk/objc/api/peerconnection/RTCEncodedImage+Private.h"
 #import "sdk/objc/api/peerconnection/RTCVideoCodecInfo+Private.h"
 #import "sdk/objc/api/peerconnection/RTCVideoEncoderSettings+Private.h"
@@ -67,6 +68,8 @@ class ObjCVideoEncoder : public VideoEncoder {
                                     class]]) {
           codecSpecificInfo = [(RTC_OBJC_TYPE(
               RTCCodecSpecificInfoH264) *)info nativeCodecSpecificInfo];
+        } else if ([info isKindOfClass:[RTC_OBJC_TYPE(RTCCodecSpecificInfoH265) class]]) {
+          codecSpecificInfo = [(RTC_OBJC_TYPE(RTCCodecSpecificInfoH265) *)info nativeCodecSpecificInfo];
         }
 
         EncodedImageCallback::Result res =
@@ -85,7 +88,7 @@ class ObjCVideoEncoder : public VideoEncoder {
                  const std::vector<VideoFrameType> *frame_types) override {
     NSMutableArray<NSNumber *> *rtcFrameTypes = [NSMutableArray array];
     for (size_t i = 0; i < frame_types->size(); ++i) {
-      [rtcFrameTypes addObject:@(RTCFrameType(frame_types->at(i)))];
+      [rtcFrameTypes addObject:@(RTC_OBJC_TYPE(RTCFrameType)(frame_types->at(i)))];
     }
 
     return [encoder_ encode:ToObjCVideoFrame(frame)

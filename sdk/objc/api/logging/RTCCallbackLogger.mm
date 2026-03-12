@@ -58,27 +58,24 @@ class CallbackWithSeverityLogSink final : public webrtc::LogSink {
   void OnLogMessage(absl::string_view message,
                     webrtc::LoggingSeverity severity) override {
     if (callback_handler_) {
-      RTCLoggingSeverity loggingSeverity =
-          NativeSeverityToObjcSeverity(severity);
-      callback_handler_([NSString stringForAbslStringView:message],
-                        loggingSeverity);
+      RTC_OBJC_TYPE(RTCLoggingSeverity) loggingSeverity = NativeSeverityToObjcSeverity(severity);
+      callback_handler_([NSString stringForAbslStringView:message], loggingSeverity);
     }
   }
 
  private:
-  static RTCLoggingSeverity NativeSeverityToObjcSeverity(
-      webrtc::LoggingSeverity severity) {
+  static RTC_OBJC_TYPE(RTCLoggingSeverity) NativeSeverityToObjcSeverity(webrtc::LoggingSeverity severity) {
     switch (severity) {
       case webrtc::LS_VERBOSE:
-        return RTCLoggingSeverityVerbose;
+        return RTC_OBJC_TYPE(RTCLoggingSeverityVerbose);
       case webrtc::LS_INFO:
-        return RTCLoggingSeverityInfo;
+        return RTC_OBJC_TYPE(RTCLoggingSeverityInfo);
       case webrtc::LS_WARNING:
-        return RTCLoggingSeverityWarning;
+        return RTC_OBJC_TYPE(RTCLoggingSeverityWarning);
       case webrtc::LS_ERROR:
-        return RTCLoggingSeverityError;
+        return RTC_OBJC_TYPE(RTCLoggingSeverityError);
       case webrtc::LS_NONE:
-        return RTCLoggingSeverityNone;
+        return RTC_OBJC_TYPE(RTCLoggingSeverityNone);
     }
   }
 
@@ -97,7 +94,7 @@ class CallbackWithSeverityLogSink final : public webrtc::LogSink {
 - (instancetype)init {
   self = [super init];
   if (self != nil) {
-    _severity = RTCLoggingSeverityInfo;
+    _severity = RTC_OBJC_TYPE(RTCLoggingSeverityInfo);
   }
   return self;
 }
@@ -143,15 +140,15 @@ class CallbackWithSeverityLogSink final : public webrtc::LogSink {
 
 - (webrtc::LoggingSeverity)rtcSeverity {
   switch (_severity) {
-    case RTCLoggingSeverityVerbose:
+    case RTC_OBJC_TYPE(RTCLoggingSeverityVerbose):
       return webrtc::LS_VERBOSE;
-    case RTCLoggingSeverityInfo:
+    case RTC_OBJC_TYPE(RTCLoggingSeverityInfo):
       return webrtc::LS_INFO;
-    case RTCLoggingSeverityWarning:
+    case RTC_OBJC_TYPE(RTCLoggingSeverityWarning):
       return webrtc::LS_WARNING;
-    case RTCLoggingSeverityError:
+    case RTC_OBJC_TYPE(RTCLoggingSeverityError):
       return webrtc::LS_ERROR;
-    case RTCLoggingSeverityNone:
+    case RTC_OBJC_TYPE(RTCLoggingSeverityNone):
       return webrtc::LS_NONE;
   }
 }

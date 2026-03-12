@@ -14,22 +14,19 @@
 
 #include <memory>
 
-NSString *const kRTCMediaConstraintsAudioNetworkAdaptorConfig =
+NSString *const RTC_CONSTANT_TYPE(RTCMediaConstraintsAudioNetworkAdaptorConfig) =
     @(webrtc::MediaConstraints::kAudioNetworkAdaptorConfig);
 
-NSString *const kRTCMediaConstraintsIceRestart =
-    @(webrtc::MediaConstraints::kIceRestart);
-NSString *const kRTCMediaConstraintsOfferToReceiveAudio =
+NSString *const RTC_CONSTANT_TYPE(RTCMediaConstraintsIceRestart) = @(webrtc::MediaConstraints::kIceRestart);
+NSString *const RTC_CONSTANT_TYPE(RTCMediaConstraintsOfferToReceiveAudio) =
     @(webrtc::MediaConstraints::kOfferToReceiveAudio);
-NSString *const kRTCMediaConstraintsOfferToReceiveVideo =
+NSString *const RTC_CONSTANT_TYPE(RTCMediaConstraintsOfferToReceiveVideo) =
     @(webrtc::MediaConstraints::kOfferToReceiveVideo);
-NSString *const kRTCMediaConstraintsVoiceActivityDetection =
+NSString *const RTC_CONSTANT_TYPE(RTCMediaConstraintsVoiceActivityDetection) =
     @(webrtc::MediaConstraints::kVoiceActivityDetection);
 
-NSString *const kRTCMediaConstraintsValueTrue =
-    @(webrtc::MediaConstraints::kValueTrue);
-NSString *const kRTCMediaConstraintsValueFalse =
-    @(webrtc::MediaConstraints::kValueFalse);
+NSString *const RTC_CONSTANT_TYPE(RTCMediaConstraintsValueTrue) = @(webrtc::MediaConstraints::kValueTrue);
+NSString *const RTC_CONSTANT_TYPE(RTCMediaConstraintsValueFalse) = @(webrtc::MediaConstraints::kValueFalse);
 
 @implementation RTC_OBJC_TYPE (RTCMediaConstraints) {
   NSDictionary<NSString *, NSString *> *_mandatory;
@@ -78,9 +75,8 @@ NSString *const kRTCMediaConstraintsValueFalse =
         [key isKindOfClass:[NSString class]], @"%@ is not an NSString.", key);
     NSString *value = [constraints objectForKey:key];
     NSAssert([value isKindOfClass:[NSString class]],
-             @"%@ is not an NSString.",
-             value);
-    if ([kRTCMediaConstraintsAudioNetworkAdaptorConfig isEqualToString:key]) {
+             @"%@ is not an NSString.", value);
+    if ([RTC_CONSTANT_TYPE(RTCMediaConstraintsAudioNetworkAdaptorConfig) isEqualToString:key]) {
       // This value is base64 encoded.
       NSData *charData = [[NSData alloc] initWithBase64EncodedString:value
                                                              options:0];

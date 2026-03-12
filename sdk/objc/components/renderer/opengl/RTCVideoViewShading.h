@@ -23,14 +23,14 @@ RTC_OBJC_EXPORT
 (RTCVideoViewShading)<NSObject>
 
     /** Callback for I420 frames. Each plane is given as a texture. */
-    - (void)applyShadingForFrameWithWidth : (int)width height
-    : (int)height rotation : (RTCVideoRotation)rotation yPlane
-    : (GLuint)yPlane uPlane : (GLuint)uPlane vPlane : (GLuint)vPlane;
+    - (void)applyShadingForFrameWithWidth : (int)width height : (int)height rotation
+    : (RTC_OBJC_TYPE(RTCVideoRotation))rotation yPlane : (GLuint)yPlane uPlane : (GLuint)uPlane vPlane
+    : (GLuint)vPlane;
 
 /** Callback for NV12 frames. Each plane is given as a texture. */
 - (void)applyShadingForFrameWithWidth:(int)width
                                height:(int)height
-                             rotation:(RTCVideoRotation)rotation
+                             rotation:(RTC_OBJC_TYPE(RTCVideoRotation))rotation
                                yPlane:(GLuint)yPlane
                               uvPlane:(GLuint)uvPlane;
 

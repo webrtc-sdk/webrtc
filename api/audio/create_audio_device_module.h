@@ -20,7 +20,8 @@ namespace webrtc {
 
 absl_nullable scoped_refptr<AudioDeviceModule> CreateAudioDeviceModule(
     const Environment& env,
-    AudioDeviceModule::AudioLayer audio_layer);
+    AudioDeviceModule::AudioLayer audio_layer,
+    bool bypass_voice_processing = false);
 
 }  // namespace webrtc
 

@@ -25,8 +25,15 @@ namespace webrtc {
 // Warning: Setting `bypass_voice_processing` will have unpredictable
 // consequences for the audio path in the device. It is not advisable to use in
 // most scenarios.
-scoped_refptr<AudioDeviceModule> CreateAudioDeviceModule(
+webrtc::scoped_refptr<AudioDeviceModule> CreateAudioDeviceModule(
     const Environment& env,
+    bool bypass_voice_processing = false);
+
+#if defined(WEBRTC_IOS)
+// If `muted_speech_event_handler` is exist, audio unit will catch speech
+// activity while muted.
+webrtc::scoped_refptr<AudioDeviceModule> CreateMutedDetectAudioDeviceModule(
+    AudioDeviceModule::MutedSpeechEventHandler muted_speech_event_handler,
     bool bypass_voice_processing = false);
 
 // If `muted_speech_event_handler` is exist, audio unit will catch speech
@@ -38,6 +45,7 @@ scoped_refptr<AudioDeviceModule> CreateMutedDetectAudioDeviceModule(
     AudioDeviceModule::MutedSpeechEventHandler muted_speech_event_handler,
     ADMErrorHandler error_handler,
     bool bypass_voice_processing = false);
+#endif
 
 }  // namespace webrtc
 

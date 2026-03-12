@@ -189,6 +189,8 @@ class RTC_EXPORT VideoTrackInterface : public MediaStreamTrackInterface,
 
   virtual VideoTrackSourceInterface* GetSource() const = 0;
 
+  virtual void set_should_receive(bool should_receive) {}
+  virtual bool should_receive() const;
   virtual ContentHint content_hint() const;
   virtual void set_content_hint(ContentHint /* hint */) {}
 

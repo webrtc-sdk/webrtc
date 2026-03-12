@@ -38,9 +38,9 @@ NS_ASSUME_NONNULL_BEGIN
                    nativeRtpTransceiver NS_DESIGNATED_INITIALIZER;
 
 + (webrtc::RtpTransceiverDirection)nativeRtpTransceiverDirectionFromDirection:
-    (RTCRtpTransceiverDirection)direction;
+    (RTC_OBJC_TYPE(RTCRtpTransceiverDirection))direction;
 
-+ (RTCRtpTransceiverDirection)rtpTransceiverDirectionFromNativeDirection:
++ (RTC_OBJC_TYPE(RTCRtpTransceiverDirection))rtpTransceiverDirectionFromNativeDirection:
     (webrtc::RtpTransceiverDirection)nativeDirection;
 
 @end

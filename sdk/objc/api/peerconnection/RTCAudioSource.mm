@@ -26,8 +26,8 @@
   RTC_DCHECK(nativeAudioSource);
 
   self = [super initWithFactory:factory
-              nativeMediaSource:nativeAudioSource
-                           type:RTCMediaSourceTypeAudio];
+                  nativeMediaSource:nativeAudioSource
+                               type:RTC_OBJC_TYPE(RTCMediaSourceTypeAudio)];
   if (self) {
     _nativeAudioSource = nativeAudioSource;
   }
@@ -38,7 +38,7 @@
       initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
     nativeMediaSource:
         (webrtc::scoped_refptr<webrtc::MediaSourceInterface>)nativeMediaSource
-                 type:(RTCMediaSourceType)type {
+                 type:(RTC_OBJC_TYPE(RTCMediaSourceType))type {
   RTC_DCHECK_NOTREACHED();
   return nil;
 }
