@@ -24,16 +24,17 @@ namespace webrtc {
 class FeatureExtractor {
  public:
   enum class ModelInputEnum {
-    kModelState = 0,
-    kMic = 1,
-    kLinearAecOutput = 2,
-    kAecRef = 3,
+    kMic = 0,
+    kLinearAecOutput = 1,
+    kAecRef = 2,
+    kModelState = 3,
     kNumInputs = 4
   };
   enum class ModelOutputEnum {
     kEchoMask = 0,
-    kModelState = 1,
-    kNumOutputs = 2
+    kUnboundedEchoMask = 1,
+    kModelState = 2,
+    kNumOutputs = 3
   };
 
   virtual ~FeatureExtractor() = default;
@@ -74,7 +75,7 @@ class TimeDomainFeatureExtractor : public FeatureExtractor {
 class FrequencyDomainFeatureExtractor : public FeatureExtractor {
  public:
   explicit FrequencyDomainFeatureExtractor(int step_size);
-  ~FrequencyDomainFeatureExtractor();
+  ~FrequencyDomainFeatureExtractor() override;
 
   bool ReadyForInference() const override;
 

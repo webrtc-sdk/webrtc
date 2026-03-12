@@ -20,16 +20,17 @@
 
 #include "absl/algorithm/container.h"
 #include "absl/functional/any_invocable.h"
+#include "absl/strings/string_view.h"
 #include "api/array_view.h"
 #include "api/data_channel_event_observer_interface.h"
 #include "api/data_channel_interface.h"
 #include "api/priority.h"
 #include "api/rtc_error.h"
 #include "api/scoped_refptr.h"
+#include "api/sctp_transport_interface.h"
 #include "api/sequence_checker.h"
 #include "api/task_queue/pending_task_safety_flag.h"
 #include "api/transport/data_channel_transport_interface.h"
-#include "media/sctp/sctp_transport_internal.h"
 #include "pc/data_channel_utils.h"
 #include "pc/peer_connection_internal.h"
 #include "pc/sctp_data_channel.h"
@@ -90,12 +91,13 @@ RTCError DataChannelController::SendData(StreamId sid,
   return result;
 }
 
-void DataChannelController::AddSctpDataStream(StreamId sid,
-                                              PriorityValue priority) {
+RTCError DataChannelController::AddSctpDataStream(StreamId sid,
+                                                  PriorityValue priority) {
   RTC_DCHECK_RUN_ON(network_thread());
   if (data_channel_transport_) {
-    data_channel_transport_->OpenChannel(sid.stream_id_int(), priority);
+    return data_channel_transport_->OpenChannel(sid.stream_id_int(), priority);
   }
+  return RTCError::OK();
 }
 
 void DataChannelController::RemoveSctpDataStream(StreamId sid) {
@@ -109,7 +111,6 @@ void DataChannelController::OnChannelStateChanged(
     SctpDataChannel* channel,
     DataChannelInterface::DataState state) {
   RTC_DCHECK_RUN_ON(network_thread());
-
   // Stash away the internal id here in case `OnSctpDataChannelClosed` ends up
   // releasing the last reference to the channel.
   const int channel_id = channel->internal_id();
@@ -154,6 +155,15 @@ void DataChannelController::SetBufferedAmountLowThreshold(StreamId sid,
   }
   data_channel_transport_->SetBufferedAmountLowThreshold(sid.stream_id_int(),
                                                          bytes);
+}
+
+void DataChannelController::OnTransportConnected() {
+  RTC_DCHECK_RUN_ON(network_thread());
+  RTC_DCHECK(data_channel_transport_);
+  RTC_DCHECK(data_channel_transport_->MaxChannels().has_value());
+  sid_allocator_.SetMaxSid(*data_channel_transport_->MaxChannels() - 1);
+  RTC_DCHECK(data_channel_transport_->DtlsRole().has_value());
+  AllocateSctpSids(*data_channel_transport_->DtlsRole());
 }
 
 void DataChannelController::OnDataReceived(int channel_id,
@@ -208,15 +218,10 @@ void DataChannelController::OnReadyToSend() {
   RTC_DCHECK_RUN_ON(network_thread());
   auto copy = sctp_data_channels_n_;
   for (const auto& channel : copy) {
-    if (channel->sid_n().has_value()) {
-      channel->OnTransportReady();
-    } else {
-      // This happens for role==SSL_SERVER channels when we get notified by
-      // the transport *before* the SDP code calls `AllocateSctpSids` to
-      // trigger assignment of sids. In this case OnTransportReady() will be
-      // called from within `AllocateSctpSids` below.
-      RTC_LOG(LS_INFO) << "OnReadyToSend: Still waiting for an id for channel.";
-    }
+    // All channels are supposed to either have an ID allocated in
+    // OnConnected, or be deleted at this point.
+    RTC_DCHECK(channel->sid_n().has_value());
+    channel->OnTransportReady();
   }
 }
 
@@ -368,7 +373,7 @@ RTCError DataChannelController::ReserveOrAllocateSid(
 
 // RTC_RUN_ON(network_thread())
 RTCErrorOr<scoped_refptr<SctpDataChannel>>
-DataChannelController::CreateDataChannel(const std::string& label,
+DataChannelController::CreateDataChannel(absl::string_view label,
                                          InternalDataChannelInit& config) {
   std::optional<StreamId> sid = std::nullopt;
   if (config.id != -1) {
@@ -391,25 +396,27 @@ DataChannelController::CreateDataChannel(const std::string& label,
       weak_factory_.GetWeakPtr(), label, data_channel_transport_ != nullptr,
       config, signaling_thread(), network_thread());
   RTC_DCHECK(channel);
-  sctp_data_channels_n_.push_back(channel);
 
   // If we have an id already, notify the transport.
-  if (sid.has_value())
-    AddSctpDataStream(*sid,
-                      config.priority.value_or(PriorityValue(Priority::kLow)));
-
+  if (sid.has_value()) {
+    RTCError error = AddSctpDataStream(
+        *sid, config.priority.value_or(PriorityValue(Priority::kLow)));
+    if (!error.ok()) {
+      return error;
+    }
+  }
+  sctp_data_channels_n_.push_back(channel);
   return channel;
 }
 
 RTCErrorOr<scoped_refptr<DataChannelInterface>>
 DataChannelController::InternalCreateDataChannelWithProxy(
-    const std::string& label,
+    absl::string_view label,
     const InternalDataChannelInit& config) {
   RTC_DCHECK_RUN_ON(signaling_thread());
   RTC_DCHECK(!pc_->IsClosed());
   if (!config.IsValid()) {
-    LOG_AND_RETURN_ERROR(RTCErrorType::INVALID_PARAMETER,
-                         "Invalid DataChannelInit");
+    return LOG_ERROR(RTCError::InvalidParameter() << "Invalid DataChannelInit");
   }
 
   bool ready_to_send = false;
@@ -451,7 +458,7 @@ void DataChannelController::AllocateSctpSids(SSLRole role) {
   const bool ready_to_send =
       data_channel_transport_ && data_channel_transport_->IsReadyToSend();
 
-  std::vector<std::pair<SctpDataChannel*, StreamId>> channels_to_update;
+  std::vector<SctpDataChannel*> channels_to_start;
   std::vector<scoped_refptr<SctpDataChannel>> channels_to_close;
   for (auto it = sctp_data_channels_n_.begin();
        it != sctp_data_channels_n_.end();) {
@@ -460,11 +467,7 @@ void DataChannelController::AllocateSctpSids(SSLRole role) {
       if (sid.has_value()) {
         (*it)->SetSctpSid_n(*sid);
         AddSctpDataStream(*sid, (*it)->priority());
-        if (ready_to_send) {
-          RTC_LOG(LS_INFO) << "AllocateSctpSids: Id assigned, ready to send.";
-          (*it)->OnTransportReady();
-        }
-        channels_to_update.push_back(std::make_pair((*it).get(), *sid));
+        channels_to_start.push_back((*it).get());
       } else {
         channels_to_close.push_back(std::move(*it));
         it = sctp_data_channels_n_.erase(it);
@@ -472,6 +475,14 @@ void DataChannelController::AllocateSctpSids(SSLRole role) {
       }
     }
     ++it;
+  }
+  // Since OnTransportReady can cause sending, and sending may fail and cause
+  // channel to close, do this outside the loop.
+  if (ready_to_send) {
+    for (auto* channel : channels_to_start) {
+      RTC_LOG(LS_INFO) << "AllocateSctpSids: Id assigned, ready to send.";
+      channel->OnTransportReady();
+    }
   }
 
   // Since closing modifies the list of channels, we have to do the actual
@@ -490,8 +501,9 @@ void DataChannelController::OnSctpDataChannelClosed(SctpDataChannel* channel) {
   }
   auto it = absl::c_find_if(sctp_data_channels_n_,
                             [&](const auto& c) { return c.get() == channel; });
-  if (it != sctp_data_channels_n_.end())
+  if (it != sctp_data_channels_n_.end()) {
     sctp_data_channels_n_.erase(it);
+  }
 }
 
 void DataChannelController::set_data_channel_transport(

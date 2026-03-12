@@ -72,7 +72,6 @@ if (!build_with_chromium) {
         "../../../api:frame_generator_api",
         "../../../api:function_view",
         "../../../api:jsep",
-        "../../../api:libjingle_peerconnection_api",
         "../../../api:make_ref_counted",
         "../../../api:media_stream_interface",
         "../../../api:peer_connection_interface",
@@ -116,7 +115,6 @@ if (!build_with_chromium) {
         "../..:create_test_environment",
         "../../../api:create_modular_peer_connection_factory",
         "../../../api:enable_media_with_defaults",
-        "../../../api:libjingle_peerconnection_api",
         "../../../api:peer_connection_interface",
         "../../../api:scoped_refptr",
         "../../../api:time_controller",
@@ -264,7 +262,6 @@ if (!build_with_chromium) {
         "../..:test_support",
         "../../../api:audio_quality_analyzer_api",
         "../../../api:jsep",
-        "../../../api:libjingle_peerconnection_api",
         "../../../api:media_stream_interface",
         "../../../api:peer_connection_interface",
         "../../../api:peer_connection_quality_test_fixture_api",
@@ -331,7 +328,6 @@ if (!build_with_chromium) {
         "../../../api:create_peer_connection_quality_test_frame_generator",
         "../../../api:create_peerconnection_quality_test_fixture",
         "../../../api:function_view",
-        "../../../api:libjingle_peerconnection_api",
         "../../../api:media_stream_interface",
         "../../../api:network_emulation_manager_api",
         "../../../api:peer_connection_quality_test_fixture_api",
@@ -357,7 +353,6 @@ if (!build_with_chromium) {
         "../../../rtc_base:gunit_helpers",
         "../../../rtc_base:logging",
         "../../../rtc_base:rtc_event",
-        "../../../system_wrappers:field_trial",
         "../../../test:fileutils",
         "../../../test:test_support",
         "analyzer/video:default_video_quality_analyzer",
@@ -466,7 +461,6 @@ if (!build_with_chromium) {
       deps = [
         ":stats_provider",
         ":test_peer",
-        "../../../api:libjingle_peerconnection_api",
         "../../../api:make_ref_counted",
         "../../../api:rtc_stats_api",
         "../../../api:scoped_refptr",
@@ -562,7 +556,6 @@ if (!build_with_chromium) {
       "../../../rtc_base:macromagic",
       "../../../rtc_base:rtc_event",
       "../../../rtc_base/synchronization:mutex",
-      "../../../system_wrappers:field_trial",
       "//third_party/abseil-cpp/absl/strings:string_view",
     ]
   }
@@ -601,7 +594,6 @@ if (!build_with_chromium) {
       "../../../rtc_base/synchronization:mutex",
       "../../../rtc_base/system:no_unique_address",
       "../../../system_wrappers",
-      "../../../system_wrappers:field_trial",
       "//third_party/abseil-cpp/absl/flags:flag",
       "//third_party/abseil-cpp/absl/strings:string_view",
     ]
@@ -633,7 +625,6 @@ if (!build_with_chromium) {
       "../../../rtc_base:rtc_numerics",
       "../../../rtc_base/synchronization:mutex",
       "../../../system_wrappers",
-      "../../../system_wrappers:field_trial",
       "//third_party/abseil-cpp/absl/flags:flag",
       "//third_party/abseil-cpp/absl/strings:string_view",
     ]

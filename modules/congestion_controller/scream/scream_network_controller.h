@@ -47,9 +47,10 @@ class ScreamNetworkController : public NetworkControllerInterface {
   bool SupportsEcnAdaptation() const override { return true; }
 
  private:
+  void UpdateScreamTargetBitrateConstraints();
   NetworkControlUpdate CreateFirstUpdate(Timestamp now);
-  NetworkControlUpdate CreateUpdate(Timestamp now, DataRate target_rate);
-  std::optional<PacerConfig> MaybeCreatePacerConfig(DataRate target_rate);
+  NetworkControlUpdate CreateUpdate(Timestamp now);
+  std::optional<PacerConfig> MaybeCreatePacerConfig();
 
   Environment env_;
   const ScreamV2Parameters params_;
@@ -60,6 +61,7 @@ class ScreamNetworkController : public NetworkControllerInterface {
   TimeDelta current_pacing_window_;
   std::optional<ScreamV2> scream_;
   TargetRateConstraints target_rate_constraints_;
+  std::optional<DataRate> remote_bitrate_report_;
   StreamsConfig streams_config_;
 
   Timestamp last_padding_interval_started_;

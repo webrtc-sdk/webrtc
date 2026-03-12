@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 
+#include "absl/strings/string_view.h"
 #include "api/rtp_parameters.h"
 #include "api/rtp_sender_interface.h"
 #include "api/scoped_refptr.h"
@@ -54,6 +55,7 @@ void TransceiverStableState::SetInitSendEncodings(
 std::vector<RtpTransceiver*> TransceiverList::ListInternal() const {
   RTC_DCHECK_RUN_ON(&sequence_checker_);
   std::vector<RtpTransceiver*> internals;
+  internals.reserve(transceivers_.size());
   for (auto transceiver : transceivers_) {
     internals.push_back(transceiver->internal());
   }
@@ -72,7 +74,7 @@ RtpTransceiverProxyRefPtr TransceiverList::FindBySender(
 }
 
 RtpTransceiverProxyRefPtr TransceiverList::FindByMid(
-    const std::string& mid) const {
+    absl::string_view mid) const {
   RTC_DCHECK_RUN_ON(&sequence_checker_);
   for (auto transceiver : transceivers_) {
     if (transceiver->mid() == mid) {

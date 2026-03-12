@@ -467,7 +467,8 @@ rtc_library("video_stream_encoder_impl") {
     "../api/video:video_rtp_headers",
     "../api/video:video_stream_encoder",
     "../api/video/corruption_detection:frame_instrumentation_data",
-    "../api/video/corruption_detection:frame_instrumentation_generator",
+    "../api/video/corruption_detection:frame_instrumentation_generator_factory",
+    "../api/video/corruption_detection:frame_instrumentation_generator_header",
     "../api/video_codecs:scalability_mode",
     "../api/video_codecs:video_codecs_api",
     "../call/adaptation:resource_adaptation",
@@ -720,7 +721,6 @@ if (rtc_include_tests) {
       ]
       deps = [
         ":video_quality_test",
-        "../api:libjingle_peerconnection_api",
         "../api:simulated_network_api",
         "../api:video_quality_test_fixture_api",
         "../api/transport:bitrate_settings",
@@ -762,7 +762,6 @@ if (rtc_include_tests) {
 
       deps = [
         ":video_quality_test",
-        "../api:libjingle_peerconnection_api",
         "../api:simulated_network_api",
         "../api:video_quality_test_fixture_api",
         "../api/transport:bitrate_settings",
@@ -786,7 +785,6 @@ if (rtc_include_tests) {
       sources = [ "sv_loopback.cc" ]
       deps = [
         ":video_quality_test",
-        "../api:libjingle_peerconnection_api",
         "../api:simulated_network_api",
         "../api:video_quality_test_fixture_api",
         "../api/transport:bitrate_settings",

@@ -24,6 +24,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/functional/any_invocable.h"
 #include "api/data_channel_interface.h"
 #include "api/jsep.h"
 #include "api/legacy_stats_types.h"
@@ -34,6 +35,7 @@
 #include "api/rtp_receiver_interface.h"
 #include "api/rtp_transceiver_interface.h"
 #include "api/scoped_refptr.h"
+#include "api/sequence_checker.h"
 #include "api/set_local_description_observer_interface.h"
 #include "api/set_remote_description_observer_interface.h"
 #include "api/stats/rtc_stats_collector_callback.h"
@@ -42,6 +44,7 @@
 #include "rtc_base/checks.h"
 #include "rtc_base/string_encode.h"
 #include "rtc_base/synchronization/mutex.h"
+#include "rtc_base/thread.h"
 #include "rtc_base/thread_annotations.h"
 
 namespace webrtc {
@@ -76,7 +79,7 @@ class MockPeerConnectionObserver : public PeerConnectionObserver {
   };
 
   MockPeerConnectionObserver() : remote_streams_(StreamCollection::Create()) {}
-  virtual ~MockPeerConnectionObserver() {}
+  ~MockPeerConnectionObserver() override {}
   void SetPeerConnectionInterface(PeerConnectionInterface* pc) {
     pc_ = pc;
     if (pc) {
@@ -196,12 +199,12 @@ class MockPeerConnectionObserver : public PeerConnectionObserver {
   // Returns the id of the last added stream.
   // Empty string if no stream have been added.
   std::string GetLastAddedStreamId() {
-    if (last_added_stream_.get())
+    if (last_added_stream_)
       return last_added_stream_->id();
     return "";
   }
   std::string GetLastRemovedStreamId() {
-    if (last_removed_stream_.get())
+    if (last_removed_stream_)
       return last_removed_stream_->id();
     return "";
   }
@@ -273,7 +276,7 @@ class MockCreateSessionDescriptionObserver
   MockCreateSessionDescriptionObserver()
       : called_(false),
         error_("MockCreateSessionDescriptionObserver not called") {}
-  virtual ~MockCreateSessionDescriptionObserver() {}
+  ~MockCreateSessionDescriptionObserver() override {}
   void OnSuccess(SessionDescriptionInterface* desc) override {
     MutexLock lock(&mutex_);
     called_ = true;
@@ -430,7 +433,7 @@ class MockDataChannelObserver : public DataChannelObserver {
     channel_->RegisterObserver(this);
     states_.push_back(channel_->state());
   }
-  virtual ~MockDataChannelObserver() { channel_->UnregisterObserver(); }
+  ~MockDataChannelObserver() override { channel_->UnregisterObserver(); }
 
   void OnBufferedAmountChange(uint64_t previous_amount) override {}
 
@@ -443,8 +446,11 @@ class MockDataChannelObserver : public DataChannelObserver {
 
   void OnMessage(const DataBuffer& buffer) override {
     messages_.push_back(
-        {std::string(buffer.data.data<char>(), buffer.data.size()),
-         buffer.binary});
+        {.data = std::string(buffer.data.data<char>(), buffer.data.size()),
+         .binary = buffer.binary});
+    if (on_message_callback_) {
+      on_message_callback_(buffer);
+    }
   }
 
   bool IsOpen() const { return state() == DataChannelInterface::kOpen; }
@@ -472,19 +478,25 @@ class MockDataChannelObserver : public DataChannelObserver {
     state_change_callback_ = std::move(func);
   }
 
+  void set_on_message_callback(
+      absl::AnyInvocable<void(const DataBuffer&)> func) {
+    on_message_callback_ = std::move(func);
+  }
+
  private:
   scoped_refptr<DataChannelInterface> channel_;
   std::vector<DataChannelInterface::DataState> states_;
   std::vector<Message> messages_;
   std::function<void(DataChannelInterface::DataState)> state_change_callback_;
+  absl::AnyInvocable<void(const DataBuffer&)> on_message_callback_;
 };
 
 class MockStatsObserver : public StatsObserver {
  public:
   MockStatsObserver() : called_(false), stats_() {}
-  virtual ~MockStatsObserver() {}
+  ~MockStatsObserver() override {}
 
-  virtual void OnComplete(const StatsReports& reports) {
+  void OnComplete(const StatsReports& reports) override {
     RTC_CHECK(!called_);
     called_ = true;
     stats_.Clear();

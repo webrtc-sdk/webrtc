@@ -219,11 +219,9 @@ rtc_library("video_common") {
   ]
   deps = [
     "../api:array_view",
-    "../rtc_base:checks",
     "../rtc_base:stringutils",
     "../rtc_base:timeutils",
     "../rtc_base/system:rtc_export",
-    "//third_party/abseil-cpp/absl/base:core_headers",
   ]
 }
 
@@ -441,6 +439,7 @@ rtc_library("stream_params") {
     "../rtc_base:stringutils",
     "../rtc_base:unique_id_generator",
     "//third_party/abseil-cpp/absl/algorithm:container",
+    "//third_party/abseil-cpp/absl/strings:string_view",
   ]
 }
 
@@ -469,7 +468,10 @@ rtc_library("rid_description") {
     "base/rid_description.cc",
     "base/rid_description.h",
   ]
-  deps = [ ":codec" ]
+  deps = [
+    ":codec",
+    "//third_party/abseil-cpp/absl/strings:string_view",
+  ]
 }
 
 rtc_library("rtc_simulcast_encoder_adapter") {
@@ -702,7 +704,6 @@ rtc_source_set("rtc_data_sctp_transport_internal") {
   sources = [ "sctp/sctp_transport_internal.h" ]
   deps = [
     ":media_channel",
-    "../api:libjingle_peerconnection_api",
     "../api:priority",
     "../api:rtc_error",
     "../api:sctp_transport_interface",
@@ -727,7 +728,6 @@ if (rtc_build_dcsctp) {
       "../api:data_channel_interface",
       "../api:dtls_transport_interface",
       "../api:field_trials_view",
-      "../api:libjingle_peerconnection_api",
       "../api:priority",
       "../api:rtc_error",
       "../api:sctp_transport_interface",
@@ -1054,7 +1054,6 @@ if (rtc_include_tests) {
         "../test:create_test_field_trials",
         "../test:fake_video_codecs",
         "../test:rtp_test_utils",
-        "../test:test_main",
         "../test:test_support",
         "../test:video_test_common",
         "../test/time_controller",
@@ -1062,6 +1061,7 @@ if (rtc_include_tests) {
         "../video/config:streams_config",
         "//third_party/abseil-cpp/absl/algorithm:container",
         "//third_party/abseil-cpp/absl/container:inlined_vector",
+        "//third_party/abseil-cpp/absl/functional:any_invocable",
         "//third_party/abseil-cpp/absl/strings",
         "//third_party/abseil-cpp/absl/strings:string_view",
       ]

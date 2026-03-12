@@ -37,12 +37,19 @@ class AudioBuffer {
   static const int kSplitBandSize = 160;
   // TODO(tommi): Remove this (`AudioBuffer::kMaxSampleRate`) constant.
   static const int kMaxSampleRate = kMaxSampleRateHz;
+
   AudioBuffer(size_t input_rate,
               size_t input_num_channels,
               size_t buffer_rate,
               size_t buffer_num_channels,
               size_t output_rate,
               size_t output_num_channels);
+
+  AudioBuffer(size_t input_rate,
+              size_t input_num_channels,
+              size_t buffer_rate,
+              size_t buffer_num_channels,
+              size_t output_rate);
 
   virtual ~AudioBuffer();
 
@@ -89,12 +96,10 @@ class AudioBuffer {
   // 0 <= band < `num_bands_`
   // 0 <= sample < `num_split_frames_`
   const float* const* split_bands_const(size_t channel) const {
-    return split_data_.get() ? split_data_->bands(channel)
-                             : data_->bands(channel);
+    return split_data_ ? split_data_->bands(channel) : data_->bands(channel);
   }
   float* const* split_bands(size_t channel) {
-    return split_data_.get() ? split_data_->bands(channel)
-                             : data_->bands(channel);
+    return split_data_ ? split_data_->bands(channel) : data_->bands(channel);
   }
 
   // Returns a pointer array to the channels for a specific band.
@@ -105,7 +110,7 @@ class AudioBuffer {
   // 0 <= channel < `buffer_num_channels_`
   // 0 <= sample < `num_split_frames_`
   const float* const* split_channels_const(Band band) const {
-    if (split_data_.get()) {
+    if (split_data_) {
       return split_data_->channels(band);
     } else {
       return band == kBand0To8kHz ? data_->channels() : nullptr;

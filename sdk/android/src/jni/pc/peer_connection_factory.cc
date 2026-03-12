@@ -31,6 +31,7 @@
 #include "api/audio_options.h"
 #include "api/create_modular_peer_connection_factory.h"
 #include "api/enable_media.h"
+#include "api/environment/deprecated_global_field_trials.h"
 #include "api/environment/environment.h"
 #include "api/fec_controller.h"
 #include "api/media_stream_interface.h"
@@ -67,7 +68,6 @@
 #include "sdk/android/src/jni/pc/ssl_certificate_verifier_wrapper.h"
 #include "sdk/android/src/jni/pc/video.h"
 #include "sdk/media_constraints.h"
-#include "system_wrappers/include/field_trial.h"
 #include "third_party/jni_zero/jni_zero.h"
 
 namespace webrtc {
@@ -200,25 +200,21 @@ static void JNI_PeerConnectionFactory_InitializeAndroidGlobals(JNIEnv* jni) {
   }
 }
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 static void JNI_PeerConnectionFactory_InitializeFieldTrials(
     JNIEnv* jni,
-    const jni_zero::JavaParamRef<jstring>& j_trials_init_string) {
+    const jni_zero::JavaRef<jstring>& j_trials_init_string) {
   std::unique_ptr<std::string>& field_trials_init_string =
       GetStaticObjects().field_trials_init_string;
 
   if (j_trials_init_string.is_null()) {
     field_trials_init_string = nullptr;
-    field_trial::InitFieldTrialsFromString(nullptr);
+    DeprecatedGlobalFieldTrials::Set(nullptr);
     return;
   }
   field_trials_init_string = std::make_unique<std::string>(
       JavaToNativeString(jni, j_trials_init_string));
-  RTC_LOG(LS_INFO) << "initializeFieldTrials: " << *field_trials_init_string;
-  field_trial::InitFieldTrialsFromString(field_trials_init_string->c_str());
+  DeprecatedGlobalFieldTrials::Set(field_trials_init_string->c_str());
 }
-#pragma clang diagnostic pop
 
 static void JNI_PeerConnectionFactory_InitializeInternalTracer(JNIEnv* jni) {
   tracing::SetupInternalTracer();
@@ -226,7 +222,7 @@ static void JNI_PeerConnectionFactory_InitializeInternalTracer(JNIEnv* jni) {
 
 static jboolean JNI_PeerConnectionFactory_StartInternalTracingCapture(
     JNIEnv* jni,
-    const jni_zero::JavaParamRef<jstring>& j_event_tracing_filename) {
+    const jni_zero::JavaRef<jstring>& j_event_tracing_filename) {
   if (j_event_tracing_filename.is_null())
     return false;
 
@@ -252,14 +248,14 @@ static void JNI_PeerConnectionFactory_ShutdownInternalTracer(JNIEnv* jni) {
 // `network_state_predictor_factory`, `neteq_factory`.
 ScopedJavaLocalRef<jobject> CreatePeerConnectionFactoryForJava(
     JNIEnv* jni,
-    const jni_zero::JavaParamRef<jobject>& jcontext,
-    const jni_zero::JavaParamRef<jobject>& joptions,
+    const jni_zero::JavaRef<jobject>& jcontext,
+    const jni_zero::JavaRef<jobject>& joptions,
     const Environment& env,
     scoped_refptr<AudioDeviceModule> audio_device_module,
     scoped_refptr<AudioEncoderFactory> audio_encoder_factory,
     scoped_refptr<AudioDecoderFactory> audio_decoder_factory,
-    const jni_zero::JavaParamRef<jobject>& jencoder_factory,
-    const jni_zero::JavaParamRef<jobject>& jdecoder_factory,
+    const jni_zero::JavaRef<jobject>& jencoder_factory,
+    const jni_zero::JavaRef<jobject>& jdecoder_factory,
     scoped_refptr<AudioProcessing> audio_processor,
     std::unique_ptr<FecControllerFactoryInterface> fec_controller_factory,
     std::unique_ptr<NetworkControllerFactoryInterface>
@@ -346,14 +342,14 @@ ScopedJavaLocalRef<jobject> CreatePeerConnectionFactoryForJava(
 static jni_zero::ScopedJavaLocalRef<jobject>
 JNI_PeerConnectionFactory_CreatePeerConnectionFactory(
     JNIEnv* jni,
-    const jni_zero::JavaParamRef<jobject>& jcontext,
-    const jni_zero::JavaParamRef<jobject>& joptions,
+    const jni_zero::JavaRef<jobject>& jcontext,
+    const jni_zero::JavaRef<jobject>& joptions,
     jlong webrtc_env_ref,
     jlong native_audio_device_module,
     jlong native_audio_encoder_factory,
     jlong native_audio_decoder_factory,
-    const jni_zero::JavaParamRef<jobject>& jencoder_factory,
-    const jni_zero::JavaParamRef<jobject>& jdecoder_factory,
+    const jni_zero::JavaRef<jobject>& jencoder_factory,
+    const jni_zero::JavaRef<jobject>& jdecoder_factory,
     jlong native_audio_processor,
     jlong native_fec_controller_factory,
     jlong native_network_controller_factory,
@@ -384,17 +380,14 @@ JNI_PeerConnectionFactory_CreatePeerConnectionFactory(
 
 static void JNI_PeerConnectionFactory_FreeFactory(JNIEnv*, jlong j_p) {
   delete reinterpret_cast<OwnedFactoryAndThreads*>(j_p);
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-  field_trial::InitFieldTrialsFromString(nullptr);
-#pragma clang diagnostic pop
+  DeprecatedGlobalFieldTrials::Set(nullptr);
   GetStaticObjects().field_trials_init_string = nullptr;
 }
 
 static jlong JNI_PeerConnectionFactory_CreateLocalMediaStream(
     JNIEnv* jni,
     jlong native_factory,
-    const jni_zero::JavaParamRef<jstring>& label) {
+    const jni_zero::JavaRef<jstring>& label) {
   scoped_refptr<MediaStreamInterface> stream(
       PeerConnectionFactoryFromJava(native_factory)
           ->CreateLocalMediaStream(JavaToStdString(jni, label)));
@@ -404,7 +397,7 @@ static jlong JNI_PeerConnectionFactory_CreateLocalMediaStream(
 static jlong JNI_PeerConnectionFactory_CreateAudioSource(
     JNIEnv* jni,
     jlong native_factory,
-    const jni_zero::JavaParamRef<jobject>& j_constraints) {
+    const jni_zero::JavaRef<jobject>& j_constraints) {
   std::unique_ptr<MediaConstraints> constraints =
       JavaToNativeMediaConstraints(jni, j_constraints);
   AudioOptions options;
@@ -418,7 +411,7 @@ static jlong JNI_PeerConnectionFactory_CreateAudioSource(
 jlong JNI_PeerConnectionFactory_CreateAudioTrack(
     JNIEnv* jni,
     jlong native_factory,
-    const jni_zero::JavaParamRef<jstring>& id,
+    const jni_zero::JavaRef<jstring>& id,
     jlong native_source) {
   scoped_refptr<AudioTrackInterface> track(
       PeerConnectionFactoryFromJava(native_factory)
@@ -431,7 +424,7 @@ jlong JNI_PeerConnectionFactory_CreateAudioTrack(
 ScopedJavaLocalRef<jobject> JNI_PeerConnectionFactory_GetRtpSenderCapabilities(
     JNIEnv* jni,
     jlong native_factory,
-    const jni_zero::JavaParamRef<jobject>& media_type) {
+    const jni_zero::JavaRef<jobject>& media_type) {
   auto factory = PeerConnectionFactoryFromJava(native_factory);
   return NativeToJavaRtpCapabilities(
       jni, factory->GetRtpSenderCapabilities(
@@ -442,7 +435,7 @@ ScopedJavaLocalRef<jobject>
 JNI_PeerConnectionFactory_GetRtpReceiverCapabilities(
     JNIEnv* jni,
     jlong native_factory,
-    const jni_zero::JavaParamRef<jobject>& media_type) {
+    const jni_zero::JavaRef<jobject>& media_type) {
   auto factory = PeerConnectionFactoryFromJava(native_factory);
   return NativeToJavaRtpCapabilities(
       jni, factory->GetRtpReceiverCapabilities(
@@ -472,10 +465,10 @@ static void JNI_PeerConnectionFactory_StopAecDump(JNIEnv* jni,
 static jlong JNI_PeerConnectionFactory_CreatePeerConnection(
     JNIEnv* jni,
     jlong factory,
-    const jni_zero::JavaParamRef<jobject>& j_rtc_config,
-    const jni_zero::JavaParamRef<jobject>& j_constraints,
+    const jni_zero::JavaRef<jobject>& j_rtc_config,
+    const jni_zero::JavaRef<jobject>& j_constraints,
     jlong observer_p,
-    const jni_zero::JavaParamRef<jobject>& j_sslCertificateVerifier) {
+    const jni_zero::JavaRef<jobject>& j_sslCertificateVerifier) {
   std::unique_ptr<PeerConnectionObserver> observer(
       reinterpret_cast<PeerConnectionObserver*>(observer_p));
 
@@ -537,7 +530,7 @@ static jlong JNI_PeerConnectionFactory_CreateVideoSource(
 static jlong JNI_PeerConnectionFactory_CreateVideoTrack(
     JNIEnv* jni,
     jlong native_factory,
-    const jni_zero::JavaParamRef<jstring>& id,
+    const jni_zero::JavaRef<jstring>& id,
     jlong native_source) {
   scoped_refptr<VideoTrackInterface> track =
       PeerConnectionFactoryFromJava(native_factory)
@@ -556,7 +549,7 @@ static jlong JNI_PeerConnectionFactory_GetNativePeerConnectionFactory(
 
 static void JNI_PeerConnectionFactory_InjectLoggable(
     JNIEnv* jni,
-    const jni_zero::JavaParamRef<jobject>& j_logging,
+    const jni_zero::JavaRef<jobject>& j_logging,
     jint nativeSeverity) {
   std::unique_ptr<JNILogSink>& jni_log_sink = GetStaticObjects().jni_log_sink;
 

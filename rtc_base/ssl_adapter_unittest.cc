@@ -38,9 +38,9 @@ namespace {
 using ::testing::_;
 using ::testing::Return;
 
-static const TimeDelta kTimeout = TimeDelta::Millis(5000);
+const TimeDelta kTimeout = TimeDelta::Millis(5000);
 
-static Socket* CreateSocket() {
+Socket* CreateSocket() {
   SocketAddress address(IPAddress(INADDR_ANY), 0);
 
   Socket* socket = Thread::Current()->socketserver()->CreateSocket(
@@ -74,7 +74,7 @@ class SSLAdapterTestDummy {
 
     ssl_adapter_->SubscribeReadEvent(
         this, [this](Socket* socket) { OnSSLAdapterReadEvent(socket); });
-    ssl_adapter_->SubscribeCloseEvent([this](Socket* socket, int error) {
+    ssl_adapter_->SubscribeCloseEvent(this, [this](Socket* socket, int error) {
       OnSSLAdapterCloseEvent(socket, error);
     });
     ssl_adapter_->SetRole(role);

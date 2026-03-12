@@ -52,6 +52,7 @@
 #include "call/payload_type_picker.h"
 #include "p2p/base/port.h"
 #include "p2p/base/port_allocator.h"
+#include "pc/channel_interface.h"
 #include "pc/jsep_transport_controller.h"
 #include "pc/peer_connection_internal.h"
 #include "pc/peer_connection_message_handler.h"
@@ -61,6 +62,7 @@
 #include "pc/transport_stats.h"
 #include "pc/usage_pattern.h"
 #include "rtc_base/checks.h"
+#include "rtc_base/containers/flat_map.h"
 #include "rtc_base/ref_counted_object.h"
 #include "rtc_base/rtc_certificate.h"
 #include "rtc_base/ssl_certificate.h"
@@ -164,7 +166,7 @@ class FakePeerConnectionBase : public PeerConnectionInternal {
 
   void ClearStatsCache() override {}
 
-  scoped_refptr<SctpTransportInterface> GetSctpTransport() const {
+  scoped_refptr<SctpTransportInterface> GetSctpTransport() const override {
     return nullptr;
   }
 
@@ -218,7 +220,9 @@ class FakePeerConnectionBase : public PeerConnectionInternal {
       std::unique_ptr<SessionDescriptionInterface> desc,
       scoped_refptr<SetRemoteDescriptionObserverInterface> observer) override {}
 
-  bool ShouldFireNegotiationNeededEvent(uint32_t event_id) { return true; }
+  bool ShouldFireNegotiationNeededEvent(uint32_t event_id) override {
+    return true;
+  }
 
   RTCConfiguration GetConfiguration() override { return RTCConfiguration(); }
 
@@ -245,7 +249,7 @@ class FakePeerConnectionBase : public PeerConnectionInternal {
   void SetAudioRecording(bool recording) override {}
 
   scoped_refptr<DtlsTransportInterface> LookupDtlsTransportByMid(
-      const std::string& mid) {
+      const std::string& mid) override {
     return nullptr;
   }
 
@@ -267,9 +271,11 @@ class FakePeerConnectionBase : public PeerConnectionInternal {
     return IceGatheringState::kIceGatheringNew;
   }
 
-  std::optional<bool> can_trickle_ice_candidates() { return std::nullopt; }
+  std::optional<bool> can_trickle_ice_candidates() override {
+    return std::nullopt;
+  }
 
-  void AddAdaptationResource(scoped_refptr<Resource> resource) {}
+  void AddAdaptationResource(scoped_refptr<Resource> resource) override {}
 
   bool StartRtcEventLog(std::unique_ptr<RtcEventLogOutput> output,
                         int64_t output_period_ms) override {
@@ -341,6 +347,7 @@ class FakePeerConnectionBase : public PeerConnectionInternal {
   bool GetSslRole(const std::string& content_name, SSLRole* role) override {
     return false;
   }
+
   const PeerConnectionInterface::RTCConfiguration* configuration()
       const override {
     return nullptr;
@@ -378,7 +385,7 @@ class FakePeerConnectionBase : public PeerConnectionInternal {
   bool IsClosed() const override { return false; }
   bool IsUnifiedPlan() const override { return true; }
   bool ValidateBundleSettings(const SessionDescription* desc,
-                              const std::map<std::string, const ContentGroup*>&
+                              const flat_map<std::string, const ContentGroup*>&
                                   bundle_groups_by_mid) override {
     return false;
   }

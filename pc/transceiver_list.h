@@ -17,6 +17,7 @@
 #include <string>
 #include <vector>
 
+#include "absl/strings/string_view.h"
 #include "api/rtp_parameters.h"
 #include "api/rtp_sender_interface.h"
 #include "api/rtp_transceiver_direction.h"
@@ -97,9 +98,17 @@ class TransceiverList {
     RTC_DCHECK_RUN_ON(&sequence_checker_);
     return transceivers_;
   }
+
   // As above, but does not check thread ownership. Unsafe.
   // TODO(bugs.webrtc.org/12692): Refactor and remove
-  std::vector<RtpTransceiverProxyRefPtr> UnsafeList() const {
+  std::vector<RtpTransceiverProxyRefPtr> UnsafeList() const
+      RTC_NO_THREAD_SAFETY_ANALYSIS {
+    return transceivers_;
+  }
+
+  // Returns a const reference to the list without generating a copy.
+  const std::vector<RtpTransceiverProxyRefPtr>& ListRef() const {
+    RTC_DCHECK_RUN_ON(&sequence_checker_);
     return transceivers_;
   }
 
@@ -118,7 +127,7 @@ class TransceiverList {
   }
   RtpTransceiverProxyRefPtr FindBySender(
       scoped_refptr<RtpSenderInterface> sender) const;
-  RtpTransceiverProxyRefPtr FindByMid(const std::string& mid) const;
+  RtpTransceiverProxyRefPtr FindByMid(absl::string_view mid) const;
   RtpTransceiverProxyRefPtr FindByMLineIndex(size_t mline_index) const;
 
   // Find or create the stable state for a transceiver.
@@ -139,9 +148,8 @@ class TransceiverList {
 
  private:
   RTC_NO_UNIQUE_ADDRESS SequenceChecker sequence_checker_;
-  std::vector<RtpTransceiverProxyRefPtr> transceivers_;
-  // TODO(bugs.webrtc.org/12692): Add RTC_GUARDED_BY(sequence_checker_);
-
+  std::vector<RtpTransceiverProxyRefPtr> transceivers_
+      RTC_GUARDED_BY(sequence_checker_);
   // Holds changes made to transceivers during applying descriptors for
   // potential rollback. Gets cleared once signaling state goes to stable.
   std::map<RtpTransceiverProxyRefPtr, TransceiverStableState>

@@ -16,7 +16,6 @@
 #include <map>
 #include <memory>
 #include <optional>
-#include <string>
 #include <vector>
 
 #include "absl/functional/any_invocable.h"
@@ -30,6 +29,7 @@
 #include "api/local_network_access_permission.h"
 #include "api/peer_connection_interface.h"
 #include "api/rtc_error.h"
+#include "api/rtp_transport_factory.h"
 #include "api/scoped_refptr.h"
 #include "api/sequence_checker.h"
 #include "api/task_queue/task_queue_base.h"
@@ -37,9 +37,6 @@
 #include "api/transport/ecn_marking.h"
 #include "api/transport/sctp_transport_factory_interface.h"
 #include "api/units/timestamp.h"
-#include "call/payload_type.h"
-#include "call/payload_type_picker.h"
-#include "media/base/codec.h"
 #include "modules/rtp_rtcp/source/rtp_packet_received.h"
 #include "p2p/base/ice_transport_internal.h"
 #include "p2p/base/packet_transport_internal.h"
@@ -67,7 +64,7 @@
 
 namespace webrtc {
 
-class JsepTransportController final : public PayloadTypeSuggester {
+class JsepTransportController final {
  public:
   // Used when the RtpTransport/DtlsTransport of the m= section is changed
   // because the section is rejected or BUNDLE is enabled.
@@ -111,9 +108,10 @@ class JsepTransportController final : public PayloadTypeSuggester {
         PeerConnectionInterface::kRtcpMuxPolicyRequire;
     bool disable_encryption = false;
     bool enable_external_auth = false;
-    // Used to inject the ICE/DTLS transports created externally.
+    // Used to inject the ICE/DTLS/SRTP transports created externally.
     IceTransportFactory* ice_transport_factory = nullptr;
     DtlsTransportFactory* dtls_transport_factory = nullptr;
+    RtpTransportFactory* rtp_transport_factory = nullptr;
     Observer* transport_observer = nullptr;
     // Must be provided and valid for the lifetime of the
     // JsepTransportController instance.
@@ -164,9 +162,8 @@ class JsepTransportController final : public PayloadTypeSuggester {
       PortAllocator* port_allocator,
       AsyncDnsResolverFactoryInterface* async_dns_resolver_factory,
       LocalNetworkAccessPermissionFactoryInterface* lna_permission_factory,
-      PayloadTypePicker& payload_type_picker,
       Config config);
-  ~JsepTransportController() override;
+  ~JsepTransportController();
 
   JsepTransportController(const JsepTransportController&) = delete;
   JsepTransportController& operator=(const JsepTransportController&) = delete;
@@ -201,13 +198,15 @@ class JsepTransportController final : public PayloadTypeSuggester {
   // Get transports to be used for the provided `mid`. If bundling is enabled,
   // calling GetRtpTransport for multiple MIDs may yield the same object.
   RtpTransportInternal* GetRtpTransport(absl::string_view mid) const;
-  DtlsTransportInternal* GetDtlsTransport(const std::string& mid);
+  DtlsTransportInternal* GetDtlsTransport(absl::string_view mid);
   // Gets the externally sharable version of the DtlsTransport.
-  scoped_refptr<DtlsTransport> LookupDtlsTransportByMid(const std::string& mid);
-  scoped_refptr<SctpTransport> GetSctpTransport(const std::string& mid) const;
+  scoped_refptr<DtlsTransport> LookupDtlsTransportByMid_n(
+      absl::string_view mid);
+  scoped_refptr<DtlsTransport> LookupDtlsTransportByMid(absl::string_view mid);
+  scoped_refptr<SctpTransport> GetSctpTransport(absl::string_view mid) const;
 
   DataChannelTransportInterface* GetDataChannelTransport(
-      const std::string& mid) const;
+      absl::string_view mid) const;
 
   /*********************
    * ICE-related methods
@@ -225,13 +224,13 @@ class JsepTransportController final : public PayloadTypeSuggester {
   // bundling, returns false.
   //
   // Must be called on the signaling thread.
-  bool NeedsIceRestart(const std::string& mid) const;
+  bool NeedsIceRestart(absl::string_view mid) const;
   // Start gathering candidates for any new transports, or transports doing an
   // ICE restart.
   //
   // Must be called on the signaling thread.
   void MaybeStartGathering();
-  RTCError AddRemoteCandidates(const std::string& mid,
+  RTCError AddRemoteCandidates(absl::string_view mid,
                                const std::vector<Candidate>& candidates);
   // Must be called on the signaling thread.
   bool RemoveRemoteCandidate(const IceCandidate* candidate);
@@ -245,30 +244,15 @@ class JsepTransportController final : public PayloadTypeSuggester {
   // Must be called on the signaling thread.
   bool SetLocalCertificate(const scoped_refptr<RTCCertificate>& certificate);
   scoped_refptr<RTCCertificate> GetLocalCertificate(
-      const std::string& mid) const;
+      absl::string_view mid) const;
   // Caller owns returned certificate chain. This method mainly exists for
   // stats reporting.
   std::unique_ptr<SSLCertChain> GetRemoteSSLCertChain(
-      const std::string& mid) const;
+      absl::string_view mid) const;
   // Get negotiated role, if one has been negotiated.
   //
   // Must be called on the signaling thread.
-  std::optional<SSLRole> GetDtlsRole(const std::string& mid) const;
-
-  // Suggest a payload type for a given codec on a given media section.
-  // Media section is indicated by MID.
-  // The function will either return a PT already in use on the connection
-  // or a newly suggested one.
-  //
-  // Must be called on the signaling thread.
-  RTCErrorOr<PayloadType> SuggestPayloadType(absl::string_view mid,
-                                             const Codec& codec) override;
-  RTCError AddLocalMapping(absl::string_view mid,
-                           PayloadType payload_type,
-                           const Codec& codec) override;
-  const PayloadTypePicker& PayloadTypePickerForTesting() const {
-    return payload_type_picker_;
-  }
+  std::optional<SSLRole> GetDtlsRole(absl::string_view mid) const;
 
   bool GetStats(absl::string_view transport_name, TransportStats* stats) const;
 
@@ -289,7 +273,7 @@ class JsepTransportController final : public PayloadTypeSuggester {
       RTC_RUN_ON(network_thread_);
 
   // Always called via a blocking call from the signaling thread.
-  bool NeedsIceRestart_n(const std::string& mid) const
+  bool NeedsIceRestart_n(absl::string_view mid) const
       RTC_RUN_ON(network_thread_);
 
   // Always called via a blocking call from the signaling thread.
@@ -304,11 +288,6 @@ class JsepTransportController final : public PayloadTypeSuggester {
 
   // Always called via a blocking call from the signaling thread.
   bool SetLocalCertificate_n(const scoped_refptr<RTCCertificate>& certificate)
-      RTC_RUN_ON(network_thread_);
-
-  // Always called via a blocking call from the signaling thread.
-  RTCErrorOr<PayloadType> SuggestPayloadType_n(absl::string_view mid,
-                                               const Codec& codec)
       RTC_RUN_ON(network_thread_);
 
   // Called from SetLocalDescription and SetRemoteDescription.
@@ -353,10 +332,6 @@ class JsepTransportController final : public PayloadTypeSuggester {
   // destroyed because of BUNDLE, it would return the transport which other
   // transports are bundled on (In current implementation, it is the first
   // content in the BUNDLE group).
-  const JsepTransport* GetJsepTransportForMid(const std::string& mid) const
-      RTC_RUN_ON(network_thread_);
-  JsepTransport* GetJsepTransportForMid(const std::string& mid)
-      RTC_RUN_ON(network_thread_);
   const JsepTransport* GetJsepTransportForMid(absl::string_view mid) const
       RTC_RUN_ON(network_thread_);
   JsepTransport* GetJsepTransportForMid(absl::string_view mid)
@@ -391,21 +366,21 @@ class JsepTransportController final : public PayloadTypeSuggester {
       const ContentInfo& content_info,
       bool rtcp);
   scoped_refptr<IceTransportInterface> CreateIceTransport(
-      const std::string& transport_name,
+      absl::string_view transport_name,
       bool rtcp);
   std::unique_ptr<RtpTransport> CreateUnencryptedRtpTransport(
-      const std::string& transport_name,
+      absl::string_view transport_name,
       std::unique_ptr<PacketTransportInternal> rtp_packet_transport,
       std::unique_ptr<PacketTransportInternal> rtcp_packet_transport);
 
   // Creates a DTLS SRTP transport.
   std::unique_ptr<DtlsSrtpTransport> CreateDtlsSrtpTransport(
-      const std::string& transport_name,
+      absl::string_view transport_name,
       std::unique_ptr<DtlsTransportInternal> rtp_dtls_transport,
       std::unique_ptr<DtlsTransportInternal> rtcp_dtls_transport);
 
   std::unique_ptr<RtpTransport> CreateRtpTransport(
-      const std::string& transport_name,
+      absl::string_view transport_name,
       std::unique_ptr<DtlsTransportInternal> rtp_dtls_transport,
       std::unique_ptr<DtlsTransportInternal> rtcp_dtls_transport);
 
@@ -479,8 +454,6 @@ class JsepTransportController final : public PayloadTypeSuggester {
   scoped_refptr<RTCCertificate> certificate_;
 
   BundleManager bundles_;
-  // Reference to the SdpOfferAnswerHandler's payload type picker.
-  PayloadTypePicker& payload_type_picker_;
 };
 
 }  // namespace webrtc

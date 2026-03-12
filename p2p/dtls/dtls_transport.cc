@@ -33,7 +33,6 @@
 #include "api/sequence_checker.h"
 #include "api/task_queue/pending_task_safety_flag.h"
 #include "api/transport/ecn_marking.h"
-#include "api/transport/stun.h"
 #include "api/units/time_delta.h"
 #include "logging/rtc_event_log/events/rtc_event_dtls_transport_state.h"
 #include "logging/rtc_event_log/events/rtc_event_dtls_writable_state.h"
@@ -57,6 +56,8 @@
 #include "rtc_base/ssl_stream_adapter.h"
 #include "rtc_base/stream.h"
 #include "rtc_base/thread.h"
+#include "system_wrappers/include/clock.h"
+#include "system_wrappers/include/metrics.h"
 
 namespace webrtc {
 namespace {
@@ -68,6 +69,20 @@ class SimpleIceTransport : public IceTransportInterface {
   IceTransportInternal* internal() override { return internal_; }
   IceTransportInternal* const internal_;
 };
+
+HistogramDtlsVersion ToHistogramDtlsVersion(int version_bytes) {
+  switch (version_bytes) {
+    case kDtls10VersionBytes:
+      return HistogramDtlsVersion::kDtls10;
+    case kDtls12VersionBytes:
+      return HistogramDtlsVersion::kDtls12;
+    case kDtls13VersionBytes:
+      return HistogramDtlsVersion::kDtls13;
+    default:
+      return HistogramDtlsVersion::kUnknown;
+  }
+}
+
 }  // namespace
 
 template <typename Sink>
@@ -702,7 +717,7 @@ void DtlsTransportInternalImpl::ConnectToIceTransport() {
       this,
       [this](PacketTransportInternal* transport) { OnReadyToSend(transport); });
   ice_transport()->SubscribeReceivingState(
-      [this](PacketTransportInternal* transport) {
+      this, [this](PacketTransportInternal* transport) {
         OnReceivingState(transport);
       });
   ice_transport()->SubscribeNetworkRouteChanged(
@@ -785,7 +800,7 @@ void DtlsTransportInternalImpl::OnWritableState(
       if (dtls_in_stun_ && dtls_ && first_ice_writable) {
         // Dtls1.3 has one remaining packet after it has become kConnected (?),
         // make sure that this packet is sent too.
-        ConfigureHandshakeTimeout();
+        UpdateHandshakeTimeout();
         PeriodicRetransmitDtlsPacketUntilDtlsConnected();
       }
       set_writable(ice_transport()->writable());
@@ -795,7 +810,7 @@ void DtlsTransportInternalImpl::OnWritableState(
         // If DTLS piggybacking is enabled, we set the timeout
         // on the DTLS object (which is then different from the
         // inital kDisabledHandshakeTimeoutMs)
-        ConfigureHandshakeTimeout();
+        UpdateHandshakeTimeout();
         PeriodicRetransmitDtlsPacketUntilDtlsConnected();
       }
       break;
@@ -1010,6 +1025,11 @@ void DtlsTransportInternalImpl::MaybeStartDtls() {
   if (dtls_ && (ice_transport()->writable() || dtls_in_stun_)) {
     ConfigureHandshakeTimeout();
 
+    RTC_LOG(LS_INFO)
+        << ToString()
+        << ": DtlsTransportInternalImpl: Start DTLS handshake active="
+        << IsDtlsActive()
+        << " role=" << (*dtls_role_ == SSL_SERVER ? "server" : "client");
     if (dtls_->StartSSL()) {
       // This should never fail:
       // Because we are operating in a nonblocking mode and all
@@ -1017,16 +1037,11 @@ void DtlsTransportInternalImpl::MaybeStartDtls() {
       // packets in this state, the incoming queue must be empty. We
       // ignore write errors, thus any errors must be because of
       // configuration and therefore are our fault.
-      RTC_DCHECK_NOTREACHED() << "StartSSL failed.";
       RTC_LOG(LS_ERROR) << ToString() << ": Couldn't start DTLS handshake";
+      RTC_DCHECK_NOTREACHED() << "StartSSL failed.";
       set_dtls_state(DtlsTransportState::kFailed);
       return;
     }
-    RTC_LOG(LS_INFO)
-        << ToString()
-        << ": DtlsTransportInternalImpl: Started DTLS handshake active="
-        << IsDtlsActive()
-        << " role=" << (*dtls_role_ == SSL_SERVER ? "server" : "client");
     set_dtls_state(DtlsTransportState::kConnecting);
     // Now that the handshake has started, we can process a cached ClientHello
     // (if one exists).
@@ -1099,7 +1114,50 @@ void DtlsTransportInternalImpl::set_dtls_state(DtlsTransportState state) {
   RTC_LOG(LS_VERBOSE) << ToString() << ": set_dtls_state from:"
                       << static_cast<int>(dtls_state_) << " to "
                       << static_cast<int>(state);
+  if (dtls_state_ == DtlsTransportState::kConnecting &&
+      state == DtlsTransportState::kConnected) {
+    if (dtls_role_) {
+      TimeDelta connection_time_delta =
+          env_.clock().CurrentTime() - connecting_state_timestamp_;
+      switch (*dtls_role_) {
+        case SSL_CLIENT:
+          RTC_HISTOGRAM_COUNTS_1G(
+              "WebRTC.PeerConnection.DtlsClientRoleConnectionTime",
+              connection_time_delta.us());
+          break;
+        case SSL_SERVER:
+          RTC_HISTOGRAM_COUNTS_1G(
+              "WebRTC.PeerConnection.DtlsServerRoleConnectionTime",
+              connection_time_delta.us());
+          break;
+      }
+    }
+  }
   dtls_state_ = state;
+  if (dtls_state_ == DtlsTransportState::kConnecting) {
+    connecting_state_timestamp_ = env_.clock().CurrentTime();
+  }
+  if (dtls_state_ == DtlsTransportState::kConnected) {
+    int ssl_version_bytes = 0;
+    if (dtls_role_ && GetSslVersionBytes(&ssl_version_bytes)) {
+      HistogramDtlsVersion dtls_version =
+          ToHistogramDtlsVersion(ssl_version_bytes);
+      switch (*dtls_role_) {
+        case SSL_CLIENT:
+          RTC_HISTOGRAM_ENUMERATION(
+              "WebRTC.PeerConnection.DtlsVersionClientRole",
+              static_cast<int>(dtls_version),
+              static_cast<int>(HistogramDtlsVersion::kMax));
+          break;
+        case SSL_SERVER:
+          RTC_HISTOGRAM_ENUMERATION(
+              "WebRTC.PeerConnection.DtlsVersionServerRole",
+              static_cast<int>(dtls_version),
+              static_cast<int>(HistogramDtlsVersion::kMax));
+          break;
+      }
+    }
+  }
   if (dtls_state_ == DtlsTransportState::kFailed) {
     dtls_stun_piggyback_controller_.SetDtlsFailed();
   }
@@ -1139,6 +1197,17 @@ void DtlsTransportInternalImpl::ConfigureHandshakeTimeout() {
   }
 }
 
+void DtlsTransportInternalImpl::UpdateHandshakeTimeout() {
+  RTC_DCHECK(dtls_);
+  const auto rtt_ms = ice_transport()->GetRttEstimate();
+  const int delay_ms = ComputeRetransmissionTimeout(
+      rtt_ms.value_or(kDefaultHandshakeEstimateRttMs));
+  RTC_LOG(LS_INFO) << ToString() << ": Update DTLS handshake timeout to "
+                   << delay_ms << "ms based on ICE RTT "
+                   << (rtt_ms ? std::to_string(*rtt_ms) : "<unset>");
+  dtls_->UpdateRetransmissionTimeout(delay_ms);
+}
+
 void DtlsTransportInternalImpl::SetPiggybackDtlsDataCallback(
     absl::AnyInvocable<void(PacketTransportInternal* transport,
                             const ReceivedIpPacket& packet)> callback) {
@@ -1160,34 +1229,40 @@ bool DtlsTransportInternalImpl::WasDtlsCompletedByPiggybacking() {
                                DtlsStunPiggybackController::State::PENDING);
 }
 
-// TODO (jonaso, webrtc:367395350): Switch to upcoming
-// DTLSv1_set_timeout_duration. Remove once we can get DTLS to handle
-// retransmission also when handshake is not complete but we become writable
-// (e.g. by setting a good timeout).
 void DtlsTransportInternalImpl::
     PeriodicRetransmitDtlsPacketUntilDtlsConnected() {
   RTC_DCHECK_RUN_ON(&thread_checker_);
+
   if (pending_periodic_retransmit_dtls_packet_ == true) {
     // PeriodicRetransmitDtlsPacketUntilDtlsConnected is called in two places
     // a) Either by PostTask, where pending_ping_until_dtls_connected_ is FALSE
     // b) When Ice get connected, in which it is unknown if
-    // pending_periodic_retransmit_dtls_packet_.
+    // pending_periodic_retransmit_dtls_packet_ is true or false.
     return;
   }
+
+  if (dtls_stun_piggyback_controller_.state() ==
+      DtlsStunPiggybackController::State::COMPLETE) {
+    // We're done.
+    return;
+  }
+
   if (ice_transport()->writable() && dtls_in_stun_) {
-    auto data_to_send = dtls_stun_piggyback_controller_.GetDataToPiggyback(
-        STUN_BINDING_INDICATION);
-    if (!data_to_send) {
+    auto data_to_send = dtls_stun_piggyback_controller_.GetPending();
+    if (data_to_send.empty()) {
       // No data to send, we're done.
       return;
     }
-    AsyncSocketPacketOptions packet_options;
-    ice_transport()->SendPacket(data_to_send->data(), data_to_send->size(),
-                                packet_options,
-                                /* flags= */ 0);
+    for (const auto& packet : data_to_send) {
+      AsyncSocketPacketOptions packet_options;
+      ice_transport()->SendPacket(reinterpret_cast<const char*>(packet.data()),
+                                  packet.size(), packet_options,
+                                  /* flags= */ 0);
+    }
   }
 
-  const auto rtt_ms = ice_transport()->GetRttEstimate().value_or(100);
+  const auto rtt_ms = ice_transport()->GetRttEstimate().value_or(
+      kDefaultHandshakeEstimateRttMs);
   const int delay_ms = ComputeRetransmissionTimeout(rtt_ms);
 
   // Set pending before we post task.

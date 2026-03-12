@@ -47,10 +47,26 @@ class FullScreenWindowDetector
   FullScreenWindowDetector(const FullScreenWindowDetector&) = delete;
   FullScreenWindowDetector& operator=(const FullScreenWindowDetector&) = delete;
 
+  void SetHeuristicForFindingEditor(bool use_heuristic) {
+    use_heuristic_for_finding_editor_ = use_heuristic;
+    if (app_handler_) {
+      app_handler_->SetHeuristicForFindingEditor(use_heuristic);
+    }
+  }
+  bool UseHeuristicForFindingEditor() {
+    return use_heuristic_for_finding_editor_;
+  }
+
   // Returns the full-screen window in place of the original window if all the
   // criteria provided by FullScreenApplicationHandler are met, or 0 if no such
   // window found.
   DesktopCapturer::SourceId FindFullScreenWindow(
+      DesktopCapturer::SourceId original_source_id);
+
+  // Returns the editor window id if `original_source_id` corresponds to a full
+  // screen window or `original_source_id` if it corresponds to an editor
+  // window. Returns 0 if no such window is found.
+  DesktopCapturer::SourceId FindEditorWindow(
       DesktopCapturer::SourceId original_source_id);
 
   // The caller should call this function periodically, implementation will
@@ -59,25 +75,15 @@ class FullScreenWindowDetector
       DesktopCapturer::SourceId original_source_id,
       FunctionView<bool(DesktopCapturer::SourceList*)> get_sources);
 
+  void SetEditorWasFoundForChosenSlideShow();
   static scoped_refptr<FullScreenWindowDetector>
   CreateFullScreenWindowDetector();
-  void SetUseHeuristicFullscreenPowerPointWindows(
-      bool use_heuristic_fullscreen_powerpoint_windows,
-      bool use_heuristic_for_wgc = false) {
-    use_heuristic_fullscreen_powerpoint_windows_ =
-        use_heuristic_fullscreen_powerpoint_windows;
-    use_heuristic_for_wgc_ = use_heuristic_for_wgc;
-    if (app_handler_) {
-      app_handler_->SetUseHeuristicFullscreenPowerPointWindows(
-          use_heuristic_fullscreen_powerpoint_windows);
-    }
-  }
-  bool UseHeuristicForWGC() { return use_heuristic_for_wgc_; }
 
   // Used for tests.
   void CreateFullScreenApplicationHandlerForTest(
       DesktopCapturer::SourceId source_id,
-      bool fullscreen_slide_show_started_after_capture_start);
+      bool fullscreen_slide_show_started_after_capture_start,
+      bool use_heuristic_for_finding_editor);
 
  protected:
   std::unique_ptr<FullScreenApplicationHandler> app_handler_;
@@ -86,18 +92,17 @@ class FullScreenWindowDetector
   void CreateApplicationHandlerIfNeeded(DesktopCapturer::SourceId source_id);
 
   ApplicationHandlerFactory application_handler_factory_;
-  // `use_heuristic_fullscreen_powerpoint_windows_` controls if we create the
-  // FullScreenPowerPointHandler class or not.
-  // TODO(crbug.com/409473386): Remove
-  // `use_heuristic_fullscreen_powerpoint_windows_` once the feature is
-  // available in stable for some milestones.
-  bool use_heuristic_fullscreen_powerpoint_windows_ = true;
 
-  // `use_heuristic_for_wgc_` implements the finch experiment for
-  // the usage of FullScreenPowerPointHandler class for WGC API.
-  // TODO(crbug.com/409473386): Remove `use_heuristic_for_wgc_` once
+  // `use_heuristic_for_finding_editor_` implements the finch experiment for
+  // finding the editor window for a chosen slide show.
+  // TODO(crbug.com/409473386): Remove `use_heuristic_for_finding_editor_` once
   // the feature has been rolled out to Stable for some milestones.
-  bool use_heuristic_for_wgc_ = false;
+  bool use_heuristic_for_finding_editor_ = false;
+
+  // This bool records if an editor window was found for the selected slide show
+  // window. This bool is then used when we create a new application handler for
+  // the editor window to tell it to start sharing the slide show immediately.
+  bool found_editor_for_chosen_slide_show_ = false;
 
   int64_t last_update_time_ms_;
   DesktopCapturer::SourceId previous_source_id_;

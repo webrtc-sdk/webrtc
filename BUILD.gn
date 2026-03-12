@@ -66,6 +66,7 @@ if (!build_with_chromium) {
         "modules/video_capture:video_capture_internal_impl",
         "modules/video_coding:video_codec_perf_tests",
         "net/dcsctp:dcsctp_unittests",
+        "p2p:dtls_ice_integration_bench",
         "pc:peerconnection_unittests",
         "pc:rtc_pc_unittests",
         "pc:slow_peer_connection_unittests",
@@ -537,7 +538,6 @@ if (!build_with_chromium) {
       "api:create_modular_peer_connection_factory",
       "api:create_peerconnection_factory",
       "api:enable_media",
-      "api:libjingle_peerconnection_api",
       "api:rtc_error",
       "api:transport_api",
       "api/audio_codecs:opus_audio_decoder_factory",
@@ -665,7 +665,6 @@ if (rtc_include_tests && !build_with_chromium) {
       "rtc_base:rtc_numerics_unittests",
       "rtc_base:rtc_operations_chain_unittests",
       "rtc_base:rtc_task_queue_unittests",
-      "rtc_base:sigslot_unittest",
       "rtc_base:task_queue_stdlib_unittest",
       "rtc_base:untyped_function_unittest",
       "rtc_base:weak_ptr_unittests",
@@ -675,7 +674,6 @@ if (rtc_include_tests && !build_with_chromium) {
       "rtc_base/units:units_unittests",
       "sdk:sdk_tests",
       "test:rtp_test_utils",
-      "test:test_main",
       "test/network:network_emulation_unittests",
     ]
 
@@ -707,16 +705,14 @@ if (rtc_include_tests && !build_with_chromium) {
   rtc_test("rtc_p2p_unittests") {
     testonly = true
 
-    deps = [
-      "p2p:rtc_p2p_unittests",
-      "test:test_main",
-    ]
+    deps = [ "p2p:rtc_p2p_unittests" ]
   }
 
   if (rtc_enable_google_benchmarks) {
-    rtc_test("benchmarks") {
+    rtc_executable("benchmarks") {
       testonly = true
       deps = [
+        "rtc_base:base64_benchmark_temp",
         "rtc_base/synchronization:mutex_benchmark",
         "test:benchmark_main",
       ]
@@ -734,7 +730,6 @@ if (rtc_include_tests && !build_with_chromium) {
       "call:call_tests",
       "call/adaptation:resource_adaptation_tests",
       "test:test_common",
-      "test:test_main",
       "test:video_test_common",
       "video:video_tests",
       "video/adaptation:video_adaptation_tests",
@@ -759,7 +754,6 @@ if (rtc_include_tests && !build_with_chromium) {
       "modules/audio_coding:audio_coding_perf_tests",
       "modules/audio_processing:audio_processing_perf_tests",
       "pc:peerconnection_perf_tests",
-      "test:test_main",
       "video:video_full_stack_tests",
       "video:video_pc_full_stack_tests",
     ]
@@ -793,7 +787,6 @@ if (rtc_include_tests && !build_with_chromium) {
       "audio/voip/test:audio_egress_unittests",
       "audio/voip/test:audio_ingress_unittests",
       "audio/voip/test:voip_core_unittests",
-      "test:test_main",
     ]
   }
 }

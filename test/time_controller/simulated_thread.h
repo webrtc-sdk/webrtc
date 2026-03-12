@@ -23,7 +23,7 @@
 #include "rtc_base/synchronization/mutex.h"
 #include "rtc_base/thread.h"
 #include "rtc_base/thread_annotations.h"
-#include "test/time_controller/simulated_time_controller.h"
+#include "test/time_controller/simulated_time_controller_impl.h"
 
 namespace webrtc {
 
@@ -70,7 +70,7 @@ class SimulatedMainThread : public SimulatedThread {
  public:
   explicit SimulatedMainThread(
       sim_time_impl::SimulatedTimeControllerImpl* handler);
-  ~SimulatedMainThread();
+  ~SimulatedMainThread() override;
 
  private:
   CurrentThreadSetter current_setter_;

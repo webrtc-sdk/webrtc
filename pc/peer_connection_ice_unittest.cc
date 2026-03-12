@@ -271,8 +271,9 @@ class PeerConnectionIceBaseTest : public ::testing::Test {
     PeerConnection* pc = static_cast<PeerConnection*>(pc_proxy->internal());
     for (const auto& transceiver : pc->GetTransceiversInternal()) {
       if (transceiver->media_type() == MediaType::AUDIO) {
-        auto dtls_transport = pc->LookupDtlsTransportByMidInternal(
-            transceiver->internal()->channel()->mid());
+        auto dtls_transport =
+            pc->transport_controller_s()->LookupDtlsTransportByMid(
+                transceiver->internal()->channel()->mid());
         return dtls_transport->ice_transport()->internal()->GetIceRole();
       }
     }
@@ -494,10 +495,9 @@ TEST_P(PeerConnectionIceTest, CannotAddCandidateWhenRemoteDescriptionNotSet) {
   std::unique_ptr<SessionDescriptionInterface> offer = caller->CreateOffer();
   ASSERT_THAT(offer, NotNull());
   ASSERT_THAT(offer->description()->contents(), SizeIs(2));
-  std::string mid = offer->description()->contents()[0].mid();
   Candidate candidate = CreateLocalUdpCandidate(kCalleeAddress);
-  std::unique_ptr<IceCandidate> jsep_candidate =
-      CreateIceCandidate(mid, 0, candidate);
+  std::unique_ptr<IceCandidate> jsep_candidate = CreateIceCandidate(
+      offer->description()->contents()[0].mid(), 0, candidate);
 
   EXPECT_FALSE(caller->pc()->AddIceCandidate(jsep_candidate.get()));
 
@@ -861,9 +861,8 @@ TEST_P(PeerConnectionIceTest,
   std::unique_ptr<SessionDescriptionInterface> offer = caller->CreateOffer();
   ASSERT_THAT(offer, NotNull());
   ASSERT_THAT(offer->description()->contents(), SizeIs(2));
-  std::string mid = offer->description()->contents()[0].mid();
-  std::unique_ptr<IceCandidate> jsep_candidate =
-      CreateIceCandidate(mid, 0, candidate);
+  std::unique_ptr<IceCandidate> jsep_candidate = CreateIceCandidate(
+      offer->description()->contents()[0].mid(), 0, candidate);
 
   bool operation_completed = false;
   caller->pc()->AddIceCandidate(

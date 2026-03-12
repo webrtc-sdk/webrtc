@@ -77,7 +77,6 @@ if (rtc_include_tests) {
     sources = [ "turnserver/read_auth_file_unittest.cc" ]
     deps = [
       ":read_auth_file",
-      "../test:test_main",
       "//test:test_support",
       "//testing/gtest",
     ]
@@ -483,7 +482,7 @@ if (is_ios || (is_mac && target_cpu != "x86")) {
       deps = [
         "../api:create_modular_peer_connection_factory",
         "../api:enable_media",
-        "../api:libjingle_peerconnection_api",
+        "../api:peer_connection_interface",
         "../api:scoped_refptr",
         "../api:sequence_checker",
         "../api/audio:audio_processing",
@@ -687,7 +686,6 @@ if (is_linux || is_chromeos || is_win) {
       "../api:enable_media",
       "../api:field_trials",
       "../api:jsep",
-      "../api:libjingle_peerconnection_api",
       "../api:make_ref_counted",
       "../api:media_stream_interface",
       "../api:peer_connection_interface",
@@ -763,7 +761,6 @@ if (is_linux || is_chromeos || is_win) {
     }
 
     deps += [
-      "../api:libjingle_peerconnection_api",
       "../api/audio_codecs:builtin_audio_decoder_factory",
       "../api/audio_codecs:builtin_audio_encoder_factory",
       "../api/video:video_frame",

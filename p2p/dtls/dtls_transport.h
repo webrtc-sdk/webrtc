@@ -31,6 +31,7 @@
 #include "api/scoped_refptr.h"
 #include "api/sequence_checker.h"
 #include "api/task_queue/pending_task_safety_flag.h"
+#include "api/units/timestamp.h"
 #include "p2p/base/ice_transport_internal.h"
 #include "p2p/base/packet_transport_internal.h"
 #include "p2p/dtls/dtls_stun_piggyback_controller.h"
@@ -52,6 +53,15 @@
 #include "rtc_base/thread_annotations.h"
 
 namespace webrtc {
+
+// Used by histograms. Values of entries should not be changed, except for kMax.
+enum class HistogramDtlsVersion {
+  kUnknown = 0,
+  kDtls10 = 1,
+  kDtls12 = 2,
+  kDtls13 = 3,
+  kMax = 4
+};
 
 // A bridge between a packet-oriented/transport-type interface on
 // the bottom and a StreamInterface on the top.
@@ -127,6 +137,11 @@ class StreamInterfaceChannel : public StreamInterface {
 // as the constructor.
 class DtlsTransportInternalImpl : public DtlsTransportInternal {
  public:
+  // See https://datatracker.ietf.org/doc/html/rfc9147#section-5.8.2,
+  // the RFC specifies 400ms...but in ComputeRetransmissionTimeout
+  // the RTT estimate is multiplied by 2, so the first timeout will be 400 ms.
+  static constexpr int kDefaultHandshakeEstimateRttMs = 200;
+
   // For testing purposes only.
   using SslStreamFactory = std::function<std::unique_ptr<SSLStreamAdapter>(
       std::unique_ptr<StreamInterface>,
@@ -278,6 +293,7 @@ class DtlsTransportInternalImpl : public DtlsTransportInternal {
   bool HandleDtlsPacket(ArrayView<const uint8_t> payload);
   void OnDtlsHandshakeError(SSLHandshakeError error);
   void ConfigureHandshakeTimeout();
+  void UpdateHandshakeTimeout();
 
   void set_receiving(bool receiving);
   void set_writable(bool writable);
@@ -301,6 +317,8 @@ class DtlsTransportInternalImpl : public DtlsTransportInternal {
 
   const int component_;
   DtlsTransportState dtls_state_ = DtlsTransportState::kNew;
+  Timestamp connecting_state_timestamp_ = Timestamp::Micros(0);
+
   // Underlying ice_transport.
   const scoped_refptr<IceTransportInterface> ice_transport_;
   std::unique_ptr<SSLStreamAdapter> dtls_;  // The DTLS stream

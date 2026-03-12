@@ -20,6 +20,7 @@
 #include <utility>
 
 #include "absl/functional/any_invocable.h"
+#include "absl/strings/string_view.h"
 #include "api/data_channel_interface.h"
 #include "api/make_ref_counted.h"
 #include "api/priority.h"
@@ -28,7 +29,6 @@
 #include "api/sequence_checker.h"
 #include "api/task_queue/pending_task_safety_flag.h"
 #include "api/transport/data_channel_transport_interface.h"
-#include "media/sctp/sctp_transport_internal.h"
 #include "pc/data_channel_utils.h"
 #include "pc/proxy.h"
 #include "pc/sctp_utils.h"
@@ -141,7 +141,7 @@ bool InternalDataChannelInit::IsValid() const {
 std::optional<StreamId> SctpSidAllocator::AllocateSid(SSLRole role) {
   RTC_DCHECK_RUN_ON(&sequence_checker_);
   int potential_sid = (role == SSL_CLIENT) ? 0 : 1;
-  while (potential_sid <= static_cast<int>(kMaxSctpSid)) {
+  while (potential_sid <= max_sid_) {
     StreamId sid(potential_sid);
     if (used_sids_.insert(sid).second)
       return sid;
@@ -301,7 +301,7 @@ class SctpDataChannel::ObserverAdapter : public DataChannelObserver {
 // static
 scoped_refptr<SctpDataChannel> SctpDataChannel::Create(
     WeakPtr<SctpDataChannelControllerInterface> controller,
-    const std::string& label,
+    absl::string_view label,
     bool connected_to_transport,
     const InternalDataChannelInit& config,
     Thread* signaling_thread,
@@ -328,7 +328,7 @@ scoped_refptr<DataChannelInterface> SctpDataChannel::CreateProxy(
 SctpDataChannel::SctpDataChannel(
     const InternalDataChannelInit& config,
     WeakPtr<SctpDataChannelControllerInterface> controller,
-    const std::string& label,
+    absl::string_view label,
     bool connected_to_transport,
     Thread* signaling_thread,
     Thread* network_thread)
@@ -577,13 +577,12 @@ uint64_t SctpDataChannel::bytes_received() const {
 bool SctpDataChannel::Send(const DataBuffer& buffer) {
   RTC_DCHECK_RUN_ON(network_thread_);
   RTCError err = SendImpl(buffer);
-  if (err.type() == RTCErrorType::INVALID_STATE ||
-      err.type() == RTCErrorType::RESOURCE_EXHAUSTED) {
-    return false;
+  if (!err.ok() && err.type() != RTCErrorType::INVALID_STATE &&
+      err.type() != RTCErrorType::RESOURCE_EXHAUSTED &&
+      err.type() != RTCErrorType::NETWORK_ERROR) {
+    RTC_LOG(LS_INFO) << "Unexpected error code: " << err;
   }
-
-  // Always return true for SCTP DataChannel per the spec.
-  return true;
+  return err.ok();
 }
 
 // RTC_RUN_ON(network_thread_);

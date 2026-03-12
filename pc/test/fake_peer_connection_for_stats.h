@@ -11,6 +11,7 @@
 #ifndef PC_TEST_FAKE_PEER_CONNECTION_FOR_STATS_H_
 #define PC_TEST_FAKE_PEER_CONNECTION_FOR_STATS_H_
 
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <optional>
@@ -23,30 +24,44 @@
 #include "api/audio/audio_device.h"
 #include "api/audio_options.h"
 #include "api/crypto/crypto_options.h"
+#include "api/environment/environment.h"
 #include "api/environment/environment_factory.h"
+#include "api/ice_transport_interface.h"
+#include "api/jsep.h"
 #include "api/make_ref_counted.h"
 #include "api/media_types.h"
 #include "api/peer_connection_interface.h"
 #include "api/rtp_receiver_interface.h"
 #include "api/rtp_sender_interface.h"
+#include "api/rtp_transceiver_direction.h"
 #include "api/scoped_refptr.h"
 #include "api/sequence_checker.h"
 #include "api/task_queue/task_queue_base.h"
+#include "api/transport/data_channel_transport_interface.h"
 #include "call/call.h"
 #include "call/payload_type_picker.h"
 #include "media/base/fake_media_engine.h"
 #include "media/base/media_channel.h"
+#include "modules/rtp_rtcp/source/rtp_packet_received.h"
 #include "p2p/base/p2p_constants.h"
 #include "p2p/base/port.h"
+#include "p2p/base/transport_description.h"
+#include "p2p/base/transport_info.h"
+#include "p2p/test/fake_ice_transport.h"
 #include "pc/channel.h"
 #include "pc/connection_context.h"
 #include "pc/data_channel_utils.h"
+#include "pc/dtls_transport.h"
+#include "pc/jsep_transport_controller.h"
+#include "pc/rtc_stats_collector.h"
 #include "pc/rtp_receiver.h"
 #include "pc/rtp_receiver_proxy.h"
 #include "pc/rtp_sender.h"
 #include "pc/rtp_sender_proxy.h"
 #include "pc/rtp_transceiver.h"
+#include "pc/rtp_transport_internal.h"
 #include "pc/sctp_data_channel.h"
+#include "pc/session_description.h"
 #include "pc/stream_collection.h"
 #include "pc/test/enable_fake_media.h"
 #include "pc/test/fake_codec_lookup_helper.h"
@@ -54,12 +69,26 @@
 #include "pc/test/fake_peer_connection_base.h"
 #include "pc/transport_stats.h"
 #include "rtc_base/checks.h"
+#include "rtc_base/copy_on_write_buffer.h"
 #include "rtc_base/rtc_certificate.h"
 #include "rtc_base/ssl_certificate.h"
 #include "rtc_base/thread.h"
 #include "rtc_base/unique_id_generator.h"
 
 namespace webrtc {
+
+class FakeIceTransportFactory : public IceTransportFactory {
+ public:
+  ~FakeIceTransportFactory() override = default;
+  scoped_refptr<IceTransportInterface> CreateIceTransport(
+      const std::string& transport_name,
+      int component,
+      IceTransportInit init) override {
+    auto internal =
+        std::make_unique<FakeIceTransportInternal>(transport_name, component);
+    return make_ref_counted<FakeIceTransport>(std::move(internal));
+  }
+};
 
 // Fake VoiceMediaChannel where the result of GetStats can be configured.
 class FakeVoiceMediaSendChannelForStats : public FakeVoiceMediaSendChannel {
@@ -235,7 +264,11 @@ class VideoChannelForTesting : public VideoChannel {
 // RTCStatsCollector so that the stats functionality can be unit tested.
 // Individual tests can configure this fake as needed to simulate scenarios
 // under which to test the stats collectors.
-class FakePeerConnectionForStats : public FakePeerConnectionBase {
+//
+// TODO: bugs.webrtc.org/470300031 - At the moment this class uses transceivers
+// via the PlanB methods This needs to be fixed.
+class FakePeerConnectionForStats : public FakePeerConnectionBase,
+                                   public JsepTransportController::Observer {
  public:
   // TODO(steveanton): Add support for specifying separate threads to test
   // multi-threading correctness.
@@ -250,9 +283,22 @@ class FakePeerConnectionForStats : public FakePeerConnectionBase {
         local_streams_(StreamCollection::Create()),
         remote_streams_(StreamCollection::Create()),
         data_channel_controller_(network_thread_),
-        codec_lookup_helper_(context_.get(), env_.field_trials()) {}
+        codec_lookup_helper_(context_.get(), env_.field_trials()),
+        ice_transport_factory_(std::make_unique<FakeIceTransportFactory>()) {
+    JsepTransportController::Config config;
+    config.ice_transport_factory = ice_transport_factory_.get();
+    config.transport_observer = this;
+    config.rtcp_handler = [](const CopyOnWriteBuffer& packet,
+                             int64_t packet_time_us) {};
+    config.un_demuxable_packet_handler =
+        [](const RtpPacketReceived& parsed_packet) {};
+    transport_controller_ = std::make_unique<JsepTransportController>(
+        env_, signaling_thread_, network_thread_, /*port_allocator=*/nullptr,
+        /*async_dns_resolver_factory=*/nullptr,
+        /*lna_permission_factory=*/nullptr, std::move(config));
+  }
 
-  ~FakePeerConnectionForStats() {
+  ~FakePeerConnectionForStats() override {
     for (auto transceiver : transceivers_) {
       transceiver->internal()->ClearChannel();
     }
@@ -282,14 +328,14 @@ class FakePeerConnectionForStats : public FakePeerConnectionBase {
         signaling_thread_, sender);
     GetOrCreateFirstTransceiverOfType(sender->media_type())
         ->internal()
-        ->AddSender(sender_proxy);
+        ->AddSenderPlanB(sender_proxy);
     return sender_proxy;
   }
 
   void RemoveSender(scoped_refptr<RtpSenderInterface> sender) {
     GetOrCreateFirstTransceiverOfType(sender->media_type())
         ->internal()
-        ->RemoveSender(sender.get());
+        ->RemoveSenderPlanB(sender.get());
   }
 
   scoped_refptr<RtpReceiverInterface> AddReceiver(
@@ -300,14 +346,14 @@ class FakePeerConnectionForStats : public FakePeerConnectionBase {
             signaling_thread_, worker_thread_, receiver);
     GetOrCreateFirstTransceiverOfType(receiver->media_type())
         ->internal()
-        ->AddReceiver(receiver_proxy);
+        ->AddReceiverPlanB(receiver_proxy);
     return receiver_proxy;
   }
 
   void RemoveReceiver(scoped_refptr<RtpReceiverInterface> receiver) {
     GetOrCreateFirstTransceiverOfType(receiver->media_type())
         ->internal()
-        ->RemoveReceiver(receiver.get());
+        ->RemoveReceiverPlanB(receiver.get());
   }
 
   std::pair<FakeVoiceMediaSendChannelForStats*,
@@ -327,17 +373,20 @@ class FakePeerConnectionForStats : public FakePeerConnectionBase {
         std::move(voice_media_receive_channel), mid, kDefaultSrtpRequired,
         CryptoOptions(), context_->ssrc_generator(), transport_name);
     auto transceiver =
-        GetOrCreateFirstTransceiverOfType(webrtc::MediaType::AUDIO)->internal();
+        GetOrCreateFirstTransceiverOfType(webrtc::MediaType::AUDIO, mid)
+            ->internal();
     if (transceiver->channel()) {
       // This transceiver already has a channel, create a new one.
       transceiver =
-          CreateTransceiverOfType(webrtc::MediaType::AUDIO)->internal();
+          CreateTransceiverOfType(webrtc::MediaType::AUDIO, mid)->internal();
     }
     RTC_DCHECK(!transceiver->channel());
+    RTC_DCHECK(transceiver->mid());
     transceiver->SetChannel(std::move(voice_channel),
                             [](const std::string&) { return nullptr; });
     voice_media_send_channel_ptr->SetStats(initial_stats);
     voice_media_receive_channel_ptr->SetStats(initial_stats);
+    UpdateJsepTransportController(mid, transport_name);
     return std::make_pair(voice_media_send_channel_ptr,
                           voice_media_receive_channel_ptr);
   }
@@ -359,17 +408,20 @@ class FakePeerConnectionForStats : public FakePeerConnectionBase {
         std::move(video_media_receive_channel), mid, kDefaultSrtpRequired,
         CryptoOptions(), context_->ssrc_generator(), transport_name);
     auto transceiver =
-        GetOrCreateFirstTransceiverOfType(webrtc::MediaType::VIDEO)->internal();
+        GetOrCreateFirstTransceiverOfType(webrtc::MediaType::VIDEO, mid)
+            ->internal();
     if (transceiver->channel()) {
       // This transceiver already has a channel, create a new one.
       transceiver =
-          CreateTransceiverOfType(webrtc::MediaType::VIDEO)->internal();
+          CreateTransceiverOfType(webrtc::MediaType::VIDEO, mid)->internal();
     }
     RTC_DCHECK(!transceiver->channel());
+    RTC_DCHECK(transceiver->mid());
     transceiver->SetChannel(std::move(video_channel),
                             [](const std::string&) { return nullptr; });
     video_media_send_channel_ptr->SetStats(initial_stats);
     video_media_receive_channel_ptr->SetStats(initial_stats);
+    UpdateJsepTransportController(mid, transport_name);
     return std::make_pair(video_media_send_channel_ptr,
                           video_media_receive_channel_ptr);
   }
@@ -459,6 +511,10 @@ class FakePeerConnectionForStats : public FakePeerConnectionBase {
 
   Thread* worker_thread() const override { return worker_thread_; }
 
+  JsepTransportController* transport_controller_n() override {
+    return transport_controller_.get();
+  }
+
   Thread* signaling_thread() const override { return signaling_thread_; }
 
   std::vector<scoped_refptr<RtpTransceiverProxyWithInternal<RtpTransceiver>>>
@@ -514,7 +570,9 @@ class FakePeerConnectionForStats : public FakePeerConnectionBase {
       return nullptr;
     }
   }
-  PayloadTypePicker& payload_type_picker() { return payload_type_picker_; }
+  PayloadTypePicker& payload_type_picker() override {
+    return payload_type_picker_;
+  }
 
  private:
   TransportStats GetTransportStatsByName(const std::string& transport_name) {
@@ -533,25 +591,74 @@ class FakePeerConnectionForStats : public FakePeerConnectionBase {
   }
 
   scoped_refptr<RtpTransceiverProxyWithInternal<RtpTransceiver>>
-  GetOrCreateFirstTransceiverOfType(MediaType media_type) {
+  GetOrCreateFirstTransceiverOfType(MediaType media_type,
+                                    absl::string_view mid = "") {
     for (auto transceiver : transceivers_) {
       if (transceiver->internal()->media_type() == media_type) {
+        // This is the first transceiver of this type - make sure it has the
+        // requested mid set.
+        if (!mid.empty() && !transceiver->internal()->mid()) {
+          transceiver->internal()->set_mid(std::string(mid));
+        }
         return transceiver;
       }
     }
-    return CreateTransceiverOfType(media_type);
+    return CreateTransceiverOfType(media_type, mid);
   }
 
   scoped_refptr<RtpTransceiverProxyWithInternal<RtpTransceiver>>
-  CreateTransceiverOfType(MediaType media_type) {
+  CreateTransceiverOfType(MediaType media_type, absl::string_view mid = "") {
     auto transceiver = RtpTransceiverProxyWithInternal<RtpTransceiver>::Create(
         signaling_thread_,
         make_ref_counted<RtpTransceiver>(env_, media_type, context_.get(),
-                                         &codec_lookup_helper_));
+                                         &codec_lookup_helper_, nullptr));
     transceiver->internal()->set_current_direction(
         RtpTransceiverDirection::kSendRecv);
+    if (!mid.empty()) {
+      transceiver->internal()->set_mid(std::string(mid));
+    }
     transceivers_.push_back(transceiver);
     return transceiver;
+  }
+
+  bool OnTransportChanged(
+      absl::string_view mid,
+      RtpTransportInternal* rtp_transport,
+      scoped_refptr<DtlsTransport> dtls_transport,
+      DataChannelTransportInterface* data_channel_transport) override {
+    return true;
+  }
+
+  void UpdateJsepTransportController(const std::string& mid,
+                                     const std::string& transport_name) {
+    transport_names_by_mid_[mid] = transport_name;
+
+    SdpType type = SdpType::kOffer;
+    ContentGroup bundle_group("BUNDLE");
+    // Reconstruct the bundle group to include all contents sharing the
+    // transport. For simplicity, we just rebuild the description with all
+    // contents so far. This is a naive implementation sufficient for tests.
+    auto description = std::make_unique<SessionDescription>();
+    for (const auto& [mid_entry, transport_entry] : transport_names_by_mid_) {
+      auto audio = std::make_unique<AudioContentDescription>();
+      audio->set_protocol("UDP/TLS/RTP/SAVPF");
+      ContentInfo content(MediaProtocolType::kRtp, mid_entry, std::move(audio));
+      description->AddContent(std::move(content));
+      description->AddTransportInfo(
+          TransportInfo(mid_entry, TransportDescription("ufrag", "pwd")));
+      if (transport_entry == transport_name) {
+        bundle_group.AddContentName(mid_entry);
+      }
+    }
+    // If we had multiple bundle groups we would need more logic, but for tests
+    // we usually only test one bundle group or distinct transports.
+    // This logic simplistically bundles everything that matches the current
+    // transport_name.
+    description->AddGroup(bundle_group);
+
+    transport_controller_->SetLocalDescription(type, description.get(),
+                                               nullptr);
+    transport_controller_->MaybeStartGathering();
   }
 
   Thread* const network_thread_;
@@ -584,6 +691,9 @@ class FakePeerConnectionForStats : public FakePeerConnectionBase {
       remote_cert_chains_by_transport_;
   PayloadTypePicker payload_type_picker_;
   FakeCodecLookupHelper codec_lookup_helper_;
+  std::unique_ptr<IceTransportFactory> ice_transport_factory_;
+  std::unique_ptr<JsepTransportController> transport_controller_;
+  std::map<std::string, std::string> transport_names_by_mid_;
 };
 
 }  // namespace webrtc
