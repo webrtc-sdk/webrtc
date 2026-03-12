@@ -82,10 +82,6 @@ ABSL_FLAG(int,
           kParameterNotSpecifiedValue,
           "Activate (1) or deactivate (0) the echo canceller");
 ABSL_FLAG(int,
-          aecm,
-          kParameterNotSpecifiedValue,
-          "Activate (1) or deactivate (0) the mobile echo controller");
-ABSL_FLAG(int,
           ed,
           kParameterNotSpecifiedValue,
           "Activate (1) or deactivate (0) the residual echo detector");
@@ -136,6 +132,11 @@ ABSL_FLAG(bool,
           false,
           "Activate all of the default components (will be overridden by any "
           "other settings)");
+ABSL_FLAG(int,
+          use_adaptive_stereo_downmixing_for_aec,
+          kParameterNotSpecifiedValue,
+          "Activate (1) or deactivate (0) adaptive downmixing for stereo "
+          "microphones when aec is active");
 ABSL_FLAG(int,
           analog_agc_use_digital_adaptive_controller,
           kParameterNotSpecifiedValue,
@@ -399,7 +400,6 @@ SimulationSettings CreateSettings() {
     settings.use_agc2 = false;
     settings.use_pre_amplifier = false;
     settings.use_aec = true;
-    settings.use_aecm = false;
     settings.use_ed = false;
   }
   SetSettingIfSpecified(absl::GetFlag(FLAGS_dump_input),
@@ -425,7 +425,6 @@ SimulationSettings CreateSettings() {
   SetSettingIfSpecified(absl::GetFlag(FLAGS_reverse_output_sample_rate_hz),
                         &settings.reverse_output_sample_rate_hz);
   SetSettingIfFlagSet(absl::GetFlag(FLAGS_aec), &settings.use_aec);
-  SetSettingIfFlagSet(absl::GetFlag(FLAGS_aecm), &settings.use_aecm);
   SetSettingIfFlagSet(absl::GetFlag(FLAGS_ed), &settings.use_ed);
   SetSettingIfSpecified(absl::GetFlag(FLAGS_ed_graph),
                         &settings.ed_graph_output_filename);
@@ -501,6 +500,9 @@ SimulationSettings CreateSettings() {
   settings.report_performance = absl::GetFlag(FLAGS_performance_report);
   SetSettingIfSpecified(absl::GetFlag(FLAGS_performance_report_output_file),
                         &settings.performance_report_output_filename);
+  SetSettingIfFlagSet(
+      absl::GetFlag(FLAGS_use_adaptive_stereo_downmixing_for_aec),
+      &settings.use_adaptive_stereo_downmixing_for_aec);
   settings.use_verbose_logging = absl::GetFlag(FLAGS_verbose);
   settings.use_quiet_output = absl::GetFlag(FLAGS_quiet);
   settings.report_bitexactness = absl::GetFlag(FLAGS_bitexactness_report);
@@ -596,11 +598,6 @@ void PerformBasicParameterSanityChecks(const SimulationSettings& settings) {
                                     settings.linear_aec_output_filename,
                                 "Error: The linear AEC ouput filename cannot "
                                 "be specified without the AEC being active");
-
-  ReportConditionalErrorAndExit(
-      settings.use_aec && *settings.use_aec && settings.use_aecm &&
-          *settings.use_aecm,
-      "Error: The AEC and the AECM cannot be activated at the same time!\n");
 
   ReportConditionalErrorAndExit(
       settings.output_sample_rate_hz && *settings.output_sample_rate_hz <= 0,

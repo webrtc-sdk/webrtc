@@ -80,7 +80,6 @@ class EchoDetector;
 //
 // AudioProcessing::Config config;
 // config.echo_canceller.enabled = true;
-// config.echo_canceller.mobile_mode = false;
 //
 // config.gain_controller1.enabled = true;
 // config.gain_controller1.mode =
@@ -140,7 +139,8 @@ class RTC_EXPORT AudioProcessing : public RefCountInterface {
       // Ways to downmix a multi-channel track to mono.
       enum class DownmixMethod {
         kAverageChannels,  // Average across channels.
-        kUseFirstChannel   // Use the first channel.
+        kUseFirstChannel,  // Use the first channel.
+        kAdaptive          // Adaptively choose how to downmix.
       };
 
       // Maximum allowed processing rate used internally. May only be set to
@@ -154,6 +154,8 @@ class RTC_EXPORT AudioProcessing : public RefCountInterface {
       // Indicates how to downmix multi-channel capture audio to mono (when
       // needed).
       DownmixMethod capture_downmix_method = DownmixMethod::kAverageChannels;
+      DownmixMethod capture_downmix_method_stereo_aec =
+          DownmixMethod::kAverageChannels;
     } pipeline;
 
     // Enabled the pre-amplifier. It amplifies the capture signal
@@ -196,10 +198,8 @@ class RTC_EXPORT AudioProcessing : public RefCountInterface {
 
     struct EchoCanceller {
       bool enabled = false;
-      bool mobile_mode = false;
       bool export_linear_aec_output = false;
-      // Enforce the highpass filter to be on (has no effect for the mobile
-      // mode).
+      // Enforce the highpass filter to be on.
       bool enforce_high_pass_filtering = true;
     } echo_canceller;
 
@@ -393,8 +393,8 @@ class RTC_EXPORT AudioProcessing : public RefCountInterface {
 
     // Play-out audio device properties.
     struct PlayoutAudioDeviceInfo {
-      int id;          // Identifies the audio device.
-      int max_volume;  // Maximum play-out volume.
+      int id = 0;          // Identifies the audio device.
+      int max_volume = 0;  // Maximum play-out volume.
     };
 
     RuntimeSetting() : type_(Type::kNotSpecified), value_(0.0f) {}

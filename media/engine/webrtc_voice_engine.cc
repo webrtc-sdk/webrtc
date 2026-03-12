@@ -526,7 +526,7 @@ void WebRtcVoiceEngine::Init() {
   // TaskQueue expects to be created/destroyed on the same thread.
   RTC_DCHECK(!low_priority_worker_queue_);
   low_priority_worker_queue_ = env_.task_queue_factory().CreateTaskQueue(
-      "rtc-low-prio", TaskQueueFactory::Priority::LOW);
+      "rtc-low-prio", TaskQueueFactory::Priority::kLow);
 
   adm_helpers::Init(adm());
 
@@ -764,7 +764,7 @@ const std::vector<Codec>& WebRtcVoiceEngine::LegacyRecvCodecs() const {
 
 std::vector<RtpHeaderExtensionCapability>
 WebRtcVoiceEngine::GetRtpHeaderExtensions(
-    const webrtc::FieldTrialsView* field_trials) const {
+    const FieldTrialsView* field_trials) const {
   RTC_DCHECK(signal_thread_checker_.IsCurrent());
   std::vector<RtpHeaderExtensionCapability> result;
   // id is *not* incremented for non-default extensions, UsedIds needs to
@@ -1131,6 +1131,11 @@ class WebRtcVoiceSendChannel::WebRtcAudioSendStream : public AudioSource::Sink {
         config_.send_codec_spec->target_bitrate_bps = send_rate;
       }
     }
+
+    rtp_parameters_.rtcp.cname = config_.rtp.c_name;
+    rtp_parameters_.rtcp.reduced_size =
+        config_.rtp.rtcp_mode == RtcpMode::kReducedSize;
+
     if (reconfigure_send_stream) {
       // Changing adaptive_ptime may update the audio network adaptor config
       // used.
@@ -1140,10 +1145,6 @@ class WebRtcVoiceSendChannel::WebRtcAudioSendStream : public AudioSource::Sink {
     } else {
       InvokeSetParametersCallback(callback, RTCError::OK());
     }
-
-    rtp_parameters_.rtcp.cname = config_.rtp.c_name;
-    rtp_parameters_.rtcp.reduced_size =
-        config_.rtp.rtcp_mode == RtcpMode::kReducedSize;
 
     // parameters.encodings[0].active could have changed.
     UpdateSendState();
@@ -1357,11 +1358,7 @@ bool WebRtcVoiceSendChannel::SetSenderParameters(
           }
         }
         if (needs_update) {
-          RTCError error =
-              send_stream->SetRtpParameters(rtp_parameters, nullptr);
-          if (error.ok() && on_rtp_send_parameters_changed_callback_) {
-            on_rtp_send_parameters_changed_callback_(ssrc, rtp_parameters);
-          }
+          send_stream->SetRtpParameters(rtp_parameters, nullptr);
         } else {
           RTC_DCHECK(rtp_parameters == send_stream->rtp_parameters());
         }
@@ -1684,14 +1681,6 @@ void WebRtcVoiceSendChannel::SetSsrcListChangedCallback(
   RTC_DCHECK_RUN_ON(worker_thread_);
   RTC_DCHECK(!ssrc_list_changed_callback_);
   ssrc_list_changed_callback_ = std::move(callback);
-}
-
-void WebRtcVoiceSendChannel::SetOnRtpSendParametersChanged(
-    absl::AnyInvocable<void(std::optional<uint32_t>, const RtpParameters&)>
-        callback) {
-  RTC_DCHECK_RUN_ON(worker_thread_);
-  RTC_DCHECK(!on_rtp_send_parameters_changed_callback_);
-  on_rtp_send_parameters_changed_callback_ = std::move(callback);
 }
 
 bool WebRtcVoiceSendChannel::SetLocalSource(uint32_t ssrc,
@@ -2025,12 +2014,7 @@ RTCError WebRtcVoiceSendChannel::SetRtpSendParameters(
   // Codecs are handled at the WebRtcVoiceMediaChannel level.
   RtpParameters reduced_params = parameters;
   reduced_params.codecs.clear();
-  RTCError error =
-      it->second->SetRtpParameters(reduced_params, std::move(callback));
-  if (error.ok() && on_rtp_send_parameters_changed_callback_) {
-    on_rtp_send_parameters_changed_callback_(ssrc, parameters);
-  }
-  return error;
+  return it->second->SetRtpParameters(reduced_params, std::move(callback));
 }
 
 // -------------------------- WebRtcVoiceReceiveChannel ----------------------
@@ -2069,7 +2053,7 @@ class WebRtcVoiceReceiveChannel::WebRtcAudioReceiveStream {
     stream_->SetNackHistory(use_nack ? kNackRtpHistoryMs : 0);
   }
 
-  void SetRtcpMode(::webrtc::RtcpMode mode) {
+  void SetRtcpMode(webrtc::RtcpMode mode) {
     RTC_DCHECK_RUN_ON(&worker_thread_checker_);
     stream_->SetRtcpMode(mode);
   }
@@ -2375,7 +2359,7 @@ bool WebRtcVoiceReceiveChannel::SetRecvCodecs(
   return true;
 }
 
-void WebRtcVoiceReceiveChannel::SetRtcpMode(::webrtc::RtcpMode mode) {
+void WebRtcVoiceReceiveChannel::SetRtcpMode(webrtc::RtcpMode mode) {
   RTC_DCHECK_RUN_ON(worker_thread_);
   // Check if the reduced size RTCP status changed on the
   // preferred send codec, and in that case reconfigure all receive streams.

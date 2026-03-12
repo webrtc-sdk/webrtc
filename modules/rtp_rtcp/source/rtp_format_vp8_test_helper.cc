@@ -55,11 +55,13 @@ int Bit(uint8_t byte, int position) {
 
 RtpFormatVp8TestHelper::RtpFormatVp8TestHelper(const RTPVideoHeaderVP8* hdr,
                                                size_t payload_len)
-    : hdr_info_(hdr),
-      payload_(Buffer::CreateUninitializedWithSize(payload_len)) {
-  for (size_t i = 0; i < payload_.size(); ++i) {
-    payload_[i] = i;
-  }
+    : hdr_info_(hdr), payload_(Buffer::CreateWithCapacity(payload_len)) {
+  payload_.AppendData(payload_len, [](ArrayView<uint8_t> payload_view) {
+    for (size_t i = 0; i < payload_view.size(); ++i) {
+      payload_view[i] = i;
+    }
+    return payload_view.size();
+  });
 }
 
 RtpFormatVp8TestHelper::~RtpFormatVp8TestHelper() = default;
@@ -78,7 +80,7 @@ void RtpFormatVp8TestHelper::GetAllPacketsAndCheck(
     int payload_offset = CheckHeader(rtp_payload, /*first=*/i == 0);
     // Verify that the payload (i.e., after the headers) of the packet is
     // identical to the expected (as found in data_ptr).
-    auto vp8_payload = rtp_payload.subview(payload_offset);
+    auto vp8_payload = rtp_payload.subspan(payload_offset);
     ASSERT_GE(payload_.end() - data_ptr, static_cast<int>(vp8_payload.size()));
     EXPECT_THAT(vp8_payload, ElementsAreArray(data_ptr, vp8_payload.size()));
     data_ptr += vp8_payload.size();

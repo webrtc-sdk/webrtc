@@ -859,6 +859,7 @@ if (current_os == "linux" || is_android) {
       "../../api/crypto:options",
       "../../api/environment",
       "../../api/environment:deprecated_global_field_trials",
+      "../../api/environment:environment_factory",
       "../../api/neteq:neteq_api",
       "../../api/rtc_event_log",
       "../../api/rtc_event_log:rtc_event_log_factory",
@@ -890,6 +891,7 @@ if (current_os == "linux" || is_android) {
       "../../rtc_base:ssl",
       "../../rtc_base:stringutils",
       "../../rtc_base:threading",
+      "../../rtc_base/system:plan_b_only",
       "../../stats:rtc_stats",
       "//third_party/abseil-cpp/absl/memory",
       "//third_party/abseil-cpp/absl/strings",
@@ -1373,12 +1375,14 @@ if (current_os == "linux" || is_android) {
       "../../api:scoped_refptr",
       "../../api:sequence_checker",
       "../../api/audio:audio_device",
+      "../../api/environment",
+      "../../api/units:time_delta",
+      "../../api/units:timestamp",
       "../../modules/audio_device:audio_device_buffer",
       "../../rtc_base:checks",
       "../../rtc_base:logging",
       "../../rtc_base:platform_thread",
       "../../rtc_base:platform_thread_types",
-      "../../rtc_base:timeutils",
     ]
   }
 

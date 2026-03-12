@@ -99,7 +99,6 @@ struct SimulationSettings {
   std::optional<std::string> artificial_nearend_filename;
   std::optional<std::string> linear_aec_output_filename;
   std::optional<bool> use_aec;
-  std::optional<bool> use_aecm;
   std::optional<bool> use_ed;  // Residual Echo Detector.
   std::optional<std::string> ed_graph_output_filename;
   std::optional<bool> use_agc;
@@ -160,6 +159,7 @@ struct SimulationSettings {
   std::optional<int> dump_end_frame;
   std::optional<int> init_to_process;
   std::optional<std::string> neural_echo_residual_estimator_model;
+  std::optional<bool> use_adaptive_stereo_downmixing_for_aec;
 };
 
 // State used by the audio processor, but not owned by it.

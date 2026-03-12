@@ -349,14 +349,8 @@ class RtpSendChannelHelper : public Base, public MediaChannelUtil {
       if (!result.ok()) {
         return InvokeSetParametersCallback(callback, result);
       }
-      bool changed = (parameters_iterator->second != parameters);
       parameters_iterator->second = parameters;
-      // Invoke the callback if set.
-      if (changed && on_rtp_send_parameters_changed_callback_) {
-        on_rtp_send_parameters_changed_callback_(ssrc, parameters);
-      }
-      InvokeSetParametersCallback(callback, RTCError::OK());
-      return RTCError::OK();
+      return InvokeSetParametersCallback(callback, RTCError::OK());
     }
     // Replicate the behavior of the real media channel: return false
     // when setting parameters for unknown SSRCs.
@@ -406,14 +400,6 @@ class RtpSendChannelHelper : public Base, public MediaChannelUtil {
   void OnRtcpPacketReceived(CopyOnWriteBuffer* packet,
                             int64_t /* packet_time_us */) {
     rtcp_packets_.push_back(std::string(packet->cdata<char>(), packet->size()));
-  }
-
-  // Stuff that deals with encryptors, transformers and the like
-  void SetOnRtpSendParametersChanged(
-      absl::AnyInvocable<void(std::optional<uint32_t>, const RtpParameters&)>
-          callback) override {
-    RTC_DCHECK(!on_rtp_send_parameters_changed_callback_);
-    on_rtp_send_parameters_changed_callback_ = std::move(callback);
   }
 
   void SetFrameEncryptor(uint32_t /* ssrc */,
@@ -488,8 +474,6 @@ class RtpSendChannelHelper : public Base, public MediaChannelUtil {
   MediaChannelNetworkInterface* network_interface_ = nullptr;
   absl::AnyInvocable<void(const std::set<uint32_t>&)>
       ssrc_list_changed_callback_ = nullptr;
-  absl::AnyInvocable<void(std::optional<uint32_t>, const RtpParameters&)>
-      on_rtp_send_parameters_changed_callback_;
 };
 
 class FakeVoiceMediaReceiveChannel
@@ -543,8 +527,8 @@ class FakeVoiceMediaReceiveChannel
   void SetDefaultRawAudioSink(
       std::unique_ptr<AudioSinkInterface> sink) override;
 
-  ::webrtc::RtcpMode RtcpMode() const override { return recv_rtcp_mode_; }
-  void SetRtcpMode(::webrtc::RtcpMode mode) override { recv_rtcp_mode_ = mode; }
+  webrtc::RtcpMode RtcpMode() const override { return recv_rtcp_mode_; }
+  void SetRtcpMode(webrtc::RtcpMode mode) override { recv_rtcp_mode_ = mode; }
   std::vector<RtpSource> GetSources(uint32_t ssrc) const override;
   void SetReceiveNackEnabled(bool /* enabled */) override {}
   void SetReceiveNonSenderRttEnabled(bool /* enabled */) override {}
@@ -580,7 +564,7 @@ class FakeVoiceMediaReceiveChannel
   std::map<uint32_t, std::unique_ptr<VoiceChannelAudioSink>> local_sinks_;
   std::unique_ptr<AudioSinkInterface> sink_;
   int max_bps_;
-  ::webrtc::RtcpMode recv_rtcp_mode_ = RtcpMode::kCompound;
+  webrtc::RtcpMode recv_rtcp_mode_ = RtcpMode::kCompound;
 };
 
 class FakeVoiceMediaSendChannel

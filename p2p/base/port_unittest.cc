@@ -23,6 +23,7 @@
 #include "absl/memory/memory.h"
 #include "absl/strings/string_view.h"
 #include "api/array_view.h"
+#include "api/async_dns_resolver.h"
 #include "api/candidate.h"
 #include "api/environment/environment.h"
 #include "api/environment/environment_factory.h"
@@ -1013,6 +1014,74 @@ void PortTest::TestConnectivity(absl::string_view name1,
                          .clock = &clock}),
               IsRtcOk());
 }
+
+class FakePacketSocketFactory : public PacketSocketFactory {
+ public:
+  FakePacketSocketFactory() = default;
+  ~FakePacketSocketFactory() override = default;
+
+  std::unique_ptr<AsyncPacketSocket> CreateUdpSocket(
+      const Environment& env,
+      const SocketAddress& address,
+      uint16_t min_port,
+      uint16_t max_port) override {
+    EXPECT_THAT(next_udp_socket_, NotNull());
+    return std::move(next_udp_socket_);
+  }
+
+  std::unique_ptr<AsyncPacketSocket> CreateClientUdpSocket(
+      const Environment& env,
+      const SocketAddress& local_address,
+      const SocketAddress& remote_address,
+      uint16_t min_port,
+      uint16_t max_port,
+      const PacketSocketTcpOptions& options) override {
+    EXPECT_THAT(next_udp_socket_, NotNull());
+    return std::move(next_udp_socket_);
+  }
+
+  std::unique_ptr<AsyncListenSocket> CreateServerTcpSocket(
+      const Environment& env,
+      const SocketAddress& local_address,
+      uint16_t min_port,
+      uint16_t max_port,
+      int opts) override {
+    EXPECT_THAT(next_server_tcp_socket_, NotNull());
+    return std::move(next_server_tcp_socket_);
+  }
+
+  std::unique_ptr<AsyncPacketSocket> CreateClientTcpSocket(
+      const Environment& env,
+      const SocketAddress& local_address,
+      const SocketAddress& remote_address,
+      const PacketSocketTcpOptions& opts) override {
+    EXPECT_TRUE(next_client_tcp_socket_.has_value());
+    auto result = std::move(*next_client_tcp_socket_);
+    next_client_tcp_socket_.reset();
+    return result;
+  }
+
+  void set_next_udp_socket(std::unique_ptr<AsyncPacketSocket> next_udp_socket) {
+    next_udp_socket_ = std::move(next_udp_socket);
+  }
+  void set_next_server_tcp_socket(
+      std::unique_ptr<AsyncListenSocket> next_server_tcp_socket) {
+    next_server_tcp_socket_ = std::move(next_server_tcp_socket);
+  }
+  void set_next_client_tcp_socket(
+      std::unique_ptr<AsyncPacketSocket> next_client_tcp_socket) {
+    next_client_tcp_socket_ = std::move(next_client_tcp_socket);
+  }
+  std::unique_ptr<webrtc::AsyncDnsResolverInterface> CreateAsyncDnsResolver()
+      override {
+    return nullptr;
+  }
+
+ private:
+  std::unique_ptr<AsyncPacketSocket> next_udp_socket_;
+  std::unique_ptr<AsyncListenSocket> next_server_tcp_socket_;
+  std::optional<std::unique_ptr<AsyncPacketSocket>> next_client_tcp_socket_;
+};
 
 class FakeAsyncPacketSocket : public AsyncPacketSocket {
  public:
@@ -2851,9 +2920,12 @@ TEST_F(PortTest, TestConnectionPriority) {
   lport->AddCandidateAddress(SocketAddress("192.168.1.4", 1234));
   rport->set_component(23);
   rport->AddCandidateAddress(SocketAddress("10.1.1.100", 1234));
+  rport->set_type_preference(ICE_TYPE_PREFERENCE_RELAY_DTLS);
+  rport->AddCandidateAddress(SocketAddress("10.1.1.100", 1234));
 
   EXPECT_EQ(0x7E001E85U, lport->Candidates()[0].priority());
-  EXPECT_EQ(0x2001EE9U, rport->Candidates()[0].priority());
+  EXPECT_EQ(0x3001EE9U, rport->Candidates()[0].priority());
+  EXPECT_EQ(0x2001EE9U, rport->Candidates()[1].priority());
 
   // RFC 5245
   // pair priority = 2^32*MIN(G,D) + 2*MAX(G,D) + (G>D?1:0)
@@ -2862,19 +2934,22 @@ TEST_F(PortTest, TestConnectionPriority) {
   Connection* lconn =
       lport->CreateConnection(rport->Candidates()[0], Port::ORIGIN_MESSAGE);
 #if defined(WEBRTC_WIN)
-  EXPECT_EQ(0x2001EE9FC003D0BU, lconn->priority());
+  EXPECT_EQ(0x3001EE9FC003D0BU, lconn->priority());
 #else
-  EXPECT_EQ(0x2001EE9FC003D0BLLU, lconn->priority());
+  EXPECT_EQ(0x3001EE9FC003D0BLLU, lconn->priority());
 #endif
+
+  lconn = lport->CreateConnection(rport->Candidates()[1], Port::ORIGIN_MESSAGE);
+  EXPECT_EQ(uint64_t{0x2001EE9FC003D0B}, lconn->priority());
 
   lport->SetIceRole(ICEROLE_CONTROLLED);
   rport->SetIceRole(ICEROLE_CONTROLLING);
   Connection* rconn =
       rport->CreateConnection(lport->Candidates()[0], Port::ORIGIN_MESSAGE);
 #if defined(WEBRTC_WIN)
-  EXPECT_EQ(0x2001EE9FC003D0AU, rconn->priority());
+  EXPECT_EQ(0x3001EE9FC003D0AU, rconn->priority());
 #else
-  EXPECT_EQ(0x2001EE9FC003D0ALLU, rconn->priority());
+  EXPECT_EQ(0x3001EE9FC003D0ALLU, rconn->priority());
 #endif
 }
 
@@ -2896,7 +2971,7 @@ TEST_F(PortTest, TestConnectionPriorityWithPriorityAdjustment) {
 
   EXPECT_EQ(0x7E001E85U + (kMaxTurnServers << 8),
             lport->Candidates()[0].priority());
-  EXPECT_EQ(0x2001EE9U + (kMaxTurnServers << 8),
+  EXPECT_EQ(0x3001EE9U + (kMaxTurnServers << 8),
             rport->Candidates()[0].priority());
 
   // RFC 5245
@@ -2906,9 +2981,9 @@ TEST_F(PortTest, TestConnectionPriorityWithPriorityAdjustment) {
   Connection* lconn =
       lport->CreateConnection(rport->Candidates()[0], Port::ORIGIN_MESSAGE);
 #if defined(WEBRTC_WIN)
-  EXPECT_EQ(0x2003EE9FC007D0BU, lconn->priority());
+  EXPECT_EQ(0x3003EE9FC007D0BU, lconn->priority());
 #else
-  EXPECT_EQ(0x2003EE9FC007D0BLLU, lconn->priority());
+  EXPECT_EQ(0x3003EE9FC007D0BLLU, lconn->priority());
 #endif
 
   lport->SetIceRole(ICEROLE_CONTROLLED);
@@ -2917,9 +2992,9 @@ TEST_F(PortTest, TestConnectionPriorityWithPriorityAdjustment) {
       rport->CreateConnection(lport->Candidates()[0], Port::ORIGIN_MESSAGE);
   RTC_LOG(LS_ERROR) << "RCONN " << rconn->priority();
 #if defined(WEBRTC_WIN)
-  EXPECT_EQ(0x2003EE9FC007D0AU, rconn->priority());
+  EXPECT_EQ(0x3003EE9FC007D0AU, rconn->priority());
 #else
-  EXPECT_EQ(0x2003EE9FC007D0ALLU, rconn->priority());
+  EXPECT_EQ(0x3003EE9FC007D0ALLU, rconn->priority());
 #endif
 }
 

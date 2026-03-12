@@ -137,7 +137,10 @@ class RtpRtcpRtxNackTest : public ::testing::Test {
       : fake_clock_(123456),
         env_(CreateEnvironment(&fake_clock_)),
         transport_(kTestRtxSsrc),
-        rtx_stream_(&media_stream_, rtx_associated_payload_types_, kTestSsrc),
+        rtx_stream_(env_,
+                    &media_stream_,
+                    rtx_associated_payload_types_,
+                    kTestSsrc),
         retransmission_rate_limiter_(&fake_clock_, kMaxRttMs) {}
   ~RtpRtcpRtxNackTest() override {}
 
@@ -151,7 +154,7 @@ class RtpRtcpRtxNackTest : public ::testing::Test {
     configuration.local_media_ssrc = kTestSsrc;
     configuration.rtx_send_ssrc = kTestRtxSsrc;
     rtp_rtcp_module_ =
-        std::make_unique<ModuleRtpRtcpImpl2>(env_, configuration);
+        ModuleRtpRtcpImpl2::CreateSendModule(env_, configuration);
     RTPSenderVideo::Config video_config;
     video_config.clock = &fake_clock_;
     video_config.rtp_sender = rtp_rtcp_module_->RtpSender();

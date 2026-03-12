@@ -434,6 +434,16 @@ void AudioProcessingSimulator::ConfigureAudioProcessor() {
         *settings_.multi_channel_capture;
   }
 
+  if (settings_.use_adaptive_stereo_downmixing_for_aec) {
+    if (*settings_.use_adaptive_stereo_downmixing_for_aec) {
+      apm_config.pipeline.capture_downmix_method_stereo_aec =
+          AudioProcessing::Config::Pipeline::DownmixMethod::kAdaptive;
+    } else {
+      apm_config.pipeline.capture_downmix_method_stereo_aec =
+          AudioProcessing::Config::Pipeline::DownmixMethod::kAverageChannels;
+    }
+  }
+
   if (settings_.use_agc2) {
     apm_config.gain_controller2.enabled = *settings_.use_agc2;
     if (settings_.agc2_fixed_gain_db) {
@@ -486,10 +496,8 @@ void AudioProcessingSimulator::ConfigureAudioProcessor() {
   }
 
   const bool use_aec = settings_.use_aec && *settings_.use_aec;
-  const bool use_aecm = settings_.use_aecm && *settings_.use_aecm;
-  if (use_aec || use_aecm) {
+  if (use_aec) {
     apm_config.echo_canceller.enabled = true;
-    apm_config.echo_canceller.mobile_mode = use_aecm;
   }
   apm_config.echo_canceller.export_linear_aec_output =
       !!settings_.linear_aec_output_filename;

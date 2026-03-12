@@ -54,39 +54,45 @@ struct NalUnitHeader {
 // Creates Buffer that looks like nal unit of given header and size.
 Buffer GenerateNalUnit(NalUnitHeader header, size_t size) {
   RTC_CHECK_GT(size, 0);
-  Buffer buffer = Buffer::CreateUninitializedWithSize(size);
-  buffer[0] = (header.nal_unit_type << 1) | (header.nuh_layer_id >> 5);
-  buffer[1] = (header.nuh_layer_id << 3) | header.nuh_temporal_id_plus1;
-  for (size_t i = 2; i < size; ++i) {
-    buffer[i] = static_cast<uint8_t>(i);
-  }
-  // Last byte shouldn't be 0, or it may be counted as part of next 4-byte start
-  // sequence.
-  buffer[size - 1] |= 0x10;
+  Buffer buffer = Buffer::CreateWithCapacity(size);
+  buffer.AppendData(size, [&](ArrayView<uint8_t> buffer_view) {
+    buffer_view[0] = (header.nal_unit_type << 1) | (header.nuh_layer_id >> 5);
+    buffer_view[1] = (header.nuh_layer_id << 3) | header.nuh_temporal_id_plus1;
+    for (size_t i = 2; i < size; ++i) {
+      buffer_view[i] = static_cast<uint8_t>(i);
+    }
+    // Last byte shouldn't be 0, or it may be counted as part of next 4-byte
+    // start sequence.
+    buffer_view[size - 1] |= 0x10;
+    return size;
+  });
   return buffer;
 }
 
 // Create frame consisting of nalus of given size.
 Buffer CreateFrame(std::initializer_list<size_t> nalu_sizes) {
   static constexpr int kStartCodeSize = 3;
-  Buffer frame = Buffer::CreateUninitializedWithSize(
-      absl::c_accumulate(nalu_sizes, size_t{0}) +
-      kStartCodeSize * nalu_sizes.size());
-  size_t offset = 0;
-  for (size_t nalu_size : nalu_sizes) {
-    EXPECT_GE(nalu_size, 1u);
-    // Insert nalu start code
-    frame[offset] = 0;
-    frame[offset + 1] = 0;
-    frame[offset + 2] = 1;
-    // Set some valid header.
-    frame[offset + 3] = 2;
-    // Fill payload avoiding accidental start codes
-    if (nalu_size > 1) {
-      memset(frame.data() + offset + 4, 0x3f, nalu_size - 1);
+  size_t size = absl::c_accumulate(nalu_sizes, size_t{0}) +
+                kStartCodeSize * nalu_sizes.size();
+  Buffer frame = Buffer::CreateWithCapacity(size);
+  frame.AppendData(size, [&](ArrayView<uint8_t> frame_view) {
+    size_t offset = 0;
+    for (size_t nalu_size : nalu_sizes) {
+      EXPECT_GE(nalu_size, 1u);
+      // Insert nalu start code
+      frame_view[offset] = 0;
+      frame_view[offset + 1] = 0;
+      frame_view[offset + 2] = 1;
+      // Set some valid header.
+      frame_view[offset + 3] = 2;
+      // Fill payload avoiding accidental start codes
+      if (nalu_size > 1) {
+        memset(frame_view.data() + offset + 4, 0x3f, nalu_size - 1);
+      }
+      offset += (kStartCodeSize + nalu_size);
     }
-    offset += (kStartCodeSize + nalu_size);
-  }
+    return offset;
+  });
   return frame;
 }
 
@@ -97,17 +103,20 @@ Buffer CreateFrame(ArrayView<const Buffer> nalus) {
   for (const Buffer& nalu : nalus) {
     frame_size += (kStartCodeSize + nalu.size());
   }
-  Buffer frame = Buffer::CreateUninitializedWithSize(frame_size);
-  size_t offset = 0;
-  for (const Buffer& nalu : nalus) {
-    // Insert nalu start code
-    frame[offset] = 0;
-    frame[offset + 1] = 0;
-    frame[offset + 2] = 1;
-    // Copy the nalu unit.
-    memcpy(frame.data() + offset + 3, nalu.data(), nalu.size());
-    offset += (kStartCodeSize + nalu.size());
-  }
+  Buffer frame = Buffer::CreateWithCapacity(frame_size);
+  frame.AppendData(frame_size, [&](ArrayView<uint8_t> frame_view) {
+    size_t offset = 0;
+    for (const Buffer& nalu : nalus) {
+      // Insert nalu start code
+      frame_view[offset] = 0;
+      frame_view[offset + 1] = 0;
+      frame_view[offset + 2] = 1;
+      // Copy the nalu unit.
+      memcpy(frame_view.data() + offset + 3, nalu.data(), nalu.size());
+      offset += (kStartCodeSize + nalu.size());
+    }
+    return offset;
+  });
   return frame;
 }
 
@@ -263,23 +272,23 @@ TEST(RtpPacketizerH265Test, ApRespectsNoPacketReduction) {
                                 3 * kH265LengthFieldSizeBytes + 3 + 3 + 0x123);
 
   EXPECT_EQ(type, H265::NaluType::kAp);
-  payload = payload.subview(kH265NalHeaderSizeBytes);
+  payload = payload.subspan(kH265NalHeaderSizeBytes);
   // 1st fragment.
-  EXPECT_THAT(payload.subview(0, kH265LengthFieldSizeBytes),
+  EXPECT_THAT(payload.subspan(0, kH265LengthFieldSizeBytes),
               ElementsAre(0, 3));  // Size.
-  EXPECT_THAT(payload.subview(kH265LengthFieldSizeBytes, 3),
+  EXPECT_THAT(payload.subspan(kH265LengthFieldSizeBytes, 3),
               ElementsAreArray(nalus[0]));
-  payload = payload.subview(kH265LengthFieldSizeBytes + 3);
+  payload = payload.subspan(kH265LengthFieldSizeBytes + 3);
   // 2nd fragment.
-  EXPECT_THAT(payload.subview(0, kH265LengthFieldSizeBytes),
+  EXPECT_THAT(payload.subspan(0, kH265LengthFieldSizeBytes),
               ElementsAre(0, 3));  // Size.
-  EXPECT_THAT(payload.subview(kH265LengthFieldSizeBytes, 3),
+  EXPECT_THAT(payload.subspan(kH265LengthFieldSizeBytes, 3),
               ElementsAreArray(nalus[1]));
-  payload = payload.subview(kH265LengthFieldSizeBytes + 3);
+  payload = payload.subspan(kH265LengthFieldSizeBytes + 3);
   // 3rd fragment.
-  EXPECT_THAT(payload.subview(0, kH265LengthFieldSizeBytes),
+  EXPECT_THAT(payload.subspan(0, kH265LengthFieldSizeBytes),
               ElementsAre(0x1, 0x23));  // Size.
-  EXPECT_THAT(payload.subview(kH265LengthFieldSizeBytes),
+  EXPECT_THAT(payload.subspan(kH265LengthFieldSizeBytes),
               ElementsAreArray(nalus[2]));
 }
 
@@ -319,21 +328,21 @@ TEST(RtpPacketizerH265Test, ApRespectsLayerIdAndTemporalId) {
   EXPECT_EQ(type, H265::NaluType::kAp);
   EXPECT_EQ(layer_id, 0);
   EXPECT_EQ(temporal_id, 1);
-  payload = payload.subview(kH265NalHeaderSizeBytes);
+  payload = payload.subspan(kH265NalHeaderSizeBytes);
   // 1st fragment.
-  EXPECT_THAT(payload.subview(0, kH265LengthFieldSizeBytes), ElementsAre(0, 3));
-  EXPECT_THAT(payload.subview(kH265LengthFieldSizeBytes, 3),
+  EXPECT_THAT(payload.subspan(0, kH265LengthFieldSizeBytes), ElementsAre(0, 3));
+  EXPECT_THAT(payload.subspan(kH265LengthFieldSizeBytes, 3),
               ElementsAreArray(nalus[0]));
-  payload = payload.subview(kH265LengthFieldSizeBytes + 3);
+  payload = payload.subspan(kH265LengthFieldSizeBytes + 3);
   // 2nd fragment.
-  EXPECT_THAT(payload.subview(0, kH265LengthFieldSizeBytes), ElementsAre(0, 3));
-  EXPECT_THAT(payload.subview(kH265LengthFieldSizeBytes, 3),
+  EXPECT_THAT(payload.subspan(0, kH265LengthFieldSizeBytes), ElementsAre(0, 3));
+  EXPECT_THAT(payload.subspan(kH265LengthFieldSizeBytes, 3),
               ElementsAreArray(nalus[1]));
-  payload = payload.subview(kH265LengthFieldSizeBytes + 3);
+  payload = payload.subspan(kH265LengthFieldSizeBytes + 3);
   // 3rd fragment.
-  EXPECT_THAT(payload.subview(0, kH265LengthFieldSizeBytes),
+  EXPECT_THAT(payload.subspan(0, kH265LengthFieldSizeBytes),
               ElementsAre(0x1, 0x23));
-  EXPECT_THAT(payload.subview(kH265LengthFieldSizeBytes),
+  EXPECT_THAT(payload.subspan(kH265LengthFieldSizeBytes),
               ElementsAreArray(nalus[2]));
 }
 
@@ -621,14 +630,14 @@ TEST_P(RtpPacketizerH265ParametrizedTest, MixedApFu) {
     if (expected_packet.aggregated) {
       int type = H265::ParseNaluType(packets[i].payload()[0]);
       EXPECT_THAT(type, H265::NaluType::kAp);
-      auto payload = packets[i].payload().subview(kH265NalHeaderSizeBytes);
+      auto payload = packets[i].payload().subspan(kH265NalHeaderSizeBytes);
       int offset = 0;
       // Generated AP packet header and payload align
       for (int j = expected_packet.nalu_index; j < expected_packet.nalu_number;
            j++) {
-        EXPECT_THAT(payload.subview(0, kH265LengthFieldSizeBytes),
+        EXPECT_THAT(payload.subspan(0, kH265LengthFieldSizeBytes),
                     ElementsAre(0, nalus[j].size()));
-        EXPECT_THAT(payload.subview(offset + kH265LengthFieldSizeBytes,
+        EXPECT_THAT(payload.subspan(offset + kH265LengthFieldSizeBytes,
                                     nalus[j].size()),
                     ElementsAreArray(nalus[j]));
         offset += kH265LengthFieldSizeBytes + nalus[j].size();
@@ -638,9 +647,9 @@ TEST_P(RtpPacketizerH265ParametrizedTest, MixedApFu) {
       fu_header |= (expected_packet.first_fragment ? kH265SBitMask : 0);
       fu_header |= (expected_packet.last_fragment ? kH265EBitMask : 0);
       fu_header |= H265::NaluType::kIdrNLp;
-      EXPECT_THAT(packets[i].payload().subview(0, kFuHeaderSizeBytes),
+      EXPECT_THAT(packets[i].payload().subspan(0, kFuHeaderSizeBytes),
                   ElementsAre(99, 2, fu_header));
-      EXPECT_THAT(packets[i].payload().subview(kFuHeaderSizeBytes),
+      EXPECT_THAT(packets[i].payload().subspan(kFuHeaderSizeBytes),
                   ElementsAreArray(nalus[expected_packet.nalu_index].data() +
                                        kH265NalHeaderSizeBytes +
                                        expected_packet.start_offset,

@@ -67,7 +67,6 @@
 #include "p2p/base/ice_transport_internal.h"
 #include "p2p/base/port.h"
 #include "p2p/base/port_allocator.h"
-#include "p2p/base/transport_description.h"
 #include "p2p/dtls/dtls_transport_factory.h"
 #include "pc/channel_interface.h"
 #include "pc/codec_vendor.h"
@@ -94,6 +93,7 @@
 #include "rtc_base/rtc_certificate.h"
 #include "rtc_base/ssl_certificate.h"
 #include "rtc_base/ssl_stream_adapter.h"
+#include "rtc_base/system/plan_b_only.h"
 #include "rtc_base/thread.h"
 #include "rtc_base/thread_annotations.h"
 #include "rtc_base/weak_ptr.h"
@@ -133,10 +133,11 @@ class PeerConnection : public PeerConnectionInternal,
       const ServerAddresses& stun_servers,
       const std::vector<RelayServerConfig>& turn_servers);
 
-  scoped_refptr<StreamCollectionInterface> local_streams() override;
-  scoped_refptr<StreamCollectionInterface> remote_streams() override;
-  bool AddStream(MediaStreamInterface* local_stream) override;
-  void RemoveStream(MediaStreamInterface* local_stream) override;
+  PLAN_B_ONLY scoped_refptr<StreamCollectionInterface> local_streams() override;
+  PLAN_B_ONLY scoped_refptr<StreamCollectionInterface> remote_streams()
+      override;
+  PLAN_B_ONLY bool AddStream(MediaStreamInterface* local_stream) override;
+  PLAN_B_ONLY void RemoveStream(MediaStreamInterface* local_stream) override;
 
   RTCErrorOr<scoped_refptr<RtpSenderInterface>> AddTrack(
       scoped_refptr<MediaStreamTrackInterface> track,
@@ -163,7 +164,7 @@ class PeerConnection : public PeerConnectionInternal,
       webrtc::MediaType media_type,
       const RtpTransceiverInit& init) override;
 
-  scoped_refptr<RtpSenderInterface> CreateSender(
+  PLAN_B_ONLY scoped_refptr<RtpSenderInterface> CreateSender(
       const std::string& kind,
       const std::string& stream_id) override;
 
@@ -177,9 +178,9 @@ class PeerConnection : public PeerConnectionInternal,
       const std::string& label,
       const DataChannelInit* config) override;
   // WARNING: LEGACY. See peerconnectioninterface.h
-  bool GetStats(StatsObserver* observer,
-                MediaStreamTrackInterface* track,
-                StatsOutputLevel level) override;
+  [[deprecated]] bool GetStats(StatsObserver* observer,
+                               MediaStreamTrackInterface* track,
+                               StatsOutputLevel level) override;
   // Spec-complaint GetStats(). See peerconnectioninterface.h
   void GetStats(RTCStatsCollectorCallback* callback) override;
   void GetStats(scoped_refptr<RtpSenderInterface> selector,
@@ -526,8 +527,6 @@ class PeerConnection : public PeerConnectionInternal,
   void OnSelectedCandidatePairChanged(const CandidatePairChangeEvent& event)
       RTC_RUN_ON(signaling_thread());
 
-  void OnNegotiationNeeded();
-
   const JsepTransportController* transport_controller_s() const
       RTC_RUN_ON(signaling_thread()) {
     return transport_controller_copy_;
@@ -561,12 +560,6 @@ class PeerConnection : public PeerConnectionInternal,
   // Stops recording an RTC event log.
   // This function should only be called from the worker thread.
   void StopRtcEventLog_w();
-
-  // Returns true and the TransportInfo of the given `content_name`
-  // from `description`. Returns false if it's not available.
-  static bool GetTransportDescription(const SessionDescription* description,
-                                      const std::string& content_name,
-                                      TransportDescription* info);
 
   // Returns the media index for a local ice candidate given the content name.
   // Returns false if the local session description does not have a media

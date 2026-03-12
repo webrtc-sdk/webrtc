@@ -120,7 +120,7 @@ class WebRtcVoiceEngine final : public VoiceEngineInterface {
     return decoder_factory_.get();
   }
   std::vector<RtpHeaderExtensionCapability> GetRtpHeaderExtensions(
-      const webrtc::FieldTrialsView* field_trials) const override;
+      const FieldTrialsView* field_trials) const override;
 
   // Starts AEC dump using an existing file. A maximum file size in bytes can be
   // specified. When the maximum file size is reached, logging is stopped and
@@ -222,10 +222,6 @@ class WebRtcVoiceSendChannel final : public MediaChannelUtil,
   RTCError SetRtpSendParameters(uint32_t ssrc,
                                 const RtpParameters& parameters,
                                 SetParametersCallback callback) override;
-  void SetOnRtpSendParametersChanged(
-      absl::AnyInvocable<void(std::optional<uint32_t>, const RtpParameters&)>
-          callback) override;
-
   void SetSend(bool send) override;
   bool SetAudioSend(uint32_t ssrc,
                     bool enable,
@@ -315,8 +311,6 @@ class WebRtcVoiceSendChannel final : public MediaChannelUtil,
   // Callback invoked whenever the list of SSRCs changes.
   absl::AnyInvocable<void(const std::set<uint32_t>&)>
       ssrc_list_changed_callback_ RTC_GUARDED_BY(worker_thread_);
-  absl::AnyInvocable<void(std::optional<uint32_t>, const RtpParameters&)>
-      on_rtp_send_parameters_changed_callback_ RTC_GUARDED_BY(worker_thread_);
 };
 
 class WebRtcVoiceReceiveChannel final
