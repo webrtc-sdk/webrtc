@@ -22,6 +22,8 @@
 #import "RTCMTLNV12Renderer.h"
 #import "RTCMTLRGBRenderer.h"
 
+#import "RTCMTLRenderer+Private.h"
+
 // To avoid unreconized symbol linker errors, we're taking advantage of the objc
 // runtime. Linking errors occur when compiling for architectures that don't
 // support Metal.
@@ -63,6 +65,14 @@
 @synthesize lastFrameTimeNs = _lastFrameTimeNs;
 @synthesize rotationOverride = _rotationOverride;
 
++ (BOOL)isMetalAvailable {
+#if TARGET_OS_IPHONE
+  return MTLCreateSystemDefaultDevice() != nil;
+#elif TARGET_OS_OSX
+  return [MTLCopyAllDevices() count] > 0;
+#endif
+}
+
 - (instancetype)initWithFrame:(CGRect)frameRect {
   self = [super initWithFrame:frameRect];
   if (self) {
@@ -87,6 +97,7 @@
   self.metalView.paused = !enabled;
 }
 
+#if TARGET_OS_IPHONE
 - (UIViewContentMode)videoContentMode {
   return self.metalView.contentMode;
 }
@@ -94,15 +105,12 @@
 - (void)setVideoContentMode:(UIViewContentMode)mode {
   self.metalView.contentMode = mode;
 }
+#endif
 
 #pragma mark - Private
 
-+ (BOOL)isMetalAvailable {
-  return MTLCreateSystemDefaultDevice() != nil;
-}
-
 + (MTKView *)createMetalView:(CGRect)frame {
-  return [[MTKViewClass alloc] initWithFrame:frame];
+  return [[MTKView alloc] initWithFrame:frame];
 }
 
 + (RTC_OBJC_TYPE(RTCMTLNV12Renderer) *)createNV12Renderer {
@@ -123,25 +131,42 @@
 
   self.metalView = [RTC_OBJC_TYPE(RTCMTLVideoView) createMetalView:self.bounds];
   self.metalView.delegate = self;
+#if TARGET_OS_IPHONE
   self.metalView.contentMode = UIViewContentModeScaleAspectFill;
+#elif TARGET_OS_OSX
+  self.metalView.layerContentsPlacement = NSViewLayerContentsPlacementScaleProportionallyToFit;
+#endif
+
   [self addSubview:self.metalView];
   self.videoFrameSize = CGSizeZero;
 }
 
+#if TARGET_OS_IPHONE
 - (void)setMultipleTouchEnabled:(BOOL)multipleTouchEnabled {
   [super setMultipleTouchEnabled:multipleTouchEnabled];
   self.metalView.multipleTouchEnabled = multipleTouchEnabled;
 }
+#endif
 
-- (void)layoutSubviews {
-  [super layoutSubviews];
+- (CGFloat)currentScaleFactor {
+  CGFloat scale = 1.0;
+#if TARGET_OS_IPHONE
+  scale = [UIScreen mainScreen].scale;
+#elif TARGET_OS_OSX
+  scale = [NSScreen mainScreen].backingScaleFactor;
+#endif
+  return MAX(scale, 1.0);
+}
 
+- (void)performLayout {
   CGRect bounds = self.bounds;
   self.metalView.frame = bounds;
   if (!CGSizeEqualToSize(self.videoFrameSize, CGSizeZero)) {
     self.metalView.drawableSize = [self drawableSize];
   } else {
-    self.metalView.drawableSize = bounds.size;
+    // Apply scale factor for default size as well (when videoFrameSize is zero)
+    CGFloat scale = [self currentScaleFactor];
+    self.metalView.drawableSize = CGSizeMake(bounds.size.width * scale, bounds.size.height * scale);
   }
 }
 
@@ -220,10 +245,10 @@
   [self setNeedsLayout];
 }
 
-- (RTCVideoRotation)frameRotation {
+- (RTC_OBJC_TYPE(RTCVideoRotation) )videoRotation {
   if (self.rotationOverride) {
-    RTCVideoRotation rotation;
-    if (@available(iOS 11, *)) {
+    RTC_OBJC_TYPE(RTCVideoRotation) rotation;
+    if (@available(iOS 11, macos 10.13, *)) {
       [self.rotationOverride getValue:&rotation size:sizeof(rotation)];
     } else {
       [self.rotationOverride getValue:&rotation];
@@ -237,18 +262,23 @@
 - (CGSize)drawableSize {
   // Flip width/height if the rotations are not the same.
   CGSize videoFrameSize = self.videoFrameSize;
-  RTCVideoRotation frameRotation = [self frameRotation];
+  RTC_OBJC_TYPE(RTCVideoRotation) videoRotation = [self videoRotation];
 
-  BOOL useLandscape = (frameRotation == RTCVideoRotation_0) ||
-      (frameRotation == RTCVideoRotation_180);
-  BOOL sizeIsLandscape = (self.videoFrame.rotation == RTCVideoRotation_0) ||
-      (self.videoFrame.rotation == RTCVideoRotation_180);
+  BOOL useLandscape =
+      (videoRotation == RTC_OBJC_TYPE(RTCVideoRotation_0)) || (videoRotation == RTC_OBJC_TYPE(RTCVideoRotation_180));
+  BOOL sizeIsLandscape = (self.videoFrame.rotation == RTC_OBJC_TYPE(RTCVideoRotation_0)) ||
+      (self.videoFrame.rotation == RTC_OBJC_TYPE(RTCVideoRotation_180));
 
+  CGSize size;
   if (useLandscape == sizeIsLandscape) {
-    return videoFrameSize;
+    size = videoFrameSize;
   } else {
-    return CGSizeMake(videoFrameSize.height, videoFrameSize.width);
+    size = CGSizeMake(videoFrameSize.height, videoFrameSize.width);
   }
+  
+  // Apply scale factor for retina displays
+  CGFloat scale = [self currentScaleFactor];
+  return CGSizeMake(size.width * scale, size.height * scale);
 }
 
 #pragma mark - RTC_OBJC_TYPE(RTCVideoRenderer)
@@ -276,7 +306,34 @@
     RTCLogInfo(@"Incoming frame is nil. Exiting render callback.");
     return;
   }
-  self.videoFrame = frame;
+
+  // Workaround to support RTCCVPixelBuffer rendering.
+  // RTCMTLRGBRenderer seems to be broken at the moment.
+  BOOL useI420 = NO;
+  if ([frame.buffer isKindOfClass:[RTC_OBJC_TYPE(RTCCVPixelBuffer) class]]) {
+    RTC_OBJC_TYPE(RTCCVPixelBuffer) *buffer = (RTC_OBJC_TYPE(RTCCVPixelBuffer) *)frame.buffer;
+    const OSType pixelFormat = CVPixelBufferGetPixelFormatType(buffer.pixelBuffer);
+    useI420 = pixelFormat == kCVPixelFormatType_32BGRA || pixelFormat == kCVPixelFormatType_32ARGB;
+  }
+  self.videoFrame = useI420 ? [frame newI420VideoFrame] : frame;
 }
+
+#pragma mark - Cross platform
+
+#if TARGET_OS_IPHONE
+- (void)layoutSubviews {
+  [super layoutSubviews];
+  [self performLayout];
+}
+#elif TARGET_OS_OSX
+- (void)layout {
+  [super layout];
+  [self performLayout];
+}
+
+- (void)setNeedsLayout {
+  self.needsLayout = YES;
+}
+#endif
 
 @end

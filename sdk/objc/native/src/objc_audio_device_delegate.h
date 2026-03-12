@@ -22,8 +22,7 @@ class ObjCAudioDeviceModule;
 }  // namespace objc_adm
 }  // namespace webrtc
 
-@interface ObjCAudioDeviceDelegate
-    : NSObject <RTC_OBJC_TYPE (RTCAudioDeviceDelegate)>
+@interface RTC_OBJC_TYPE(RTCObjCAudioDeviceDelegate) : NSObject <RTC_OBJC_TYPE (RTCAudioDeviceDelegate)>
 
 - (instancetype)
     initWithAudioDeviceModule:

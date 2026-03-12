@@ -14,16 +14,14 @@
 
 @implementation RTC_OBJC_TYPE (RTCMediaSource) {
   RTC_OBJC_TYPE(RTCPeerConnectionFactory) * _factory;
-  RTCMediaSourceType _type;
+  RTC_OBJC_TYPE(RTCMediaSourceType) _type;
 }
 
 @synthesize nativeMediaSource = _nativeMediaSource;
 
-- (instancetype)
-      initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
-    nativeMediaSource:
-        (webrtc::scoped_refptr<webrtc::MediaSourceInterface>)nativeMediaSource
-                 type:(RTCMediaSourceType)type {
+- (instancetype)initWithFactory:(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *)factory
+              nativeMediaSource:(webrtc::scoped_refptr<webrtc::MediaSourceInterface>)nativeMediaSource
+                           type:(RTC_OBJC_TYPE(RTCMediaSourceType))type {
   RTC_DCHECK(factory);
   RTC_DCHECK(nativeMediaSource);
   self = [super init];
@@ -35,49 +33,49 @@
   return self;
 }
 
-- (RTCSourceState)state {
+- (RTC_OBJC_TYPE(RTCSourceState))state {
   return [[self class] sourceStateForNativeState:_nativeMediaSource->state()];
 }
 
 #pragma mark - Private
 
 + (webrtc::MediaSourceInterface::SourceState)nativeSourceStateForState:
-    (RTCSourceState)state {
+    (RTC_OBJC_TYPE(RTCSourceState))state {
   switch (state) {
-    case RTCSourceStateInitializing:
+    case RTC_OBJC_TYPE(RTCSourceStateInitializing):
       return webrtc::MediaSourceInterface::kInitializing;
-    case RTCSourceStateLive:
+    case RTC_OBJC_TYPE(RTCSourceStateLive):
       return webrtc::MediaSourceInterface::kLive;
-    case RTCSourceStateEnded:
+    case RTC_OBJC_TYPE(RTCSourceStateEnded):
       return webrtc::MediaSourceInterface::kEnded;
-    case RTCSourceStateMuted:
+    case RTC_OBJC_TYPE(RTCSourceStateMuted):
       return webrtc::MediaSourceInterface::kMuted;
   }
 }
 
-+ (RTCSourceState)sourceStateForNativeState:
++ (RTC_OBJC_TYPE(RTCSourceState))sourceStateForNativeState:
     (webrtc::MediaSourceInterface::SourceState)nativeState {
   switch (nativeState) {
     case webrtc::MediaSourceInterface::kInitializing:
-      return RTCSourceStateInitializing;
+      return RTC_OBJC_TYPE(RTCSourceStateInitializing);
     case webrtc::MediaSourceInterface::kLive:
-      return RTCSourceStateLive;
+      return RTC_OBJC_TYPE(RTCSourceStateLive);
     case webrtc::MediaSourceInterface::kEnded:
-      return RTCSourceStateEnded;
+      return RTC_OBJC_TYPE(RTCSourceStateEnded);
     case webrtc::MediaSourceInterface::kMuted:
-      return RTCSourceStateMuted;
+      return RTC_OBJC_TYPE(RTCSourceStateMuted);
   }
 }
 
-+ (NSString *)stringForState:(RTCSourceState)state {
++ (NSString *)stringForState:(RTC_OBJC_TYPE(RTCSourceState))state {
   switch (state) {
-    case RTCSourceStateInitializing:
+    case RTC_OBJC_TYPE(RTCSourceStateInitializing):
       return @"Initializing";
-    case RTCSourceStateLive:
+    case RTC_OBJC_TYPE(RTCSourceStateLive):
       return @"Live";
-    case RTCSourceStateEnded:
+    case RTC_OBJC_TYPE(RTCSourceStateEnded):
       return @"Ended";
-    case RTCSourceStateMuted:
+    case RTC_OBJC_TYPE(RTCSourceStateMuted):
       return @"Muted";
   }
 }

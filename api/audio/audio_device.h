@@ -15,11 +15,23 @@
 #include <optional>
 
 #include "api/audio/audio_device_defines.h"
+#include "api/environment/environment.h"
 #include "api/ref_count.h"
+#include "api/scoped_refptr.h"
+#include "api/task_queue/task_queue_factory.h"
+#include "sdk/objc/base/RTCMacros.h"
+
+RTC_FWD_DECL_OBJC_CLASS(AVAudioEngine);
+RTC_FWD_DECL_OBJC_CLASS(AVAudioFormat);
+RTC_FWD_DECL_OBJC_CLASS(AVAudioNode);
+RTC_FWD_DECL_OBJC_CLASS(AVAudioSourceNode);
+RTC_FWD_DECL_OBJC_CLASS(AVAudioMixerNode);
+RTC_FWD_DECL_OBJC_CLASS(NSDictionary);
 
 namespace webrtc {
 
 class AudioDeviceModuleForTest;
+class AudioDeviceObserver;
 
 class AudioDeviceModule : public RefCountInterface {
  public:
@@ -37,16 +49,18 @@ class AudioDeviceModule : public RefCountInterface {
     kDummyAudio,
   };
 
-  enum WindowsDeviceType {
-    kDefaultCommunicationDevice = -1,
-    kDefaultDevice = -2
-  };
+  enum WindowsDeviceType { kDefaultCommunicationDevice = -1, kDefaultDevice = -2 };
 
-// Only supported on iOS.
+  // Only supported on iOS.
 #if defined(WEBRTC_IOS)
   enum MutedSpeechEvent { kMutedSpeechStarted, kMutedSpeechEnded };
   typedef void (^MutedSpeechEventHandler)(MutedSpeechEvent event);
 #endif  // WEBRTC_IOS
+
+  enum SpeechActivityEvent {
+    kStarted = 0,
+    kEnded,
+  };
 
   struct Stats {
     // The fields below correspond to similarly-named fields in the WebRTC stats
@@ -66,6 +80,10 @@ class AudioDeviceModule : public RefCountInterface {
   };
 
  public:
+  // Creates a default ADM for usage in production code.
+  static scoped_refptr<AudioDeviceModule> Create(const Environment& env, AudioLayer audio_layer,
+                                                 bool bypass_voice_processing = false);
+
   // Retrieve the currently utilized audio layer
   virtual int32_t ActiveAudioLayer(AudioLayer* audioLayer) const = 0;
 
@@ -80,11 +98,9 @@ class AudioDeviceModule : public RefCountInterface {
   // Device enumeration
   virtual int16_t PlayoutDevices() = 0;
   virtual int16_t RecordingDevices() = 0;
-  virtual int32_t PlayoutDeviceName(uint16_t index,
-                                    char name[kAdmMaxDeviceNameSize],
+  virtual int32_t PlayoutDeviceName(uint16_t index, char name[kAdmMaxDeviceNameSize],
                                     char guid[kAdmMaxGuidSize]) = 0;
-  virtual int32_t RecordingDeviceName(uint16_t index,
-                                      char name[kAdmMaxDeviceNameSize],
+  virtual int32_t RecordingDeviceName(uint16_t index, char name[kAdmMaxDeviceNameSize],
                                       char guid[kAdmMaxGuidSize]) = 0;
 
   // Device selection
@@ -168,11 +184,18 @@ class AudioDeviceModule : public RefCountInterface {
   // not be present in the stats.
   virtual std::optional<Stats> GetStats() const { return std::nullopt; }
 
+  // Whether to stop recording when all streams are muted.
+  virtual bool IsStopOnMuteModeEnabled() const { return true; }
+
 // Only supported on iOS.
 #if defined(WEBRTC_IOS)
   virtual int GetPlayoutAudioParameters(AudioParameters* params) const = 0;
   virtual int GetRecordAudioParameters(AudioParameters* params) const = 0;
 #endif  // WEBRTC_IOS
+
+  virtual int32_t SetObserver(AudioDeviceObserver* observer) { return -1; }
+  virtual int32_t GetPlayoutDevice() const { return -1; }
+  virtual int32_t GetRecordingDevice() const { return -1; }
 
  protected:
   ~AudioDeviceModule() override {}
@@ -190,6 +213,54 @@ class AudioDeviceModuleForTest : public AudioDeviceModule {
 
   virtual int SetPlayoutSampleRate(uint32_t sample_rate) = 0;
   virtual int SetRecordingSampleRate(uint32_t sample_rate) = 0;
+};
+
+class AudioDeviceObserver {
+ public:
+  virtual ~AudioDeviceObserver() = default;
+
+  // input/output devices updated or default device changed
+  virtual void OnDevicesUpdated() {}
+  virtual void OnSpeechActivityEvent(AudioDeviceModule::SpeechActivityEvent event) {}
+
+  // AVAudioEngine lifecycle
+  virtual int32_t OnEngineDidCreate(AVAudioEngine* engine) { return 0; }
+
+  virtual int32_t OnEngineWillEnable(AVAudioEngine* engine, bool playout_enabled,
+                                     bool recording_enabled) {
+    return 0;
+  }
+
+  virtual int32_t OnEngineWillStart(AVAudioEngine* engine, bool playout_enabled,
+                                    bool recording_enabled) {
+    return 0;
+  }
+
+  virtual int32_t OnEngineDidStop(AVAudioEngine* engine, bool playout_enabled,
+                                  bool recording_enabled) {
+    return 0;
+  }
+
+  virtual int32_t OnEngineDidDisable(AVAudioEngine* engine, bool playout_enabled,
+                                     bool recording_enabled) {
+    return 0;
+  }
+
+  virtual int32_t OnEngineWillRelease(AVAudioEngine* engine) { return 0; }
+
+  // Override the input node configuration with a custom implementation.
+  virtual int32_t OnEngineWillConnectInput(AVAudioEngine* engine, AVAudioNode* src,
+                                           AVAudioNode* dst, AVAudioFormat* format,
+                                           NSDictionary* context) {
+    return 0;
+  }
+
+  // Override the input node configuration with a custom implementation.
+  virtual int32_t OnEngineWillConnectOutput(AVAudioEngine* engine, AVAudioNode* src,
+                                            AVAudioNode* dst, AVAudioFormat* format,
+                                            NSDictionary* context) {
+    return 0;
+  }
 };
 
 }  // namespace webrtc

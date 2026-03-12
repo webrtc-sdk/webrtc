@@ -124,6 +124,7 @@ bool PeerConnectionInterface::RTCConfiguration::operator==(
     PortAllocatorConfig port_allocator_config;
     std::optional<TimeDelta> pacer_burst_interval;
     bool always_negotiate_data_channels;
+    bool enable_any_address_ports;
     int max_sctp_streams;
     bool enable_sctp_snap;
   };
@@ -188,7 +189,9 @@ bool PeerConnectionInterface::RTCConfiguration::operator==(
          port_allocator_config.flags == o.port_allocator_config.flags &&
          pacer_burst_interval == o.pacer_burst_interval &&
          always_negotiate_data_channels == o.always_negotiate_data_channels &&
-         max_sctp_streams == o.max_sctp_streams;
+         enable_any_address_ports == o.enable_any_address_ports &&
+         max_sctp_streams == o.max_sctp_streams &&
+         enable_sctp_snap == o.enable_sctp_snap;
 }
 
 bool PeerConnectionInterface::RTCConfiguration::operator!=(

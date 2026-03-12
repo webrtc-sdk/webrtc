@@ -5682,6 +5682,11 @@ void SdpOfferAnswerHandler::RemoveStoppedTransceivers() {
       RTC_LOG(LS_INFO)
           << "Dropping stopped transceiver that was never associated";
     }
+    // Ensure channel teardown before dropping the last reference.
+    if (transceiver->internal()->HasChannel()) {
+      RTC_LOG(LS_INFO) << "Clearing channel before removing transceiver";
+      transceiver->internal()->ClearChannel();
+    }
     transceivers()->Remove(transceiver);
   }
 }

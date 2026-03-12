@@ -28,6 +28,7 @@
 #include "rtc_base/experiments/field_trial_parser.h"
 #include "rtc_base/logging.h"
 #include "system_wrappers/include/metrics.h"
+#include "modules/rtp_rtcp/source/rtp_video_header.h"
 
 namespace webrtc {
 
@@ -283,21 +284,6 @@ std::vector<ProbeClusterConfig> ProbeController::OnNetworkAvailability(
   return std::vector<ProbeClusterConfig>();
 }
 
-void ProbeController::UpdateState(State new_state) {
-  switch (new_state) {
-    case State::kInit:
-      state_ = State::kInit;
-      break;
-    case State::kWaitingForProbingResult:
-      state_ = State::kWaitingForProbingResult;
-      break;
-    case State::kProbingComplete:
-      state_ = State::kProbingComplete;
-      min_bitrate_to_probe_further_ = DataRate::PlusInfinity();
-      break;
-  }
-}
-
 std::vector<ProbeClusterConfig> ProbeController::InitiateExponentialProbing(
     Timestamp at_time) {
   RTC_DCHECK(network_available_);
@@ -497,7 +483,8 @@ std::vector<ProbeClusterConfig> ProbeController::Process(Timestamp at_time) {
       kMaxWaitingTimeForProbingResult) {
     if (state_ == State::kWaitingForProbingResult) {
       RTC_LOG(LS_INFO) << "kWaitingForProbingResult: timeout";
-      UpdateState(State::kProbingComplete);
+      state_ = State::kProbingComplete;
+      min_bitrate_to_probe_further_ = DataRate::PlusInfinity();
     }
   }
   if (estimated_bitrate_.IsZero() || state_ != State::kProbingComplete) {
@@ -556,7 +543,8 @@ std::vector<ProbeClusterConfig> ProbeController::InitiateProbing(
                        max_bitrate_);
     if (std::min(network_estimate, estimated_bitrate_) >
         config_.skip_if_estimate_larger_than_fraction_of_max * max_probe_rate) {
-      UpdateState(State::kProbingComplete);
+      state_ = State::kProbingComplete;
+      min_bitrate_to_probe_further_ = DataRate::PlusInfinity();
       return {};
     }
   }
@@ -614,13 +602,14 @@ std::vector<ProbeClusterConfig> ProbeController::InitiateProbing(
   }
   time_last_probing_initiated_ = now;
   if (probe_further) {
-    UpdateState(State::kWaitingForProbingResult);
+    state_ = State::kWaitingForProbingResult;
     // Dont expect probe results to be larger than a fraction of the actual
     // probe rate.
     min_bitrate_to_probe_further_ = pending_probes.back().target_data_rate *
                                     config_.further_probe_threshold;
   } else {
-    UpdateState(State::kProbingComplete);
+    state_ = State::kProbingComplete;
+    min_bitrate_to_probe_further_ = DataRate::PlusInfinity();
   }
   return pending_probes;
 }

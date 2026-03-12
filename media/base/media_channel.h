@@ -1065,6 +1065,8 @@ class VideoMediaReceiveChannelInterface : public MediaReceiveChannelInterface {
   virtual absl::AnyInvocable<std::optional<VideoMediaReceiveInfo>()>
   GetStatsTask() = 0;
   virtual bool AddDefaultRecvStreamForTesting(const StreamParams& sp) = 0;
+  virtual void StartReceive(uint32_t ssrc) {}
+  virtual void StopReceive(uint32_t ssrc) {}
 };
 
 }  // namespace webrtc

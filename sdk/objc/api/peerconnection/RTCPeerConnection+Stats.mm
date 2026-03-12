@@ -98,7 +98,7 @@ class StatsObserverAdapter : public StatsObserver {
 }
 
 - (void)statsForTrack:(RTC_OBJC_TYPE(RTCMediaStreamTrack) *)mediaStreamTrack
-     statsOutputLevel:(RTCStatsOutputLevel)statsOutputLevel
+     statsOutputLevel:(RTC_OBJC_TYPE(RTCStatsOutputLevel))statsOutputLevel
     completionHandler:
         (void (^)(NSArray<RTC_OBJC_TYPE(RTCLegacyStatsReport) *> *stats))
             completionHandler {

@@ -16,6 +16,24 @@ group("crypto") {
   ]
 }
 
+rtc_library("frame_crypto_transformer") {
+  visibility = [ "*" ]
+  sources = [
+    "frame_crypto_transformer.cc",
+    "frame_crypto_transformer.h",
+  ]
+
+  deps = [
+   "//api:frame_transformer_interface",
+  ]
+
+  if (rtc_build_ssl) {
+    deps += [ "//third_party/boringssl" ]
+  } else {
+    configs += [ ":external_ssl_library" ]
+  }
+}
+
 rtc_library("options") {
   visibility = [ "*" ]
   sources = [
@@ -65,5 +83,17 @@ if (rtc_include_tests) {
     if (rtc_build_ssl) {
       deps += [ "//third_party/boringssl" ]
     }
+  }
+  rtc_library("crypto_unittests") {
+    testonly = true
+    sources = [
+      "frame_crypto_transformer_unittest.cc",
+    ]
+    deps = [
+      ":crypto",
+      ":frame_crypto_transformer",
+      "//testing/gtest",
+      "../../test:test_support",
+    ]
   }
 }

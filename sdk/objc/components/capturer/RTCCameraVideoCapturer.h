@@ -18,7 +18,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 // Camera capture that implements RTCVideoCapturer. Delivers frames to a
 // RTCVideoCapturerDelegate (usually RTCVideoSource).
-NS_EXTENSION_UNAVAILABLE_IOS("Camera not available in app extensions.")
 RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCCameraVideoCapturer) : RTC_OBJC_TYPE(RTCVideoCapturer)
 
@@ -27,9 +26,21 @@ RTC_OBJC_EXPORT
 
 // Returns list of available capture devices that support video capture.
 + (NSArray<AVCaptureDevice *> *)captureDevices;
+
 // Returns list of formats that are supported by this class for this device.
 + (NSArray<AVCaptureDeviceFormat *> *)supportedFormatsForDevice:
     (AVCaptureDevice *)device;
+
+#if !TARGET_OS_VISION
++ (CGFloat)defaultZoomFactorForDeviceType:(AVCaptureDeviceType)deviceType;
+#endif
+
+- (instancetype)initWithDelegate:
+    (nullable __weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)delegate;
+
+- (instancetype)initWithDelegate:
+                    (nullable __weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)delegate
+                  captureSession:(AVCaptureSession *)captureSession;
 
 // Returns the most efficient supported output pixel format for this capturer.
 - (FourCharCode)preferredOutputPixelFormat;

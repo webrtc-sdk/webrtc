@@ -22,7 +22,7 @@
 #include "rtc_base/logging.h"
 
 // Vertex shader doesn't do anything except pass coordinates through.
-const char kRTCVertexShaderSource[] = SHADER_VERSION VERTEX_SHADER_IN
+const char RTC_CONSTANT_TYPE(RTCVertexShaderSource)[] = SHADER_VERSION VERTEX_SHADER_IN
     " vec2 position;\n" VERTEX_SHADER_IN " vec2 texcoord;\n" VERTEX_SHADER_OUT
     " vec2 v_texcoord;\n"
     "void main() {\n"
@@ -32,7 +32,7 @@ const char kRTCVertexShaderSource[] = SHADER_VERSION VERTEX_SHADER_IN
 
 // Compiles a shader of the given `type` with GLSL source `source` and returns
 // the shader handle or 0 on error.
-GLuint RTCCreateShader(GLenum type, const GLchar *source) {
+GLuint RTC_OBJC_TYPE(RTCCreateShader)(GLenum type, const GLchar *source) {
   GLuint shader = glCreateShader(type);
   if (!shader) {
     return 0;
@@ -59,7 +59,7 @@ GLuint RTCCreateShader(GLenum type, const GLchar *source) {
 
 // Links a shader program with the given vertex and fragment shaders and
 // returns the program handle or 0 on error.
-GLuint RTCCreateProgram(GLuint vertexShader, GLuint fragmentShader) {
+GLuint RTC_OBJC_TYPE(RTCCreateProgram)(GLuint vertexShader, GLuint fragmentShader) {
   if (vertexShader == 0 || fragmentShader == 0) {
     return 0;
   }
@@ -81,9 +81,8 @@ GLuint RTCCreateProgram(GLuint vertexShader, GLuint fragmentShader) {
 
 // Creates and links a shader program with the given fragment shader source and
 // a plain vertex shader. Returns the program handle or 0 on error.
-GLuint RTCCreateProgramFromFragmentSource(const char fragmentShaderSource[]) {
-  GLuint vertexShader =
-      RTCCreateShader(GL_VERTEX_SHADER, kRTCVertexShaderSource);
+GLuint RTC_OBJC_TYPE(RTCCreateProgramFromFragmentSource)(const char fragmentShaderSource[]) {
+  GLuint vertexShader = RTCCreateShader(GL_VERTEX_SHADER, RTC_CONSTANT_TYPE(RTCVertexShaderSource));
   RTC_CHECK(vertexShader) << "failed to create vertex shader";
   GLuint fragmentShader =
       RTCCreateShader(GL_FRAGMENT_SHADER, fragmentShaderSource);
@@ -126,7 +125,7 @@ GLuint RTCCreateProgramFromFragmentSource(const char fragmentShaderSource[]) {
   return program;
 }
 
-BOOL RTCCreateVertexBuffer(GLuint *vertexBuffer, GLuint *vertexArray) {
+BOOL RTC_OBJC_TYPE(RTCCreateVertexBuffer)(GLuint *vertexBuffer, GLuint *vertexArray) {
   glGenBuffers(1, vertexBuffer);
   if (*vertexBuffer == 0) {
     glDeleteVertexArrays(1, vertexArray);
@@ -138,7 +137,7 @@ BOOL RTCCreateVertexBuffer(GLuint *vertexBuffer, GLuint *vertexArray) {
 }
 
 // Set vertex data to the currently bound vertex buffer.
-void RTCSetVertexData(RTCVideoRotation rotation) {
+void RTC_OBJC_TYPE(RTCSetVertexData)(RTCVideoRotation rotation) {
   // When modelview and projection matrices are identity (default) the world is
   // contained in the square around origin with unit size 2. Drawing to these
   // coordinates is equivalent to drawing to the entire screen. The texture is
@@ -156,16 +155,16 @@ void RTCSetVertexData(RTCVideoRotation rotation) {
   // Rotate the UV coordinates.
   int rotation_offset;
   switch (rotation) {
-    case RTCVideoRotation_0:
+    case RTC_OBJC_TYPE(RTCVideoRotation_0):
       rotation_offset = 0;
       break;
-    case RTCVideoRotation_90:
+    case RTC_OBJC_TYPE(RTCVideoRotation_90):
       rotation_offset = 1;
       break;
-    case RTCVideoRotation_180:
+    case RTC_OBJC_TYPE(RTCVideoRotation_180):
       rotation_offset = 2;
       break;
-    case RTCVideoRotation_270:
+    case RTC_OBJC_TYPE(RTCVideoRotation_270):
       rotation_offset = 3;
       break;
   }

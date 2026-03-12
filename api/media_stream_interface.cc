@@ -19,6 +19,10 @@ namespace webrtc {
 const char* const MediaStreamTrackInterface::kVideoKind = kMediaTypeVideo;
 const char* const MediaStreamTrackInterface::kAudioKind = kMediaTypeAudio;
 
+bool VideoTrackInterface::should_receive() const {
+  return true;
+}
+
 VideoTrackInterface::ContentHint VideoTrackInterface::content_hint() const {
   return ContentHint::kNone;
 }

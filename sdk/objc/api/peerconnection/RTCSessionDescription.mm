@@ -21,17 +21,17 @@
 @synthesize type = _type;
 @synthesize sdp = _sdp;
 
-+ (NSString *)stringForType:(RTCSdpType)type {
++ (NSString *)stringForType:(RTC_OBJC_TYPE(RTCSdpType))type {
   std::string string = [[self class] stdStringForType:type];
   return [NSString stringForStdString:string];
 }
 
-+ (RTCSdpType)typeForString:(NSString *)string {
++ (RTC_OBJC_TYPE(RTCSdpType))typeForString:(NSString *)string {
   std::string typeString = string.stdString;
   return [[self class] typeForStdString:typeString];
 }
 
-- (instancetype)initWithType:(RTCSdpType)type sdp:(NSString *)sdp {
+- (instancetype)initWithType:(RTC_OBJC_TYPE(RTCSdpType))type sdp:(NSString *)sdp {
   self = [super init];
   if (self) {
     _type = type;
@@ -70,63 +70,63 @@
   NSParameterAssert(nativeDescription);
   std::string sdp;
   nativeDescription->ToString(&sdp);
-  RTCSdpType type = [[self class] typeForSdpType:nativeDescription->GetType()];
+  RTC_OBJC_TYPE(RTCSdpType) type = [[self class] typeForSdpType:nativeDescription->GetType()];
 
   return [self initWithType:type sdp:[NSString stringForStdString:sdp]];
 }
 
-+ (std::string)stdStringForType:(RTCSdpType)type {
++ (std::string)stdStringForType:(RTC_OBJC_TYPE(RTCSdpType))type {
   switch (type) {
-    case RTCSdpTypeOffer:
+    case RTC_OBJC_TYPE(RTCSdpTypeOffer):
       return webrtc::SessionDescriptionInterface::kOffer;
-    case RTCSdpTypePrAnswer:
+    case RTC_OBJC_TYPE(RTCSdpTypePrAnswer):
       return webrtc::SessionDescriptionInterface::kPrAnswer;
-    case RTCSdpTypeAnswer:
+    case RTC_OBJC_TYPE(RTCSdpTypeAnswer):
       return webrtc::SessionDescriptionInterface::kAnswer;
-    case RTCSdpTypeRollback:
+    case RTC_OBJC_TYPE(RTCSdpTypeRollback):
       return webrtc::SessionDescriptionInterface::kRollback;
   }
 }
 
-+ (RTCSdpType)typeForStdString:(const std::string &)string {
++ (RTC_OBJC_TYPE(RTCSdpType))typeForStdString:(const std::string &)string {
   if (string == webrtc::SessionDescriptionInterface::kOffer) {
-    return RTCSdpTypeOffer;
+    return RTC_OBJC_TYPE(RTCSdpTypeOffer);
   } else if (string == webrtc::SessionDescriptionInterface::kPrAnswer) {
-    return RTCSdpTypePrAnswer;
+    return RTC_OBJC_TYPE(RTCSdpTypePrAnswer);
   } else if (string == webrtc::SessionDescriptionInterface::kAnswer) {
-    return RTCSdpTypeAnswer;
+    return RTC_OBJC_TYPE(RTCSdpTypeAnswer);
   } else if (string == webrtc::SessionDescriptionInterface::kRollback) {
-    return RTCSdpTypeRollback;
+    return RTC_OBJC_TYPE(RTCSdpTypeRollback);
   } else {
     RTC_DCHECK_NOTREACHED();
-    return RTCSdpTypeOffer;
+    return RTC_OBJC_TYPE(RTCSdpTypeOffer);
   }
 }
 
-+ (RTCSdpType)typeForSdpType:(webrtc::SdpType)type {
++ (RTC_OBJC_TYPE(RTCSdpType))typeForSdpType:(webrtc::SdpType)type {
   if (type == webrtc::SdpType::kOffer) {
-    return RTCSdpTypeOffer;
+    return RTC_OBJC_TYPE(RTCSdpTypeOffer);
   } else if (type == webrtc::SdpType::kPrAnswer) {
-    return RTCSdpTypePrAnswer;
+    return RTC_OBJC_TYPE(RTCSdpTypePrAnswer);
   } else if (type == webrtc::SdpType::kAnswer) {
-    return RTCSdpTypeAnswer;
+    return RTC_OBJC_TYPE(RTCSdpTypeAnswer);
   } else if (type == webrtc::SdpType::kRollback) {
-    return RTCSdpTypeRollback;
+    return RTC_OBJC_TYPE(RTCSdpTypeRollback);
   } else {
     RTC_DCHECK_NOTREACHED();
-    return RTCSdpTypeOffer;
+    return RTC_OBJC_TYPE(RTCSdpTypeOffer);
   }
 }
 
-+ (webrtc::SdpType)nativeTypeForType:(RTCSdpType)type {
++ (webrtc::SdpType)nativeTypeForType:(RTC_OBJC_TYPE(RTCSdpType))type {
   switch (type) {
-    case RTCSdpTypeOffer:
+    case RTC_OBJC_TYPE(RTCSdpTypeOffer):
       return webrtc::SdpType::kOffer;
-    case RTCSdpTypePrAnswer:
+    case RTC_OBJC_TYPE(RTCSdpTypePrAnswer):
       return webrtc::SdpType::kPrAnswer;
-    case RTCSdpTypeAnswer:
+    case RTC_OBJC_TYPE(RTCSdpTypeAnswer):
       return webrtc::SdpType::kAnswer;
-    case RTCSdpTypeRollback:
+    case RTC_OBJC_TYPE(RTCSdpTypeRollback):
       return webrtc::SdpType::kRollback;
   }
 }

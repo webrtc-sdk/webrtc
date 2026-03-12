@@ -58,7 +58,7 @@ class AudioDeviceDelegateImpl final
 
 }  // namespace
 
-@implementation ObjCAudioDeviceDelegate {
+@implementation RTC_OBJC_TYPE(RTCObjCAudioDeviceDelegate) {
   webrtc::scoped_refptr<AudioDeviceDelegateImpl> impl_;
 }
 

@@ -12,16 +12,16 @@
 
 #import "sdk/objc/base/RTCMacros.h"
 
-typedef NS_ENUM(NSUInteger, RTCFileLoggerSeverity) {
-  RTCFileLoggerSeverityVerbose,
-  RTCFileLoggerSeverityInfo,
-  RTCFileLoggerSeverityWarning,
-  RTCFileLoggerSeverityError
+typedef NS_ENUM(NSUInteger, RTC_OBJC_TYPE(RTCFileLoggerSeverity)) {
+  RTC_OBJC_TYPE(RTCFileLoggerSeverityVerbose),
+  RTC_OBJC_TYPE(RTCFileLoggerSeverityInfo),
+  RTC_OBJC_TYPE(RTCFileLoggerSeverityWarning),
+  RTC_OBJC_TYPE(RTCFileLoggerSeverityError)
 };
 
-typedef NS_ENUM(NSUInteger, RTCFileLoggerRotationType) {
-  RTCFileLoggerTypeCall,
-  RTCFileLoggerTypeApp,
+typedef NS_ENUM(NSUInteger, RTC_OBJC_TYPE(RTCFileLoggerRotationType)) {
+  RTC_OBJC_TYPE(RTCFileLoggerTypeCall),
+  RTC_OBJC_TYPE(RTCFileLoggerTypeApp),
 };
 
 NS_ASSUME_NONNULL_BEGIN
@@ -37,11 +37,11 @@ RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCFileLogger) : NSObject
 
 // The severity level to capture. The default is kRTCFileLoggerSeverityInfo.
-@property(nonatomic, assign) RTCFileLoggerSeverity severity;
+@property(nonatomic, assign) RTC_OBJC_TYPE(RTCFileLoggerSeverity) severity;
 
 // The rotation type for this file logger. The default is
 // kRTCFileLoggerTypeCall.
-@property(nonatomic, readonly) RTCFileLoggerRotationType rotationType;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCFileLoggerRotationType) rotationType;
 
 // Disables buffering disk writes. Should be set before `start`. Buffering
 // is enabled by default for performance.
@@ -57,8 +57,7 @@ RTC_OBJC_EXPORT
 
 - (instancetype)initWithDirPath:(NSString *)dirPath
                     maxFileSize:(NSUInteger)maxFileSize
-                   rotationType:(RTCFileLoggerRotationType)rotationType
-    NS_DESIGNATED_INITIALIZER;
+                   rotationType:(RTC_OBJC_TYPE(RTCFileLoggerRotationType))rotationType NS_DESIGNATED_INITIALIZER;
 
 // Starts writing WebRTC logs to disk if not already started. Overwrites any
 // existing file(s).

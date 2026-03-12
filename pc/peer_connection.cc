@@ -2286,6 +2286,11 @@ PeerConnection::InitializePortAllocator_n(
     RTC_LOG(LS_INFO) << "Disable candidates on link-local network interfaces.";
   }
 
+  if (configuration.enable_any_address_ports) {
+    port_allocator_flags |= PORTALLOCATOR_ENABLE_ANY_ADDRESS_PORTS;
+    RTC_LOG(LS_INFO) << "Enable gathering on any address ports.";
+  }
+
   port_allocator_->set_flags(port_allocator_flags);
   // No step delay is used while allocating ports.
   port_allocator_->set_step_delay(kMinimumStepDelay);

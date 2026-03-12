@@ -15,11 +15,11 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-extern NSString *const kRTCAudioSessionErrorDomain;
+extern NSString *const RTC_CONSTANT_TYPE(RTCAudioSessionErrorDomain);
 /** Method that requires lock was called without lock. */
-extern NSInteger const kRTCAudioSessionErrorLockRequired;
+extern NSInteger const RTC_CONSTANT_TYPE(RTCAudioSessionErrorLockRequired);
 /** Unknown configuration error occurred. */
-extern NSInteger const kRTCAudioSessionErrorConfiguration;
+extern NSInteger const RTC_CONSTANT_TYPE(RTCAudioSessionErrorConfiguration);
 
 @class RTC_OBJC_TYPE(RTCAudioSession);
 @class RTC_OBJC_TYPE(RTCAudioSessionConfiguration);
@@ -208,6 +208,16 @@ RTC_OBJC_EXPORT
  not available. The default value of this property is NO.
  */
 @property(nonatomic) BOOL ignoresPreferredAttributeConfigurationErrors;
+
+/** Number of times setActive:YES has succeeded without a balanced call to
+ *  setActive:NO.
+ */
+@property(nonatomic, readonly) int activationCount;
+
+/** The number of times `beginWebRTCSession` was called without a balanced call
+ *  to `endWebRTCSession`.
+ */
+@property(nonatomic, readonly) int webRTCSessionCount;
 
 /** Default constructor. */
 + (instancetype)sharedInstance;

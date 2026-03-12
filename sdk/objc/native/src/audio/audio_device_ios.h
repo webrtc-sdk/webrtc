@@ -26,7 +26,7 @@
 #include "sdk/objc/base/RTCMacros.h"
 #include "voice_processing_audio_unit.h"
 
-RTC_FWD_DECL_OBJC_CLASS(RTCNativeAudioSessionDelegateAdapter);
+RTC_FWD_DECL_OBJC_CLASS(RTC_OBJC_TYPE(RTCNativeAudioSessionDelegateAdapter));
 
 namespace webrtc {
 
@@ -153,7 +153,7 @@ class AudioDeviceIOS : public AudioDeviceGeneric,
 
   // AudioSessionObserver methods. May be called from any thread.
   void OnInterruptionBegin() override;
-  void OnInterruptionEnd() override;
+  void OnInterruptionEnd(bool should_resume) override;
   void OnValidRouteChange() override;
   void OnCanPlayOrRecordChange(bool can_play_or_record) override;
   void OnChangedOutputVolume() override;
@@ -186,6 +186,8 @@ class AudioDeviceIOS : public AudioDeviceGeneric,
   void HandlePlayoutGlitchDetected(uint64_t glitch_duration_ms);
   void HandleOutputVolumeChange();
 
+  bool RestartAudioUnit(bool enable_input);
+
   // Uses current `playout_parameters_` and `record_parameters_` to inform the
   // audio device buffer (ADB) about our internal audio parameters.
   void UpdateAudioDeviceBuffer();
@@ -214,7 +216,7 @@ class AudioDeviceIOS : public AudioDeviceGeneric,
 
   // Activates our audio session, creates and initializes the voice-processing
   // audio unit and verifies that we got the preferred native audio parameters.
-  bool InitPlayOrRecord();
+  bool InitPlayOrRecord(bool enable_input);
 
   // Closes and deletes the voice-processing I/O unit.
   void ShutdownPlayOrRecord();
@@ -286,8 +288,12 @@ class AudioDeviceIOS : public AudioDeviceGeneric,
   // will be changed dynamically to account for this behavior.
   webrtc::BufferT<int16_t> record_audio_buffer_;
 
+  bool recording_is_initialized_;
+
   // Set to 1 when recording is active and 0 otherwise.
   std::atomic<int> recording_;
+
+  bool playout_is_initialized_;
 
   // Set to 1 when playout is active and 0 otherwise.
   std::atomic<int> playing_;
@@ -295,15 +301,11 @@ class AudioDeviceIOS : public AudioDeviceGeneric,
   // Set to true after successful call to Init(), false otherwise.
   bool initialized_ RTC_GUARDED_BY(thread_);
 
-  // Set to true after successful call to InitRecording() or InitPlayout(),
-  // false otherwise.
-  bool audio_is_initialized_;
-
   // Set to true if audio session is interrupted, false otherwise.
   bool is_interrupted_;
 
   // Audio interruption observer instance.
-  RTCNativeAudioSessionDelegateAdapter* audio_session_observer_
+  RTC_OBJC_TYPE(RTCNativeAudioSessionDelegateAdapter)* audio_session_observer_
       RTC_GUARDED_BY(thread_);
 
   // Set to true if we've activated the audio session.
@@ -333,6 +335,9 @@ class AudioDeviceIOS : public AudioDeviceGeneric,
   std::atomic<uint64_t> total_playout_delay_ms_;
   std::atomic<double> hw_output_latency_;
   int last_hw_output_latency_update_sample_count_;
+  // Ratio between mach tick units and nanosecond. Used to change mach tick
+  // units to nanoseconds.
+  double machTickUnitsToNanoseconds_;
 };
 }  // namespace ios_adm
 }  // namespace webrtc

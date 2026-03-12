@@ -19,7 +19,7 @@ RTC_OBJC_TYPE(RTCVideoFrame) * ToObjCVideoFrame(const VideoFrame &frame) {
   RTC_OBJC_TYPE(
       RTCVideoFrame) *videoFrame = [[RTC_OBJC_TYPE(RTCVideoFrame) alloc]
       initWithBuffer:ToObjCVideoFrameBuffer(frame.video_frame_buffer())
-            rotation:RTCVideoRotation(frame.rotation())
+            rotation:RTC_OBJC_TYPE(RTCVideoRotation)(frame.rotation())
          timeStampNs:frame.timestamp_us() * webrtc::kNumNanosecsPerMicrosec];
   videoFrame.timeStamp = frame.rtp_timestamp();
 

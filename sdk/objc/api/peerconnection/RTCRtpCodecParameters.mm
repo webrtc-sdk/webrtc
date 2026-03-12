@@ -16,21 +16,22 @@
 #include "media/base/media_constants.h"
 #include "rtc_base/checks.h"
 
-const NSString *const kRTCRtxCodecName = @(webrtc::kRtxCodecName);
-const NSString *const kRTCRedCodecName = @(webrtc::kRedCodecName);
-const NSString *const kRTCUlpfecCodecName = @(webrtc::kUlpfecCodecName);
-const NSString *const kRTCFlexfecCodecName = @(webrtc::kFlexfecCodecName);
-const NSString *const kRTCOpusCodecName = @(webrtc::kOpusCodecName);
-const NSString *const kRTCL16CodecName = @(webrtc::kL16CodecName);
-const NSString *const kRTCG722CodecName = @(webrtc::kG722CodecName);
-const NSString *const kRTCPcmuCodecName = @(webrtc::kPcmuCodecName);
-const NSString *const kRTCPcmaCodecName = @(webrtc::kPcmaCodecName);
-const NSString *const kRTCDtmfCodecName = @(webrtc::kDtmfCodecName);
-const NSString *const kRTCComfortNoiseCodecName =
+const NSString * const RTC_CONSTANT_TYPE(RTCRtxCodecName) = @(webrtc::kRtxCodecName);
+const NSString * const RTC_CONSTANT_TYPE(RTCRedCodecName) = @(webrtc::kRedCodecName);
+const NSString * const RTC_CONSTANT_TYPE(RTCUlpfecCodecName) = @(webrtc::kUlpfecCodecName);
+const NSString * const RTC_CONSTANT_TYPE(RTCFlexfecCodecName) = @(webrtc::kFlexfecCodecName);
+const NSString * const RTC_CONSTANT_TYPE(RTCOpusCodecName) = @(webrtc::kOpusCodecName);
+const NSString * const RTC_CONSTANT_TYPE(RTCL16CodecName)  = @(webrtc::kL16CodecName);
+const NSString * const RTC_CONSTANT_TYPE(RTCG722CodecName) = @(webrtc::kG722CodecName);
+const NSString * const RTC_CONSTANT_TYPE(RTCPcmuCodecName) = @(webrtc::kPcmuCodecName);
+const NSString * const RTC_CONSTANT_TYPE(RTCPcmaCodecName) = @(webrtc::kPcmaCodecName);
+const NSString * const RTC_CONSTANT_TYPE(RTCDtmfCodecName) = @(webrtc::kDtmfCodecName);
+const NSString * const RTC_CONSTANT_TYPE(RTCComfortNoiseCodecName) =
     @(webrtc::kComfortNoiseCodecName);
-const NSString *const kRTCVp8CodecName = @(webrtc::kVp8CodecName);
-const NSString *const kRTCVp9CodecName = @(webrtc::kVp9CodecName);
-const NSString *const kRTCH264CodecName = @(webrtc::kH264CodecName);
+const NSString * const RTC_CONSTANT_TYPE(RTCVp8CodecName) = @(webrtc::kVp8CodecName);
+const NSString * const RTC_CONSTANT_TYPE(RTCVp9CodecName) = @(webrtc::kVp9CodecName);
+const NSString * const RTC_CONSTANT_TYPE(RTCH264CodecName) = @(webrtc::kH264CodecName);
+const NSString * const RTC_CONSTANT_TYPE(RTCAv1CodecName) = @(webrtc::kAv1CodecName);
 
 @implementation RTC_OBJC_TYPE (RTCRtpCodecParameters)
 
@@ -54,10 +55,10 @@ const NSString *const kRTCH264CodecName = @(webrtc::kH264CodecName);
     _name = [NSString stringForStdString:nativeParameters.name];
     switch (nativeParameters.kind) {
       case webrtc::MediaType::AUDIO:
-        _kind = kRTCMediaStreamTrackKindAudio;
+        _kind = RTC_CONSTANT_TYPE(RTCMediaStreamTrackKindAudio);
         break;
       case webrtc::MediaType::VIDEO:
-        _kind = kRTCMediaStreamTrackKindVideo;
+        _kind = RTC_CONSTANT_TYPE(RTCMediaStreamTrackKindVideo);
         break;
       default:
         RTC_DCHECK_NOTREACHED();
@@ -85,9 +86,9 @@ const NSString *const kRTCH264CodecName = @(webrtc::kH264CodecName);
   parameters.name = [NSString stdStringForString:_name];
   // NSString pointer comparison is safe here since "kind" is readonly and only
   // populated above.
-  if (_kind == kRTCMediaStreamTrackKindAudio) {
+  if (_kind == RTC_CONSTANT_TYPE(RTCMediaStreamTrackKindAudio)) {
     parameters.kind = webrtc::MediaType::AUDIO;
-  } else if (_kind == kRTCMediaStreamTrackKindVideo) {
+  } else if (_kind == RTC_CONSTANT_TYPE(RTCMediaStreamTrackKindVideo)) {
     parameters.kind = webrtc::MediaType::VIDEO;
   } else {
     RTC_DCHECK_NOTREACHED();

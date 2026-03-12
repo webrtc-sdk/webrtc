@@ -3655,6 +3655,31 @@ bool WebRtcVideoReceiveChannel::WebRtcVideoReceiveStream::ReconfigureCodecs(
   return recreate_needed;
 }
 
+void WebRtcVideoReceiveChannel::WebRtcVideoReceiveStream::SetFeedbackParameters(
+    bool lntf_enabled,
+    bool nack_enabled,
+    RtcpMode rtcp_mode,
+    std::optional<int> rtx_time) {
+  RTC_DCHECK(stream_);
+
+  if (config_.rtp.rtcp_mode != rtcp_mode) {
+    config_.rtp.rtcp_mode = rtcp_mode;
+    stream_->SetRtcpMode(rtcp_mode);
+
+    flexfec_config_.rtcp_mode = rtcp_mode;
+    if (flexfec_stream_) {
+      flexfec_stream_->SetRtcpMode(rtcp_mode);
+    }
+  }
+
+  config_.rtp.lntf.enabled = lntf_enabled;
+  stream_->SetLossNotificationEnabled(lntf_enabled);
+
+  int nack_history_ms = nack_enabled ? rtx_time.value_or(kNackHistoryMs) : 0;
+  config_.rtp.nack.rtp_history_ms = nack_history_ms;
+  stream_->SetNackHistory(TimeDelta::Millis(nack_history_ms));
+}
+
 void WebRtcVideoReceiveChannel::WebRtcVideoReceiveStream::SetFlexFecPayload(
     int payload_type) {
   // TODO(bugs.webrtc.org/11993, tommi): See if it is better to always have a
@@ -3713,6 +3738,24 @@ void WebRtcVideoReceiveChannel::WebRtcVideoReceiveStream::SetReceiverParameters(
       flexfec_stream_->SetRtcpMode(rtcp_mode);
     }
   }
+}
+
+void WebRtcVideoReceiveChannel::StartReceive(uint32_t ssrc) {
+  RTC_DCHECK_RUN_ON(&thread_checker_);
+  WebRtcVideoReceiveStream* stream = FindReceiveStream(ssrc);
+  if(!stream) {
+    return;
+  }
+  stream->StartReceiveStream();
+}
+
+void WebRtcVideoReceiveChannel::StopReceive(uint32_t ssrc) {
+  RTC_DCHECK_RUN_ON(&thread_checker_);
+  WebRtcVideoReceiveStream* stream = FindReceiveStream(ssrc);
+  if(!stream) {
+    return;
+  }
+  stream->StopReceiveStream();
 }
 
 void WebRtcVideoReceiveChannel::WebRtcVideoReceiveStream::

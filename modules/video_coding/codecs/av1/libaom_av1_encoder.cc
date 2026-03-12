@@ -834,6 +834,14 @@ int32_t LibaomAv1Encoder::Encode(
         encoder_settings_.spatialLayers[last_active_layer_].height);
   }
 
+  // Ensure frame dimensions match encoder config. cfg_.g_w/g_h may have been
+  // changed by AdjustScalingFactorsForTopActiveLayer() in SetRates() while the
+  // video pipeline still delivers frames at the original resolution.
+  if (scaled_image->width() != static_cast<int>(cfg_.g_w) ||
+      scaled_image->height() != static_cast<int>(cfg_.g_h)) {
+    scaled_image = scaled_image->Scale(cfg_.g_w, cfg_.g_h);
+  }
+
   scoped_refptr<VideoFrameBuffer> mapped_buffer;
   if (scaled_image->type() != VideoFrameBuffer::Type::kNative) {
     // `buffer` is already mapped.
@@ -848,7 +856,7 @@ int32_t LibaomAv1Encoder::Encode(
       (absl::c_find(supported_formats, mapped_buffer->type()) ==
            supported_formats.end() &&
        mapped_buffer->type() != VideoFrameBuffer::Type::kI420A)) {
-    scoped_refptr<I420BufferInterface> converted_buffer(buffer->ToI420());
+    scoped_refptr<I420BufferInterface> converted_buffer(scaled_image->ToI420());
     if (!converted_buffer) {
       RTC_LOG(LS_ERROR) << "Failed to convert "
                         << VideoFrameBufferTypeToString(
@@ -1101,6 +1109,14 @@ EncodeResult LibaomAv1Encoder::DoEncode(
   output.encode_time = realtime_clock_->CurrentTime() - start_time;
 
   if (output.status_code != AOM_CODEC_OK) {
+    const char* detail = aom_codec_error_detail(&ctx_);
+    RTC_LOG(LS_ERROR) << "aom_codec_encode failed: "
+                      << aom_codec_err_to_string(output.status_code)
+                      << (detail ? detail : "")
+                      << " img=" << frame_for_encode_->d_w << "x"
+                      << frame_for_encode_->d_h
+                      << " cfg=" << cfg_.g_w << "x" << cfg_.g_h
+                      << " pts=" << timestamp_ << " dur=" << duration;
     return output;
   }
 

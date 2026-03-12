@@ -23,6 +23,7 @@
 #include "api/units/timestamp.h"
 #include "api/video/video_frame_metadata.h"
 #include "rtc_base/checks.h"
+#include "modules/rtp_rtcp/source/rtp_video_header.h"
 #include "rtc_base/system/rtc_export.h"
 
 namespace webrtc {
@@ -117,6 +118,8 @@ class TransformableVideoFrameInterface : public TransformableFrameInterface {
   virtual std::optional<std::string> Rid() const { return std::nullopt; }
   virtual VideoFrameMetadata Metadata() const = 0;
   virtual void SetMetadata(const VideoFrameMetadata&) = 0;
+
+  virtual const RTPVideoHeader& header () const = 0;
 };
 
 // Extends the TransformableFrameInterface to expose audio-specific information.

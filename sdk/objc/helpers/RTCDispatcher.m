@@ -28,13 +28,13 @@ static dispatch_queue_t kNetworkMonitorQueue = nil;
   });
 }
 
-+ (void)dispatchAsyncOnType:(RTCDispatcherQueueType)dispatchType
++ (void)dispatchAsyncOnType:(RTC_OBJC_TYPE(RTCDispatcherQueueType))dispatchType
                       block:(dispatch_block_t)block {
   dispatch_queue_t queue = [self dispatchQueueForType:dispatchType];
   dispatch_async(queue, block);
 }
 
-+ (BOOL)isOnQueueForType:(RTCDispatcherQueueType)dispatchType {
++ (BOOL)isOnQueueForType:(RTC_OBJC_TYPE(RTCDispatcherQueueType))dispatchType {
   dispatch_queue_t targetQueue = [self dispatchQueueForType:dispatchType];
   const char* targetLabel = dispatch_queue_get_label(targetQueue);
   const char* currentLabel =
@@ -49,15 +49,15 @@ static dispatch_queue_t kNetworkMonitorQueue = nil;
 
 #pragma mark - Private
 
-+ (dispatch_queue_t)dispatchQueueForType:(RTCDispatcherQueueType)dispatchType {
++ (dispatch_queue_t)dispatchQueueForType:(RTC_OBJC_TYPE(RTCDispatcherQueueType))dispatchType {
   switch (dispatchType) {
-    case RTCDispatcherTypeMain:
+    case RTC_OBJC_TYPE(RTCDispatcherTypeMain):
       return dispatch_get_main_queue();
-    case RTCDispatcherTypeCaptureSession:
+    case RTC_OBJC_TYPE(RTCDispatcherTypeCaptureSession):
       return kCaptureSessionQueue;
-    case RTCDispatcherTypeAudioSession:
+    case RTC_OBJC_TYPE(RTCDispatcherTypeAudioSession):
       return kAudioSessionQueue;
-    case RTCDispatcherTypeNetworkMonitor:
+    case RTC_OBJC_TYPE(RTCDispatcherTypeNetworkMonitor):
       return kNetworkMonitorQueue;
   }
 }

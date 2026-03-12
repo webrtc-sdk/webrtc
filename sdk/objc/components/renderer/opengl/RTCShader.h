@@ -10,12 +10,12 @@
 
 #import "base/RTCVideoFrame.h"
 
-RTC_EXTERN const char kRTCVertexShaderSource[];
+RTC_EXTERN const char RTC_CONSTANT_TYPE(RTCVertexShaderSource)[];
 
-RTC_EXTERN GLuint RTCCreateShader(GLenum type, const GLchar* source);
-RTC_EXTERN GLuint RTCCreateProgram(GLuint vertexShader, GLuint fragmentShader);
+RTC_EXTERN GLuint RTC_OBJC_TYPE(RTCCreateShader)(GLenum type, const GLchar* source);
+RTC_EXTERN GLuint RTC_OBJC_TYPE(RTCCreateProgram)(GLuint vertexShader, GLuint fragmentShader);
 RTC_EXTERN GLuint
-RTCCreateProgramFromFragmentSource(const char fragmentShaderSource[]);
-RTC_EXTERN BOOL RTCCreateVertexBuffer(GLuint* vertexBuffer,
+RTC_OBJC_TYPE(RTCCreateProgramFromFragmentSource)(const char fragmentShaderSource[]);
+RTC_EXTERN BOOL RTC_OBJC_TYPE(RTCCreateVertexBuffer)(GLuint* vertexBuffer,
                                       GLuint* vertexArray);
-RTC_EXTERN void RTCSetVertexData(RTCVideoRotation rotation);
+RTC_EXTERN void RTC_OBJC_TYPE(RTCSetVertexData)(RTCVideoRotation rotation);

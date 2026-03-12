@@ -565,6 +565,8 @@ class WebRtcVideoReceiveChannel : public MediaChannelUtil,
       scoped_refptr<FrameTransformerInterface> frame_transformer) override;
   std::vector<RtpSource> GetSources(uint32_t ssrc) const override;
 
+  void StartReceive(uint32_t ssrc) override;
+  void StopReceive(uint32_t ssrc) override;
  private:
   class WebRtcVideoReceiveStream;
   struct ChangedReceiverParameters {
@@ -626,6 +628,11 @@ class WebRtcVideoReceiveChannel : public MediaChannelUtil,
     RtpParameters GetRtpParameters() const;
 
     void SetReceiverParameters(const ChangedReceiverParameters& recv_params);
+
+    void SetFeedbackParameters(bool lntf_enabled,
+                               bool nack_enabled,
+                               RtcpMode rtcp_mode,
+                               std::optional<int> rtx_time);
 
     void OnFrame(const VideoFrame& frame) override;
     bool IsDefaultStream() const;

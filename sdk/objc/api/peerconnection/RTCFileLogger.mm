@@ -18,8 +18,8 @@
 #include "rtc_base/logging.h"
 
 NSString *const kDefaultLogDirName = @"webrtc_logs";
-NSUInteger const kDefaultMaxFileSize = 10 * 1024 * 1024;  // 10MB.
-const char *kRTCFileLoggerRotatingLogPrefix = "rotating_log";
+NSUInteger const kDefaultMaxFileSize = 10 * 1024 * 1024; // 10MB.
+const char * RTC_CONSTANT_TYPE(RTCFileLoggerRotatingLogPrefix) = "rotating_log";
 
 @implementation RTC_OBJC_TYPE (RTCFileLogger) {
   BOOL _hasStarted;
@@ -45,12 +45,12 @@ const char *kRTCFileLoggerRotatingLogPrefix = "rotating_log";
                     maxFileSize:(NSUInteger)maxFileSize {
   return [self initWithDirPath:dirPath
                    maxFileSize:maxFileSize
-                  rotationType:RTCFileLoggerTypeCall];
+                  rotationType:RTC_OBJC_TYPE(RTCFileLoggerTypeCall)];
 }
 
 - (instancetype)initWithDirPath:(NSString *)dirPath
                     maxFileSize:(NSUInteger)maxFileSize
-                   rotationType:(RTCFileLoggerRotationType)rotationType {
+                   rotationType:(RTC_OBJC_TYPE(RTCFileLoggerRotationType))rotationType {
   NSParameterAssert(dirPath.length);
   NSParameterAssert(maxFileSize);
   self = [super init];
@@ -73,7 +73,7 @@ const char *kRTCFileLoggerRotatingLogPrefix = "rotating_log";
     }
     _dirPath = dirPath;
     _maxFileSize = maxFileSize;
-    _severity = RTCFileLoggerSeverityInfo;
+    _severity = RTC_OBJC_TYPE(RTCFileLoggerSeverityInfo);
   }
   return self;
 }
@@ -87,16 +87,17 @@ const char *kRTCFileLoggerRotatingLogPrefix = "rotating_log";
     return;
   }
   switch (_rotationType) {
-    case RTCFileLoggerTypeApp:
+    case RTC_OBJC_TYPE(RTCFileLoggerTypeApp):
       _logSink.reset(
           new webrtc::FileRotatingLogSink(_dirPath.UTF8String,
-                                          kRTCFileLoggerRotatingLogPrefix,
-                                          _maxFileSize,
-                                          _maxFileSize / 10));
+                                       RTC_CONSTANT_TYPE(RTCFileLoggerRotatingLogPrefix),
+                                       _maxFileSize,
+                                       _maxFileSize / 10));
       break;
-    case RTCFileLoggerTypeCall:
-      _logSink.reset(new webrtc::CallSessionFileRotatingLogSink(
-          _dirPath.UTF8String, _maxFileSize));
+    case RTC_OBJC_TYPE(RTCFileLoggerTypeCall):
+      _logSink.reset(
+          new webrtc::CallSessionFileRotatingLogSink(_dirPath.UTF8String,
+                                                  _maxFileSize));
       break;
   }
   if (!_logSink->Init()) {
@@ -131,16 +132,15 @@ const char *kRTCFileLoggerRotatingLogPrefix = "rotating_log";
   if (_hasStarted) {
     return nil;
   }
-  NSMutableData *logData = [NSMutableData data];
+  NSMutableData* logData = [NSMutableData data];
   std::unique_ptr<webrtc::FileRotatingStreamReader> stream;
-  switch (_rotationType) {
-    case RTCFileLoggerTypeApp:
-      stream = std::make_unique<webrtc::FileRotatingStreamReader>(
-          _dirPath.UTF8String, kRTCFileLoggerRotatingLogPrefix);
+  switch(_rotationType) {
+    case RTC_OBJC_TYPE(RTCFileLoggerTypeApp):
+      stream = std::make_unique<webrtc::FileRotatingStreamReader>(_dirPath.UTF8String,
+                                                               RTC_CONSTANT_TYPE(RTCFileLoggerRotatingLogPrefix));
       break;
-    case RTCFileLoggerTypeCall:
-      stream = std::make_unique<webrtc::CallSessionFileRotatingStreamReader>(
-          _dirPath.UTF8String);
+    case RTC_OBJC_TYPE(RTCFileLoggerTypeCall):
+      stream = std::make_unique<webrtc::CallSessionFileRotatingStreamReader>(_dirPath.UTF8String);
       break;
   }
   size_t bufferSize = stream->GetSize();
@@ -160,13 +160,13 @@ const char *kRTCFileLoggerRotatingLogPrefix = "rotating_log";
 
 - (webrtc::LoggingSeverity)rtcSeverity {
   switch (_severity) {
-    case RTCFileLoggerSeverityVerbose:
+    case RTC_OBJC_TYPE(RTCFileLoggerSeverityVerbose):
       return webrtc::LS_VERBOSE;
-    case RTCFileLoggerSeverityInfo:
+    case RTC_OBJC_TYPE(RTCFileLoggerSeverityInfo):
       return webrtc::LS_INFO;
-    case RTCFileLoggerSeverityWarning:
+    case RTC_OBJC_TYPE(RTCFileLoggerSeverityWarning):
       return webrtc::LS_WARNING;
-    case RTCFileLoggerSeverityError:
+    case RTC_OBJC_TYPE(RTCFileLoggerSeverityError):
       return webrtc::LS_ERROR;
   }
 }

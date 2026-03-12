@@ -176,7 +176,7 @@ declare_args() {
   if (build_with_chromium) {
     rtc_use_h265 = enable_hevc_parser_and_hw_decoder
   } else {
-    rtc_use_h265 = proprietary_codecs
+    rtc_use_h265 = true
   }
 
   # Enable this flag to make webrtc::Mutex be implemented by absl::Mutex.
@@ -1140,6 +1140,7 @@ if (is_mac || is_ios) {
           ":create_privacy_manifest_$this_target_name",
           ":modulemap_$this_target_name",
           ":privacy_manifest_bundle_data_$this_target_name",
+          ":copy_framework_header_$this_target_name",
         ]
       }
     }
@@ -1230,6 +1231,13 @@ if (is_mac || is_ios) {
           "$root_out_dir/$output_name.framework/$headers_dir/$output_name.h",
         ]
         deps = [ ":umbrella_header_$this_target_name" ]
+      }
+
+      copy("copy_framework_header_$target_name") {
+        deps = [ ":create_bracket_include_headers_$this_target_name" ]
+        sources = get_target_outputs(
+                ":create_bracket_include_headers_$this_target_name")
+        outputs = [ "$root_build_dir/$output_name.framework/$headers_dir/{{source_file_part}}" ]
       }
     }
   }

@@ -19,7 +19,7 @@ namespace webrtc {
 
 class VideoRendererAdapter : public VideoSinkInterface<webrtc::VideoFrame> {
  public:
-  VideoRendererAdapter(RTCVideoRendererAdapter* adapter) {
+  VideoRendererAdapter(RTC_OBJC_TYPE(RTCVideoRendererAdapter) * adapter) {
     adapter_ = adapter;
     size_ = CGSizeZero;
   }
@@ -40,12 +40,12 @@ class VideoRendererAdapter : public VideoSinkInterface<webrtc::VideoFrame> {
   }
 
  private:
-  __weak RTCVideoRendererAdapter* adapter_;
+  __weak RTC_OBJC_TYPE(RTCVideoRendererAdapter) * adapter_;
   CGSize size_;
 };
 }  // namespace webrtc
 
-@implementation RTCVideoRendererAdapter {
+@implementation RTC_OBJC_TYPE (RTCVideoRendererAdapter) {
   std::unique_ptr<webrtc::VideoRendererAdapter> _adapter;
 }
 
