@@ -173,6 +173,11 @@ RTC_OBJC_EXPORT
     BOOL recordingAlwaysPreparedMode;
 - (NSInteger)setRecordingAlwaysPreparedMode:(BOOL)enabled;
 
+/// Forces effective playout to remain enabled/running (availability still wins).
+/// Backed by `AudioEngineDevice::EngineState::output_running_persistent_mode`.
+@property(nonatomic, readonly, getter=isOutputAlwaysRunningMode) BOOL outputAlwaysRunningMode;
+- (NSInteger)setOutputAlwaysRunningMode:(BOOL)enabled;
+
 @property(nonatomic, weak, nullable) id<RTC_OBJC_TYPE(RTCAudioDeviceModuleDelegate)> observer;
 
 // Manual rendering.
