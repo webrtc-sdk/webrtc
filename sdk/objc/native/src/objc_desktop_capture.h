@@ -40,7 +40,8 @@ class ObjCDesktopCapturer : public DesktopCapturer::Callback {
  public:
   ObjCDesktopCapturer(DesktopType type,
     webrtc::DesktopCapturer::SourceId source_id,
-    id<RTC_OBJC_TYPE(RTCDesktopCapturerPrivateDelegate)> delegate);
+    id<RTC_OBJC_TYPE(RTCDesktopCapturerPrivateDelegate)> delegate,
+    bool showCursor = true);
   virtual ~ObjCDesktopCapturer();
 
   virtual CaptureState Start(uint32_t fps);

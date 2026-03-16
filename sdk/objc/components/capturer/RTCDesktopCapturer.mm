@@ -32,22 +32,24 @@
 @synthesize nativeCapturer = _nativeCapturer;
 @synthesize source = _source;
 
-- (instancetype)initWithSource:(RTC_OBJC_TYPE(RTCDesktopSource) *)source delegate:(__weak id<RTC_OBJC_TYPE(RTCDesktopCapturerDelegate)>)delegate captureDelegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)captureDelegate {
+- (instancetype)initWithSource:(RTC_OBJC_TYPE(RTCDesktopSource) *)source delegate:(__weak id<RTC_OBJC_TYPE(RTCDesktopCapturerDelegate)>)delegate captureDelegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)captureDelegate
+                    showCursor:(BOOL)showCursor {
     if (self = [super initWithDelegate:captureDelegate]) {
       webrtc::DesktopType captureType = webrtc::kScreen;
       if(source.sourceType == RTC_OBJC_TYPE(RTCDesktopSourceTypeWindow)) {
           captureType = webrtc::kWindow;
       }
-      _nativeCapturer = std::make_shared<webrtc::ObjCDesktopCapturer>(captureType, source.nativeMediaSource->id(), self);
+      _nativeCapturer = std::make_shared<webrtc::ObjCDesktopCapturer>(captureType, source.nativeMediaSource->id(), self, showCursor);
       _source = source;
       _delegate = delegate;
   }
   return self;
 }
 
-- (instancetype)initWithDefaultScreen:(__weak id<RTC_OBJC_TYPE(RTCDesktopCapturerDelegate)>)delegate captureDelegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)captureDelegate {
+- (instancetype)initWithDefaultScreen:(__weak id<RTC_OBJC_TYPE(RTCDesktopCapturerDelegate)>)delegate captureDelegate:(__weak id<RTC_OBJC_TYPE(RTCVideoCapturerDelegate)>)captureDelegate
+                           showCursor:(BOOL)showCursor{
     if (self = [super initWithDelegate:captureDelegate]) {
-      _nativeCapturer = std::make_unique<webrtc::ObjCDesktopCapturer>(webrtc::kScreen, -1, self);
+      _nativeCapturer = std::make_unique<webrtc::ObjCDesktopCapturer>(webrtc::kScreen, -1, self, showCursor);
       _source = nil;
       _delegate = delegate;
   }

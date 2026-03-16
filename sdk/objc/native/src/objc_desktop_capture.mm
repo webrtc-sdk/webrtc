@@ -29,7 +29,8 @@ enum { kCaptureDelay = 33, kCaptureMessageId = 1000 };
 
 ObjCDesktopCapturer::ObjCDesktopCapturer(DesktopType type,
                                          webrtc::DesktopCapturer::SourceId source_id,
-                                         id<RTC_OBJC_TYPE(RTCDesktopCapturerPrivateDelegate)> delegate)
+                                         id<RTC_OBJC_TYPE(RTCDesktopCapturerPrivateDelegate)> delegate,
+                                         bool showCursor)
     : thread_(rtc::Thread::Create()), source_id_(source_id), delegate_(delegate) {
   RTC_DCHECK(thread_);
   type_ = type;
@@ -37,10 +38,15 @@ ObjCDesktopCapturer::ObjCDesktopCapturer(DesktopType type,
   options_ = webrtc::DesktopCaptureOptions::CreateDefault();
   options_.set_detect_updated_region(true);
   options_.set_allow_iosurface(true);
-  thread_->BlockingCall([this, type] {
+  thread_->BlockingCall([this, type, showCursor] {
     if (type == kScreen) {
-      capturer_ = std::make_unique<DesktopAndCursorComposer>(
-          webrtc::DesktopCapturer::CreateScreenCapturer(options_), options_);
+        if (showCursor) {
+            capturer_ = std::make_unique<DesktopAndCursorComposer>(
+                webrtc::DesktopCapturer::CreateScreenCapturer(options_), options_);
+        } else {
+            capturer_ = webrtc::DesktopAndCursorComposer::CreateWithoutMouseCursorMonitor(
+                            webrtc::DesktopCapturer::CreateScreenCapturer(options_));
+        }
     } else {
       capturer_ = std::make_unique<DesktopAndCursorComposer>(
           webrtc::DesktopCapturer::CreateWindowCapturer(options_), options_);
