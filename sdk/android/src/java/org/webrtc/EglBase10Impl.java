@@ -66,8 +66,7 @@ class EglBase10Impl implements EglBase10 {
           tempEglSurface =
               egl.eglCreatePbufferSurface(currentDisplay, eglContextConfig, surfaceAttribs);
           if (!egl.eglMakeCurrent(currentDisplay, tempEglSurface, tempEglSurface, eglContext)) {
-            throw new GLException(egl.eglGetError(),
-                "Failed to make temporary EGL surface active: " + egl.eglGetError());
+            throwEglException(egl.eglGetError(), "Failed to make temporary EGL surface active");
           }
         }
 
@@ -162,8 +161,7 @@ class EglBase10Impl implements EglBase10 {
 
       synchronized (EglBase.lock) {
         if (!egl.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)) {
-          throw new GLException(egl.eglGetError(),
-              "eglMakeCurrent failed: 0x" + Integer.toHexString(egl.eglGetError()));
+          throwEglException(egl.eglGetError(), "eglMakeCurrent failed");
         }
       }
       currentSurface = eglSurface;
@@ -173,8 +171,7 @@ class EglBase10Impl implements EglBase10 {
       synchronized (EglBase.lock) {
         if (!egl.eglMakeCurrent(
                 eglDisplay, EGL10.EGL_NO_SURFACE, EGL10.EGL_NO_SURFACE, EGL10.EGL_NO_CONTEXT)) {
-          throw new GLException(egl.eglGetError(),
-              "eglDetachCurrent failed: 0x" + Integer.toHexString(egl.eglGetError()));
+          throwEglException(egl.eglGetError(), "eglDetachCurrent failed");
         }
       }
       currentSurface = EGL10.EGL_NO_SURFACE;
@@ -281,8 +278,7 @@ class EglBase10Impl implements EglBase10 {
     eglSurface = egl.eglCreateWindowSurface(
         eglConnection.getDisplay(), eglConnection.getConfig(), nativeWindow, surfaceAttribs);
     if (eglSurface == EGL10.EGL_NO_SURFACE) {
-      throw new GLException(egl.eglGetError(),
-          "Failed to create window surface: 0x" + Integer.toHexString(egl.eglGetError()));
+      throwEglException(egl.eglGetError(), "Failed to create window surface");
     }
   }
 
@@ -303,9 +299,8 @@ class EglBase10Impl implements EglBase10 {
     eglSurface = egl.eglCreatePbufferSurface(
         eglConnection.getDisplay(), eglConnection.getConfig(), surfaceAttribs);
     if (eglSurface == EGL10.EGL_NO_SURFACE) {
-      throw new GLException(egl.eglGetError(),
-          "Failed to create pixel buffer surface with size " + width + "x" + height + ": 0x"
-              + Integer.toHexString(egl.eglGetError()));
+      throwEglException(egl.eglGetError(),
+          "Failed to create pixel buffer surface with size " + width + "x" + height);
     }
   }
 
@@ -394,13 +389,11 @@ class EglBase10Impl implements EglBase10 {
   private static EGLDisplay getEglDisplay(EGL10 egl) {
     EGLDisplay eglDisplay = egl.eglGetDisplay(EGL10.EGL_DEFAULT_DISPLAY);
     if (eglDisplay == EGL10.EGL_NO_DISPLAY) {
-      throw new GLException(egl.eglGetError(),
-          "Unable to get EGL10 display: 0x" + Integer.toHexString(egl.eglGetError()));
+      throwEglException(egl.eglGetError(), "Unable to get EGL10 display");
     }
     int[] version = new int[2];
     if (!egl.eglInitialize(eglDisplay, version)) {
-      throw new GLException(egl.eglGetError(),
-          "Unable to initialize EGL10: 0x" + Integer.toHexString(egl.eglGetError()));
+      throwEglException(egl.eglGetError(), "Unable to initialize EGL10");
     }
     return eglDisplay;
   }
@@ -410,8 +403,7 @@ class EglBase10Impl implements EglBase10 {
     EGLConfig[] configs = new EGLConfig[1];
     int[] numConfigs = new int[1];
     if (!egl.eglChooseConfig(eglDisplay, configAttributes, configs, configs.length, numConfigs)) {
-      throw new GLException(
-          egl.eglGetError(), "eglChooseConfig failed: 0x" + Integer.toHexString(egl.eglGetError()));
+      throwEglException(egl.eglGetError(), "eglChooseConfig failed");
     }
     if (numConfigs[0] <= 0) {
       throw new RuntimeException("Unable to find any matching EGL config");
@@ -436,10 +428,13 @@ class EglBase10Impl implements EglBase10 {
       eglContext = egl.eglCreateContext(eglDisplay, eglConfig, rootContext, contextAttributes);
     }
     if (eglContext == EGL10.EGL_NO_CONTEXT) {
-      throw new GLException(egl.eglGetError(),
-          "Failed to create EGL context: 0x" + Integer.toHexString(egl.eglGetError()));
+        throwEglException(egl.eglGetError(), "Failed to create EGL context");
     }
     return eglContext;
+  }
+
+  private static void throwEglException(int error, String message) {
+      throw new GLException(error, message + ": 0x" + Integer.toHexString(error));
   }
 
   private static native long nativeGetCurrentNativeEGLContext();
