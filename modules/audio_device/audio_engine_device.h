@@ -179,9 +179,8 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
     // AUDIO STATE LOGIC
     //
     // Device Mode:
-    // - Output follows input only when voice_processing_enabled=true (for AEC)
+    // - Output follows input to keep AVAudioEngine IO active for capture.
     // - Input respects mute mode restrictions (RestartEngine + input_muted)
-    // - Independent operation when voice processing is disabled
     //
     // Manual Mode:
     // - Bidirectional coupling: if ANY component is enabled/running, BOTH are considered
@@ -196,7 +195,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
       switch (render_mode) {
         case RenderMode::Device:
-          return voice_processing_enabled ? (IsInputEnabled() || output_enabled) : output_enabled;
+          return IsInputEnabled() || output_enabled;
         case RenderMode::Manual:
           return output_enabled || input_enabled || input_enabled_persistent_mode;
       }
@@ -207,7 +206,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
       switch (render_mode) {
         case RenderMode::Device:
-          return voice_processing_enabled ? (IsInputRunning() || output_running) : output_running;
+          return IsInputRunning() || output_running;
         case RenderMode::Manual:
           return output_running || input_running;
       }
@@ -430,11 +429,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
     bool DidUpdateMuteMode() const { return prev.mute_mode != next.mute_mode; }
 
-    bool IsEngineRestartRequired() const {
-      return DidUpdateAudioGraph() ||
-             // Voice processing enable state updates
-             DidUpdateVoiceProcessingEnabled();
-    }
+    bool IsEngineRestartRequired() const { return DidUpdateAudioGraph(); }
 
     bool IsEngineRecreateRequired() const {
       // Device id specified
@@ -449,7 +444,11 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
       bool special_case = (prev.IsOutputEnabled() && next.IsOutputEnabled()) &&
                           (prev.IsInputEnabled() && !next.IsInputEnabled());
 
-      return device || default_device || special_case;
+      // Toggling voice processing requires a full engine recreate to ensure
+      // a clean audio hardware state.
+      bool voice_processing = DidUpdateVoiceProcessingEnabled();
+
+      return device || default_device || special_case || voice_processing;
     }
 
     bool DidEnableManualRenderingMode() const {
