@@ -2556,12 +2556,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     if (state.next.IsInputEnabled()) {
       uint32_t requested_input_device_id = state.next.input_device_id;
 
-      if (requested_input_device_id == kAudioObjectUnknown) {
-        // For default routing, avoid forcing kAudioOutputUnitProperty_CurrentDevice. On macOS this
-        // can fail during VoiceProcessingIO reconfiguration and the engine already follows the
-        // system default route.
-        LOGI() << "Using default input device";
-      } else {
+      if (requested_input_device_id != kAudioObjectUnknown) {
         auto input_device_name = mac_audio_utils::GetDeviceName(requested_input_device_id);
         LOGI() << "Setting input device: " << input_device_name.value_or("Unknown") << " ("
                << requested_input_device_id << ")";
@@ -2575,14 +2570,17 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
                  << ", error: " << set_input_err;
           return rollback(kAudioEngineRecordingDeviceNotAvailableError);
         }
+      } else {
+        // For default routing, avoid forcing kAudioOutputUnitProperty_CurrentDevice. On macOS this
+        // can fail during VoiceProcessingIO reconfiguration and the engine already follows the
+        // system default route.
+        LOGI() << "Using default input device";
       }
     }
 
     if (state.next.IsOutputEnabled()) {
       uint32_t output_deviceId = state.next.output_device_id;
-      if (output_deviceId == kAudioObjectUnknown) {
-        LOGI() << "Using default output device";
-      } else {
+      if (output_deviceId != kAudioObjectUnknown) {
         auto output_device_name = mac_audio_utils::GetDeviceName(output_deviceId);
         LOGI() << "Setting output device: " << output_device_name.value_or("Unknown") << " ("
                << output_deviceId << ")";
@@ -2594,6 +2592,8 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
           LOGE() << "Failed to set output device: " << output_deviceId << ", error: " << err;
           return rollback(kAudioEnginePlayoutDeviceNotAvailableError);
         }
+      } else {
+        LOGI() << "Using default output device";
       }
     }
   }
