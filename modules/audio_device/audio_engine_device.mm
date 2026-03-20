@@ -1929,12 +1929,10 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   if (state.IsEngineRecreateRequired()) {
     LOGI() << "Recreate required, releasing AVAudioEngine...";
 
-    if ((state.prev.voice_processing_enabled || state.next.voice_processing_enabled) &&
-        engine_device_ != nil) {
-      // Stop AudioUnits explicitly before releasing the engine whenever VP is
-      // or was active. VPIO creates an aggregate device and IO thread that may
-      // not be fully torn down by -[AVAudioEngine stop] alone, leading to
-      // "Timeout waiting for streams" / IO-thread collisions on the new engine.
+    if (engine_device_ != nil) {
+      // Stop AudioUnits explicitly before releasing the engine. Required for VPIO
+      // which creates an aggregate device and IO thread that may not be fully torn
+      // down by -[AVAudioEngine stop] alone, and harmless for standard I/O nodes.
       AVAudioInputNode* input_node = engine_device_.inputNode;
       AVAudioOutputNode* output_node = engine_device_.outputNode;
 
@@ -2757,9 +2755,10 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   if (state.prev.IsAnyEnabled() && !state.next.IsAnyEnabled()) {
     RTC_DCHECK(engine_device_ != nullptr);
 
-    if (state.prev.voice_processing_enabled) {
-      // Stop AudioUnits explicitly when VP was active. Same rationale as the
-      // recreate path: VPIO aggregate device / IO thread cleanup.
+    {
+      // Stop AudioUnits explicitly before releasing the engine. Required for VPIO
+      // which creates an aggregate device and IO thread that may not be fully torn
+      // down by -[AVAudioEngine stop] alone, and harmless for standard I/O nodes.
       AVAudioInputNode* input_node = engine_device_.inputNode;
       AVAudioOutputNode* output_node = engine_device_.outputNode;
 
