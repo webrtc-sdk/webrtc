@@ -2032,13 +2032,21 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     LOGI() << "setVoiceProcessingEnabled (input): " << state.next.voice_processing_enabled ? "YES"
                                                                                            : "NO";
     NSError* error = nil;
-    BOOL set_vp_result = [inputNode() setVoiceProcessingEnabled:state.next.voice_processing_enabled
-                                                          error:&error];
-    if (!set_vp_result) {
-      NSLog(@"AudioEngineDevice setVoiceProcessingEnabled error: %@", error.localizedDescription);
-      RTC_DCHECK(set_vp_result);
+    BOOL set_vp_result = NO;
+    @try {
+      set_vp_result = [inputNode() setVoiceProcessingEnabled:state.next.voice_processing_enabled
+                                                       error:&error];
+    } @catch (NSException* exception) {
+      LOGE() << "setVoiceProcessingEnabled threw exception: "
+             << exception.reason.UTF8String;
+      return rollback(kAudioEngineVoiceProcessingError);
     }
-    LOGI() << "setVoiceProcessingEnabled (input) result: " << set_vp_result ? "YES" : "NO";
+    if (!set_vp_result) {
+      LOGE() << "setVoiceProcessingEnabled error: "
+             << (error != nil ? error.localizedDescription.UTF8String : "unknown");
+      return rollback(kAudioEngineVoiceProcessingError);
+    }
+    LOGI() << "setVoiceProcessingEnabled (input) result: YES";
 #endif
 
     if (state.next.voice_processing_enabled) {
