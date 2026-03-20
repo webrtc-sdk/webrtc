@@ -1939,10 +1939,16 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       AVAudioOutputNode* output_node = engine_device_.outputNode;
 
       if (input_node != nil && input_node.audioUnit != nullptr) {
-        AudioOutputUnitStop(input_node.audioUnit);
+        OSStatus err = AudioOutputUnitStop(input_node.audioUnit);
+        if (err != noErr) {
+          LOGW() << "AudioOutputUnitStop (input) returned: " << err;
+        }
       }
       if (output_node != nil && output_node.audioUnit != nullptr) {
-        AudioOutputUnitStop(output_node.audioUnit);
+        OSStatus err = AudioOutputUnitStop(output_node.audioUnit);
+        if (err != noErr) {
+          LOGW() << "AudioOutputUnitStop (output) returned: " << err;
+        }
       }
     }
 
@@ -2758,10 +2764,16 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       AVAudioOutputNode* output_node = engine_device_.outputNode;
 
       if (input_node != nil && input_node.audioUnit != nullptr) {
-        AudioOutputUnitStop(input_node.audioUnit);
+        OSStatus err = AudioOutputUnitStop(input_node.audioUnit);
+        if (err != noErr) {
+          LOGW() << "AudioOutputUnitStop (input) returned: " << err;
+        }
       }
       if (output_node != nil && output_node.audioUnit != nullptr) {
-        AudioOutputUnitStop(output_node.audioUnit);
+        OSStatus err = AudioOutputUnitStop(output_node.audioUnit);
+        if (err != noErr) {
+          LOGW() << "AudioOutputUnitStop (output) returned: " << err;
+        }
       }
     }
 
