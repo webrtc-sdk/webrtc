@@ -1612,9 +1612,14 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
       }
     }
 
-    [engine_manual_input_ connect:engine_manual_input_.mainMixerNode
-                               to:outputNode()
-                           format:manual_render_rtc_format_];
+    @try {
+      [engine_manual_input_ connect:engine_manual_input_.mainMixerNode
+                                 to:outputNode()
+                             format:manual_render_rtc_format_];
+    } @catch (NSException* exception) {
+      LOGE() << "Failed to connect manual input nodes: " << exception.reason.UTF8String;
+      return rollback(kAudioEngineDeviceFormatError);
+    }
 
   } else if (state.prev.IsInputEnabled() && !state.next.IsInputEnabled()) {
     LOGI() << "Disabling input for AVAudioEngine (Manual)...";
@@ -2167,15 +2172,20 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       source_node_ = nil;
     });
 
-    [engine_device_ connect:source_node_
-                         to:engine_device_.mainMixerNode
-                     format:engine_output_format];
+    @try {
+      [engine_device_ connect:source_node_
+                           to:engine_device_.mainMixerNode
+                       format:engine_output_format];
 
-    // mainMixerNode -> outputNode is connected by default by AVAudioEngine, but we connect anyways
-    // with format.
-    [engine_device_ connect:engine_device_.mainMixerNode
-                         to:outputNode()
-                     format:engine_output_format];
+      // mainMixerNode -> outputNode is connected by default by AVAudioEngine, but we connect anyways
+      // with format.
+      [engine_device_ connect:engine_device_.mainMixerNode
+                           to:outputNode()
+                       format:engine_output_format];
+    } @catch (NSException* exception) {
+      LOGE() << "Failed to connect output nodes: " << exception.reason.UTF8String;
+      return rollback(kAudioEngineDeviceFormatError);
+    }
 
     if (this->observer_ != nullptr) {
       NSDictionary* context = @{};
@@ -2371,10 +2381,15 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     }
 
     LOGI() << "input mixer connection count: " << input_mixer_connections.count;
-    if (input_mixer_connections.count == 0) {
-      LOGI() << "Nothing connected to input mixer, connecting input node...";
-      // Default implementation.
-      [engine_device_ connect:inputNode() to:input_mixer_node_ format:engine_input_format];
+    @try {
+      if (input_mixer_connections.count == 0) {
+        LOGI() << "Nothing connected to input mixer, connecting input node...";
+        // Default implementation.
+        [engine_device_ connect:inputNode() to:input_mixer_node_ format:engine_input_format];
+      }
+    } @catch (NSException* exception) {
+      LOGE() << "Failed to connect input nodes: " << exception.reason.UTF8String;
+      return rollback(kAudioEngineDeviceFormatError);
     }
 
     sink_node_ = [[AVAudioSinkNode alloc] initWithReceiverBlock:sink_block];
@@ -2393,7 +2408,12 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       sink_node_ = nil;
     });
 
-    [engine_device_ connect:input_mixer_node_ to:sink_node_ format:engine_input_format];
+    @try {
+      [engine_device_ connect:input_mixer_node_ to:sink_node_ format:engine_input_format];
+    } @catch (NSException* exception) {
+      LOGE() << "Failed to connect input mixer to sink node: " << exception.reason.UTF8String;
+      return rollback(kAudioEngineDeviceFormatError);
+    }
 
   } else if ((state.prev.IsInputEnabled() && !state.next.IsInputEnabled()) &&
              !state.IsEngineRecreateRequired()) {
