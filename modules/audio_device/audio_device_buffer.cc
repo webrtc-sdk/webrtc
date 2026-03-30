@@ -105,8 +105,7 @@ int32_t AudioDeviceBuffer::RegisterAudioCallback(
   RTC_DCHECK_RUN_ON(&main_thread_checker_);
   RTC_DLOG(LS_INFO) << __FUNCTION__;
   if (playing_ || recording_) {
-    RTC_LOG(LS_ERROR) << "Failed to set audio transport since media was active";
-    return -1;
+    RTC_LOG(LS_WARNING) << "Setting audio transport while media is active";
   }
   audio_transport_cb_ = audio_callback;
   return 0;
