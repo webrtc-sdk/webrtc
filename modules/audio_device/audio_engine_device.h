@@ -517,7 +517,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   // Set to true after successful call to Init(), false otherwise.
   bool initialized_ RTC_GUARDED_BY(thread_);
 
-  AudioDeviceObserver* observer_ RTC_GUARDED_BY(thread_);
+  AudioDeviceObserver* observer_ RTC_GUARDED_BY(thread_) = nullptr;
 
 #if defined(WEBRTC_IOS)
   // Audio interruption observer instance.
@@ -547,10 +547,10 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   AVAudioMixerNode* input_mixer_node_ RTC_GUARDED_BY(thread_);
 
   // Float32 -> Int16 converter.
-  AudioConverterRef converter_ref_;
+  AudioConverterRef converter_ref_ = nullptr;
   AVAudioPCMBuffer* converter_buffer_;
 
-  void* configuration_observer_ RTC_GUARDED_BY(thread_);
+  void* configuration_observer_ RTC_GUARDED_BY(thread_) = nullptr;
 };
 }  // namespace webrtc
 
