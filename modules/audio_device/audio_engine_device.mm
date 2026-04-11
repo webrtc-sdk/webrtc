@@ -993,7 +993,6 @@ int32_t AudioEngineDevice::RegisterAudioCallback(AudioTransport* audioCallback) 
 
 bool AudioEngineDevice::BuiltInAECIsAvailable() const {
 #if TARGET_OS_SIMULATOR
-  // VPIO is not reliably available on iOS Simulator.
   return false;
 #else
   return true;
@@ -1008,13 +1007,19 @@ bool AudioEngineDevice::BuiltInAGCIsAvailable() const {
 #endif
 }
 
-bool AudioEngineDevice::BuiltInNSIsAvailable() const { return false; }
+bool AudioEngineDevice::BuiltInNSIsAvailable() const {
+#if TARGET_OS_SIMULATOR
+  return false;
+#else
+  return true;
+#endif
+}
 
 int32_t AudioEngineDevice::EnableBuiltInAEC(bool enable) { return 0; }
 
 int32_t AudioEngineDevice::EnableBuiltInAGC(bool enable) { return 0; }
 
-int32_t AudioEngineDevice::EnableBuiltInNS(bool enable) { return -1; }
+int32_t AudioEngineDevice::EnableBuiltInNS(bool enable) { return 0; }
 
 // ----------------------------------------------------------------------------------------------------
 // Misc
