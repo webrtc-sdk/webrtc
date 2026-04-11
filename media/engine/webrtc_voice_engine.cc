@@ -612,7 +612,8 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
                    << options_in.ToString();
   AudioOptions options = options_in;  // The options are modified below.
 
-#if (defined(WEBRTC_IOS) && !TARGET_OS_SIMULATOR) || defined(WEBRTC_MAC)
+#if (defined(WEBRTC_IOS) && !TARGET_OS_SIMULATOR) || \
+    (defined(WEBRTC_MAC) && !defined(WEBRTC_IOS))
   // On iOS device / macOS, AVAudioEngine VPIO provides built-in AEC/AGC/NS.
   // Force software APM off to prevent double processing with VPIO.
   options.echo_cancellation = false;
@@ -629,7 +630,6 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
 #endif
 
 #if defined(WEBRTC_ANDROID)
-  use_mobile_software_aec = true;
   // Turn off the gain control if specified by the field trial.
   // The purpose of the field trial is to reduce the amount of resampling
   // performed inside the audio processing module on mobile platforms by

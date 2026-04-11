@@ -991,9 +991,22 @@ int32_t AudioEngineDevice::RegisterAudioCallback(AudioTransport* audioCallback) 
 // ----------------------------------------------------------------------------------------------------
 // Misc
 
-bool AudioEngineDevice::BuiltInAECIsAvailable() const { return true; }
+bool AudioEngineDevice::BuiltInAECIsAvailable() const {
+#if TARGET_OS_SIMULATOR
+  // VPIO is not reliably available on iOS Simulator.
+  return false;
+#else
+  return true;
+#endif
+}
 
-bool AudioEngineDevice::BuiltInAGCIsAvailable() const { return true; }
+bool AudioEngineDevice::BuiltInAGCIsAvailable() const {
+#if TARGET_OS_SIMULATOR
+  return false;
+#else
+  return true;
+#endif
+}
 
 bool AudioEngineDevice::BuiltInNSIsAvailable() const { return false; }
 
