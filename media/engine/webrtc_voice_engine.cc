@@ -536,17 +536,15 @@ void WebRtcVoiceEngine::Init() {
   // Set default engine options.
   {
     AudioOptions options;
-#if defined(WEBRTC_ANDROID)
     options.echo_cancellation = true;
     options.auto_gain_control = true;
-    options.noise_suppression = true;
-    options.highpass_filter = true;
-#else
-    options.echo_cancellation = false;
-    options.auto_gain_control = false;
+#if defined(WEBRTC_IOS) || defined(WEBRTC_MAC)
+    // On iOS/macOS, VPIO provides built-in NS.
     options.noise_suppression = false;
-    options.highpass_filter = false;
+#else
+    options.noise_suppression = true;
 #endif
+    options.highpass_filter = true;
     options.stereo_swapping = false;
     options.audio_jitter_buffer_max_packets = 200;
     options.audio_jitter_buffer_fast_accelerate = false;
@@ -614,10 +612,24 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
                    << options_in.ToString();
   AudioOptions options = options_in;  // The options are modified below.
 
-  // Skip AEC AGC NS option manipulation for iOS adn macOS.
-#if !(defined(WEBRTC_IOS) || defined(WEBRTC_MAC))
+#if (defined(WEBRTC_IOS) && !TARGET_OS_SIMULATOR) || defined(WEBRTC_MAC)
+  // On iOS device / macOS, AVAudioEngine VPIO provides built-in AEC/AGC/NS.
+  // Force software APM off to prevent double processing with VPIO.
+  options.echo_cancellation = false;
+  options.auto_gain_control = false;
+  options.noise_suppression = false;
+  options.highpass_filter = false;
+  RTC_LOG(LS_INFO) << "Disabling software APM on Apple. Using VPIO instead.";
+#else
+
+#if defined(WEBRTC_IOS) && TARGET_OS_SIMULATOR
+  // On iOS Simulator, VPIO is not reliably available.
+  // Allow software AEC/AGC/NS to be controlled by SDK options.
+  RTC_LOG(LS_INFO) << "iOS Simulator: allowing software APM options.";
+#endif
 
 #if defined(WEBRTC_ANDROID)
+  use_mobile_software_aec = true;
   // Turn off the gain control if specified by the field trial.
   // The purpose of the field trial is to reduce the amount of resampling
   // performed inside the audio processing module on mobile platforms by
