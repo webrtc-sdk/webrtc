@@ -1015,11 +1015,29 @@ bool AudioEngineDevice::BuiltInNSIsAvailable() const {
 #endif
 }
 
-int32_t AudioEngineDevice::EnableBuiltInAEC(bool enable) { return 0; }
+int32_t AudioEngineDevice::EnableBuiltInAEC(bool enable) {
+#if TARGET_OS_SIMULATOR
+  return -1;
+#else
+  return 0;
+#endif
+}
 
-int32_t AudioEngineDevice::EnableBuiltInAGC(bool enable) { return 0; }
+int32_t AudioEngineDevice::EnableBuiltInAGC(bool enable) {
+#if TARGET_OS_SIMULATOR
+  return -1;
+#else
+  return 0;
+#endif
+}
 
-int32_t AudioEngineDevice::EnableBuiltInNS(bool enable) { return 0; }
+int32_t AudioEngineDevice::EnableBuiltInNS(bool enable) {
+#if TARGET_OS_SIMULATOR
+  return -1;
+#else
+  return 0;
+#endif
+}
 
 // ----------------------------------------------------------------------------------------------------
 // Misc
