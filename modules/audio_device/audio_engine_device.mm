@@ -1019,7 +1019,8 @@ int32_t AudioEngineDevice::EnableBuiltInAEC(bool enable) {
 #if TARGET_OS_SIMULATOR
   return -1;
 #else
-  return 0;
+  // VPIO AEC is always-on when VP is active; can't individually disable.
+  return enable ? 0 : -1;
 #endif
 }
 
@@ -1027,7 +1028,7 @@ int32_t AudioEngineDevice::EnableBuiltInAGC(bool enable) {
 #if TARGET_OS_SIMULATOR
   return -1;
 #else
-  return 0;
+  return enable ? 0 : -1;
 #endif
 }
 
@@ -1035,7 +1036,7 @@ int32_t AudioEngineDevice::EnableBuiltInNS(bool enable) {
 #if TARGET_OS_SIMULATOR
   return -1;
 #else
-  return 0;
+  return enable ? 0 : -1;
 #endif
 }
 
