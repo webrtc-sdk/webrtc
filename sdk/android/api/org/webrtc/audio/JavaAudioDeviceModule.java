@@ -469,7 +469,6 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
   }
 
   public void requestStopRecording() {
-    audioInput.initRecordingIfNeeded();
     audioInput.stopRecordingIfNeeded();
   }
 
