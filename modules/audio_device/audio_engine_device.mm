@@ -991,17 +991,54 @@ int32_t AudioEngineDevice::RegisterAudioCallback(AudioTransport* audioCallback) 
 // ----------------------------------------------------------------------------------------------------
 // Misc
 
-bool AudioEngineDevice::BuiltInAECIsAvailable() const { return true; }
+bool AudioEngineDevice::BuiltInAECIsAvailable() const {
+#if TARGET_OS_SIMULATOR
+  return false;
+#else
+  return true;
+#endif
+}
 
-bool AudioEngineDevice::BuiltInAGCIsAvailable() const { return true; }
+bool AudioEngineDevice::BuiltInAGCIsAvailable() const {
+#if TARGET_OS_SIMULATOR
+  return false;
+#else
+  return true;
+#endif
+}
 
-bool AudioEngineDevice::BuiltInNSIsAvailable() const { return false; }
+bool AudioEngineDevice::BuiltInNSIsAvailable() const {
+#if TARGET_OS_SIMULATOR
+  return false;
+#else
+  return true;
+#endif
+}
 
-int32_t AudioEngineDevice::EnableBuiltInAEC(bool enable) { return 0; }
+int32_t AudioEngineDevice::EnableBuiltInAEC(bool enable) {
+#if TARGET_OS_SIMULATOR
+  return -1;
+#else
+  // Succeed on enable, fail on disable so software APM stays on as fallback.
+  return enable ? 0 : -1;
+#endif
+}
 
-int32_t AudioEngineDevice::EnableBuiltInAGC(bool enable) { return 0; }
+int32_t AudioEngineDevice::EnableBuiltInAGC(bool enable) {
+#if TARGET_OS_SIMULATOR
+  return -1;
+#else
+  return enable ? 0 : -1;
+#endif
+}
 
-int32_t AudioEngineDevice::EnableBuiltInNS(bool enable) { return -1; }
+int32_t AudioEngineDevice::EnableBuiltInNS(bool enable) {
+#if TARGET_OS_SIMULATOR
+  return -1;
+#else
+  return enable ? 0 : -1;
+#endif
+}
 
 // ----------------------------------------------------------------------------------------------------
 // Misc

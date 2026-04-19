@@ -536,17 +536,10 @@ void WebRtcVoiceEngine::Init() {
   // Set default engine options.
   {
     AudioOptions options;
-#if defined(WEBRTC_ANDROID)
     options.echo_cancellation = true;
     options.auto_gain_control = true;
     options.noise_suppression = true;
     options.highpass_filter = true;
-#else
-    options.echo_cancellation = false;
-    options.auto_gain_control = false;
-    options.noise_suppression = false;
-    options.highpass_filter = false;
-#endif
     options.stereo_swapping = false;
     options.audio_jitter_buffer_max_packets = 200;
     options.audio_jitter_buffer_fast_accelerate = false;
@@ -614,9 +607,6 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
                    << options_in.ToString();
   AudioOptions options = options_in;  // The options are modified below.
 
-  // Skip AEC AGC NS option manipulation for iOS adn macOS.
-#if !(defined(WEBRTC_IOS) || defined(WEBRTC_MAC))
-
 #if defined(WEBRTC_ANDROID)
   // Turn off the gain control if specified by the field trial.
   // The purpose of the field trial is to reduce the amount of resampling
@@ -636,15 +626,13 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
   }
 #endif
 
+  // Delegate to built-in AEC/AGC/NS if the ADM provides them (e.g.
+  // AVAudioEngine VPIO on iOS device / macOS). On platforms where the ADM
+  // reports no built-in processing (Android, iOS Simulator, etc.) the
+  // software APM stays enabled as requested by the SDK.
   if (options.echo_cancellation) {
-    // Check if platform supports built-in EC. Currently only supported on
-    // Android and in combination with Java based audio layer.
-    // TODO(henrika): investigate possibility to support built-in EC also
-    // in combination with Open SL ES audio.
     const bool built_in_aec = adm()->BuiltInAECIsAvailable();
     if (built_in_aec) {
-      // Built-in EC exists on this device. Enable/Disable it according to the
-      // echo_cancellation audio option.
       const bool enable_built_in_aec = *options.echo_cancellation;
       if (adm()->EnableBuiltInAEC(enable_built_in_aec) == 0 &&
           enable_built_in_aec) {
@@ -683,7 +671,6 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
       }
     }
   }
-#endif
 
   if (options.stereo_swapping) {
     audio_state()->SetStereoChannelSwapping(*options.stereo_swapping);
