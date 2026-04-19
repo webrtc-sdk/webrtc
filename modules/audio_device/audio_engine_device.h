@@ -326,12 +326,10 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
   int32_t RegisterAudioCallback(AudioTransport* audioCallback) override;
 
-  // Only supported on Android.
+  // Built-in AEC/AGC/NS via VPIO. Available on device, not on simulator.
   bool BuiltInAECIsAvailable() const override;
   bool BuiltInAGCIsAvailable() const override;
   bool BuiltInNSIsAvailable() const override;
-
-  // Enables the built-in audio effects. Only supported on Android.
   int32_t EnableBuiltInAEC(bool enable) override;
   int32_t EnableBuiltInAGC(bool enable) override;
   int32_t EnableBuiltInNS(bool enable) override;

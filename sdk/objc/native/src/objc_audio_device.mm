@@ -732,7 +732,7 @@ bool ObjCAudioDeviceModule::BuiltInAECIsAvailable() const {
 }
 
 int32_t ObjCAudioDeviceModule::EnableBuiltInAEC(bool enable) {
-  return 0;
+  return -1;
 }
 
 bool ObjCAudioDeviceModule::BuiltInAGCIsAvailable() const {
@@ -740,7 +740,7 @@ bool ObjCAudioDeviceModule::BuiltInAGCIsAvailable() const {
 }
 
 int32_t ObjCAudioDeviceModule::EnableBuiltInAGC(bool enable) {
-  return 0;
+  return -1;
 }
 
 bool ObjCAudioDeviceModule::BuiltInNSIsAvailable() const {
@@ -748,7 +748,7 @@ bool ObjCAudioDeviceModule::BuiltInNSIsAvailable() const {
 }
 
 int32_t ObjCAudioDeviceModule::EnableBuiltInNS(bool enable) {
-  return 0;
+  return -1;
 }
 
 int32_t ObjCAudioDeviceModule::GetPlayoutUnderrunCount() const {

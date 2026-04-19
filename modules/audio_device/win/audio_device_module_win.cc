@@ -448,9 +448,9 @@ class WindowsAudioDeviceModule : public AudioDeviceModuleForTest {
   bool BuiltInAGCIsAvailable() const override { return false; }
   bool BuiltInNSIsAvailable() const override { return false; }
 
-  int32_t EnableBuiltInAEC(bool enable) override { return 0; }
-  int32_t EnableBuiltInAGC(bool enable) override { return 0; }
-  int32_t EnableBuiltInNS(bool enable) override { return 0; }
+  int32_t EnableBuiltInAEC(bool enable) override { return -1; }
+  int32_t EnableBuiltInAGC(bool enable) override { return -1; }
+  int32_t EnableBuiltInNS(bool enable) override { return -1; }
 
   int32_t AttachAudioBuffer() {
     RTC_DLOG(LS_INFO) << __FUNCTION__;
