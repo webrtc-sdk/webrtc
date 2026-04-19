@@ -1019,7 +1019,7 @@ int32_t AudioEngineDevice::EnableBuiltInAEC(bool enable) {
 #if TARGET_OS_SIMULATOR
   return -1;
 #else
-  // VPIO AEC is always-on when VP is active; can't individually disable.
+  // Succeed on enable, fail on disable so software APM stays on as fallback.
   return enable ? 0 : -1;
 #endif
 }
