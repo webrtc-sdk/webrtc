@@ -123,7 +123,6 @@ class DcSctpTransport : public SctpTransportInternal,
   dcsctp::TaskQueueTimeoutFactory task_queue_timeout_factory_;
   std::unique_ptr<dcsctp::DcSctpSocketInterface> socket_;
   std::string debug_name_ = "DcSctpTransport";
-  CopyOnWriteBuffer receive_buffer_;
 
   // Used to keep track of the state of data channels.
   // Reset needs to happen both ways before signaling the transport

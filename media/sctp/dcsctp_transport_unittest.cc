@@ -10,9 +10,11 @@
 
 #include "media/sctp/dcsctp_transport.h"
 
+#include <cstddef>
 #include <memory>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include "api/environment/environment.h"
 #include "api/environment/environment_factory.h"
@@ -317,5 +319,52 @@ TEST(DcSctpTransportTest, DropMessageWithUnknownPpid) {
   static_cast<dcsctp::DcSctpSocketCallbacks*>(peer_a.sctp_transport_.get())
       ->OnMessageReceived(
           dcsctp::DcSctpMessage(dcsctp::StreamID(1), dcsctp::PPID(1337), {0}));
+}
+
+// Regression: a per-message receive buffer must not retain the high-water
+// capacity of a previous, larger message. If it did, every subsequent small
+// message would force a fresh full-capacity allocation whenever a downstream
+// consumer still held a reference, which on iOS (no NSRunLoop on the network
+// thread, autoreleased RTCDataBuffers retain the backing buffer) OOMs the
+// app on sustained small-message receives after a single large one.
+TEST(DcSctpTransportTest, ReceiveBufferCapacityTracksCurrentMessageSize) {
+  AutoThread main_thread;
+  Peer peer_a;
+
+  std::vector<size_t> reported_capacities;
+  EXPECT_CALL(peer_a.sink_, OnDataReceived(_, _, _))
+      .WillRepeatedly([&](int /*channel_id*/, DataMessageType /*type*/,
+                          const CopyOnWriteBuffer& buffer) {
+        reported_capacities.push_back(buffer.capacity());
+      });
+
+  peer_a.sctp_transport_->OpenStream(1, kDefaultPriority);
+  peer_a.sctp_transport_->Start({.local_port = 5000,
+                                 .remote_port = 5000,
+                                 .max_message_size = 8 * 1024 * 1024});
+
+  auto* callbacks = static_cast<dcsctp::DcSctpSocketCallbacks*>(
+      peer_a.sctp_transport_.get());
+
+  constexpr size_t kLargeMessageSize = 4 * 1024 * 1024;
+  constexpr size_t kSmallMessageSize = 32;
+  callbacks->OnMessageReceived(dcsctp::DcSctpMessage(
+      dcsctp::StreamID(1), dcsctp::PPID(53),
+      std::vector<uint8_t>(kLargeMessageSize, 0xAA)));
+  for (int i = 0; i < 5; ++i) {
+    callbacks->OnMessageReceived(dcsctp::DcSctpMessage(
+        dcsctp::StreamID(1), dcsctp::PPID(53),
+        std::vector<uint8_t>(kSmallMessageSize, 0xBB)));
+  }
+
+  ASSERT_EQ(reported_capacities.size(), 6u);
+  EXPECT_GE(reported_capacities[0], kLargeMessageSize);
+  for (size_t i = 1; i < reported_capacities.size(); ++i) {
+    EXPECT_LT(reported_capacities[i], kLargeMessageSize / 2)
+        << "small message " << i << " reported capacity "
+        << reported_capacities[i]
+        << "; expected capacity to follow current message size, not the "
+           "prior high-water mark";
+  }
 }
 }  // namespace webrtc
