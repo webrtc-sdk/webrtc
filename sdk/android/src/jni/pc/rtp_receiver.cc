@@ -12,6 +12,8 @@
 
 #include <jni.h>
 
+#include <optional>
+
 #include "api/crypto/frame_decryptor_interface.h"
 #include "api/media_types.h"
 #include "api/rtp_parameters.h"
@@ -138,6 +140,21 @@ static void JNI_RtpReceiver_SetFrameDecryptor(JNIEnv* jni,
       ->SetFrameDecryptor(scoped_refptr<FrameDecryptorInterface>(
           reinterpret_cast<FrameDecryptorInterface*>(
               j_frame_decryptor_pointer)));
+}
+
+static void JNI_RtpReceiver_SetJitterBufferMinimumDelay(
+    JNIEnv* jni,
+    jlong j_rtp_receiver_pointer,
+    jdouble delay_seconds) {
+  reinterpret_cast<RtpReceiverInterface*>(j_rtp_receiver_pointer)
+      ->SetJitterBufferMinimumDelay(std::optional<double>(delay_seconds));
+}
+
+static void JNI_RtpReceiver_ClearJitterBufferMinimumDelay(
+    JNIEnv* jni,
+    jlong j_rtp_receiver_pointer) {
+  reinterpret_cast<RtpReceiverInterface*>(j_rtp_receiver_pointer)
+      ->SetJitterBufferMinimumDelay(std::nullopt);
 }
 
 }  // namespace jni

@@ -93,6 +93,14 @@ the current RTCRtpReceiver in the last ten seconds.
 /** The delegate for this RtpReceiver. */
 @property(nonatomic, weak) id<RTC_OBJC_TYPE(RTCRtpReceiverDelegate)> delegate;
 
+/** Sets the minimum jitter buffer delay (in seconds) for this receiver.
+ *  Pass nil to restore the default behaviour. The receiver keeps at least
+ *  this much media buffered before playout, trading latency for smoothness
+ *  on weak networks. Mirrors RTCRtpReceiver.jitterBufferTarget in browser
+ *  WebRTC; wraps the C++ RtpReceiverInterface::SetJitterBufferMinimumDelay.
+ */
+- (void)setJitterBufferMinimumDelay:(nullable NSNumber *)delaySeconds;
+
 @end
 
 RTC_OBJC_EXPORT

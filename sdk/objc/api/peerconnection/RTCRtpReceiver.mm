@@ -17,6 +17,8 @@
 #import "base/RTCLogging.h"
 #import "helpers/NSString+StdString.h"
 
+#include <optional>
+
 #include "api/media_stream_interface.h"
 
 namespace webrtc {
@@ -97,6 +99,15 @@ void RtpReceiverDelegateAdapter::OnFirstPacketReceivedAfterReceptiveChange(
                           initWithNativeRtpSource:nativeSource]];
   }
   return result;
+}
+
+- (void)setJitterBufferMinimumDelay:(nullable NSNumber *)delaySeconds {
+  if (delaySeconds == nil) {
+    _nativeRtpReceiver->SetJitterBufferMinimumDelay(std::nullopt);
+  } else {
+    _nativeRtpReceiver->SetJitterBufferMinimumDelay(
+        std::optional<double>(delaySeconds.doubleValue));
+  }
 }
 
 - (void)dealloc {
