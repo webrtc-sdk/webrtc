@@ -25,6 +25,12 @@ static void JNI_AudioTrack_SetVolume(JNIEnv*, jlong j_p, jdouble volume) {
   source->SetVolume(volume);
 }
 
+static jdouble JNI_AudioTrack_GetVolume(JNIEnv*, jlong j_p) {
+  scoped_refptr<AudioSourceInterface> source(
+      reinterpret_cast<AudioTrackInterface*>(j_p)->GetSource());
+  return source->GetVolume();
+}
+
 static void JNI_AudioTrack_AddSink(JNIEnv* jni,
                                    jlong j_native_track,
                                    jlong j_native_sink) {
