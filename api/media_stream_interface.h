@@ -296,6 +296,19 @@ class RTC_EXPORT AudioTrackInterface : public MediaStreamTrackInterface {
   // not.
   virtual AudioSourceInterface* GetSource() const = 0;
 
+  // Sets/gets the volume of the underlying source. `volume` is in the range of
+  // [0, 10].
+  virtual void SetVolume(double volume) {
+    AudioSourceInterface* source = GetSource();
+    if (source) {
+      source->SetVolume(volume);
+    }
+  }
+  virtual double GetVolume() const {
+    AudioSourceInterface* source = GetSource();
+    return source ? source->GetVolume() : 1.0;
+  }
+
   // Add/Remove a sink that will receive the audio data from the track.
   virtual void AddSink(AudioTrackSinkInterface* sink) = 0;
   virtual void RemoveSink(AudioTrackSinkInterface* sink) = 0;
