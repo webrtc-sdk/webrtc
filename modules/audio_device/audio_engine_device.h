@@ -20,6 +20,7 @@
 #include <atomic>
 #include <memory>
 
+#include "api/audio_processing_controller.h"
 #include "api/environment/environment.h"
 #include "api/scoped_refptr.h"
 #include "api/sequence_checker.h"
@@ -238,6 +239,13 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
     bool IsAnyEnabled() const { return IsInputEnabled() || IsOutputEnabled(); }
     bool IsAnyRunning() const { return IsInputRunning() || IsOutputRunning(); }
 
+    MuteMode EffectiveMuteMode() const {
+      if (mute_mode == MuteMode::VoiceProcessing && !voice_processing_enabled) {
+        return MuteMode::InputMixer;
+      }
+      return mute_mode;
+    }
+
     bool IsOutputDefaultDevice() const {
 #if TARGET_OS_OSX
       return output_device_id == kAudioObjectUnknown;
@@ -370,6 +378,10 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
   int32_t SetVoiceProcessingEnabled(bool enable);
   int32_t VoiceProcessingEnabled(bool* enabled);
+
+  int32_t SetAudioProcessingMode(AudioProcessingMode mode);
+  int32_t GetAudioProcessingMode(AudioProcessingMode* mode);
+  AudioProcessingState GetAudioProcessingState();
 
   int32_t SetVoiceProcessingBypassed(bool enable);
   int32_t VoiceProcessingBypassed(bool* enabled);

@@ -1047,6 +1047,7 @@ if (is_ios || is_mac) {
       deps = [
         ":base_objc",
         ":helpers_objc",
+        "../api:audio_processing_controller",
         "../api/video:encoded_image",
         "../api/video_codecs:scalability_mode",
         "../api/video_codecs:scalability_mode_helper",

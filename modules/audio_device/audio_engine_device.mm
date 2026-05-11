@@ -106,6 +106,12 @@ AudioEngineDevice::AudioEngineDevice(const Environment& env, bool voice_processi
 
   // Initial engine state
   engine_state_.voice_processing_bypassed = voice_processing_bypassed;
+#if TARGET_OS_SIMULATOR
+  engine_state_.voice_processing_enabled = false;
+#endif
+  AudioProcessingController::Shared().SetSystemPreferences(
+      engine_state_.voice_processing_bypassed,
+      engine_state_.voice_processing_agc_enabled);
 }
 
 bool AudioEngineDevice::IsStopOnMuteModeEnabled() const {
@@ -1114,12 +1120,8 @@ int32_t AudioEngineDevice::SetVoiceProcessingEnabled(bool enable) {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "SetVoiceProcessingEnabled: " << enable;
 
-  int32_t result = ModifyEngineState([enable](EngineState state) -> EngineState {
-    state.voice_processing_enabled = enable;
-    return state;
-  });
-
-  return result;
+  return SetAudioProcessingMode(enable ? AudioProcessingMode::kAutomatic
+                                       : AudioProcessingMode::kDisabled);
 }
 
 int32_t AudioEngineDevice::VoiceProcessingEnabled(bool* enabled) {
@@ -1135,6 +1137,85 @@ int32_t AudioEngineDevice::VoiceProcessingEnabled(bool* enabled) {
   return 0;
 }
 
+int32_t AudioEngineDevice::SetAudioProcessingMode(AudioProcessingMode mode) {
+  RTC_DCHECK_RUN_ON(thread_);
+  LOGI() << "SetAudioProcessingMode: " << static_cast<int>(mode);
+
+  auto& controller = AudioProcessingController::Shared();
+  const AudioProcessingMode previous_mode = controller.requested_mode();
+  const bool previous_voice_processing_enabled =
+      engine_state_.voice_processing_enabled;
+
+  if (mode == AudioProcessingMode::kSystem &&
+      !controller.IsSystemProcessingAvailable(this)) {
+    controller.BeginTransition(mode);
+    controller.CompleteTransition(-1, engine_state_.IsAnyRunning());
+    LOGE() << "System audio processing is unavailable";
+    return -1;
+  }
+
+  const bool enable_system_processing =
+      controller.ShouldEnableSystemProcessing(this, mode);
+
+  controller.BeginTransition(mode);
+
+  int32_t result = 0;
+  if (enable_system_processing) {
+    // Turn software APM off before enabling Apple VPIO.
+    controller.SetRequestedMode(mode);
+    controller.ReapplyLatestOptions();
+    result = ModifyEngineState([](EngineState state) -> EngineState {
+      state.voice_processing_enabled = true;
+      return state;
+    });
+  } else {
+    // Turn Apple VPIO off before enabling WebRTC software APM.
+    result = ModifyEngineState([](EngineState state) -> EngineState {
+      state.voice_processing_enabled = false;
+      return state;
+    });
+    if (result == 0) {
+      controller.SetRequestedMode(mode);
+      controller.ReapplyLatestOptions();
+    }
+  }
+
+  if (result != 0) {
+    LOGE() << "SetAudioProcessingMode failed, rolling back: " << result;
+    controller.SetRequestedMode(previous_mode);
+    ModifyEngineState(
+        [previous_voice_processing_enabled](EngineState state) -> EngineState {
+          state.voice_processing_enabled = previous_voice_processing_enabled;
+          return state;
+        });
+    controller.ReapplyLatestOptions();
+  }
+
+  controller.SetSystemPreferences(engine_state_.voice_processing_bypassed,
+                                  engine_state_.voice_processing_agc_enabled);
+  controller.CompleteTransition(result, engine_state_.IsAnyRunning());
+
+  return result;
+}
+
+int32_t AudioEngineDevice::GetAudioProcessingMode(AudioProcessingMode* mode) {
+  RTC_DCHECK_RUN_ON(thread_);
+  if (mode == nullptr) {
+    return -1;
+  }
+
+  *mode = AudioProcessingController::Shared().requested_mode();
+  return 0;
+}
+
+AudioProcessingState AudioEngineDevice::GetAudioProcessingState() {
+  RTC_DCHECK_RUN_ON(thread_);
+  AudioProcessingController::Shared().SetSystemPreferences(
+      engine_state_.voice_processing_bypassed,
+      engine_state_.voice_processing_agc_enabled);
+  return AudioProcessingController::Shared().state();
+}
+
 int32_t AudioEngineDevice::SetVoiceProcessingBypassed(bool enable) {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "SetVoiceProcessingBypassed: " << enable;
@@ -1143,6 +1224,10 @@ int32_t AudioEngineDevice::SetVoiceProcessingBypassed(bool enable) {
     state.voice_processing_bypassed = enable;
     return state;
   });
+
+  AudioProcessingController::Shared().SetSystemPreferences(
+      engine_state_.voice_processing_bypassed,
+      engine_state_.voice_processing_agc_enabled);
 
   return result;
 }
@@ -1168,6 +1253,10 @@ int32_t AudioEngineDevice::SetVoiceProcessingAGCEnabled(bool enable) {
     state.voice_processing_agc_enabled = enable;
     return state;
   });
+
+  AudioProcessingController::Shared().SetSystemPreferences(
+      engine_state_.voice_processing_bypassed,
+      engine_state_.voice_processing_agc_enabled);
 
   return result;
 }
@@ -2099,7 +2188,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       // After VP (re)enable, ensure mute starts clean for restart-engine mode.
       // VP mute defaults to false on fresh enable; set unconditionally to avoid
       // a potentially unsafe hardware read.
-      if (state.next.mute_mode == MuteMode::RestartEngine) {
+      if (state.next.EffectiveMuteMode() == MuteMode::RestartEngine) {
         inputNode().voiceProcessingInputMuted = false;
       }
 
@@ -2525,9 +2614,11 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   //
   if (state.next.IsInputEnabled() && state.next.voice_processing_enabled) {
     bool should_vp_mute =
-        (state.next.mute_mode == MuteMode::VoiceProcessing) && state.next.input_muted;
+        (state.next.EffectiveMuteMode() == MuteMode::VoiceProcessing) &&
+        state.next.input_muted;
     bool prev_vp_mute = vp_was_configured &&
-        (state.prev.mute_mode == MuteMode::VoiceProcessing) && state.prev.input_muted;
+        (state.prev.EffectiveMuteMode() == MuteMode::VoiceProcessing) &&
+        state.prev.input_muted;
     if (should_vp_mute != prev_vp_mute) {
       LOGI() << "Update mute (voice processing): " << should_vp_mute;
       inputNode().voiceProcessingInputMuted = should_vp_mute;
@@ -2540,7 +2631,10 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   //
   if (state.next.IsInputEnabled() && input_mixer_node_ != nil) {
     float mixer_volume =
-        (state.next.mute_mode == MuteMode::InputMixer && state.next.input_muted) ? 0.0f : 1.0f;
+        (state.next.EffectiveMuteMode() == MuteMode::InputMixer &&
+         state.next.input_muted)
+            ? 0.0f
+            : 1.0f;
     if (input_mixer_node_.outputVolume != mixer_volume) {
       LOGI() << "Update mute (input mixer): " << (mixer_volume == 0.0f);
       input_mixer_node_.outputVolume = mixer_volume;

@@ -1129,6 +1129,23 @@ rtc_library("audio_options_api") {
   ]
 }
 
+rtc_library("audio_processing_controller") {
+  visibility = [ "*" ]
+  sources = [
+    "audio_processing_controller.cc",
+    "audio_processing_controller.h",
+  ]
+
+  deps = [
+    ":audio_options_api",
+    "audio:audio_device",
+    "audio:audio_processing",
+    "../rtc_base:logging",
+    "../rtc_base/synchronization:mutex",
+    "../rtc_base/system:rtc_export",
+  ]
+}
+
 rtc_library("transport_api") {
   visibility = [ "*" ]
   sources = [

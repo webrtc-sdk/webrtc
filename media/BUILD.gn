@@ -71,6 +71,7 @@ rtc_library("rtc_media_base") {
     ":video_source_base",
     "../api:array_view",
     "../api:audio_options_api",
+    "../api:audio_processing_controller",
     "../api:call_api",
     "../api:field_trials_view",
     "../api:frame_transformer_interface",

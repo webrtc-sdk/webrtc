@@ -49,6 +49,27 @@ typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCAudioDuckingLevel)) {
   RTC_OBJC_TYPE(RTCAudioDuckingLevelMax) = 3,
 };
 
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCAudioProcessingMode)) {
+  RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic) = 0,
+  RTC_OBJC_TYPE(RTCAudioProcessingModeSystem) = 1,
+  RTC_OBJC_TYPE(RTCAudioProcessingModeSoftware) = 2,
+  RTC_OBJC_TYPE(RTCAudioProcessingModeDisabled) = 3,
+};
+
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCAudioProcessingLifecycle)) {
+  RTC_OBJC_TYPE(RTCAudioProcessingLifecycleIdle) = 0,
+  RTC_OBJC_TYPE(RTCAudioProcessingLifecycleRunning) = 1,
+  RTC_OBJC_TYPE(RTCAudioProcessingLifecycleTransitioning) = 2,
+  RTC_OBJC_TYPE(RTCAudioProcessingLifecycleFailed) = 3,
+};
+
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCAudioProcessingBackend)) {
+  RTC_OBJC_TYPE(RTCAudioProcessingBackendDisabled) = 0,
+  RTC_OBJC_TYPE(RTCAudioProcessingBackendSystem) = 1,
+  RTC_OBJC_TYPE(RTCAudioProcessingBackendSoftware) = 2,
+  RTC_OBJC_TYPE(RTCAudioProcessingBackendUnavailable) = 3,
+};
+
 typedef struct {
   BOOL outputEnabled;
   BOOL outputRunning;
@@ -62,6 +83,21 @@ typedef struct {
   BOOL isInputAvailable;
   BOOL isOutputAvailable;
 } RTC_OBJC_TYPE(RTCAudioEngineAvailability);
+
+typedef struct {
+  RTC_OBJC_TYPE(RTCAudioProcessingMode) requestedMode;
+  RTC_OBJC_TYPE(RTCAudioProcessingLifecycle) lifecycle;
+  RTC_OBJC_TYPE(RTCAudioProcessingBackend) backend;
+  RTC_OBJC_TYPE(RTCAudioProcessingMode) transitionFrom;
+  RTC_OBJC_TYPE(RTCAudioProcessingMode) transitionTo;
+  NSInteger lastError;
+  BOOL systemBypassed;
+  BOOL systemAGCEnabled;
+  BOOL softwareEchoCancellation;
+  BOOL softwareNoiseSuppression;
+  BOOL softwareAutoGainControl;
+  BOOL softwareHighpassFilter;
+} RTC_OBJC_TYPE(RTCAudioProcessingState);
 
 RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCAudioEngineInputMixerNodeKey);
 
@@ -192,6 +228,10 @@ RTC_OBJC_EXPORT
 /// toggle. Defaults to true.
 @property(nonatomic, readonly, getter=isVoiceProcessingEnabled) BOOL voiceProcessingEnabled;
 - (NSInteger)setVoiceProcessingEnabled:(BOOL)enabled;
+
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioProcessingMode) audioProcessingMode;
+- (NSInteger)setAudioProcessingMode:(RTC_OBJC_TYPE(RTCAudioProcessingMode))mode;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioProcessingState) audioProcessingState;
 
 /// Temporarily bypasses Voice-Processing I/O. Can be toggled at runtime without restarting the
 /// Audio Engine. Defaults to false.

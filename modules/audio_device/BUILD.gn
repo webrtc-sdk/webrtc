@@ -265,6 +265,7 @@ rtc_library("audio_device_impl") {
     ":audio_device_dummy",
     ":audio_device_generic",
     "../../api:array_view",
+    "../../api:audio_processing_controller",
     "../../api:make_ref_counted",
     "../../api:ref_count",
     "../../api:refcountedbase",
