@@ -115,6 +115,7 @@ bool RemoteAudioSource::remote() const {
 }
 
 void RemoteAudioSource::SetVolume(double volume) {
+  RTC_DCHECK_RUN_ON(main_thread_);
   RTC_DCHECK_GE(volume, 0);
   RTC_DCHECK_LE(volume, 10);
   RTC_LOG(LS_INFO) << StringFormat("RAS::%s({volume=%.2f})", __func__, volume);
@@ -125,16 +126,19 @@ void RemoteAudioSource::SetVolume(double volume) {
 }
 
 double RemoteAudioSource::GetVolume() const {
+  RTC_DCHECK_RUN_ON(main_thread_);
   return volume_;
 }
 
 void RemoteAudioSource::RegisterAudioObserver(AudioObserver* observer) {
+  RTC_DCHECK_RUN_ON(main_thread_);
   RTC_DCHECK(observer != nullptr);
   RTC_DCHECK(!absl::c_linear_search(audio_observers_, observer));
   audio_observers_.push_back(observer);
 }
 
 void RemoteAudioSource::UnregisterAudioObserver(AudioObserver* observer) {
+  RTC_DCHECK_RUN_ON(main_thread_);
   RTC_DCHECK(observer != nullptr);
   audio_observers_.remove(observer);
 }
