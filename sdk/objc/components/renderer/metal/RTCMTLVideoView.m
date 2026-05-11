@@ -138,11 +138,22 @@
 #endif
 
 - (CGFloat)currentScaleFactor {
-  CGFloat scale = 1.0;
+  // Avoid deprecated [UIScreen mainScreen] / [NSScreen mainScreen],
+  // see https://github.com/livekit/client-sdk-swift/issues/998.
+  // The traitCollection.displayScale fallback handles the case where the view
+  // is queried before being attached to a window scene; Flutter hit crashes
+  // without this guard, see https://github.com/flutter/flutter/pull/166080.
+  CGFloat scale = 0.0;
 #if TARGET_OS_IPHONE
-  scale = [UIScreen mainScreen].scale;
+  scale = self.window.windowScene.screen.scale;
+  if (scale <= 0.0) {
+    scale = self.traitCollection.displayScale;
+  }
 #elif TARGET_OS_OSX
-  scale = [NSScreen mainScreen].backingScaleFactor;
+  scale = self.window.screen.backingScaleFactor;
+  if (scale <= 0.0) {
+    scale = self.window.backingScaleFactor;
+  }
 #endif
   return MAX(scale, 1.0);
 }
