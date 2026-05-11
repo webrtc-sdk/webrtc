@@ -23,6 +23,7 @@
 #include "rtc_base/thread_annotations.h"
 #include "rtc_base/time_utils.h"
 #include "sck_picker_handle.h"
+#include "sdk/objc/base/RTCMacros.h"
 #include "sdk/objc/helpers/scoped_cftyperef.h"
 
 namespace webrtc {
@@ -34,7 +35,7 @@ class ScreenCapturerSck;
 // Also, the `SCContentFilter` fields `contentRect` and `pointPixelScale` were
 // introduced in macOS 14.
 API_AVAILABLE(macos(14.0))
-@interface SckHelper : NSObject <SCStreamDelegate,
+@interface RTC_OBJC_TYPE(SckHelper) : NSObject <SCStreamDelegate,
                                  SCStreamOutput,
                                  SCContentSharingPickerObserver>
 
@@ -111,7 +112,7 @@ class API_AVAILABLE(macos(14.0)) ScreenCapturerSck final
   // call into this C++ object. The helper may outlive this C++ instance, if a
   // completion-handler is passed to ScreenCaptureKit APIs and the C++ object is
   // deleted before the handler executes.
-  SckHelper* __strong helper_;
+  RTC_OBJC_TYPE(SckHelper)* __strong helper_;
 
   // Callback for returning captured frames, or errors, to the caller.
   Callback* callback_ RTC_GUARDED_BY(api_checker_) = nullptr;
@@ -218,7 +219,7 @@ ScreenCapturerSck::ScreenCapturerSck(const DesktopCaptureOptions& options,
     : api_checker_(SequenceChecker::kDetached),
       capture_options_(options),
       picker_modes_(modes) {
-  helper_ = [[SckHelper alloc] initWithCapturer:this];
+  helper_ = [[RTC_OBJC_TYPE(SckHelper) alloc] initWithCapturer:this];
 }
 
 ScreenCapturerSck::ScreenCapturerSck(const DesktopCaptureOptions& options)
@@ -737,7 +738,7 @@ void ScreenCapturerSck::StartOrReconfigureCapturer() {
   // The copy is needed to avoid capturing `this` in the Objective-C block.
   // Accessing `helper_` inside the block is equivalent to `this->helper_` and
   // would crash (UAF) if `this` is deleted before the block is executed.
-  SckHelper* local_helper = helper_;
+  RTC_OBJC_TYPE(SckHelper)* local_helper = helper_;
   auto handler = ^(SCShareableContent* content, NSError* error) {
     [local_helper onShareableContentCreated:content error:error];
   };
@@ -786,7 +787,7 @@ std::unique_ptr<DesktopCapturer> CreateGenericCapturerSck(
 
 }  // namespace webrtc
 
-@implementation SckHelper {
+@implementation RTC_OBJC_TYPE(SckHelper) {
   // This lock is to prevent the capturer being destroyed while an instance
   // method is still running on another thread.
   webrtc::Mutex _capturer_lock;
