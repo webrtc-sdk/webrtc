@@ -254,6 +254,7 @@ class RTC_EXPORT AudioSourceInterface : public MediaSourceInterface {
   // TODO(tommi): This method should be on the track and ideally volume should
   // be applied in the track in a way that does not affect clones of the track.
   virtual void SetVolume(double /* volume */) {}
+  virtual double GetVolume() const { return 1.0; }
 
   // Registers/unregisters observers to the audio source.
   virtual void RegisterAudioObserver(AudioObserver* /* observer */) {}

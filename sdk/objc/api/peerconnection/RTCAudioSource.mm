@@ -15,7 +15,6 @@
 @implementation RTC_OBJC_TYPE (RTCAudioSource) {
 }
 
-@synthesize volume = _volume;
 @synthesize nativeAudioSource = _nativeAudioSource;
 
 - (instancetype)
@@ -50,8 +49,11 @@
                                     stateString];
 }
 
+- (double)volume {
+  return _nativeAudioSource->GetVolume();
+}
+
 - (void)setVolume:(double)volume {
-  _volume = volume;
   _nativeAudioSource->SetVolume(volume);
 }
 
