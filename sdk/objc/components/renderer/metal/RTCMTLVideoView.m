@@ -149,11 +149,23 @@
 #endif
 
 - (CGFloat)currentScaleFactor {
-  CGFloat scale = 1.0;
+  // Avoid deprecated [UIScreen mainScreen] / [NSScreen mainScreen],
+  // see https://github.com/livekit/client-sdk-swift/issues/998.
+  // Prefer the trait/window-local scale; fall back to the scene's screen.
+  // MAX(scale, 1.0) covers the not-yet-attached case where both yield 0.
+  // TODO: switch to nativeScale per Apple's Metal best practices,
+  // https://developer.apple.com/library/archive/documentation/3DDrawing/Conceptual/MTLBestPracticesGuide/NativeScreenScale.html
+  CGFloat scale = 0.0;
 #if TARGET_OS_IPHONE
-  scale = [UIScreen mainScreen].scale;
+  scale = self.traitCollection.displayScale;
+  if (scale <= 0.0) {
+    scale = self.window.windowScene.screen.scale;
+  }
 #elif TARGET_OS_OSX
-  scale = [NSScreen mainScreen].backingScaleFactor;
+  scale = self.window.backingScaleFactor;
+  if (scale <= 0.0) {
+    scale = self.window.screen.backingScaleFactor;
+  }
 #endif
   return MAX(scale, 1.0);
 }
