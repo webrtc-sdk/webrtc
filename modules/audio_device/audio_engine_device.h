@@ -382,10 +382,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
   int32_t SetAudioProcessingMode(AudioProcessingMode mode);
   int32_t GetAudioProcessingMode(AudioProcessingMode* mode);
-  AudioProcessingState GetAudioProcessingState();
   std::optional<AudioProcessingMode> audio_processing_mode() const override;
-  void OnAudioProcessingStateChanged(
-      const AudioProcessingState& state) override;
 
   int32_t SetVoiceProcessingBypassed(bool enable);
   int32_t VoiceProcessingBypassed(bool* enabled);
@@ -477,11 +474,8 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   EngineState engine_state_ RTC_GUARDED_BY(thread_);
   AudioProcessingMode audio_processing_mode_ RTC_GUARDED_BY(thread_) =
       AudioProcessingMode::kAutomatic;
-  AudioProcessingState audio_processing_state_ RTC_GUARDED_BY(thread_);
 
   int32_t ModifyEngineState(std::function<EngineState(EngineState)> state_transform);
-  void RefreshAudioProcessingState(AudioProcessingBackend backend,
-                                   int32_t error);
 
   int32_t ApplyDeviceEngineState(EngineStateUpdate state);
   int32_t ApplyManualEngineState(EngineStateUpdate state);

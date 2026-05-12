@@ -47,34 +47,6 @@ inline RTC_OBJC_TYPE(RTCAudioProcessingMode)
   return static_cast<RTC_OBJC_TYPE(RTCAudioProcessingMode)>(mode);
 }
 
-inline RTC_OBJC_TYPE(RTCAudioProcessingLifecycle)
-    AudioProcessingLifecycleToObjC(webrtc::AudioProcessingLifecycle lifecycle) {
-  return static_cast<RTC_OBJC_TYPE(RTCAudioProcessingLifecycle)>(lifecycle);
-}
-
-inline RTC_OBJC_TYPE(RTCAudioProcessingBackend)
-    AudioProcessingBackendToObjC(webrtc::AudioProcessingBackend backend) {
-  return static_cast<RTC_OBJC_TYPE(RTCAudioProcessingBackend)>(backend);
-}
-
-inline RTC_OBJC_TYPE(RTCAudioProcessingState)
-    AudioProcessingStateToObjC(webrtc::AudioProcessingState state) {
-  return {
-      AudioProcessingModeToObjC(state.requested_mode),
-      AudioProcessingLifecycleToObjC(state.lifecycle),
-      AudioProcessingBackendToObjC(state.backend),
-      AudioProcessingModeToObjC(state.transition_from),
-      AudioProcessingModeToObjC(state.transition_to),
-      state.last_error,
-      state.system_bypassed,
-      state.system_agc_enabled,
-      state.software_echo_cancellation,
-      state.software_noise_suppression,
-      state.software_auto_gain_control,
-      state.software_highpass_filter,
-  };
-}
-
 // Maps between RTCAudioDuckingLevel and AudioDuckingLevel.
 // Uses explicit mapping to avoid assuming integer values match between enums.
 inline webrtc::AudioEngineDevice::AudioDuckingLevel DuckingLevelToRTC(
@@ -602,29 +574,6 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   return _workerThread->BlockingCall([module, mode] {
     return module->SetAudioProcessingMode(AudioProcessingModeToRTC(mode));
   });
-}
-
-- (RTC_OBJC_TYPE(RTCAudioProcessingState))audioProcessingState {
-  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
-  if (module == nullptr) {
-    return {
-        RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic),
-        RTC_OBJC_TYPE(RTCAudioProcessingLifecycleFailed),
-        RTC_OBJC_TYPE(RTCAudioProcessingBackendUnavailable),
-        RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic),
-        RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic),
-        -1,
-        NO,
-        NO,
-        NO,
-        NO,
-        NO,
-        NO,
-    };
-  }
-
-  return _workerThread->BlockingCall(
-      [module] { return AudioProcessingStateToObjC(module->GetAudioProcessingState()); });
 }
 
 - (BOOL)isVoiceProcessingBypassed {

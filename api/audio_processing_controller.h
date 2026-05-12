@@ -28,19 +28,13 @@ bool RTC_EXPORT IsAudioProcessingModeValid(AudioProcessingMode mode);
 bool RTC_EXPORT IsSystemAudioProcessingAvailable(AudioDeviceModule* adm);
 bool RTC_EXPORT ShouldUseSystemAudioProcessing(AudioDeviceModule* adm,
                                                AudioProcessingMode mode);
-AudioProcessingBackend RTC_EXPORT ResolveAudioProcessingBackend(
-    AudioDeviceModule* adm,
-    AudioProcessingMode mode,
-    const AudioOptions& resolved_options,
-    int32_t* error);
 void RTC_EXPORT ApplyAudioProcessingConfig(AudioProcessing* apm,
                                            const AudioOptions& options);
 AudioOptions RTC_EXPORT ApplyAudioProcessingOptions(
     AudioProcessing* apm,
     AudioDeviceModule* adm,
     AudioProcessingMode mode,
-    const AudioOptions& options,
-    AudioProcessingState* state);
+    const AudioOptions& options);
 
 }  // namespace webrtc
 

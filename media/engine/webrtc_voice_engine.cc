@@ -628,12 +628,9 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
 #endif
 
   if (std::optional<AudioProcessingMode> mode = adm()->audio_processing_mode()) {
-    AudioProcessingState state;
-    options = ApplyAudioProcessingOptions(apm(), adm(), *mode, options, &state);
-    adm()->OnAudioProcessingStateChanged(state);
+    options = ApplyAudioProcessingOptions(apm(), adm(), *mode, options);
     RTC_LOG(LS_INFO) << "Applied audio processing mode="
                      << static_cast<int>(*mode)
-                     << " backend=" << static_cast<int>(state.backend)
                      << " options=" << options.ToString();
   } else {
     // Delegate to built-in AEC/AGC/NS if the ADM provides them. ADMs without

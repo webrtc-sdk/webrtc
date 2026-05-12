@@ -26,13 +26,6 @@ void ForceSoftwareProcessing(AudioOptions* options, bool enabled) {
   options->highpass_filter = enabled;
 }
 
-bool AnySoftwareProcessingEnabled(const AudioOptions& options) {
-  return options.echo_cancellation.value_or(false) ||
-         options.auto_gain_control.value_or(false) ||
-         options.noise_suppression.value_or(false) ||
-         options.highpass_filter.value_or(false);
-}
-
 }  // namespace
 
 bool IsAudioProcessingModeValid(AudioProcessingMode mode) {
@@ -62,43 +55,6 @@ bool ShouldUseSystemAudioProcessing(AudioDeviceModule* adm,
       return false;
   }
   return false;
-}
-
-AudioProcessingBackend ResolveAudioProcessingBackend(
-    AudioDeviceModule* adm,
-    AudioProcessingMode mode,
-    const AudioOptions& resolved_options,
-    int32_t* error) {
-  if (error != nullptr) {
-    *error = 0;
-  }
-  switch (mode) {
-    case AudioProcessingMode::kDisabled:
-      return AudioProcessingBackend::kDisabled;
-
-    case AudioProcessingMode::kSoftware:
-      return AnySoftwareProcessingEnabled(resolved_options)
-                 ? AudioProcessingBackend::kSoftware
-                 : AudioProcessingBackend::kDisabled;
-
-    case AudioProcessingMode::kSystem:
-      if (!IsSystemAudioProcessingAvailable(adm)) {
-        if (error != nullptr) {
-          *error = -1;
-        }
-        return AudioProcessingBackend::kUnavailable;
-      }
-      return AudioProcessingBackend::kSystem;
-
-    case AudioProcessingMode::kAutomatic:
-      if (IsSystemAudioProcessingAvailable(adm)) {
-        return AudioProcessingBackend::kSystem;
-      }
-      return AnySoftwareProcessingEnabled(resolved_options)
-                 ? AudioProcessingBackend::kSoftware
-                 : AudioProcessingBackend::kDisabled;
-  }
-  return AudioProcessingBackend::kUnavailable;
 }
 
 void ApplyAudioProcessingConfig(AudioProcessing* apm,
@@ -142,8 +98,7 @@ void ApplyAudioProcessingConfig(AudioProcessing* apm,
 AudioOptions ApplyAudioProcessingOptions(AudioProcessing* apm,
                                          AudioDeviceModule* adm,
                                          AudioProcessingMode mode,
-                                         const AudioOptions& options_in,
-                                         AudioProcessingState* state) {
+                                         const AudioOptions& options_in) {
   AudioOptions options = options_in;
 
   switch (mode) {
@@ -162,32 +117,7 @@ AudioOptions ApplyAudioProcessingOptions(AudioProcessing* apm,
       break;
   }
 
-  int32_t error = 0;
-  const AudioProcessingBackend backend =
-      ResolveAudioProcessingBackend(adm, mode, options, &error);
-
   ApplyAudioProcessingConfig(apm, options);
-
-  if (state != nullptr) {
-    state->requested_mode = mode;
-    state->backend = backend;
-    state->transition_from = mode;
-    state->transition_to = mode;
-    state->last_error = error;
-    state->software_echo_cancellation =
-        options.echo_cancellation.value_or(false);
-    state->software_auto_gain_control =
-        options.auto_gain_control.value_or(false);
-    state->software_noise_suppression =
-        options.noise_suppression.value_or(false);
-    state->software_highpass_filter = options.highpass_filter.value_or(false);
-    state->lifecycle =
-        error == 0 ? ((adm != nullptr && (adm->Playing() || adm->Recording()))
-                          ? AudioProcessingLifecycle::kRunning
-                          : AudioProcessingLifecycle::kIdle)
-                   : AudioProcessingLifecycle::kFailed;
-  }
-
   return options;
 }
 
