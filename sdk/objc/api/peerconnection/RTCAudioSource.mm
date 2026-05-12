@@ -9,13 +9,14 @@
  */
 
 #import "RTCAudioSource+Private.h"
+#import "RTCPeerConnectionFactory+Private.h"
 
 #include "rtc_base/checks.h"
 
 @implementation RTC_OBJC_TYPE (RTCAudioSource) {
+  webrtc::Thread *_signalingThread;
 }
 
-@synthesize volume = _volume;
 @synthesize nativeAudioSource = _nativeAudioSource;
 
 - (instancetype)
@@ -30,6 +31,7 @@
                                type:RTC_OBJC_TYPE(RTCMediaSourceTypeAudio)];
   if (self) {
     _nativeAudioSource = nativeAudioSource;
+    _signalingThread = factory.signalingThread;
   }
   return self;
 }
@@ -50,8 +52,20 @@
                                     stateString];
 }
 
+- (double)volume {
+  if (!_signalingThread->IsCurrent()) {
+    return _signalingThread->BlockingCall([self] { return [self volume]; });
+  }
+
+  return _nativeAudioSource->GetVolume();
+}
+
 - (void)setVolume:(double)volume {
-  _volume = volume;
+  if (!_signalingThread->IsCurrent()) {
+    _signalingThread->BlockingCall([self, volume] { [self setVolume:volume]; });
+    return;
+  }
+
   _nativeAudioSource->SetVolume(volume);
 }
 

@@ -60,6 +60,7 @@ class RemoteAudioSource : public Notifier<AudioSourceInterface> {
 
   // AudioSourceInterface implementation.
   void SetVolume(double volume) override;
+  double GetVolume() const override;
   void RegisterAudioObserver(AudioObserver* observer) override;
   void UnregisterAudioObserver(AudioObserver* observer) override;
 
@@ -83,6 +84,7 @@ class RemoteAudioSource : public Notifier<AudioSourceInterface> {
   Mutex sink_lock_;
   std::list<AudioTrackSinkInterface*> sinks_;
   SourceState state_;
+  double volume_ = 1.0;
 };
 
 }  // namespace webrtc

@@ -11,7 +11,6 @@
 #include <jni.h>
 
 #include "api/media_stream_interface.h"
-#include "api/scoped_refptr.h"
 #include "sdk/android/src/jni/pc/audio_sink.h"
 
 #include "sdk/android/generated_peerconnection_jni/AudioTrack_jni.h"
@@ -20,9 +19,11 @@ namespace webrtc {
 namespace jni {
 
 static void JNI_AudioTrack_SetVolume(JNIEnv*, jlong j_p, jdouble volume) {
-  scoped_refptr<AudioSourceInterface> source(
-      reinterpret_cast<AudioTrackInterface*>(j_p)->GetSource());
-  source->SetVolume(volume);
+  reinterpret_cast<AudioTrackInterface*>(j_p)->SetVolume(volume);
+}
+
+static jdouble JNI_AudioTrack_GetVolume(JNIEnv*, jlong j_p) {
+  return reinterpret_cast<AudioTrackInterface*>(j_p)->GetVolume();
 }
 
 static void JNI_AudioTrack_AddSink(JNIEnv* jni,
