@@ -1256,8 +1256,7 @@ int32_t AudioEngineDevice::SetVoiceProcessingBypassed(bool enable) {
     return state;
   });
 
-  RefreshAudioProcessingState(audio_processing_state_.backend,
-                              audio_processing_state_.last_error);
+  RefreshAudioProcessingState(audio_processing_state_.backend, result);
 
   return result;
 }
@@ -1284,8 +1283,7 @@ int32_t AudioEngineDevice::SetVoiceProcessingAGCEnabled(bool enable) {
     return state;
   });
 
-  RefreshAudioProcessingState(audio_processing_state_.backend,
-                              audio_processing_state_.last_error);
+  RefreshAudioProcessingState(audio_processing_state_.backend, result);
 
   return result;
 }
