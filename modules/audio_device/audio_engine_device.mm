@@ -109,9 +109,11 @@ AudioEngineDevice::AudioEngineDevice(const Environment& env, bool voice_processi
 #if TARGET_OS_SIMULATOR
   engine_state_.voice_processing_enabled = false;
 #endif
-  AudioProcessingController::Shared().SetSystemPreferences(
-      engine_state_.voice_processing_bypassed,
-      engine_state_.voice_processing_agc_enabled);
+  RefreshAudioProcessingState(
+      ShouldUseSystemAudioProcessing(this, audio_processing_mode_)
+          ? AudioProcessingBackend::kSystem
+          : AudioProcessingBackend::kDisabled,
+      0);
 }
 
 bool AudioEngineDevice::IsStopOnMuteModeEnabled() const {
@@ -272,7 +274,7 @@ int32_t AudioEngineDevice::Init() {
   // main thread to issue notifications.
   AudioObjectPropertyAddress propertyAddress = {kAudioHardwarePropertyRunLoop,
                                                 kAudioObjectPropertyScopeGlobal,
-                                                kAudioObjectPropertyElementMaster};
+                                                kAudioObjectPropertyElementMain};
 
   CFRunLoopRef runLoop = NULL;
   UInt32 size = sizeof(CFRunLoopRef);
@@ -331,7 +333,7 @@ int32_t AudioEngineDevice::Terminate() {
   AudioObjectPropertyAddress propertyAddress = {
       kAudioHardwarePropertyDevices,     // selector
       kAudioObjectPropertyScopeGlobal,   // scope
-      kAudioObjectPropertyElementMaster  // element
+      kAudioObjectPropertyElementMain  // element
   };
 
   OSStatus err = noErr;
@@ -1141,61 +1143,55 @@ int32_t AudioEngineDevice::SetAudioProcessingMode(AudioProcessingMode mode) {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "SetAudioProcessingMode: " << static_cast<int>(mode);
 
-  auto& controller = AudioProcessingController::Shared();
-  const AudioProcessingMode previous_mode = controller.requested_mode();
-  const bool previous_voice_processing_enabled =
-      engine_state_.voice_processing_enabled;
+  if (!IsAudioProcessingModeValid(mode)) {
+    RefreshAudioProcessingState(AudioProcessingBackend::kUnavailable,
+                                kAudioEngineInvalidStateError);
+    return kAudioEngineInvalidStateError;
+  }
+
+  const AudioProcessingMode previous_mode = audio_processing_mode_;
+  audio_processing_state_.transition_from = previous_mode;
+  audio_processing_state_.transition_to = mode;
+
+  if (engine_state_.IsAnyRunning()) {
+    RefreshAudioProcessingState(audio_processing_state_.backend,
+                                kAudioEngineInvalidStateError);
+    LOGE() << "Cannot switch audio processing mode while engine is running";
+    return kAudioEngineInvalidStateError;
+  }
 
   if (mode == AudioProcessingMode::kSystem &&
-      !controller.IsSystemProcessingAvailable(this)) {
-    controller.BeginTransition(mode);
-    controller.CompleteTransition(-1, engine_state_.IsAnyRunning());
+      !IsSystemAudioProcessingAvailable(this)) {
+    RefreshAudioProcessingState(AudioProcessingBackend::kUnavailable,
+                                kAudioEngineVoiceProcessingError);
     LOGE() << "System audio processing is unavailable";
-    return -1;
+    return kAudioEngineVoiceProcessingError;
   }
 
   const bool enable_system_processing =
-      controller.ShouldEnableSystemProcessing(this, mode);
+      ShouldUseSystemAudioProcessing(this, mode);
 
-  controller.BeginTransition(mode);
-
-  int32_t result = 0;
-  if (enable_system_processing) {
-    // Turn software APM off before enabling Apple VPIO.
-    controller.SetRequestedMode(mode);
-    controller.ReapplyLatestOptions();
-    result = ModifyEngineState([](EngineState state) -> EngineState {
-      state.voice_processing_enabled = true;
-      return state;
-    });
-  } else {
-    // Turn Apple VPIO off before enabling WebRTC software APM.
-    result = ModifyEngineState([](EngineState state) -> EngineState {
-      state.voice_processing_enabled = false;
-      return state;
-    });
-    if (result == 0) {
-      controller.SetRequestedMode(mode);
-      controller.ReapplyLatestOptions();
-    }
-  }
+  const int32_t result =
+      ModifyEngineState([enable_system_processing](EngineState state) -> EngineState {
+        state.voice_processing_enabled = enable_system_processing;
+        return state;
+      });
 
   if (result != 0) {
-    LOGE() << "SetAudioProcessingMode failed, rolling back: " << result;
-    controller.SetRequestedMode(previous_mode);
-    ModifyEngineState(
-        [previous_voice_processing_enabled](EngineState state) -> EngineState {
-          state.voice_processing_enabled = previous_voice_processing_enabled;
-          return state;
-        });
-    controller.ReapplyLatestOptions();
+    LOGE() << "SetAudioProcessingMode failed: " << result;
+    RefreshAudioProcessingState(audio_processing_state_.backend, result);
+    return result;
   }
 
-  controller.SetSystemPreferences(engine_state_.voice_processing_bypassed,
-                                  engine_state_.voice_processing_agc_enabled);
-  controller.CompleteTransition(result, engine_state_.IsAnyRunning());
+  audio_processing_mode_ = mode;
+  RefreshAudioProcessingState(enable_system_processing
+                                  ? AudioProcessingBackend::kSystem
+                                  : (mode == AudioProcessingMode::kDisabled
+                                         ? AudioProcessingBackend::kDisabled
+                                         : AudioProcessingBackend::kSoftware),
+                              0);
 
-  return result;
+  return 0;
 }
 
 int32_t AudioEngineDevice::GetAudioProcessingMode(AudioProcessingMode* mode) {
@@ -1204,16 +1200,51 @@ int32_t AudioEngineDevice::GetAudioProcessingMode(AudioProcessingMode* mode) {
     return -1;
   }
 
-  *mode = AudioProcessingController::Shared().requested_mode();
+  *mode = audio_processing_mode_;
   return 0;
 }
 
 AudioProcessingState AudioEngineDevice::GetAudioProcessingState() {
   RTC_DCHECK_RUN_ON(thread_);
-  AudioProcessingController::Shared().SetSystemPreferences(
-      engine_state_.voice_processing_bypassed,
-      engine_state_.voice_processing_agc_enabled);
-  return AudioProcessingController::Shared().state();
+  RefreshAudioProcessingState(audio_processing_state_.backend,
+                              audio_processing_state_.last_error);
+  return audio_processing_state_;
+}
+
+std::optional<AudioProcessingMode> AudioEngineDevice::audio_processing_mode()
+    const {
+  RTC_DCHECK_RUN_ON(thread_);
+  return audio_processing_mode_;
+}
+
+void AudioEngineDevice::OnAudioProcessingStateChanged(
+    const AudioProcessingState& state) {
+  RTC_DCHECK_RUN_ON(thread_);
+  audio_processing_state_ = state;
+  audio_processing_state_.system_bypassed =
+      engine_state_.voice_processing_bypassed;
+  audio_processing_state_.system_agc_enabled =
+      engine_state_.voice_processing_agc_enabled;
+  audio_processing_state_.transition_from = audio_processing_mode_;
+  audio_processing_state_.transition_to = audio_processing_mode_;
+}
+
+void AudioEngineDevice::RefreshAudioProcessingState(
+    AudioProcessingBackend backend,
+    int32_t error) {
+  RTC_DCHECK_RUN_ON(thread_);
+  audio_processing_state_.requested_mode = audio_processing_mode_;
+  audio_processing_state_.backend = backend;
+  audio_processing_state_.last_error = error;
+  audio_processing_state_.system_bypassed =
+      engine_state_.voice_processing_bypassed;
+  audio_processing_state_.system_agc_enabled =
+      engine_state_.voice_processing_agc_enabled;
+  audio_processing_state_.lifecycle =
+      error == 0 ? (engine_state_.IsAnyRunning()
+                        ? AudioProcessingLifecycle::kRunning
+                        : AudioProcessingLifecycle::kIdle)
+                 : AudioProcessingLifecycle::kFailed;
 }
 
 int32_t AudioEngineDevice::SetVoiceProcessingBypassed(bool enable) {
@@ -1225,9 +1256,8 @@ int32_t AudioEngineDevice::SetVoiceProcessingBypassed(bool enable) {
     return state;
   });
 
-  AudioProcessingController::Shared().SetSystemPreferences(
-      engine_state_.voice_processing_bypassed,
-      engine_state_.voice_processing_agc_enabled);
+  RefreshAudioProcessingState(audio_processing_state_.backend,
+                              audio_processing_state_.last_error);
 
   return result;
 }
@@ -1254,9 +1284,8 @@ int32_t AudioEngineDevice::SetVoiceProcessingAGCEnabled(bool enable) {
     return state;
   });
 
-  AudioProcessingController::Shared().SetSystemPreferences(
-      engine_state_.voice_processing_bypassed,
-      engine_state_.voice_processing_agc_enabled);
+  RefreshAudioProcessingState(audio_processing_state_.backend,
+                              audio_processing_state_.last_error);
 
   return result;
 }

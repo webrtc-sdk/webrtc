@@ -33,6 +33,44 @@ namespace webrtc {
 class AudioDeviceModuleForTest;
 class AudioDeviceObserver;
 
+enum class AudioProcessingMode {
+  kAutomatic = 0,
+  kSystem = 1,
+  kSoftware = 2,
+  kDisabled = 3,
+};
+
+enum class AudioProcessingLifecycle {
+  kIdle = 0,
+  kRunning = 1,
+  kTransitioning = 2,
+  kFailed = 3,
+};
+
+enum class AudioProcessingBackend {
+  kDisabled = 0,
+  kSystem = 1,
+  kSoftware = 2,
+  kUnavailable = 3,
+};
+
+struct AudioProcessingState {
+  AudioProcessingMode requested_mode = AudioProcessingMode::kAutomatic;
+  AudioProcessingLifecycle lifecycle = AudioProcessingLifecycle::kIdle;
+  AudioProcessingBackend backend = AudioProcessingBackend::kDisabled;
+  AudioProcessingMode transition_from = AudioProcessingMode::kAutomatic;
+  AudioProcessingMode transition_to = AudioProcessingMode::kAutomatic;
+  int32_t last_error = 0;
+
+  bool system_bypassed = false;
+  bool system_agc_enabled = true;
+
+  bool software_echo_cancellation = false;
+  bool software_noise_suppression = false;
+  bool software_auto_gain_control = false;
+  bool software_highpass_filter = false;
+};
+
 class AudioDeviceModule : public RefCountInterface {
  public:
   enum AudioLayer {
@@ -172,6 +210,13 @@ class AudioDeviceModule : public RefCountInterface {
   // Play underrun count. Only supported on Android.
   // TODO(alexnarest): Make it abstract after upstream projects support it.
   virtual int32_t GetPlayoutUnderrunCount() const { return -1; }
+
+  // Optional audio processing mode support. AudioEngineDevice implements this;
+  // other ADMs use WebRTC's legacy built-in/software processing behavior.
+  virtual std::optional<AudioProcessingMode> audio_processing_mode() const {
+    return std::nullopt;
+  }
+  virtual void OnAudioProcessingStateChanged(const AudioProcessingState&) {}
 
   // Used to generate RTC stats. If not implemented, RTCAudioPlayoutStats will
   // not be present in the stats.

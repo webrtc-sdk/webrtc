@@ -1140,8 +1140,6 @@ rtc_library("audio_processing_controller") {
     ":audio_options_api",
     "audio:audio_device",
     "audio:audio_processing",
-    "../rtc_base:logging",
-    "../rtc_base/synchronization:mutex",
     "../rtc_base/system:rtc_export",
   ]
 }

@@ -16,8 +16,6 @@
 
 #include "api/audio_processing_controller.h"
 
-#include "rtc_base/logging.h"
-
 namespace webrtc {
 namespace {
 
@@ -33,6 +31,74 @@ bool AnySoftwareProcessingEnabled(const AudioOptions& options) {
          options.auto_gain_control.value_or(false) ||
          options.noise_suppression.value_or(false) ||
          options.highpass_filter.value_or(false);
+}
+
+}  // namespace
+
+bool IsAudioProcessingModeValid(AudioProcessingMode mode) {
+  switch (mode) {
+    case AudioProcessingMode::kAutomatic:
+    case AudioProcessingMode::kSystem:
+    case AudioProcessingMode::kSoftware:
+    case AudioProcessingMode::kDisabled:
+      return true;
+  }
+  return false;
+}
+
+bool IsSystemAudioProcessingAvailable(AudioDeviceModule* adm) {
+  return adm != nullptr && adm->BuiltInAECIsAvailable();
+}
+
+bool ShouldUseSystemAudioProcessing(AudioDeviceModule* adm,
+                                    AudioProcessingMode mode) {
+  switch (mode) {
+    case AudioProcessingMode::kAutomatic:
+      return IsSystemAudioProcessingAvailable(adm);
+    case AudioProcessingMode::kSystem:
+      return IsSystemAudioProcessingAvailable(adm);
+    case AudioProcessingMode::kSoftware:
+    case AudioProcessingMode::kDisabled:
+      return false;
+  }
+  return false;
+}
+
+AudioProcessingBackend ResolveAudioProcessingBackend(
+    AudioDeviceModule* adm,
+    AudioProcessingMode mode,
+    const AudioOptions& resolved_options,
+    int32_t* error) {
+  if (error != nullptr) {
+    *error = 0;
+  }
+  switch (mode) {
+    case AudioProcessingMode::kDisabled:
+      return AudioProcessingBackend::kDisabled;
+
+    case AudioProcessingMode::kSoftware:
+      return AnySoftwareProcessingEnabled(resolved_options)
+                 ? AudioProcessingBackend::kSoftware
+                 : AudioProcessingBackend::kDisabled;
+
+    case AudioProcessingMode::kSystem:
+      if (!IsSystemAudioProcessingAvailable(adm)) {
+        if (error != nullptr) {
+          *error = -1;
+        }
+        return AudioProcessingBackend::kUnavailable;
+      }
+      return AudioProcessingBackend::kSystem;
+
+    case AudioProcessingMode::kAutomatic:
+      if (IsSystemAudioProcessingAvailable(adm)) {
+        return AudioProcessingBackend::kSystem;
+      }
+      return AnySoftwareProcessingEnabled(resolved_options)
+                 ? AudioProcessingBackend::kSoftware
+                 : AudioProcessingBackend::kDisabled;
+  }
+  return AudioProcessingBackend::kUnavailable;
 }
 
 void ApplyAudioProcessingConfig(AudioProcessing* apm,
@@ -73,169 +139,56 @@ void ApplyAudioProcessingConfig(AudioProcessing* apm,
   apm->ApplyConfig(apm_config);
 }
 
-}  // namespace
-
-AudioProcessingController& AudioProcessingController::Shared() {
-  static AudioProcessingController* instance = new AudioProcessingController();
-  return *instance;
-}
-
-AudioProcessingMode AudioProcessingController::requested_mode() const {
-  MutexLock lock(&mutex_);
-  return state_.requested_mode;
-}
-
-AudioProcessingState AudioProcessingController::state() const {
-  MutexLock lock(&mutex_);
-  return state_;
-}
-
-void AudioProcessingController::BeginTransition(AudioProcessingMode to) {
-  MutexLock lock(&mutex_);
-  state_.transition_from = state_.requested_mode;
-  state_.transition_to = to;
-  state_.lifecycle = AudioProcessingLifecycle::kTransitioning;
-  state_.last_error = 0;
-}
-
-void AudioProcessingController::CompleteTransition(int32_t result,
-                                                   bool running) {
-  MutexLock lock(&mutex_);
-  state_.last_error = result;
-  state_.lifecycle = result == 0 ? (running ? AudioProcessingLifecycle::kRunning
-                                            : AudioProcessingLifecycle::kIdle)
-                                : AudioProcessingLifecycle::kFailed;
-}
-
-void AudioProcessingController::SetRequestedMode(AudioProcessingMode mode) {
-  MutexLock lock(&mutex_);
-  state_.requested_mode = mode;
-}
-
-void AudioProcessingController::SetSystemPreferences(bool bypassed,
-                                                     bool agc_enabled) {
-  MutexLock lock(&mutex_);
-  state_.system_bypassed = bypassed;
-  state_.system_agc_enabled = agc_enabled;
-}
-
-bool AudioProcessingController::IsSystemProcessingAvailable(
-    AudioDeviceModule* adm) const {
-  return adm != nullptr && adm->BuiltInAECIsAvailable();
-}
-
-bool AudioProcessingController::ShouldEnableSystemProcessing(
-    AudioDeviceModule* adm,
-    AudioProcessingMode mode) const {
-  switch (mode) {
-    case AudioProcessingMode::kAutomatic:
-      return IsSystemProcessingAvailable(adm);
-    case AudioProcessingMode::kSystem:
-      return IsSystemProcessingAvailable(adm);
-    case AudioProcessingMode::kSoftware:
-    case AudioProcessingMode::kDisabled:
-      return false;
-  }
-}
-
-AudioOptions AudioProcessingController::ApplyOptions(
-    AudioProcessing* apm,
-    AudioDeviceModule* adm,
-    const AudioOptions& options) {
-  MutexLock lock(&mutex_);
-  apm_ = apm;
-  adm_ = adm;
-  latest_options_ = options;
-  return ApplyOptionsLocked(apm, adm, options);
-}
-
-void AudioProcessingController::ReapplyLatestOptions() {
-  MutexLock lock(&mutex_);
-  if (!latest_options_) {
-    return;
-  }
-
-  ApplyOptionsLocked(apm_, adm_, *latest_options_);
-}
-
-AudioOptions AudioProcessingController::ApplyOptionsLocked(
-    AudioProcessing* apm,
-    AudioDeviceModule* adm,
-    const AudioOptions& options_in) {
+AudioOptions ApplyAudioProcessingOptions(AudioProcessing* apm,
+                                         AudioDeviceModule* adm,
+                                         AudioProcessingMode mode,
+                                         const AudioOptions& options_in,
+                                         AudioProcessingState* state) {
   AudioOptions options = options_in;
-  AudioProcessingBackend backend = AudioProcessingBackend::kDisabled;
-  int32_t error = 0;
 
-  switch (state_.requested_mode) {
+  switch (mode) {
     case AudioProcessingMode::kDisabled:
       ForceSoftwareProcessing(&options, false);
-      backend = AudioProcessingBackend::kDisabled;
       break;
-
-    case AudioProcessingMode::kSoftware:
-      backend = AnySoftwareProcessingEnabled(options)
-                    ? AudioProcessingBackend::kSoftware
-                    : AudioProcessingBackend::kDisabled;
-      break;
-
     case AudioProcessingMode::kSystem:
-      if (!IsSystemProcessingAvailable(adm)) {
+      ForceSoftwareProcessing(&options, false);
+      break;
+    case AudioProcessingMode::kAutomatic:
+      if (IsSystemAudioProcessingAvailable(adm)) {
         ForceSoftwareProcessing(&options, false);
-        backend = AudioProcessingBackend::kUnavailable;
-        error = -1;
-      } else {
-        ForceSoftwareProcessing(&options, false);
-        backend = AudioProcessingBackend::kSystem;
       }
       break;
-
-    case AudioProcessingMode::kAutomatic:
-      if (IsSystemProcessingAvailable(adm)) {
-        ForceSoftwareProcessing(&options, false);
-        backend = AudioProcessingBackend::kSystem;
-      } else {
-        backend = AnySoftwareProcessingEnabled(options)
-                      ? AudioProcessingBackend::kSoftware
-                      : AudioProcessingBackend::kDisabled;
-      }
+    case AudioProcessingMode::kSoftware:
       break;
   }
+
+  int32_t error = 0;
+  const AudioProcessingBackend backend =
+      ResolveAudioProcessingBackend(adm, mode, options, &error);
 
   ApplyAudioProcessingConfig(apm, options);
 
-  state_.software_echo_cancellation = options.echo_cancellation.value_or(false);
-  state_.software_auto_gain_control = options.auto_gain_control.value_or(false);
-  state_.software_noise_suppression = options.noise_suppression.value_or(false);
-  state_.software_highpass_filter = options.highpass_filter.value_or(false);
-  UpdateLifecycleAndBackendLocked(adm, backend, error);
-
-  RTC_LOG(LS_INFO) << "AudioProcessingController::ApplyOptions mode="
-                   << static_cast<int>(state_.requested_mode)
-                   << " backend=" << static_cast<int>(backend)
-                   << " options=" << options.ToString();
+  if (state != nullptr) {
+    state->requested_mode = mode;
+    state->backend = backend;
+    state->transition_from = mode;
+    state->transition_to = mode;
+    state->last_error = error;
+    state->software_echo_cancellation =
+        options.echo_cancellation.value_or(false);
+    state->software_auto_gain_control =
+        options.auto_gain_control.value_or(false);
+    state->software_noise_suppression =
+        options.noise_suppression.value_or(false);
+    state->software_highpass_filter = options.highpass_filter.value_or(false);
+    state->lifecycle =
+        error == 0 ? ((adm != nullptr && (adm->Playing() || adm->Recording()))
+                          ? AudioProcessingLifecycle::kRunning
+                          : AudioProcessingLifecycle::kIdle)
+                   : AudioProcessingLifecycle::kFailed;
+  }
 
   return options;
-}
-
-void AudioProcessingController::UpdateLifecycleAndBackendLocked(
-    AudioDeviceModule* adm,
-    AudioProcessingBackend backend,
-    int32_t error) {
-  state_.backend = backend;
-  state_.last_error = error;
-
-  if (state_.lifecycle == AudioProcessingLifecycle::kTransitioning) {
-    return;
-  }
-
-  if (error != 0) {
-    state_.lifecycle = AudioProcessingLifecycle::kFailed;
-    return;
-  }
-
-  const bool running = adm != nullptr && (adm->Playing() || adm->Recording());
-  state_.lifecycle = running ? AudioProcessingLifecycle::kRunning
-                             : AudioProcessingLifecycle::kIdle;
 }
 
 }  // namespace webrtc

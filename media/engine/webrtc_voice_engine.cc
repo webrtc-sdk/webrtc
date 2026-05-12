@@ -627,8 +627,56 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
   }
 #endif
 
-  options =
-      AudioProcessingController::Shared().ApplyOptions(apm(), adm(), options);
+  if (std::optional<AudioProcessingMode> mode = adm()->audio_processing_mode()) {
+    AudioProcessingState state;
+    options = ApplyAudioProcessingOptions(apm(), adm(), *mode, options, &state);
+    adm()->OnAudioProcessingStateChanged(state);
+    RTC_LOG(LS_INFO) << "Applied audio processing mode="
+                     << static_cast<int>(*mode)
+                     << " backend=" << static_cast<int>(state.backend)
+                     << " options=" << options.ToString();
+  } else {
+    // Delegate to built-in AEC/AGC/NS if the ADM provides them. ADMs without
+    // AudioProcessingMode support keep WebRTC's legacy built-in/software
+    // processing behavior.
+    if (options.echo_cancellation) {
+      const bool built_in_aec = adm()->BuiltInAECIsAvailable();
+      if (built_in_aec) {
+        const bool enable_built_in_aec = *options.echo_cancellation;
+        if (adm()->EnableBuiltInAEC(enable_built_in_aec) == 0 &&
+            enable_built_in_aec) {
+          options.echo_cancellation = false;
+          RTC_LOG(LS_INFO)
+              << "Disabling EC since built-in EC will be used instead";
+        }
+      }
+    }
+
+    if (options.auto_gain_control) {
+      const bool built_in_agc_available = adm()->BuiltInAGCIsAvailable();
+      if (built_in_agc_available) {
+        if (adm()->EnableBuiltInAGC(*options.auto_gain_control) == 0 &&
+            *options.auto_gain_control) {
+          options.auto_gain_control = false;
+          RTC_LOG(LS_INFO)
+              << "Disabling AGC since built-in AGC will be used instead";
+        }
+      }
+    }
+
+    if (options.noise_suppression) {
+      if (adm()->BuiltInNSIsAvailable()) {
+        const bool builtin_ns = *options.noise_suppression;
+        if (adm()->EnableBuiltInNS(builtin_ns) == 0 && builtin_ns) {
+          options.noise_suppression = false;
+          RTC_LOG(LS_INFO)
+              << "Disabling NS since built-in NS will be used instead";
+        }
+      }
+    }
+
+    ApplyAudioProcessingConfig(apm(), options);
+  }
 
   if (options.stereo_swapping) {
     audio_state()->SetStereoChannelSwapping(*options.stereo_swapping);
@@ -646,7 +694,6 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
     audio_jitter_buffer_min_delay_ms_ =
         *options.audio_jitter_buffer_min_delay_ms;
   }
-
 }
 
 const std::vector<Codec>& WebRtcVoiceEngine::LegacySendCodecs() const {
