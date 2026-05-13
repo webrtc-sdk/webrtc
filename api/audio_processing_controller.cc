@@ -16,6 +16,8 @@
 
 #include "api/audio_processing_controller.h"
 
+#include <optional>
+
 namespace webrtc {
 namespace {
 
@@ -26,12 +28,62 @@ void ForceSoftwareProcessing(AudioOptions* options, bool enabled) {
   options->highpass_filter = enabled;
 }
 
+using AvailabilityFn = bool (AudioDeviceModule::*)() const;
+using EnableFn = int32_t (AudioDeviceModule::*)(bool);
+
+bool DisablePlatformEffect(AudioDeviceModule* adm,
+                           AvailabilityFn is_available,
+                           EnableFn enable) {
+  if (adm == nullptr || !(adm->*is_available)()) {
+    return false;
+  }
+  return (adm->*enable)(false) == 0;
+}
+
+bool ApplyPlatformEffect(AudioDeviceModule* adm,
+                         std::optional<bool>* software_option,
+                         AvailabilityFn is_available,
+                         EnableFn enable,
+                         bool allow_platform,
+                         bool require_platform) {
+  if (!software_option->has_value()) {
+    return false;
+  }
+
+  const bool requested = software_option->value();
+  if (!requested || !allow_platform) {
+    DisablePlatformEffect(adm, is_available, enable);
+    return false;
+  }
+
+  if (adm != nullptr && (adm->*is_available)() && (adm->*enable)(true) == 0) {
+    // ADM-provided processing replaces the corresponding WebRTC APM module.
+    *software_option = false;
+    return true;
+  }
+
+  if (require_platform) {
+    // Platform-only mode does not fall back to WebRTC software processing.
+    *software_option = false;
+  }
+  return false;
+}
+
+void DisablePlatformAudioProcessing(AudioDeviceModule* adm) {
+  DisablePlatformEffect(adm, &AudioDeviceModule::BuiltInAECIsAvailable,
+                        &AudioDeviceModule::EnableBuiltInAEC);
+  DisablePlatformEffect(adm, &AudioDeviceModule::BuiltInAGCIsAvailable,
+                        &AudioDeviceModule::EnableBuiltInAGC);
+  DisablePlatformEffect(adm, &AudioDeviceModule::BuiltInNSIsAvailable,
+                        &AudioDeviceModule::EnableBuiltInNS);
+}
+
 }  // namespace
 
 bool IsAudioProcessingModeValid(AudioProcessingMode mode) {
   switch (mode) {
     case AudioProcessingMode::kAutomatic:
-    case AudioProcessingMode::kSystem:
+    case AudioProcessingMode::kPlatform:
     case AudioProcessingMode::kSoftware:
     case AudioProcessingMode::kDisabled:
       return true;
@@ -39,17 +91,19 @@ bool IsAudioProcessingModeValid(AudioProcessingMode mode) {
   return false;
 }
 
-bool IsSystemAudioProcessingAvailable(AudioDeviceModule* adm) {
-  return adm != nullptr && adm->BuiltInAECIsAvailable();
+bool IsPlatformAudioProcessingAvailable(AudioDeviceModule* adm) {
+  return adm != nullptr &&
+         (adm->BuiltInAECIsAvailable() || adm->BuiltInAGCIsAvailable() ||
+          adm->BuiltInNSIsAvailable());
 }
 
-bool ShouldUseSystemAudioProcessing(AudioDeviceModule* adm,
-                                    AudioProcessingMode mode) {
+bool ShouldUsePlatformAudioProcessing(AudioDeviceModule* adm,
+                                      AudioProcessingMode mode) {
   switch (mode) {
     case AudioProcessingMode::kAutomatic:
-      return IsSystemAudioProcessingAvailable(adm);
-    case AudioProcessingMode::kSystem:
-      return IsSystemAudioProcessingAvailable(adm);
+      return IsPlatformAudioProcessingAvailable(adm);
+    case AudioProcessingMode::kPlatform:
+      return IsPlatformAudioProcessingAvailable(adm);
     case AudioProcessingMode::kSoftware:
     case AudioProcessingMode::kDisabled:
       return false;
@@ -103,17 +157,54 @@ AudioOptions ApplyAudioProcessingOptions(AudioProcessing* apm,
 
   switch (mode) {
     case AudioProcessingMode::kDisabled:
+      DisablePlatformAudioProcessing(adm);
       ForceSoftwareProcessing(&options, false);
       break;
-    case AudioProcessingMode::kSystem:
-      ForceSoftwareProcessing(&options, false);
+    case AudioProcessingMode::kPlatform: {
+      const bool platform_aec = ApplyPlatformEffect(
+          adm, &options.echo_cancellation,
+          &AudioDeviceModule::BuiltInAECIsAvailable,
+          &AudioDeviceModule::EnableBuiltInAEC, true, true);
+      const bool platform_agc = ApplyPlatformEffect(
+          adm, &options.auto_gain_control,
+          &AudioDeviceModule::BuiltInAGCIsAvailable,
+          &AudioDeviceModule::EnableBuiltInAGC, true, true);
+      const bool platform_ns = ApplyPlatformEffect(
+          adm, &options.noise_suppression,
+          &AudioDeviceModule::BuiltInNSIsAvailable,
+          &AudioDeviceModule::EnableBuiltInNS, true, true);
+      if (!platform_aec) {
+        options.echo_cancellation = false;
+      }
+      if (!platform_agc) {
+        options.auto_gain_control = false;
+      }
+      if (!platform_ns) {
+        options.noise_suppression = false;
+      }
+      options.highpass_filter = false;
       break;
-    case AudioProcessingMode::kAutomatic:
-      if (IsSystemAudioProcessingAvailable(adm)) {
-        ForceSoftwareProcessing(&options, false);
+    }
+    case AudioProcessingMode::kAutomatic: {
+      const bool platform_aec = ApplyPlatformEffect(
+          adm, &options.echo_cancellation,
+          &AudioDeviceModule::BuiltInAECIsAvailable,
+          &AudioDeviceModule::EnableBuiltInAEC, true, false);
+      const bool platform_agc = ApplyPlatformEffect(
+          adm, &options.auto_gain_control,
+          &AudioDeviceModule::BuiltInAGCIsAvailable,
+          &AudioDeviceModule::EnableBuiltInAGC, true, false);
+      const bool platform_ns = ApplyPlatformEffect(
+          adm, &options.noise_suppression,
+          &AudioDeviceModule::BuiltInNSIsAvailable,
+          &AudioDeviceModule::EnableBuiltInNS, true, false);
+      if (platform_aec && platform_agc && platform_ns) {
+        options.highpass_filter = false;
       }
       break;
+    }
     case AudioProcessingMode::kSoftware:
+      DisablePlatformAudioProcessing(adm);
       break;
   }
 

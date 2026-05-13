@@ -627,53 +627,13 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
   }
 #endif
 
-  if (std::optional<AudioProcessingMode> mode = adm()->audio_processing_mode()) {
-    options = ApplyAudioProcessingOptions(apm(), adm(), *mode, options);
-    RTC_LOG(LS_INFO) << "Applied audio processing mode="
-                     << static_cast<int>(*mode)
-                     << " options=" << options.ToString();
-  } else {
-    // Delegate to built-in AEC/AGC/NS if the ADM provides them. ADMs without
-    // AudioProcessingMode support keep WebRTC's legacy built-in/software
-    // processing behavior.
-    if (options.echo_cancellation) {
-      const bool built_in_aec = adm()->BuiltInAECIsAvailable();
-      if (built_in_aec) {
-        const bool enable_built_in_aec = *options.echo_cancellation;
-        if (adm()->EnableBuiltInAEC(enable_built_in_aec) == 0 &&
-            enable_built_in_aec) {
-          options.echo_cancellation = false;
-          RTC_LOG(LS_INFO)
-              << "Disabling EC since built-in EC will be used instead";
-        }
-      }
-    }
-
-    if (options.auto_gain_control) {
-      const bool built_in_agc_available = adm()->BuiltInAGCIsAvailable();
-      if (built_in_agc_available) {
-        if (adm()->EnableBuiltInAGC(*options.auto_gain_control) == 0 &&
-            *options.auto_gain_control) {
-          options.auto_gain_control = false;
-          RTC_LOG(LS_INFO)
-              << "Disabling AGC since built-in AGC will be used instead";
-        }
-      }
-    }
-
-    if (options.noise_suppression) {
-      if (adm()->BuiltInNSIsAvailable()) {
-        const bool builtin_ns = *options.noise_suppression;
-        if (adm()->EnableBuiltInNS(builtin_ns) == 0 && builtin_ns) {
-          options.noise_suppression = false;
-          RTC_LOG(LS_INFO)
-              << "Disabling NS since built-in NS will be used instead";
-        }
-      }
-    }
-
-    ApplyAudioProcessingConfig(apm(), options);
-  }
+  const AudioProcessingMode audio_processing_mode =
+      adm()->GetAudioProcessingMode();
+  options = ApplyAudioProcessingOptions(apm(), adm(), audio_processing_mode,
+                                        options);
+  RTC_LOG(LS_INFO) << "Applied audio processing mode="
+                   << static_cast<int>(audio_processing_mode)
+                   << " options=" << options.ToString();
 
   if (options.stereo_swapping) {
     audio_state()->SetStereoChannelSwapping(*options.stereo_swapping);

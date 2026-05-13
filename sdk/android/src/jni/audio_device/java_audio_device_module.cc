@@ -37,7 +37,8 @@ static jlong JNI_JavaAudioDeviceModule_CreateAudioDeviceModule(
     int input_sample_rate,
     int output_sample_rate,
     jboolean j_use_stereo_input,
-    jboolean j_use_stereo_output) {
+    jboolean j_use_stereo_output,
+    int audio_processing_mode) {
   const Environment& webrtc_env = *reinterpret_cast<Environment*>(webrtcEnvRef);
   AudioParameters input_parameters;
   AudioParameters output_parameters;
@@ -53,8 +54,10 @@ static jlong JNI_JavaAudioDeviceModule_CreateAudioDeviceModule(
   return NativeToJavaPointer(
       CreateAudioDeviceModuleFromInputAndOutput(
           webrtc_env, AudioDeviceModule::kAndroidJavaAudio, j_use_stereo_input,
-          j_use_stereo_output, kHighLatencyModeDelayEstimateInMilliseconds,
-          std::move(audio_input), std::move(audio_output))
+          j_use_stereo_output,
+          static_cast<AudioProcessingMode>(audio_processing_mode),
+          kHighLatencyModeDelayEstimateInMilliseconds, std::move(audio_input),
+          std::move(audio_output))
           .release());
 }
 

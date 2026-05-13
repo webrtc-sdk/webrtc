@@ -106,6 +106,7 @@ scoped_refptr<AudioDeviceModule> CreateAudioDeviceModuleFromInputAndOutput(
     AudioDeviceModule::AudioLayer audio_layer,
     bool is_stereo_playout_supported,
     bool is_stereo_record_supported,
+    AudioProcessingMode audio_processing_mode,
     uint16_t playout_delay_ms,
     std::unique_ptr<AudioInput> audio_input,
     std::unique_ptr<AudioOutput> audio_output);

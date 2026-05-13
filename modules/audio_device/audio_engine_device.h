@@ -19,7 +19,6 @@
 
 #include <atomic>
 #include <memory>
-#include <optional>
 
 #include "api/audio_processing_controller.h"
 #include "api/environment/environment.h"
@@ -380,9 +379,8 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   int32_t SetVoiceProcessingEnabled(bool enable);
   int32_t VoiceProcessingEnabled(bool* enabled);
 
-  int32_t SetAudioProcessingMode(AudioProcessingMode mode);
-  int32_t GetAudioProcessingMode(AudioProcessingMode* mode);
-  std::optional<AudioProcessingMode> audio_processing_mode() const override;
+  int32_t SetAudioProcessingMode(AudioProcessingMode mode) override;
+  AudioProcessingMode GetAudioProcessingMode() const override;
 
   int32_t SetVoiceProcessingBypassed(bool enable);
   int32_t VoiceProcessingBypassed(bool* enabled);

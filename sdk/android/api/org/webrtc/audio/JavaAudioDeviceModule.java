@@ -54,6 +54,7 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
     private AudioAttributes audioAttributes;
     private boolean useLowLatency;
     private boolean enableVolumeLogger;
+    private AudioProcessingMode audioProcessingMode = AudioProcessingMode.AUTOMATIC;
 
     private Builder(Context context) {
       this.context = context;
@@ -241,23 +242,47 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
     }
 
     /**
+     * Selects how platform-provided audio processing is combined with WebRTC software audio
+     * processing.
+     */
+    public Builder setAudioProcessingMode(AudioProcessingMode audioProcessingMode) {
+      if (audioProcessingMode == null) {
+        throw new NullPointerException("audioProcessingMode");
+      }
+      this.audioProcessingMode = audioProcessingMode;
+      return this;
+    }
+
+    /**
      * Construct an AudioDeviceModule based on the supplied arguments. The caller takes ownership
      * and is responsible for calling release().
      */
     public JavaAudioDeviceModule createAudioDeviceModule() {
       Logging.d(TAG, "createAudioDeviceModule");
-      if (useHardwareNoiseSuppressor) {
+      Logging.d(TAG, "Audio processing mode: " + audioProcessingMode);
+      final boolean allowPlatformAudioProcessing =
+          audioProcessingMode == AudioProcessingMode.AUTOMATIC
+          || audioProcessingMode == AudioProcessingMode.PLATFORM;
+      final boolean usePlatformAcousticEchoCanceler =
+          allowPlatformAudioProcessing && useHardwareAcousticEchoCanceler;
+      final boolean usePlatformNoiseSuppressor =
+          allowPlatformAudioProcessing && useHardwareNoiseSuppressor;
+      if (usePlatformNoiseSuppressor) {
         Logging.d(TAG, "HW NS will be used.");
       } else {
-        if (isBuiltInNoiseSuppressorSupported()) {
+        if (audioProcessingMode != AudioProcessingMode.DISABLED
+            && audioProcessingMode != AudioProcessingMode.PLATFORM
+            && isBuiltInNoiseSuppressorSupported()) {
           Logging.d(TAG, "Overriding default behavior; now using WebRTC NS!");
         }
         Logging.d(TAG, "HW NS will not be used.");
       }
-      if (useHardwareAcousticEchoCanceler) {
+      if (usePlatformAcousticEchoCanceler) {
         Logging.d(TAG, "HW AEC will be used.");
       } else {
-        if (isBuiltInAcousticEchoCancelerSupported()) {
+        if (audioProcessingMode != AudioProcessingMode.DISABLED
+            && audioProcessingMode != AudioProcessingMode.PLATFORM
+            && isBuiltInAcousticEchoCancelerSupported()) {
           Logging.d(TAG, "Overriding default behavior; now using WebRTC AEC!");
         }
         Logging.d(TAG, "HW AEC will not be used.");
@@ -274,13 +299,13 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
       }
       final WebRtcAudioRecord audioInput = new WebRtcAudioRecord(context, executor, audioManager,
           audioSource, audioFormat, audioRecordErrorCallback, audioRecordStateCallback,
-          samplesReadyCallback, audioBufferCallback, useHardwareAcousticEchoCanceler,
-          useHardwareNoiseSuppressor, inputSampleRate, useStereoInput ? 2 : 1);
+          samplesReadyCallback, audioBufferCallback, usePlatformAcousticEchoCanceler,
+          usePlatformNoiseSuppressor, inputSampleRate, useStereoInput ? 2 : 1);
       final WebRtcAudioTrack audioOutput =
           new WebRtcAudioTrack(context, audioManager, audioAttributes, audioTrackErrorCallback,
               audioTrackStateCallback, playbackSamplesReadyCallback, useLowLatency, enableVolumeLogger);
       return new JavaAudioDeviceModule(context, audioManager, audioInput, audioOutput,
-          inputSampleRate, outputSampleRate, useStereoInput, useStereoOutput);
+          inputSampleRate, outputSampleRate, useStereoInput, useStereoOutput, audioProcessingMode);
     }
   }
 
@@ -403,13 +428,15 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
   private final int outputSampleRate;
   private final boolean useStereoInput;
   private final boolean useStereoOutput;
+  private final AudioProcessingMode audioProcessingMode;
 
   private final Object nativeLock = new Object();
   private long nativeAudioDeviceModule;
 
   private JavaAudioDeviceModule(Context context, AudioManager audioManager,
       WebRtcAudioRecord audioInput, WebRtcAudioTrack audioOutput, int inputSampleRate,
-      int outputSampleRate, boolean useStereoInput, boolean useStereoOutput) {
+      int outputSampleRate, boolean useStereoInput, boolean useStereoOutput,
+      AudioProcessingMode audioProcessingMode) {
     this.context = context;
     this.audioManager = audioManager;
     this.audioInput = audioInput;
@@ -418,6 +445,7 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
     this.outputSampleRate = outputSampleRate;
     this.useStereoInput = useStereoInput;
     this.useStereoOutput = useStereoOutput;
+    this.audioProcessingMode = audioProcessingMode;
   }
 
   @Override
@@ -426,7 +454,7 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
       if (nativeAudioDeviceModule == 0) {
         nativeAudioDeviceModule = nativeCreateAudioDeviceModule(context, audioManager, audioInput,
             audioOutput, webrtcEnvRef, inputSampleRate, outputSampleRate, useStereoInput,
-            useStereoOutput);
+            useStereoOutput, audioProcessingMode.ordinal());
       }
       return nativeAudioDeviceModule;
     }
@@ -452,6 +480,11 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
   public void setMicrophoneMute(boolean mute) {
     Logging.d(TAG, "setMicrophoneMute: " + mute);
     audioInput.setMicrophoneMute(mute);
+  }
+
+  @Override
+  public AudioProcessingMode getAudioProcessingMode() {
+    return audioProcessingMode;
   }
 
   public void setAudioRecordEnabled(boolean enable) {
@@ -493,5 +526,5 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
   private static native long nativeCreateAudioDeviceModule(Context context,
       AudioManager audioManager, WebRtcAudioRecord audioInput, WebRtcAudioTrack audioOutput,
       long webrtcEnvRef, int inputSampleRate, int outputSampleRate, boolean useStereoInput,
-      boolean useStereoOutput);
+      boolean useStereoOutput, int audioProcessingMode);
 }

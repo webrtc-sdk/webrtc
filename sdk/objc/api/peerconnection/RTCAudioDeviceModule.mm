@@ -556,23 +556,14 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (RTC_OBJC_TYPE(RTCAudioProcessingMode))audioProcessingMode {
-  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
-  if (module == nullptr) return RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic);
-
-  return _workerThread->BlockingCall([module] {
-    webrtc::AudioProcessingMode mode = webrtc::AudioProcessingMode::kAutomatic;
-    return module->GetAudioProcessingMode(&mode) == 0
-               ? AudioProcessingModeToObjC(mode)
-               : RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic);
+  return _workerThread->BlockingCall([native = _native.get()] {
+    return AudioProcessingModeToObjC(native->GetAudioProcessingMode());
   });
 }
 
 - (NSInteger)setAudioProcessingMode:(RTC_OBJC_TYPE(RTCAudioProcessingMode))mode {
-  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
-  if (module == nullptr) return -1;
-
-  return _workerThread->BlockingCall([module, mode] {
-    return module->SetAudioProcessingMode(AudioProcessingModeToRTC(mode));
+  return _workerThread->BlockingCall([native = _native.get(), mode] {
+    return native->SetAudioProcessingMode(AudioProcessingModeToRTC(mode));
   });
 }
 

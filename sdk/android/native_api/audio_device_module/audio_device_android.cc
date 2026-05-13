@@ -76,6 +76,7 @@ scoped_refptr<AudioDeviceModule> CreateAAudioAudioDeviceModule(
       webrtc_env, AudioDeviceModule::kAndroidAAudioAudio,
       /*is_stereo_playout_supported=*/false,
       /*is_stereo_record_supported=*/false,
+      AudioProcessingMode::kAutomatic,
       jni::kLowLatencyModeDelayEstimateInMilliseconds,
       std::make_unique<jni::AAudioRecorder>(input_parameters),
       std::make_unique<jni::AAudioPlayer>(output_parameters));
@@ -106,6 +107,7 @@ CreateJavaInputAndAAudioOutputAudioDeviceModule(JNIEnv* env,
       webrtc_env, AudioDeviceModule::kAndroidJavaInputAndOpenSLESOutputAudio,
       /*is_stereo_playout_supported=*/false,
       /*is_stereo_record_supported=*/false,
+      AudioProcessingMode::kAutomatic,
       jni::kLowLatencyModeDelayEstimateInMilliseconds, std::move(audio_input),
       std::make_unique<jni::AAudioPlayer>(output_parameters));
 }
@@ -139,6 +141,7 @@ scoped_refptr<AudioDeviceModule> CreateJavaAudioDeviceModule(
       webrtc_env, AudioDeviceModule::kAndroidJavaAudio,
       /*is_stereo_playout_supported=*/false,
       /*is_stereo_record_supported=*/false,
+      AudioProcessingMode::kAutomatic,
       jni::kHighLatencyModeDelayEstimateInMilliseconds, std::move(audio_input),
       std::move(audio_output));
 }
@@ -164,6 +167,7 @@ scoped_refptr<AudioDeviceModule> CreateOpenSLESAudioDeviceModule(
       webrtc_env, AudioDeviceModule::kAndroidOpenSLESAudio,
       /*is_stereo_playout_supported=*/false,
       /*is_stereo_record_supported=*/false,
+      AudioProcessingMode::kAutomatic,
       jni::kLowLatencyModeDelayEstimateInMilliseconds, std::move(audio_input),
       std::move(audio_output));
 }
@@ -197,6 +201,7 @@ CreateJavaInputAndOpenSLESOutputAudioDeviceModule(JNIEnv* env,
       webrtc_env, AudioDeviceModule::kAndroidJavaInputAndOpenSLESOutputAudio,
       /*is_stereo_playout_supported=*/false,
       /*is_stereo_record_supported=*/false,
+      AudioProcessingMode::kAutomatic,
       jni::kLowLatencyModeDelayEstimateInMilliseconds, std::move(audio_input),
       std::move(audio_output));
 }

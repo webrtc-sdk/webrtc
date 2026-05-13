@@ -18,6 +18,13 @@ package org.webrtc.audio;
  * <p>Note: This class is still under development and may change without notice.
  */
 public interface AudioDeviceModule {
+  enum AudioProcessingMode {
+    AUTOMATIC,
+    PLATFORM,
+    SOFTWARE,
+    DISABLED
+  }
+
   /**
    * Returns a C++ pointer to a {@code webrtc::AudioDeviceModule} instance.
    * Lifetime of the returned object is handled through the release() call.
@@ -38,6 +45,14 @@ public interface AudioDeviceModule {
 
   /** Control muting/unmuting the microphone. */
   void setMicrophoneMute(boolean mute);
+
+  /**
+   * Returns how platform-provided audio processing is combined with WebRTC software audio
+   * processing.
+   */
+  default AudioProcessingMode getAudioProcessingMode() {
+    return AudioProcessingMode.AUTOMATIC;
+  }
 
   /**
    * Enable or disable built in noise suppressor. Returns true if the enabling was successful,

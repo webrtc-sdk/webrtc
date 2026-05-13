@@ -51,7 +51,7 @@ typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCAudioDuckingLevel)) {
 
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCAudioProcessingMode)) {
   RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic) = 0,
-  RTC_OBJC_TYPE(RTCAudioProcessingModeSystem) = 1,
+  RTC_OBJC_TYPE(RTCAudioProcessingModePlatform) = 1,
   RTC_OBJC_TYPE(RTCAudioProcessingModeSoftware) = 2,
   RTC_OBJC_TYPE(RTCAudioProcessingModeDisabled) = 3,
 };

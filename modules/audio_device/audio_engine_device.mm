@@ -1147,18 +1147,18 @@ int32_t AudioEngineDevice::SetAudioProcessingMode(AudioProcessingMode mode) {
     return kAudioEngineInvalidStateError;
   }
 
-  if (mode == AudioProcessingMode::kSystem &&
-      !IsSystemAudioProcessingAvailable(this)) {
-    LOGE() << "System audio processing is unavailable";
+  if (mode == AudioProcessingMode::kPlatform &&
+      !IsPlatformAudioProcessingAvailable(this)) {
+    LOGE() << "Platform audio processing is unavailable";
     return kAudioEngineVoiceProcessingError;
   }
 
-  const bool enable_system_processing =
-      ShouldUseSystemAudioProcessing(this, mode);
+  const bool enable_platform_processing =
+      ShouldUsePlatformAudioProcessing(this, mode);
 
   const int32_t result =
-      ModifyEngineState([enable_system_processing](EngineState state) -> EngineState {
-        state.voice_processing_enabled = enable_system_processing;
+      ModifyEngineState([enable_platform_processing](EngineState state) -> EngineState {
+        state.voice_processing_enabled = enable_platform_processing;
         return state;
       });
 
@@ -1171,18 +1171,7 @@ int32_t AudioEngineDevice::SetAudioProcessingMode(AudioProcessingMode mode) {
   return 0;
 }
 
-int32_t AudioEngineDevice::GetAudioProcessingMode(AudioProcessingMode* mode) {
-  RTC_DCHECK_RUN_ON(thread_);
-  if (mode == nullptr) {
-    return -1;
-  }
-
-  *mode = audio_processing_mode_;
-  return 0;
-}
-
-std::optional<AudioProcessingMode> AudioEngineDevice::audio_processing_mode()
-    const {
+AudioProcessingMode AudioEngineDevice::GetAudioProcessingMode() const {
   RTC_DCHECK_RUN_ON(thread_);
   return audio_processing_mode_;
 }

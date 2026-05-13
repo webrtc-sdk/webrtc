@@ -25,9 +25,9 @@
 namespace webrtc {
 
 bool RTC_EXPORT IsAudioProcessingModeValid(AudioProcessingMode mode);
-bool RTC_EXPORT IsSystemAudioProcessingAvailable(AudioDeviceModule* adm);
-bool RTC_EXPORT ShouldUseSystemAudioProcessing(AudioDeviceModule* adm,
-                                               AudioProcessingMode mode);
+bool RTC_EXPORT IsPlatformAudioProcessingAvailable(AudioDeviceModule* adm);
+bool RTC_EXPORT ShouldUsePlatformAudioProcessing(AudioDeviceModule* adm,
+                                                 AudioProcessingMode mode);
 void RTC_EXPORT ApplyAudioProcessingConfig(AudioProcessing* apm,
                                            const AudioOptions& options);
 AudioOptions RTC_EXPORT ApplyAudioProcessingOptions(

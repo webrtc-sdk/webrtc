@@ -36,6 +36,17 @@ namespace jni {
 
 namespace {
 
+bool IsAudioProcessingModeValid(AudioProcessingMode mode) {
+  switch (mode) {
+    case AudioProcessingMode::kAutomatic:
+    case AudioProcessingMode::kPlatform:
+    case AudioProcessingMode::kSoftware:
+    case AudioProcessingMode::kDisabled:
+      return true;
+  }
+  return false;
+}
+
 // This class combines a generic instance of an AudioInput and a generic
 // instance of an AudioOutput to create an AudioDeviceModule. This is mostly
 // done by delegating to the audio input/output with some glue code. This class
@@ -66,6 +77,7 @@ class AndroidAudioDeviceModule : public AudioDeviceModule {
                            AudioDeviceModule::AudioLayer audio_layer,
                            bool is_stereo_playout_supported,
                            bool is_stereo_record_supported,
+                           AudioProcessingMode audio_processing_mode,
                            uint16_t playout_delay_ms,
                            std::unique_ptr<AudioInput> audio_input,
                            std::unique_ptr<AudioOutput> audio_output)
@@ -73,6 +85,9 @@ class AndroidAudioDeviceModule : public AudioDeviceModule {
         audio_layer_(audio_layer),
         is_stereo_playout_supported_(is_stereo_playout_supported),
         is_stereo_record_supported_(is_stereo_record_supported),
+        audio_processing_mode_(IsAudioProcessingModeValid(audio_processing_mode)
+                                   ? audio_processing_mode
+                                   : AudioProcessingMode::kAutomatic),
         playout_delay_ms_(playout_delay_ms),
         input_(std::move(audio_input)),
         output_(std::move(audio_output)),
@@ -579,6 +594,27 @@ class AndroidAudioDeviceModule : public AudioDeviceModule {
     return result;
   }
 
+  AudioProcessingMode GetAudioProcessingMode() const override {
+    RTC_DCHECK(thread_checker_.IsCurrent());
+    return audio_processing_mode_;
+  }
+
+  int32_t SetAudioProcessingMode(AudioProcessingMode mode) override {
+    RTC_DLOG(LS_INFO) << __FUNCTION__ << "(" << static_cast<int>(mode) << ")";
+    RTC_DCHECK(thread_checker_.IsCurrent());
+    if (!IsAudioProcessingModeValid(mode)) {
+      return -1;
+    }
+    if (Playing() || Recording()) {
+      RTC_LOG(LS_WARNING)
+          << "Changing audio processing mode while audio is running is not "
+             "supported";
+      return -1;
+    }
+    audio_processing_mode_ = mode;
+    return 0;
+  }
+
   int32_t GetPlayoutUnderrunCount() const override {
     if (!initialized_)
       return -1;
@@ -605,6 +641,7 @@ class AndroidAudioDeviceModule : public AudioDeviceModule {
   const AudioDeviceModule::AudioLayer audio_layer_;
   const bool is_stereo_playout_supported_;
   const bool is_stereo_record_supported_;
+  AudioProcessingMode audio_processing_mode_;
   const uint16_t playout_delay_ms_;
   const std::unique_ptr<AudioInput> input_;
   const std::unique_ptr<AudioOutput> output_;
@@ -664,13 +701,15 @@ scoped_refptr<AudioDeviceModule> CreateAudioDeviceModuleFromInputAndOutput(
     AudioDeviceModule::AudioLayer audio_layer,
     bool is_stereo_playout_supported,
     bool is_stereo_record_supported,
+    AudioProcessingMode audio_processing_mode,
     uint16_t playout_delay_ms,
     std::unique_ptr<AudioInput> audio_input,
     std::unique_ptr<AudioOutput> audio_output) {
   RTC_DLOG(LS_INFO) << __FUNCTION__;
   return make_ref_counted<AndroidAudioDeviceModule>(
       env, audio_layer, is_stereo_playout_supported, is_stereo_record_supported,
-      playout_delay_ms, std::move(audio_input), std::move(audio_output));
+      audio_processing_mode, playout_delay_ms, std::move(audio_input),
+      std::move(audio_output));
 }
 
 }  // namespace jni

@@ -285,6 +285,12 @@ class ADMWrapper : public AudioDeviceModule, public AudioTransport {
   int32_t EnableBuiltInNS(bool enable) override {
     return impl_->EnableBuiltInNS(enable);
   }
+  AudioProcessingMode GetAudioProcessingMode() const override {
+    return impl_->GetAudioProcessingMode();
+  }
+  int32_t SetAudioProcessingMode(AudioProcessingMode mode) override {
+    return impl_->SetAudioProcessingMode(mode);
+  }
   int32_t GetPlayoutUnderrunCount() const override {
     return impl_->GetPlayoutUnderrunCount();
   }

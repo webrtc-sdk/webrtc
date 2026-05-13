@@ -34,9 +34,15 @@ class AudioDeviceModuleForTest;
 class AudioDeviceObserver;
 
 enum class AudioProcessingMode {
+  // Prefer platform processing when the ADM exposes it, and fall back to WebRTC
+  // software processing per component when platform support is unavailable.
   kAutomatic = 0,
-  kSystem = 1,
+  // Use only ADM-provided platform processing. WebRTC software AEC, AGC, NS,
+  // and HPF are disabled.
+  kPlatform = 1,
+  // Use only WebRTC software processing configured by AudioOptions.
   kSoftware = 2,
+  // Disable both platform processing and WebRTC software processing.
   kDisabled = 3,
 };
 
@@ -180,10 +186,14 @@ class AudioDeviceModule : public RefCountInterface {
   // TODO(alexnarest): Make it abstract after upstream projects support it.
   virtual int32_t GetPlayoutUnderrunCount() const { return -1; }
 
-  // Optional audio processing mode support. AudioEngineDevice implements this;
-  // other ADMs use WebRTC's legacy built-in/software processing behavior.
-  virtual std::optional<AudioProcessingMode> audio_processing_mode() const {
-    return std::nullopt;
+  // Controls how WebRTC and ADM-provided platform audio processing are combined.
+  // SetAudioProcessingMode() is supported only by ADMs that can safely apply
+  // the mode before audio starts; other ADMs keep automatic behavior.
+  virtual AudioProcessingMode GetAudioProcessingMode() const {
+    return AudioProcessingMode::kAutomatic;
+  }
+  virtual int32_t SetAudioProcessingMode(AudioProcessingMode mode) {
+    return -1;
   }
 
   // Used to generate RTC stats. If not implemented, RTCAudioPlayoutStats will
