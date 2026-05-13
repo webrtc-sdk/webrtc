@@ -27,6 +27,13 @@ public class AudioTrack extends MediaStreamTrack {
     nativeSetVolume(getNativeAudioTrack(), volume);
   }
 
+  /** Gets the volume for the underlying MediaSource. Volume is a gain value in the range
+   *  0 to 10.
+   */
+  public double getVolume() {
+    return nativeGetVolume(getNativeAudioTrack());
+  }
+
   /**
    * Adds an AudioTrackSink to the track. This callback is only
    * called for remote audio tracks.
@@ -73,6 +80,7 @@ public class AudioTrack extends MediaStreamTrack {
   }
 
   private static native void nativeSetVolume(long track, double volume);
+  private static native double nativeGetVolume(long track);
   private static native void nativeAddSink(long track, long nativeSink);
   private static native void nativeRemoveSink(long track, long nativeSink);
   private static native long nativeWrapSink(AudioTrackSink sink);
