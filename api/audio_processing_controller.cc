@@ -186,21 +186,18 @@ AudioOptions ApplyAudioProcessingOptions(AudioProcessing* apm,
       break;
     }
     case AudioProcessingMode::kAutomatic: {
-      const bool platform_aec = ApplyPlatformEffect(
+      ApplyPlatformEffect(
           adm, &options.echo_cancellation,
           &AudioDeviceModule::BuiltInAECIsAvailable,
           &AudioDeviceModule::EnableBuiltInAEC, true, false);
-      const bool platform_agc = ApplyPlatformEffect(
+      ApplyPlatformEffect(
           adm, &options.auto_gain_control,
           &AudioDeviceModule::BuiltInAGCIsAvailable,
           &AudioDeviceModule::EnableBuiltInAGC, true, false);
-      const bool platform_ns = ApplyPlatformEffect(
+      ApplyPlatformEffect(
           adm, &options.noise_suppression,
           &AudioDeviceModule::BuiltInNSIsAvailable,
           &AudioDeviceModule::EnableBuiltInNS, true, false);
-      if (platform_aec && platform_agc && platform_ns) {
-        options.highpass_filter = false;
-      }
       break;
     }
     case AudioProcessingMode::kSoftware:
