@@ -27,6 +27,25 @@
 namespace webrtc {
 namespace jni {
 
+namespace {
+
+AudioProcessingMode AudioProcessingModeFromJava(int audio_processing_mode) {
+  switch (audio_processing_mode) {
+    case 0:
+      return AudioProcessingMode::kAutomatic;
+    case 1:
+      return AudioProcessingMode::kPlatform;
+    case 2:
+      return AudioProcessingMode::kSoftware;
+    case 3:
+      return AudioProcessingMode::kDisabled;
+    default:
+      return AudioProcessingMode::kAutomatic;
+  }
+}
+
+}  // namespace
+
 static jlong JNI_JavaAudioDeviceModule_CreateAudioDeviceModule(
     JNIEnv* env,
     const jni_zero::JavaParamRef<jobject>& j_context,
@@ -55,7 +74,7 @@ static jlong JNI_JavaAudioDeviceModule_CreateAudioDeviceModule(
       CreateAudioDeviceModuleFromInputAndOutput(
           webrtc_env, AudioDeviceModule::kAndroidJavaAudio, j_use_stereo_input,
           j_use_stereo_output,
-          static_cast<AudioProcessingMode>(audio_processing_mode),
+          AudioProcessingModeFromJava(audio_processing_mode),
           kHighLatencyModeDelayEstimateInMilliseconds, std::move(audio_input),
           std::move(audio_output))
           .release());

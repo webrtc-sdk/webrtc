@@ -454,9 +454,24 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
       if (nativeAudioDeviceModule == 0) {
         nativeAudioDeviceModule = nativeCreateAudioDeviceModule(context, audioManager, audioInput,
             audioOutput, webrtcEnvRef, inputSampleRate, outputSampleRate, useStereoInput,
-            useStereoOutput, audioProcessingMode.ordinal());
+            useStereoOutput, toNativeAudioProcessingMode(audioProcessingMode));
       }
       return nativeAudioDeviceModule;
+    }
+  }
+
+  private static int toNativeAudioProcessingMode(AudioProcessingMode audioProcessingMode) {
+    switch (audioProcessingMode) {
+      case AUTOMATIC:
+        return 0;
+      case PLATFORM:
+        return 1;
+      case SOFTWARE:
+        return 2;
+      case DISABLED:
+        return 3;
+      default:
+        throw new IllegalArgumentException("Unknown audio processing mode: " + audioProcessingMode);
     }
   }
 
