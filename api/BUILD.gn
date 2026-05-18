@@ -690,6 +690,21 @@ rtc_library("frame_transformer_interface") {
   ]
 }
 
+rtc_library("chained_frame_transformer") {
+  visibility = [ "*" ]
+  sources = [
+    "chained_frame_transformer.cc",
+    "chained_frame_transformer.h",
+  ]
+  deps = [
+    ":frame_transformer_interface",
+    ":make_ref_counted",
+    ":scoped_refptr",
+    "../rtc_base:checks",
+    "../rtc_base/system:rtc_export",
+  ]
+}
+
 rtc_library("rtc_error") {
   visibility = [ "*" ]
   sources = [
@@ -1912,6 +1927,7 @@ if (rtc_include_tests) {
     sources = [
       "array_view_unittest.cc",
       "candidate_unittest.cc",
+      "chained_frame_transformer_unittest.cc",
       "field_trials_unittest.cc",
       "function_view_unittest.cc",
       "jsep_unittest.cc",
@@ -1930,11 +1946,14 @@ if (rtc_include_tests) {
     deps = [
       ":array_view",
       ":candidate",
+      ":chained_frame_transformer",
       ":field_trials",
       ":field_trials_view",
       ":function_view",
       ":jsep",
       ":libjingle_peerconnection_api",
+      ":make_ref_counted",
+      ":mock_transformable_frame",
       ":peer_connection_interface",
       ":rtc_error",
       ":rtc_event_log_output_file",
