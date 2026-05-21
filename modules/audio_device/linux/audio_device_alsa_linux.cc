@@ -1135,6 +1135,9 @@ int32_t AudioDeviceLinuxALSA::StopRecordingLocked() {
     RTC_LOG(LS_ERROR) << "Error closing record sound device, error: "
                       << LATE(snd_strerror)(errVal);
     result = -1;
+  } else {
+    // set the pcm input handle to NULL
+    _handleRecord = nullptr;
   }
 
   // Check if we have muted and unmute if so.
@@ -1144,8 +1147,6 @@ int32_t AudioDeviceLinuxALSA::StopRecordingLocked() {
     SetMicrophoneMute(false);
   }
 
-  // set the pcm input handle to NULL
-  _handleRecord = nullptr;
   _recIsStopping = false;
   return result;
 }
