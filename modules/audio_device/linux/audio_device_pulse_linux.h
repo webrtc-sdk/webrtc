@@ -151,6 +151,7 @@ class AudioDeviceLinuxPulse : public AudioDeviceGeneric {
   int32_t StartRecording() RTC_LOCKS_EXCLUDED(mutex_) override;
   int32_t StopRecording() RTC_LOCKS_EXCLUDED(mutex_) override;
   bool Recording() const override;
+  bool IsStopOnMuteModeEnabled() const override;
 
   // Audio mixer initialization
   int32_t InitSpeaker() override;

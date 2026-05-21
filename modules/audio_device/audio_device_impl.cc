@@ -810,6 +810,10 @@ bool AudioDeviceModuleImpl::Recording() const {
   return audio_device_->Recording();
 }
 
+bool AudioDeviceModuleImpl::IsStopOnMuteModeEnabled() const {
+  return audio_device_->IsStopOnMuteModeEnabled();
+}
+
 int32_t AudioDeviceModuleImpl::RegisterAudioCallback(
     AudioTransport* audioCallback) {
   RTC_LOG(LS_INFO) << __FUNCTION__;

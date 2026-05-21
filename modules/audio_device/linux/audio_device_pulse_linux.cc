@@ -1160,6 +1160,10 @@ bool AudioDeviceLinuxPulse::Recording() const {
   return (_recording);
 }
 
+bool AudioDeviceLinuxPulse::IsStopOnMuteModeEnabled() const {
+  return false;
+}
+
 bool AudioDeviceLinuxPulse::PlayoutIsInitialized() const {
   RTC_DCHECK(thread_checker_.IsCurrent());
   return (_playIsInitialized);

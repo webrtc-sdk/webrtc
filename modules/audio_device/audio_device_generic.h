@@ -73,6 +73,7 @@ class AudioDeviceGeneric {
   virtual int32_t StartRecording() = 0;
   virtual int32_t StopRecording() = 0;
   virtual bool Recording() const = 0;
+  virtual bool IsStopOnMuteModeEnabled() const { return true; }
 
   // Audio mixer initialization
   virtual int32_t InitSpeaker() = 0;

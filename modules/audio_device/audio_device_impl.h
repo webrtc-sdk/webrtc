@@ -106,6 +106,7 @@ class AudioDeviceModuleImpl : public AudioDeviceModuleForTest {
   int32_t StartRecording() override;
   int32_t StopRecording() override;
   bool Recording() const override;
+  bool IsStopOnMuteModeEnabled() const override;
 
   // Audio mixer initialization
   int32_t InitSpeaker() override;
