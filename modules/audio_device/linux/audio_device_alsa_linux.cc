@@ -112,6 +112,7 @@ AudioDeviceLinuxALSA::AudioDeviceLinuxALSA()
       _recIsInitialized(false),
       _recIsStopping(false),
       _playIsInitialized(false),
+      _playIsStopping(false),
       _recordingDelay(0),
       _playoutDelay(0) {
   memset(_oldKeyState, 0, sizeof(_oldKeyState));
@@ -509,7 +510,7 @@ int32_t AudioDeviceLinuxALSA::StereoPlayoutIsAvailable(bool& available) {
     InitPlayoutLocked();
   }
   if (playing) {
-    StartPlayout();
+    StartPlayoutLocked();
   }
 
   return 0;
@@ -760,7 +761,7 @@ int32_t AudioDeviceLinuxALSA::InitPlayout() {
 int32_t AudioDeviceLinuxALSA::InitPlayoutLocked() {
   int errVal = 0;
 
-  if (_playing) {
+  if (_playing || _playIsStopping) {
     return -1;
   }
 
@@ -1135,10 +1136,10 @@ int32_t AudioDeviceLinuxALSA::StopRecordingLocked() {
     RTC_LOG(LS_ERROR) << "Error closing record sound device, error: "
                       << LATE(snd_strerror)(errVal);
     result = -1;
-  } else {
-    // set the pcm input handle to NULL
-    _handleRecord = nullptr;
   }
+  // Null the handle regardless: on close failure the handle is in an
+  // undefined state and not safe to reuse.
+  _handleRecord = nullptr;
 
   // Check if we have muted and unmute if so.
   bool muteEnabled = false;
@@ -1164,7 +1165,20 @@ bool AudioDeviceLinuxALSA::PlayoutIsInitialized() const {
 }
 
 int32_t AudioDeviceLinuxALSA::StartPlayout() {
+  MutexLock lock(&mutex_);
+  return StartPlayoutLocked();
+}
+
+int32_t AudioDeviceLinuxALSA::StartPlayoutLocked() {
+  if (_playIsStopping) {
+    return -1;
+  }
+
   if (!_playIsInitialized) {
+    return -1;
+  }
+
+  if (_handlePlayout == nullptr) {
     return -1;
   }
 
@@ -1172,16 +1186,23 @@ int32_t AudioDeviceLinuxALSA::StartPlayout() {
     return 0;
   }
 
-  _playing = true;
-
   _playoutFramesLeft = 0;
   if (!_playoutBuffer)
     _playoutBuffer = new int8_t[_playoutBufferSizeIn10MS];
   if (!_playoutBuffer) {
     RTC_LOG(LS_ERROR) << "failed to alloc playout buf";
-    _playing = false;
     return -1;
   }
+
+  int errVal = LATE(snd_pcm_prepare)(_handlePlayout);
+  if (errVal < 0) {
+    RTC_LOG(LS_ERROR) << "playout snd_pcm_prepare failed ("
+                      << LATE(snd_strerror)(errVal) << ")\n";
+    // just log error
+    // if snd_pcm_open fails will return -1
+  }
+
+  _playing = true;
 
   // PLAYOUT
   _ptrThreadPlay = PlatformThread::SpawnJoinable(
@@ -1192,14 +1213,6 @@ int32_t AudioDeviceLinuxALSA::StartPlayout() {
       "webrtc_audio_module_play_thread",
       ThreadAttributes().SetPriority(ThreadPriority::kRealtime));
 
-  int errVal = LATE(snd_pcm_prepare)(_handlePlayout);
-  if (errVal < 0) {
-    RTC_LOG(LS_ERROR) << "playout snd_pcm_prepare failed ("
-                      << LATE(snd_strerror)(errVal) << ")\n";
-    // just log error
-    // if snd_pcm_open fails will return -1
-  }
-
   return 0;
 }
 
@@ -1209,40 +1222,57 @@ int32_t AudioDeviceLinuxALSA::StopPlayout() {
 }
 
 int32_t AudioDeviceLinuxALSA::StopPlayoutLocked() {
+  if (_playIsStopping) {
+    return 0;
+  }
+
   if (!_playIsInitialized) {
+    _playing = false;
     return 0;
   }
 
   if (_handlePlayout == nullptr) {
+    _playIsInitialized = false;
+    _playing = false;
     return -1;
   }
 
+  _playIsInitialized = false;
   _playing = false;
+  _playIsStopping = true;
 
-  // stop playout thread first
+  // The playout thread can reacquire mutex_ after RequestPlayoutData().
+  // Join it without holding the mutex to avoid a stop/playout deadlock.
+  mutex_.Unlock();
   _ptrThreadPlay.Finalize();
+  mutex_.Lock();
 
   _playoutFramesLeft = 0;
   delete[] _playoutBuffer;
   _playoutBuffer = nullptr;
 
+  int32_t result = 0;
+
   // stop and close pcm playout device
   int errVal = LATE(snd_pcm_drop)(_handlePlayout);
   if (errVal < 0) {
     RTC_LOG(LS_ERROR) << "Error stop playing: " << LATE(snd_strerror)(errVal);
+    result = -1;
   }
 
   errVal = LATE(snd_pcm_close)(_handlePlayout);
-  if (errVal < 0)
+  if (errVal < 0) {
     RTC_LOG(LS_ERROR) << "Error closing playout sound device, error: "
                       << LATE(snd_strerror)(errVal);
-
-  // set the pcm input handle to NULL
-  _playIsInitialized = false;
+    result = -1;
+  }
+  // Null the handle regardless: on close failure the handle is in an
+  // undefined state and not safe to reuse.
   _handlePlayout = nullptr;
   RTC_LOG(LS_VERBOSE) << "handle_playout is now set to NULL";
 
-  return 0;
+  _playIsStopping = false;
+  return result;
 }
 
 int32_t AudioDeviceLinuxALSA::PlayoutDelay(uint16_t& delayMS) const {
@@ -1496,14 +1526,16 @@ int32_t AudioDeviceLinuxALSA::ErrorRecovery(int32_t error,
 // ============================================================================
 
 bool AudioDeviceLinuxALSA::PlayThreadProcess() {
-  if (!_playing)
-    return false;
-
   int err;
   snd_pcm_sframes_t frames;
   snd_pcm_sframes_t avail_frames;
 
   Lock();
+  if (!_playing || _handlePlayout == nullptr) {
+    UnLock();
+    return false;
+  }
+
   // return a positive number of frames ready otherwise a negative error code
   avail_frames = LATE(snd_pcm_avail_update)(_handlePlayout);
   if (avail_frames < 0) {
@@ -1528,6 +1560,10 @@ bool AudioDeviceLinuxALSA::PlayThreadProcess() {
     UnLock();
     _ptrAudioBuffer->RequestPlayoutData(_playoutFramesIn10MS);
     Lock();
+    if (!_playing || _handlePlayout == nullptr) {
+      UnLock();
+      return false;
+    }
 
     _playoutFramesLeft = _ptrAudioBuffer->GetPlayoutData(_playoutBuffer);
     RTC_DCHECK_EQ(_playoutFramesLeft, _playoutFramesIn10MS);
