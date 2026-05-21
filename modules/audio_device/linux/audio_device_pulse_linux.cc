@@ -10,6 +10,8 @@
 
 #include "modules/audio_device/linux/audio_device_pulse_linux.h"
 
+#include <sys/time.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -1728,24 +1730,64 @@ void AudioDeviceLinuxPulse::PaUnLock() {
 
 bool AudioDeviceLinuxPulse::WaitForPulseStreamReady(pa_stream* stream,
                                                     const char* stream_name) {
+  // Bound the wait: a PulseAudio server stuck in CREATING/UNCONNECTED would
+  // otherwise wedge the audio thread inside pa_threaded_mainloop_wait() while
+  // holding mutex_, deadlocking any concurrent StopRecording/StopPlayout.
+  constexpr int kStreamReadyTimeoutSec = 10;
+
+  struct TimerCtx {
+    pa_threaded_mainloop* mainloop;
+    bool fired;
+  };
+  TimerCtx ctx{_paMainloop, false};
+
+  struct timeval when;
+  gettimeofday(&when, nullptr);
+  when.tv_sec += kStreamReadyTimeoutSec;
+
+  pa_time_event* timer = _paMainloopApi->time_new(
+      _paMainloopApi, &when,
+      [](pa_mainloop_api* /*api*/, pa_time_event* /*e*/,
+         const struct timeval* /*tv*/, void* userdata) {
+        auto* c = static_cast<TimerCtx*>(userdata);
+        c->fired = true;
+        LATE(pa_threaded_mainloop_signal)(c->mainloop, 0);
+      },
+      &ctx);
+  if (!timer) {
+    RTC_LOG(LS_WARNING)
+        << stream_name
+        << " stream wait: failed to arm timeout timer, proceeding unbounded";
+  }
+
+  bool result = false;
   while (true) {
     const pa_stream_state_t state = LATE(pa_stream_get_state)(stream);
-    switch (state) {
-      case PA_STREAM_READY:
-        return true;
-      case PA_STREAM_FAILED:
-        RTC_LOG(LS_ERROR) << stream_name << " stream failed, err="
-                          << LATE(pa_context_errno)(_paContext);
-        return false;
-      case PA_STREAM_TERMINATED:
-        RTC_LOG(LS_ERROR) << stream_name << " stream terminated";
-        return false;
-      case PA_STREAM_UNCONNECTED:
-      case PA_STREAM_CREATING:
-        LATE(pa_threaded_mainloop_wait)(_paMainloop);
-        break;
+    if (state == PA_STREAM_READY) {
+      result = true;
+      break;
     }
+    if (state == PA_STREAM_FAILED) {
+      RTC_LOG(LS_ERROR) << stream_name << " stream failed, err="
+                        << LATE(pa_context_errno)(_paContext);
+      break;
+    }
+    if (state == PA_STREAM_TERMINATED) {
+      RTC_LOG(LS_ERROR) << stream_name << " stream terminated";
+      break;
+    }
+    if (ctx.fired) {
+      RTC_LOG(LS_ERROR) << stream_name << " stream wait timed out after "
+                        << kStreamReadyTimeoutSec << "s, state=" << state;
+      break;
+    }
+    LATE(pa_threaded_mainloop_wait)(_paMainloop);
   }
+
+  if (timer) {
+    _paMainloopApi->time_free(timer);
+  }
+  return result;
 }
 
 void AudioDeviceLinuxPulse::WaitForOperationCompletion(
