@@ -155,6 +155,13 @@ AudioDeviceGeneric::InitStatus AudioDeviceLinuxPulse::Init() {
     return InitStatus::OK;
   }
 
+  {
+    MutexLock lock(&mutex_);
+    quit_ = false;
+    _startRec = false;
+    _startPlay = false;
+  }
+
   // Initialize PulseAudio
   if (InitPulseAudio() < 0) {
     RTC_LOG(LS_ERROR) << "failed to initialize PulseAudio";
@@ -2076,6 +2083,11 @@ bool AudioDeviceLinuxPulse::PlayThreadProcess() {
   MutexLock lock(&mutex_);
 
   if (quit_) {
+    if (_startPlay) {
+      _startPlay = false;
+      _playing = false;
+      _playStartEvent.Set();
+    }
     return false;
   }
 
@@ -2265,6 +2277,11 @@ bool AudioDeviceLinuxPulse::RecThreadProcess() {
 
   MutexLock lock(&mutex_);
   if (quit_) {
+    if (_startRec) {
+      _startRec = false;
+      _recording = false;
+      _recStartEvent.Set();
+    }
     return false;
   }
   if (_startRec) {
