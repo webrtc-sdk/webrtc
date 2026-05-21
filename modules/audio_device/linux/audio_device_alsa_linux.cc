@@ -110,6 +110,7 @@ AudioDeviceLinuxALSA::AudioDeviceLinuxALSA()
       _recording(false),
       _playing(false),
       _recIsInitialized(false),
+      _recIsStopping(false),
       _playIsInitialized(false),
       _recordingDelay(0),
       _playoutDelay(0) {
@@ -448,7 +449,7 @@ int32_t AudioDeviceLinuxALSA::StereoRecordingIsAvailable(bool& available) {
     InitRecordingLocked();
   }
   if (recording) {
-    StartRecording();
+    StartRecordingLocked();
   }
 
   return 0;
@@ -880,7 +881,7 @@ int32_t AudioDeviceLinuxALSA::InitRecording() {
 int32_t AudioDeviceLinuxALSA::InitRecordingLocked() {
   int errVal = 0;
 
-  if (_recording) {
+  if (_recording || _recIsStopping) {
     return -1;
   }
 
@@ -1015,15 +1016,26 @@ int32_t AudioDeviceLinuxALSA::InitRecordingLocked() {
 }
 
 int32_t AudioDeviceLinuxALSA::StartRecording() {
+  MutexLock lock(&mutex_);
+  return StartRecordingLocked();
+}
+
+int32_t AudioDeviceLinuxALSA::StartRecordingLocked() {
+  if (_recIsStopping) {
+    return -1;
+  }
+
   if (!_recIsInitialized) {
+    return -1;
+  }
+
+  if (_handleRecord == nullptr) {
     return -1;
   }
 
   if (_recording) {
     return 0;
   }
-
-  _recording = true;
 
   int errVal = 0;
   _recordingFramesLeft = _recordingFramesIn10MS;
@@ -1033,17 +1045,8 @@ int32_t AudioDeviceLinuxALSA::StartRecording() {
     _recordingBuffer = new int8_t[_recordingBufferSizeIn10MS];
   if (!_recordingBuffer) {
     RTC_LOG(LS_ERROR) << "failed to alloc recording buffer";
-    _recording = false;
     return -1;
   }
-  // RECORDING
-  _ptrThreadRec = PlatformThread::SpawnJoinable(
-      [this] {
-        while (RecThreadProcess()) {
-        }
-      },
-      "webrtc_audio_module_capture_thread",
-      ThreadAttributes().SetPriority(ThreadPriority::kRealtime));
 
   errVal = LATE(snd_pcm_prepare)(_handleRecord);
   if (errVal < 0) {
@@ -1061,10 +1064,21 @@ int32_t AudioDeviceLinuxALSA::StartRecording() {
     if (errVal < 0) {
       RTC_LOG(LS_ERROR) << "capture snd_pcm_start 2nd try err: "
                         << LATE(snd_strerror)(errVal);
-      StopRecording();
+      StopRecordingLocked();
       return -1;
     }
   }
+
+  _recording = true;
+
+  // RECORDING
+  _ptrThreadRec = PlatformThread::SpawnJoinable(
+      [this] {
+        while (RecThreadProcess()) {
+        }
+      },
+      "webrtc_audio_module_capture_thread",
+      ThreadAttributes().SetPriority(ThreadPriority::kRealtime));
 
   return 0;
 }
@@ -1075,19 +1089,31 @@ int32_t AudioDeviceLinuxALSA::StopRecording() {
 }
 
 int32_t AudioDeviceLinuxALSA::StopRecordingLocked() {
+  if (_recIsStopping) {
+    return 0;
+  }
+
   if (!_recIsInitialized) {
+    _recording = false;
     return 0;
   }
 
   if (_handleRecord == nullptr) {
+    _recIsInitialized = false;
+    _recording = false;
     return -1;
   }
 
   // Make sure we don't start recording (it's asynchronous).
   _recIsInitialized = false;
   _recording = false;
+  _recIsStopping = true;
 
+  // The capture thread can reacquire mutex_ after DeliverRecordedData().
+  // Join it without holding the mutex to avoid a stop/delivery deadlock.
+  mutex_.Unlock();
   _ptrThreadRec.Finalize();
+  mutex_.Lock();
 
   _recordingFramesLeft = 0;
   if (_recordingBuffer) {
@@ -1095,18 +1121,20 @@ int32_t AudioDeviceLinuxALSA::StopRecordingLocked() {
     _recordingBuffer = nullptr;
   }
 
+  int32_t result = 0;
+
   // Stop and close pcm recording device.
   int errVal = LATE(snd_pcm_drop)(_handleRecord);
   if (errVal < 0) {
     RTC_LOG(LS_ERROR) << "Error stop recording: " << LATE(snd_strerror)(errVal);
-    return -1;
+    result = -1;
   }
 
   errVal = LATE(snd_pcm_close)(_handleRecord);
   if (errVal < 0) {
     RTC_LOG(LS_ERROR) << "Error closing record sound device, error: "
                       << LATE(snd_strerror)(errVal);
-    return -1;
+    result = -1;
   }
 
   // Check if we have muted and unmute if so.
@@ -1118,7 +1146,8 @@ int32_t AudioDeviceLinuxALSA::StopRecordingLocked() {
 
   // set the pcm input handle to NULL
   _handleRecord = nullptr;
-  return 0;
+  _recIsStopping = false;
+  return result;
 }
 
 bool AudioDeviceLinuxALSA::RecordingIsInitialized() const {
@@ -1528,15 +1557,17 @@ bool AudioDeviceLinuxALSA::PlayThreadProcess() {
 }
 
 bool AudioDeviceLinuxALSA::RecThreadProcess() {
-  if (!_recording)
-    return false;
-
   int err;
   snd_pcm_sframes_t frames;
   snd_pcm_sframes_t avail_frames;
-  std::vector<int8_t> buffer(_recordingBufferSizeIn10MS);
 
   Lock();
+  if (!_recording || _handleRecord == nullptr) {
+    UnLock();
+    return false;
+  }
+
+  std::vector<int8_t> buffer(_recordingBufferSizeIn10MS);
 
   // return a positive number of frames ready otherwise a negative error code
   avail_frames = LATE(snd_pcm_avail_update)(_handleRecord);
@@ -1621,6 +1652,10 @@ bool AudioDeviceLinuxALSA::RecThreadProcess() {
       UnLock();
       _ptrAudioBuffer->DeliverRecordedData();
       Lock();
+      if (!_recording) {
+        UnLock();
+        return false;
+      }
     }
   }
 

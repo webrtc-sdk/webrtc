@@ -133,6 +133,7 @@ class AudioDeviceLinuxALSA : public AudioDeviceGeneric {
       RTC_LOCKS_EXCLUDED(mutex_) override;
 
  private:
+  int32_t StartRecordingLocked() RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
   int32_t InitRecordingLocked() RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
   int32_t StopRecordingLocked() RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
   int32_t StopPlayoutLocked() RTC_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
@@ -200,6 +201,7 @@ class AudioDeviceLinuxALSA : public AudioDeviceGeneric {
   bool _recording;
   bool _playing;
   bool _recIsInitialized;
+  bool _recIsStopping;
   bool _playIsInitialized;
 
   snd_pcm_sframes_t _recordingDelay;
