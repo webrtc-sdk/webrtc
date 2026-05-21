@@ -1733,7 +1733,7 @@ bool AudioDeviceLinuxPulse::WaitForPulseStreamReady(pa_stream* stream,
   // Bound the wait: a PulseAudio server stuck in CREATING/UNCONNECTED would
   // otherwise wedge the audio thread inside pa_threaded_mainloop_wait() while
   // holding mutex_, deadlocking any concurrent StopRecording/StopPlayout.
-  constexpr int kStreamReadyTimeoutSec = 10;
+  constexpr int kStreamReadyTimeoutSec = 9;
 
   struct TimerCtx {
     pa_threaded_mainloop* mainloop;
@@ -1755,9 +1755,9 @@ bool AudioDeviceLinuxPulse::WaitForPulseStreamReady(pa_stream* stream,
       },
       &ctx);
   if (!timer) {
-    RTC_LOG(LS_WARNING)
-        << stream_name
-        << " stream wait: failed to arm timeout timer, proceeding unbounded";
+    RTC_LOG(LS_ERROR)
+        << stream_name << " stream wait: failed to arm timeout timer";
+    return false;
   }
 
   bool result = false;
