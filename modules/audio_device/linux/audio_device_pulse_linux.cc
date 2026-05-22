@@ -1737,9 +1737,10 @@ void AudioDeviceLinuxPulse::PaUnLock() {
 
 bool AudioDeviceLinuxPulse::WaitForPulseStreamReady(pa_stream* stream,
                                                     const char* stream_name) {
-  // Bound the wait: a PulseAudio server stuck in CREATING/UNCONNECTED would
-  // otherwise wedge the audio thread inside pa_threaded_mainloop_wait() while
-  // holding mutex_, deadlocking any concurrent StopRecording/StopPlayout.
+  // Bound the wait: callers enter this helper from the audio worker thread
+  // while holding mutex_. A PulseAudio server stuck in CREATING/UNCONNECTED
+  // would otherwise wedge the worker in pa_threaded_mainloop_wait(), blocking
+  // concurrent StopRecording/StopPlayout from acquiring mutex_.
   constexpr int kStreamReadyTimeoutSec = 9;
 
   struct TimerCtx {
