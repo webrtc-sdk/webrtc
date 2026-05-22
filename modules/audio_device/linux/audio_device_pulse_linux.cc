@@ -47,6 +47,13 @@ WebRTCPulseSymbolTable* GetPulseSymbolTable() {
 
 namespace webrtc {
 
+namespace {
+
+constexpr int kPulseStreamReadyTimeoutSec = 9;
+constexpr int kPulseStartTimeoutSec = kPulseStreamReadyTimeoutSec + 1;
+
+}  // namespace
+
 AudioDeviceLinuxPulse::AudioDeviceLinuxPulse()
     : _ptrAudioBuffer(nullptr),
       _inputDeviceIndex(0),
@@ -1085,7 +1092,7 @@ int32_t AudioDeviceLinuxPulse::StartRecording() {
 
   // The audio thread will signal when recording has started.
   _timeEventRec.Set();
-  if (!_recStartEvent.Wait(TimeDelta::Seconds(10))) {
+  if (!_recStartEvent.Wait(TimeDelta::Seconds(kPulseStartTimeoutSec))) {
     {
       MutexLock lock(&mutex_);
       _startRec = false;
@@ -1206,7 +1213,7 @@ int32_t AudioDeviceLinuxPulse::StartPlayout() {
 
   // The audio thread will signal when playout has started.
   _timeEventPlay.Set();
-  if (!_playStartEvent.Wait(TimeDelta::Seconds(10))) {
+  if (!_playStartEvent.Wait(TimeDelta::Seconds(kPulseStartTimeoutSec))) {
     {
       MutexLock lock(&mutex_);
       _startPlay = false;
@@ -1741,8 +1748,6 @@ bool AudioDeviceLinuxPulse::WaitForPulseStreamReady(pa_stream* stream,
   // while holding mutex_. A PulseAudio server stuck in CREATING/UNCONNECTED
   // would otherwise wedge the worker in pa_threaded_mainloop_wait(), blocking
   // concurrent StopRecording/StopPlayout from acquiring mutex_.
-  constexpr int kStreamReadyTimeoutSec = 9;
-
   struct TimerCtx {
     pa_threaded_mainloop* mainloop;
     bool fired;
@@ -1751,7 +1756,7 @@ bool AudioDeviceLinuxPulse::WaitForPulseStreamReady(pa_stream* stream,
 
   struct timeval when;
   gettimeofday(&when, nullptr);
-  when.tv_sec += kStreamReadyTimeoutSec;
+  when.tv_sec += kPulseStreamReadyTimeoutSec;
 
   pa_time_event* timer = _paMainloopApi->time_new(
       _paMainloopApi, &when,
@@ -1786,7 +1791,8 @@ bool AudioDeviceLinuxPulse::WaitForPulseStreamReady(pa_stream* stream,
     }
     if (ctx.fired) {
       RTC_LOG(LS_ERROR) << stream_name << " stream wait timed out after "
-                        << kStreamReadyTimeoutSec << "s, state=" << state;
+                        << kPulseStreamReadyTimeoutSec
+                        << "s, state=" << state;
       break;
     }
     LATE(pa_threaded_mainloop_wait)(_paMainloop);
