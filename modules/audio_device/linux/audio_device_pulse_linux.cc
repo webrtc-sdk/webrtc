@@ -50,7 +50,7 @@ namespace webrtc {
 namespace {
 
 constexpr int kPulseStreamReadyTimeoutSec = 9;
-constexpr int kPulseStartTimeoutSec = kPulseStreamReadyTimeoutSec + 1;
+constexpr int kPulseStartTimeoutSec = kPulseStreamReadyTimeoutSec + 3;
 
 }  // namespace
 
