@@ -250,6 +250,7 @@ class AudioDeviceLinuxPulse : public AudioDeviceGeneric {
   int32_t GetDefaultDeviceInfo(bool recDevice, char* name, uint16_t& index);
   int32_t InitPulseAudio();
   int32_t TerminatePulseAudio();
+  bool WaitForPulseStreamReady(pa_stream* stream, const char* stream_name);
 
   void PaLock();
   void PaUnLock();
