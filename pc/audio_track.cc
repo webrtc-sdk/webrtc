@@ -59,8 +59,14 @@ bool AudioTrack::SetAudioProcessingOptions(const AudioOptions& options) {
     return false;
   }
 
+  AudioOptions processing_options;
+  processing_options.echo_cancellation = options.echo_cancellation;
+  processing_options.noise_suppression = options.noise_suppression;
+  processing_options.auto_gain_control = options.auto_gain_control;
+  processing_options.highpass_filter = options.highpass_filter;
+
   AudioOptions updated_options = audio_source_->options();
-  updated_options.SetAll(options);
+  updated_options.SetAll(processing_options);
   audio_source_->SetOptions(updated_options);
   FireOnChanged();
   return true;
