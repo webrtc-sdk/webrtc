@@ -30,6 +30,11 @@ RTC_OBJC_EXPORT
 
 - (void)removeAllRenderers;
 
+- (BOOL)setAudioProcessingOptionsWithEchoCancellation:(BOOL)echoCancellation
+                                    noiseSuppression:(BOOL)noiseSuppression
+                                     autoGainControl:(BOOL)autoGainControl
+                                      highPassFilter:(BOOL)highPassFilter;
+
 @end
 
 NS_ASSUME_NONNULL_END

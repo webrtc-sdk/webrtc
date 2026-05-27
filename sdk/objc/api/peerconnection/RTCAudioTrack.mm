@@ -144,6 +144,18 @@
   [_adapters removeAllObjects];
 }
 
+- (BOOL)setAudioProcessingOptionsWithEchoCancellation:(BOOL)echoCancellation
+                                    noiseSuppression:(BOOL)noiseSuppression
+                                     autoGainControl:(BOOL)autoGainControl
+                                      highPassFilter:(BOOL)highPassFilter {
+  webrtc::AudioOptions options;
+  options.echo_cancellation = echoCancellation;
+  options.noise_suppression = noiseSuppression;
+  options.auto_gain_control = autoGainControl;
+  options.highpass_filter = highPassFilter;
+  return self.nativeAudioTrack->SetAudioProcessingOptions(options);
+}
+
 #pragma mark - Private
 
 - (webrtc::scoped_refptr<webrtc::AudioTrackInterface>)nativeAudioTrack {
