@@ -67,9 +67,10 @@ class WebRtcAudioEffects {
   }
 
   // Call this method to enable or disable the platform AEC. It modifies
-  // `shouldEnableAec` which is used in enable() where the actual state
-  // of the AEC effect is modified. Returns true if HW AEC is supported and
-  // false otherwise.
+  // `shouldEnableAec` which is used in enable() where the initial state of the
+  // AEC effect is set. If the effect is already active, its state is toggled
+  // immediately. Returns true if HW AEC is supported and the state was stored
+  // or toggled successfully, and false otherwise.
   public boolean setAEC(boolean enable) {
     Logging.d(TAG, "setAEC(" + enable + ")");
     if (!isAcousticEchoCancelerSupported()) {
@@ -77,18 +78,18 @@ class WebRtcAudioEffects {
       shouldEnableAec = false;
       return false;
     }
-    if (aec != null && (enable != shouldEnableAec)) {
-      Logging.e(TAG, "Platform AEC state can't be modified while recording");
-      return false;
-    }
     shouldEnableAec = enable;
-    return true;
+    if (aec == null) {
+      return true;
+    }
+    return toggleAEC(enable);
   }
 
   // Call this method to enable or disable the platform NS. It modifies
-  // `shouldEnableNs` which is used in enable() where the actual state
-  // of the NS effect is modified. Returns true if HW NS is supported and
-  // false otherwise.
+  // `shouldEnableNs` which is used in enable() where the initial state of the
+  // NS effect is set. If the effect is already active, its state is toggled
+  // immediately. Returns true if HW NS is supported and the state was stored
+  // or toggled successfully, and false otherwise.
   public boolean setNS(boolean enable) {
     Logging.d(TAG, "setNS(" + enable + ")");
     if (!isNoiseSuppressorSupported()) {
@@ -96,12 +97,27 @@ class WebRtcAudioEffects {
       shouldEnableNs = false;
       return false;
     }
-    if (ns != null && (enable != shouldEnableNs)) {
-      Logging.e(TAG, "Platform NS state can't be modified while recording");
+    shouldEnableNs = enable;
+    if (ns == null) {
+      return true;
+    }
+    return toggleNS(enable);
+  }
+
+  // Toggles an existing AcousticEchoCanceler to be enabled or disabled.
+  // Returns true if the toggling was successful, otherwise false is returned (this is also the case
+  // if no AcousticEchoCanceler was present).
+  public boolean toggleAEC(boolean enable) {
+    if (aec == null) {
+      Logging.e(TAG, "Attempting to enable or disable nonexistent AcousticEchoCanceler.");
       return false;
     }
-    shouldEnableNs = enable;
-    return true;
+    Logging.d(TAG, "toggleAEC(" + enable + ")");
+    shouldEnableAec = enable;
+    boolean toggling_succeeded = aec.setEnabled(enable) == AudioEffect.SUCCESS;
+    Logging.d(TAG,
+        "AcousticEchoCanceler: is now: " + (aec.getEnabled() ? "enabled" : "disabled"));
+    return toggling_succeeded;
   }
 
   // Toggles an existing NoiseSuppressor to be enabled or disabled.
@@ -113,7 +129,9 @@ class WebRtcAudioEffects {
       return false;
     }
     Logging.d(TAG, "toggleNS(" + enable + ")");
+    shouldEnableNs = enable;
     boolean toggling_succeeded = ns.setEnabled(enable) == AudioEffect.SUCCESS;
+    Logging.d(TAG, "NoiseSuppressor: is now: " + (ns.getEnabled() ? "enabled" : "disabled"));
     return toggling_succeeded;
   }
 
