@@ -96,6 +96,43 @@ jboolean JNI_RtpSender_SetParameters(
       .ok();
 }
 
+static jboolean JNI_RtpSender_SetAudioProcessingOptions(
+    JNIEnv*,
+    jlong j_rtp_sender_pointer,
+    jboolean echo_cancellation,
+    jboolean noise_suppression,
+    jboolean auto_gain_control,
+    jboolean high_pass_filter) {
+  RtpSenderInterface* sender =
+      reinterpret_cast<RtpSenderInterface*>(j_rtp_sender_pointer);
+  if (sender->media_type() != MediaType::AUDIO) {
+    return false;
+  }
+
+  scoped_refptr<MediaStreamTrackInterface> track = sender->track();
+  if (!track || track->kind() != MediaStreamTrackInterface::kAudioKind) {
+    return false;
+  }
+
+  AudioTrackInterface* audio_track =
+      static_cast<AudioTrackInterface*>(track.get());
+  AudioSourceInterface* source = audio_track->GetSource();
+  if (!source || source->remote()) {
+    return false;
+  }
+
+  AudioOptions options = source->options();
+  options.echo_cancellation = static_cast<bool>(echo_cancellation);
+  options.noise_suppression = static_cast<bool>(noise_suppression);
+  options.auto_gain_control = static_cast<bool>(auto_gain_control);
+  options.highpass_filter = static_cast<bool>(high_pass_filter);
+  source->SetOptions(options);
+
+  // Re-setting the current track routes through AudioRtpSender::SetSend(),
+  // which refreshes WebRtcVoiceSendChannel::options_ and reapplies APM config.
+  return sender->SetTrack(track.get());
+}
+
 ScopedJavaLocalRef<jobject> JNI_RtpSender_GetParameters(
     JNIEnv* jni,
     jlong j_rtp_sender_pointer) {

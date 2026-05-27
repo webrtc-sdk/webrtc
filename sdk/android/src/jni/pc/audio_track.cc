@@ -26,6 +26,28 @@ static jdouble JNI_AudioTrack_GetVolume(JNIEnv*, jlong j_p) {
   return reinterpret_cast<AudioTrackInterface*>(j_p)->GetVolume();
 }
 
+static jboolean JNI_AudioTrack_SetAudioProcessingOptions(
+    JNIEnv*,
+    jlong j_p,
+    jboolean echo_cancellation,
+    jboolean noise_suppression,
+    jboolean auto_gain_control,
+    jboolean high_pass_filter) {
+  AudioTrackInterface* track = reinterpret_cast<AudioTrackInterface*>(j_p);
+  AudioSourceInterface* source = track->GetSource();
+  if (!source || source->remote()) {
+    return false;
+  }
+
+  AudioOptions options = source->options();
+  options.echo_cancellation = static_cast<bool>(echo_cancellation);
+  options.noise_suppression = static_cast<bool>(noise_suppression);
+  options.auto_gain_control = static_cast<bool>(auto_gain_control);
+  options.highpass_filter = static_cast<bool>(high_pass_filter);
+  source->SetOptions(options);
+  return true;
+}
+
 static void JNI_AudioTrack_AddSink(JNIEnv* jni,
                                    jlong j_native_track,
                                    jlong j_native_sink) {

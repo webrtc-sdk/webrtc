@@ -268,6 +268,7 @@ class RTC_EXPORT AudioSourceInterface : public MediaSourceInterface {
   // (for some of the settings this approach is broken, e.g. setting
   // audio network adaptation on the source is the wrong layer of abstraction).
   virtual const AudioOptions options() const;
+  virtual void SetOptions(const AudioOptions& /* options */) {}
 };
 
 // Interface of the audio processor used by the audio track to collect

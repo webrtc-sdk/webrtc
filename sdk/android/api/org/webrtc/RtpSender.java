@@ -83,6 +83,19 @@ public class RtpSender {
     return nativeSetParameters(nativeRtpSender, parameters);
   }
 
+  /**
+   * Updates audio processing options for this sender's local audio source and reapplies them to the
+   * active voice channel.
+   *
+   * <p>This does not restart capture or change Android AudioRecord configuration.
+   */
+  public boolean setAudioProcessingOptions(boolean echoCancellation, boolean noiseSuppression,
+      boolean autoGainControl, boolean highPassFilter) {
+    checkRtpSenderExists();
+    return nativeSetAudioProcessingOptions(
+        nativeRtpSender, echoCancellation, noiseSuppression, autoGainControl, highPassFilter);
+  }
+
   public RtpParameters getParameters() {
     checkRtpSenderExists();
     return nativeGetParameters(nativeRtpSender);
@@ -142,6 +155,10 @@ public class RtpSender {
   private static native long nativeGetDtmfSender(long rtpSender);
 
   private static native boolean nativeSetParameters(long rtpSender, RtpParameters parameters);
+
+  private static native boolean nativeSetAudioProcessingOptions(long rtpSender,
+      boolean echoCancellation, boolean noiseSuppression, boolean autoGainControl,
+      boolean highPassFilter);
 
   private static native RtpParameters nativeGetParameters(long rtpSender);
 

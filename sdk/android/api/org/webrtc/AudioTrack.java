@@ -35,6 +35,19 @@ public class AudioTrack extends MediaStreamTrack {
   }
 
   /**
+   * Updates the audio processing options stored on this local audio track's source.
+   *
+   * <p>This does not restart capture or change Android AudioRecord configuration. If the track is
+   * already being sent, prefer {@link RtpSender#setAudioProcessingOptions} so the active voice
+   * channel also reapplies the updated options.
+   */
+  public boolean setAudioProcessingOptions(boolean echoCancellation, boolean noiseSuppression,
+      boolean autoGainControl, boolean highPassFilter) {
+    return nativeSetAudioProcessingOptions(
+        getNativeAudioTrack(), echoCancellation, noiseSuppression, autoGainControl, highPassFilter);
+  }
+
+  /**
    * Adds an AudioTrackSink to the track. This callback is only
    * called for remote audio tracks.
    * 
@@ -81,6 +94,8 @@ public class AudioTrack extends MediaStreamTrack {
 
   private static native void nativeSetVolume(long track, double volume);
   private static native double nativeGetVolume(long track);
+  private static native boolean nativeSetAudioProcessingOptions(long track, boolean echoCancellation,
+      boolean noiseSuppression, boolean autoGainControl, boolean highPassFilter);
   private static native void nativeAddSink(long track, long nativeSink);
   private static native void nativeRemoveSink(long track, long nativeSink);
   private static native long nativeWrapSink(AudioTrackSink sink);
