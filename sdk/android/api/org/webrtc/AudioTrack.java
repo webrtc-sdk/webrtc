@@ -39,6 +39,8 @@ public class AudioTrack extends MediaStreamTrack {
    *
    * <p>This does not restart capture or change Android AudioRecord configuration. If the track is
    * already being sent, active senders observe the track update and reapply the updated options.
+   * The effective audio processing module configuration is shared by the voice engine/channel, so
+   * conflicting updates from multiple local tracks are not isolated per track.
    */
   public boolean setAudioProcessingOptions(boolean echoCancellation, boolean noiseSuppression,
       boolean autoGainControl, boolean highPassFilter) {

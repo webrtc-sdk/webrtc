@@ -30,6 +30,13 @@ RTC_OBJC_EXPORT
 
 - (void)removeAllRenderers;
 
+/** Updates local source audio processing options without restarting capture.
+ *
+ * If the track is already being sent, active senders observe the track update
+ * and reapply the updated options. The effective audio processing module
+ * configuration is shared by the voice engine/channel, so conflicting updates
+ * from multiple local tracks are not isolated per track.
+ */
 - (BOOL)setAudioProcessingOptionsWithEchoCancellation:(BOOL)echoCancellation
                                     noiseSuppression:(BOOL)noiseSuppression
                                      autoGainControl:(BOOL)autoGainControl
