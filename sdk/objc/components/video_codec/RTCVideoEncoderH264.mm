@@ -359,6 +359,19 @@ NSUInteger GetMaxSampleRate(
       return 0;
   }
 }
+
+const char *H264ProfileName(const std::optional<webrtc::H264ProfileLevelId> &id) {
+  if (!id) return "<unparsed>";
+  switch (id->profile) {
+    case webrtc::H264Profile::kProfileConstrainedBaseline: return "ConstrainedBaseline";
+    case webrtc::H264Profile::kProfileBaseline: return "Baseline";
+    case webrtc::H264Profile::kProfileMain: return "Main";
+    case webrtc::H264Profile::kProfileConstrainedHigh: return "ConstrainedHigh";
+    case webrtc::H264Profile::kProfileHigh: return "High";
+    case webrtc::H264Profile::kProfilePredictiveHigh444: return "PredictiveHigh444";
+  }
+  return "<unknown>";
+}
 }  // namespace
 
 @implementation RTC_OBJC_TYPE (RTCVideoEncoderH264) {
@@ -730,11 +743,25 @@ NSUInteger GetMaxSampleRate(
     }];
   }
 
-  // Enable low-latency video encoding
+  // kVTVideoEncoderSpecification_EnableLowLatencyRateControl only supports High
+  // profiles per VTCompressionProperties.h; setting it alongside a Baseline/Main
+  // ProfileLevel disables hardware acceleration.
   if (@available(iOS 14.5, macCatalyst 14.5, macOS 11.3, tvOS 14.5, visionOS 1.0, *)) {
-    [encoder_specs addEntriesFromDictionary:@{
-      (NSString *)kVTVideoEncoderSpecification_EnableLowLatencyRateControl : @(YES),
-    }];
+    const bool isHighFamily = _profile_level_id &&
+        (_profile_level_id->profile == webrtc::H264Profile::kProfileConstrainedHigh ||
+         _profile_level_id->profile == webrtc::H264Profile::kProfileHigh ||
+         _profile_level_id->profile == webrtc::H264Profile::kProfilePredictiveHigh444);
+    const char *profileName = H264ProfileName(_profile_level_id);
+    if (isHighFamily) {
+      RTC_LOG(LS_INFO) << "H264: enabling EnableLowLatencyRateControl (profile=" << profileName
+                       << ", in High family).";
+      [encoder_specs addEntriesFromDictionary:@{
+        (NSString *)kVTVideoEncoderSpecification_EnableLowLatencyRateControl : @(YES),
+      }];
+    } else {
+      RTC_LOG(LS_INFO) << "H264: skipping EnableLowLatencyRateControl (profile=" << profileName
+                       << ", not in High family).";
+    }
   }
 
   OSStatus status = VTCompressionSessionCreate(
