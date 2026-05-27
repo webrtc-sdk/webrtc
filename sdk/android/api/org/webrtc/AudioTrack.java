@@ -14,6 +14,30 @@ import java.util.IdentityHashMap;
 
 /** Java wrapper for a C++ AudioTrackInterface */
 public class AudioTrack extends MediaStreamTrack {
+  /** Audio processing options for a native local audio track. */
+  public static final class AudioProcessingOptions {
+    public final boolean echoCancellation;
+    public final boolean noiseSuppression;
+    public final boolean autoGainControl;
+    public final boolean highPassFilter;
+
+    public AudioProcessingOptions(boolean echoCancellation, boolean noiseSuppression,
+        boolean autoGainControl, boolean highPassFilter) {
+      this.echoCancellation = echoCancellation;
+      this.noiseSuppression = noiseSuppression;
+      this.autoGainControl = autoGainControl;
+      this.highPassFilter = highPassFilter;
+    }
+
+    public static AudioProcessingOptions communication() {
+      return new AudioProcessingOptions(true, true, true, true);
+    }
+
+    public static AudioProcessingOptions raw() {
+      return new AudioProcessingOptions(false, false, false, false);
+    }
+  }
+
   private final IdentityHashMap<AudioTrackSink, Long> sinks = new IdentityHashMap<AudioTrackSink, Long>();
 
   public AudioTrack(long nativeTrack) {
@@ -42,10 +66,18 @@ public class AudioTrack extends MediaStreamTrack {
    * The effective audio processing module configuration is shared by the voice engine/channel, so
    * conflicting updates from multiple local tracks are not isolated per track.
    */
+  public boolean setAudioProcessingOptions(AudioProcessingOptions options) {
+    if (options == null) {
+      throw new IllegalArgumentException("AudioProcessingOptions is not allowed to be null");
+    }
+    return nativeSetAudioProcessingOptions(getNativeAudioTrack(), options.echoCancellation,
+        options.noiseSuppression, options.autoGainControl, options.highPassFilter);
+  }
+
   public boolean setAudioProcessingOptions(boolean echoCancellation, boolean noiseSuppression,
       boolean autoGainControl, boolean highPassFilter) {
-    return nativeSetAudioProcessingOptions(
-        getNativeAudioTrack(), echoCancellation, noiseSuppression, autoGainControl, highPassFilter);
+    return setAudioProcessingOptions(new AudioProcessingOptions(
+        echoCancellation, noiseSuppression, autoGainControl, highPassFilter));
   }
 
   /**

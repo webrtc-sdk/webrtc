@@ -17,6 +17,26 @@ NS_ASSUME_NONNULL_BEGIN
 @class RTC_OBJC_TYPE(RTCAudioSource);
 
 RTC_OBJC_EXPORT
+@interface RTC_OBJC_TYPE (RTCAudioProcessingOptions) : NSObject
+
+@property(nonatomic, readonly) BOOL echoCancellation;
+@property(nonatomic, readonly) BOOL noiseSuppression;
+@property(nonatomic, readonly) BOOL autoGainControl;
+@property(nonatomic, readonly) BOOL highPassFilter;
+
+- (instancetype)initWithEchoCancellation:(BOOL)echoCancellation
+                        noiseSuppression:(BOOL)noiseSuppression
+                         autoGainControl:(BOOL)autoGainControl
+                          highPassFilter:(BOOL)highPassFilter NS_DESIGNATED_INITIALIZER;
+
++ (instancetype)communicationOptions;
++ (instancetype)rawOptions;
+
+- (instancetype)init NS_UNAVAILABLE;
+
+@end
+
+RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCAudioTrack) : RTC_OBJC_TYPE(RTCMediaStreamTrack)
 
 - (instancetype)init NS_UNAVAILABLE;
@@ -37,6 +57,9 @@ RTC_OBJC_EXPORT
  * configuration is shared by the voice engine/channel, so conflicting updates
  * from multiple local tracks are not isolated per track.
  */
+- (BOOL)setAudioProcessingOptions:
+    (RTC_OBJC_TYPE(RTCAudioProcessingOptions) *)options;
+
 - (BOOL)setAudioProcessingOptionsWithEchoCancellation:(BOOL)echoCancellation
                                     noiseSuppression:(BOOL)noiseSuppression
                                      autoGainControl:(BOOL)autoGainControl

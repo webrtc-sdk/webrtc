@@ -22,6 +22,43 @@
 
 #include "rtc_base/checks.h"
 
+@implementation RTC_OBJC_TYPE (RTCAudioProcessingOptions)
+
+@synthesize echoCancellation = _echoCancellation;
+@synthesize noiseSuppression = _noiseSuppression;
+@synthesize autoGainControl = _autoGainControl;
+@synthesize highPassFilter = _highPassFilter;
+
+- (instancetype)initWithEchoCancellation:(BOOL)echoCancellation
+                        noiseSuppression:(BOOL)noiseSuppression
+                         autoGainControl:(BOOL)autoGainControl
+                          highPassFilter:(BOOL)highPassFilter {
+  self = [super init];
+  if (self) {
+    _echoCancellation = echoCancellation;
+    _noiseSuppression = noiseSuppression;
+    _autoGainControl = autoGainControl;
+    _highPassFilter = highPassFilter;
+  }
+  return self;
+}
+
++ (instancetype)communicationOptions {
+  return [[self alloc] initWithEchoCancellation:YES
+                              noiseSuppression:YES
+                               autoGainControl:YES
+                                highPassFilter:YES];
+}
+
++ (instancetype)rawOptions {
+  return [[self alloc] initWithEchoCancellation:NO
+                              noiseSuppression:NO
+                               autoGainControl:NO
+                                highPassFilter:NO];
+}
+
+@end
+
 @implementation RTC_OBJC_TYPE (RTCAudioTrack) {
   webrtc::Thread *_signalingThread;
   NSMutableArray *_adapters;
@@ -148,12 +185,26 @@
                                     noiseSuppression:(BOOL)noiseSuppression
                                      autoGainControl:(BOOL)autoGainControl
                                       highPassFilter:(BOOL)highPassFilter {
-  webrtc::AudioOptions options;
-  options.echo_cancellation = echoCancellation;
-  options.noise_suppression = noiseSuppression;
-  options.auto_gain_control = autoGainControl;
-  options.highpass_filter = highPassFilter;
-  return self.nativeAudioTrack->SetAudioProcessingOptions(options);
+  RTC_OBJC_TYPE(RTCAudioProcessingOptions) *options =
+      [[RTC_OBJC_TYPE(RTCAudioProcessingOptions) alloc] initWithEchoCancellation:echoCancellation
+                                                                noiseSuppression:noiseSuppression
+                                                                 autoGainControl:autoGainControl
+                                                                  highPassFilter:highPassFilter];
+  return [self setAudioProcessingOptions:options];
+}
+
+- (BOOL)setAudioProcessingOptions:
+    (RTC_OBJC_TYPE(RTCAudioProcessingOptions) *)options {
+  NSParameterAssert(options);
+  if (!options) {
+    return NO;
+  }
+  webrtc::AudioOptions nativeOptions;
+  nativeOptions.echo_cancellation = options.echoCancellation;
+  nativeOptions.noise_suppression = options.noiseSuppression;
+  nativeOptions.auto_gain_control = options.autoGainControl;
+  nativeOptions.highpass_filter = options.highPassFilter;
+  return self.nativeAudioTrack->SetAudioProcessingOptions(nativeOptions);
 }
 
 #pragma mark - Private
