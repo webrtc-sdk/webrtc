@@ -397,11 +397,13 @@ class AudioRtpSender : public DtmfProviderInterface, public RtpSenderBase {
     return scoped_refptr<AudioTrackInterface>(
         static_cast<AudioTrackInterface*>(track_.get()));
   }
+  std::optional<AudioOptions> GetTrackSourceOptions() const;
 
   LegacyStatsCollectorInterface* legacy_stats_ = nullptr;
   scoped_refptr<DtmfSender> dtmf_sender_;
   scoped_refptr<DtmfSenderInterface> dtmf_sender_proxy_;
   bool cached_track_enabled_ = false;
+  std::optional<AudioOptions> cached_track_source_options_;
 
   // Used to pass the data callback from the `track_` to the other end of
   // webrtc::AudioSource.
