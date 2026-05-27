@@ -53,6 +53,19 @@ AudioSourceInterface* AudioTrack::GetSource() const {
   return audio_source_.get();
 }
 
+bool AudioTrack::SetAudioProcessingOptions(const AudioOptions& options) {
+  RTC_DCHECK_RUN_ON(&signaling_thread_checker_);
+  if (!audio_source_ || audio_source_->remote()) {
+    return false;
+  }
+
+  AudioOptions updated_options = audio_source_->options();
+  updated_options.SetAll(options);
+  audio_source_->SetOptions(updated_options);
+  FireOnChanged();
+  return true;
+}
+
 void AudioTrack::AddSink(AudioTrackSinkInterface* sink) {
   RTC_DCHECK_RUN_ON(&signaling_thread_checker_);
   if (audio_source_)

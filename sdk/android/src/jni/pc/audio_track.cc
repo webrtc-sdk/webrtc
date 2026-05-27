@@ -34,18 +34,12 @@ static jboolean JNI_AudioTrack_SetAudioProcessingOptions(
     jboolean auto_gain_control,
     jboolean high_pass_filter) {
   AudioTrackInterface* track = reinterpret_cast<AudioTrackInterface*>(j_p);
-  AudioSourceInterface* source = track->GetSource();
-  if (!source || source->remote()) {
-    return false;
-  }
-
-  AudioOptions options = source->options();
+  AudioOptions options;
   options.echo_cancellation = static_cast<bool>(echo_cancellation);
   options.noise_suppression = static_cast<bool>(noise_suppression);
   options.auto_gain_control = static_cast<bool>(auto_gain_control);
   options.highpass_filter = static_cast<bool>(high_pass_filter);
-  source->SetOptions(options);
-  return true;
+  return track->SetAudioProcessingOptions(options);
 }
 
 static void JNI_AudioTrack_AddSink(JNIEnv* jni,

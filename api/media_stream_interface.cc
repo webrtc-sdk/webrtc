@@ -36,6 +36,19 @@ AudioTrackInterface::GetAudioProcessor() {
   return nullptr;
 }
 
+bool AudioTrackInterface::SetAudioProcessingOptions(
+    const AudioOptions& options) {
+  AudioSourceInterface* source = GetSource();
+  if (!source || source->remote()) {
+    return false;
+  }
+
+  AudioOptions updated_options = source->options();
+  updated_options.SetAll(options);
+  source->SetOptions(updated_options);
+  return true;
+}
+
 const AudioOptions AudioSourceInterface::options() const {
   return {};
 }

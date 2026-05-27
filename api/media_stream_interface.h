@@ -310,6 +310,11 @@ class RTC_EXPORT AudioTrackInterface : public MediaStreamTrackInterface {
     return source ? source->GetVolume() : 1.0;
   }
 
+  // Updates audio processing options on the underlying local source.
+  // Implementations may notify track observers so active senders can reapply
+  // the updated options without replacing the track.
+  virtual bool SetAudioProcessingOptions(const AudioOptions& options);
+
   // Add/Remove a sink that will receive the audio data from the track.
   virtual void AddSink(AudioTrackSinkInterface* sink) = 0;
   virtual void RemoveSink(AudioTrackSinkInterface* sink) = 0;

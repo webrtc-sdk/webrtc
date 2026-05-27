@@ -738,11 +738,12 @@ void AudioRtpSender::OnChanged() {
   RTC_DCHECK_RUN_ON(signaling_thread_);
   TRACE_EVENT0("webrtc", "AudioRtpSender::OnChanged");
   RTC_DCHECK(!stopped_);
-  if (cached_track_enabled_ != track_->enabled()) {
-    cached_track_enabled_ = track_->enabled();
-    if (can_send_track()) {
-      SetSend();
-    }
+  bool track_enabled = track_->enabled();
+  bool enabled_changed = cached_track_enabled_ != track_enabled;
+  cached_track_enabled_ = track_enabled;
+
+  if (can_send_track() && (enabled_changed || track_enabled)) {
+    SetSend();
   }
 }
 

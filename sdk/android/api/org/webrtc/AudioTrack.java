@@ -38,8 +38,7 @@ public class AudioTrack extends MediaStreamTrack {
    * Updates the audio processing options stored on this local audio track's source.
    *
    * <p>This does not restart capture or change Android AudioRecord configuration. If the track is
-   * already being sent, prefer {@link RtpSender#setAudioProcessingOptions} so the active voice
-   * channel also reapplies the updated options.
+   * already being sent, active senders observe the track update and reapply the updated options.
    */
   public boolean setAudioProcessingOptions(boolean echoCancellation, boolean noiseSuppression,
       boolean autoGainControl, boolean highPassFilter) {
