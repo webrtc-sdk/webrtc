@@ -360,6 +360,14 @@ NSUInteger GetMaxSampleRate(
   }
 }
 
+// EnableLowLatencyRateControl only supports High profiles (VTCompressionProperties.h).
+bool IsH264HighProfileFamily(const std::optional<webrtc::H264ProfileLevelId> &id) {
+  return id &&
+      (id->profile == webrtc::H264Profile::kProfileConstrainedHigh ||
+       id->profile == webrtc::H264Profile::kProfileHigh ||
+       id->profile == webrtc::H264Profile::kProfilePredictiveHigh444);
+}
+
 const char *H264ProfileName(const std::optional<webrtc::H264ProfileLevelId> &id) {
   if (!id) return "<unparsed>";
   switch (id->profile) {
@@ -747,10 +755,7 @@ const char *H264ProfileName(const std::optional<webrtc::H264ProfileLevelId> &id)
   // profiles per VTCompressionProperties.h; setting it alongside a Baseline/Main
   // ProfileLevel disables hardware acceleration.
   if (@available(iOS 14.5, macCatalyst 14.5, macOS 11.3, tvOS 14.5, visionOS 1.0, *)) {
-    const bool isHighFamily = _profile_level_id &&
-        (_profile_level_id->profile == webrtc::H264Profile::kProfileConstrainedHigh ||
-         _profile_level_id->profile == webrtc::H264Profile::kProfileHigh ||
-         _profile_level_id->profile == webrtc::H264Profile::kProfilePredictiveHigh444);
+    const bool isHighFamily = IsH264HighProfileFamily(_profile_level_id);
     const char *profileName = H264ProfileName(_profile_level_id);
     if (isHighFamily) {
       RTC_LOG(LS_INFO) << "H264: enabling EnableLowLatencyRateControl (profile=" << profileName
