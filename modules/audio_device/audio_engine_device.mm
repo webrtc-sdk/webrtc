@@ -106,6 +106,8 @@ AudioEngineDevice::AudioEngineDevice(const Environment& env, bool voice_processi
 
   // Initial engine state
   engine_state_.voice_processing_bypassed = voice_processing_bypassed;
+  engine_state_.built_in_aec_enabled = !voice_processing_bypassed;
+  engine_state_.built_in_ns_enabled = !voice_processing_bypassed;
 }
 
 bool AudioEngineDevice::IsStopOnMuteModeEnabled() const {
@@ -995,7 +997,8 @@ bool AudioEngineDevice::BuiltInAECIsAvailable() const {
 #if TARGET_OS_SIMULATOR
   return false;
 #else
-  return true;
+  RTC_DCHECK_RUN_ON(thread_);
+  return engine_state_.voice_processing_enabled;
 #endif
 }
 
@@ -1003,7 +1006,8 @@ bool AudioEngineDevice::BuiltInAGCIsAvailable() const {
 #if TARGET_OS_SIMULATOR
   return false;
 #else
-  return true;
+  RTC_DCHECK_RUN_ON(thread_);
+  return engine_state_.voice_processing_enabled;
 #endif
 }
 
@@ -1011,7 +1015,8 @@ bool AudioEngineDevice::BuiltInNSIsAvailable() const {
 #if TARGET_OS_SIMULATOR
   return false;
 #else
-  return true;
+  RTC_DCHECK_RUN_ON(thread_);
+  return engine_state_.voice_processing_enabled;
 #endif
 }
 
@@ -1019,8 +1024,18 @@ int32_t AudioEngineDevice::EnableBuiltInAEC(bool enable) {
 #if TARGET_OS_SIMULATOR
   return -1;
 #else
-  // Succeed on enable, fail on disable so software APM stays on as fallback.
-  return enable ? 0 : -1;
+  RTC_DCHECK_RUN_ON(thread_);
+  if (!engine_state_.voice_processing_enabled) {
+    return -1;
+  }
+  return ModifyEngineState([enable](EngineState state) -> EngineState {
+    state.built_in_aec_enabled = enable;
+    // AVAudioEngine exposes VPIO bypass as one knob for AEC, NS, and AGC.
+    const bool use_vpio = state.built_in_aec_enabled || state.built_in_ns_enabled ||
+                          state.voice_processing_agc_enabled;
+    state.voice_processing_bypassed = !use_vpio;
+    return state;
+  });
 #endif
 }
 
@@ -1028,7 +1043,17 @@ int32_t AudioEngineDevice::EnableBuiltInAGC(bool enable) {
 #if TARGET_OS_SIMULATOR
   return -1;
 #else
-  return enable ? 0 : -1;
+  RTC_DCHECK_RUN_ON(thread_);
+  if (!engine_state_.voice_processing_enabled) {
+    return -1;
+  }
+  return ModifyEngineState([enable](EngineState state) -> EngineState {
+    state.voice_processing_agc_enabled = enable;
+    const bool use_vpio = state.built_in_aec_enabled || state.built_in_ns_enabled ||
+                          state.voice_processing_agc_enabled;
+    state.voice_processing_bypassed = !use_vpio;
+    return state;
+  });
 #endif
 }
 
@@ -1036,7 +1061,18 @@ int32_t AudioEngineDevice::EnableBuiltInNS(bool enable) {
 #if TARGET_OS_SIMULATOR
   return -1;
 #else
-  return enable ? 0 : -1;
+  RTC_DCHECK_RUN_ON(thread_);
+  if (!engine_state_.voice_processing_enabled) {
+    return -1;
+  }
+  return ModifyEngineState([enable](EngineState state) -> EngineState {
+    state.built_in_ns_enabled = enable;
+    // AVAudioEngine exposes VPIO bypass as one knob for AEC, NS, and AGC.
+    const bool use_vpio = state.built_in_aec_enabled || state.built_in_ns_enabled ||
+                          state.voice_processing_agc_enabled;
+    state.voice_processing_bypassed = !use_vpio;
+    return state;
+  });
 #endif
 }
 
@@ -1141,6 +1177,9 @@ int32_t AudioEngineDevice::SetVoiceProcessingBypassed(bool enable) {
 
   int32_t result = ModifyEngineState([enable](EngineState state) -> EngineState {
     state.voice_processing_bypassed = enable;
+    state.built_in_aec_enabled = !enable;
+    state.built_in_ns_enabled = !enable;
+    state.voice_processing_agc_enabled = !enable;
     return state;
   });
 
@@ -1828,6 +1867,8 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
            << " vp=" << s.voice_processing_enabled
            << " vpBypass=" << s.voice_processing_bypassed
            << " agc=" << s.voice_processing_agc_enabled
+           << " builtinAec=" << s.built_in_aec_enabled
+           << " builtinNs=" << s.built_in_ns_enabled
            << " mute_mode=" << mute_mode_str(s.mute_mode)
            << " render=" << render_mode_str(s.render_mode)
            << " interrupted=" << s.is_interrupted

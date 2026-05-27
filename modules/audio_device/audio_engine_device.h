@@ -149,6 +149,11 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
     bool voice_processing_enabled = true;
     bool voice_processing_bypassed = false;
     bool voice_processing_agc_enabled = true;
+    // Desired built-in AEC/NS state. AVAudioEngine exposes one VPIO bypass knob
+    // for AEC, NS, and AGC, so these are tracked separately and folded into
+    // bypass state with voice_processing_agc_enabled.
+    bool built_in_aec_enabled = true;
+    bool built_in_ns_enabled = true;
     bool advanced_ducking = false;
     AudioDuckingLevel ducking_level = AudioDuckingLevelMin;
 
@@ -168,6 +173,8 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
              voice_processing_enabled == rhs.voice_processing_enabled &&
              voice_processing_bypassed == rhs.voice_processing_bypassed &&
              voice_processing_agc_enabled == rhs.voice_processing_agc_enabled &&
+             built_in_aec_enabled == rhs.built_in_aec_enabled &&
+             built_in_ns_enabled == rhs.built_in_ns_enabled &&
              advanced_ducking == rhs.advanced_ducking && ducking_level == rhs.ducking_level &&
              output_device_id == rhs.output_device_id && input_device_id == rhs.input_device_id &&
              default_output_device_update_count == rhs.default_output_device_update_count &&
