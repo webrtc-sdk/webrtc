@@ -108,6 +108,7 @@ AudioEngineDevice::AudioEngineDevice(const Environment& env, bool voice_processi
   engine_state_.voice_processing_bypassed = voice_processing_bypassed;
   engine_state_.built_in_aec_enabled = !voice_processing_bypassed;
   engine_state_.built_in_ns_enabled = !voice_processing_bypassed;
+  engine_state_.voice_processing_agc_enabled = !voice_processing_bypassed;
 }
 
 bool AudioEngineDevice::IsStopOnMuteModeEnabled() const {
