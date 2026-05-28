@@ -445,6 +445,59 @@ TEST(AudioProcessingControllerTest,
   EXPECT_FALSE(apm_config.gain_controller1.enabled);
 }
 
+TEST(AudioProcessingControllerTest,
+     CoupledEchoPlatformResolvesDisabledWhenVpioUnavailable) {
+  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>
+      adm = webrtc::make_ref_counted<
+          StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
+  webrtc::AudioOptions options;
+  options.echo_cancellation = true;
+  options.echo_cancellation_mode = webrtc::AudioProcessingMode::kPlatform;
+
+  EXPECT_CALL(*adm, BuiltInAECIsAvailable()).WillOnce(Return(false));
+
+  webrtc::AudioProcessing::Config apm_config =
+      ApplyAudioProcessingOptionsForTest(options, adm.get());
+  EXPECT_FALSE(apm_config.echo_canceller.enabled);
+}
+
+TEST(AudioProcessingControllerTest,
+     CoupledAgcPlatformOnlyDoesNotEnableVpioOrSoftwareFallback) {
+  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>
+      adm = webrtc::make_ref_counted<
+          StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
+  webrtc::AudioOptions options;
+  options.auto_gain_control = true;
+  options.auto_gain_control_mode = webrtc::AudioProcessingMode::kPlatform;
+
+  EXPECT_CALL(*adm, BuiltInAGCIsAvailable()).WillOnce(Return(true));
+  EXPECT_CALL(*adm, EnableBuiltInAGC(false)).WillOnce(Return(0));
+
+  webrtc::AudioProcessing::Config apm_config =
+      ApplyAudioProcessingOptionsForTest(options, adm.get());
+  EXPECT_FALSE(apm_config.gain_controller1.enabled);
+}
+
+TEST(AudioProcessingControllerTest,
+     CoupledEchoPlatformWithNoiseUnsetEnablesSharedVpio) {
+  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>
+      adm = webrtc::make_ref_counted<
+          StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
+  webrtc::AudioOptions options;
+  options.echo_cancellation = true;
+  options.echo_cancellation_mode = webrtc::AudioProcessingMode::kPlatform;
+
+  EXPECT_CALL(*adm, BuiltInAECIsAvailable()).WillOnce(Return(true));
+  EXPECT_CALL(*adm, BuiltInNSIsAvailable()).WillOnce(Return(true));
+  EXPECT_CALL(*adm, EnableBuiltInAEC(true)).WillOnce(Return(0));
+  EXPECT_CALL(*adm, EnableBuiltInNS(true)).WillOnce(Return(0));
+
+  webrtc::AudioProcessing::Config apm_config =
+      ApplyAudioProcessingOptionsForTest(options, adm.get());
+  EXPECT_FALSE(apm_config.echo_canceller.enabled);
+  EXPECT_FALSE(apm_config.noise_suppression.enabled);
+}
+
 TEST(AudioProcessingControllerTest, CoupledAgcOnlyDoesNotEnableVpio) {
   webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>
       adm = webrtc::make_ref_counted<
