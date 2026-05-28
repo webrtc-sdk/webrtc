@@ -22,23 +22,72 @@
 
 #include "rtc_base/checks.h"
 
+namespace {
+
+webrtc::AudioProcessingMode NativeAudioProcessingMode(
+    RTC_OBJC_TYPE(RTCAudioProcessingMode) mode) {
+  switch (mode) {
+    case RTC_OBJC_TYPE(RTCAudioProcessingModePlatform):
+      return webrtc::AudioProcessingMode::kPlatform;
+    case RTC_OBJC_TYPE(RTCAudioProcessingModeSoftware):
+      return webrtc::AudioProcessingMode::kSoftware;
+    case RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic):
+    default:
+      return webrtc::AudioProcessingMode::kAutomatic;
+  }
+}
+
+}  // namespace
+
 @implementation RTC_OBJC_TYPE (RTCAudioProcessingOptions)
 
 @synthesize echoCancellation = _echoCancellation;
 @synthesize noiseSuppression = _noiseSuppression;
 @synthesize autoGainControl = _autoGainControl;
 @synthesize highPassFilter = _highPassFilter;
+@synthesize echoCancellationMode = _echoCancellationMode;
+@synthesize noiseSuppressionMode = _noiseSuppressionMode;
+@synthesize autoGainControlMode = _autoGainControlMode;
+@synthesize highPassFilterMode = _highPassFilterMode;
 
 - (instancetype)initWithEchoCancellation:(BOOL)echoCancellation
                         noiseSuppression:(BOOL)noiseSuppression
                          autoGainControl:(BOOL)autoGainControl
                           highPassFilter:(BOOL)highPassFilter {
+  return [self
+      initWithEchoCancellation:echoCancellation
+              noiseSuppression:noiseSuppression
+               autoGainControl:autoGainControl
+                highPassFilter:highPassFilter
+          echoCancellationMode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)
+          noiseSuppressionMode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)
+           autoGainControlMode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)
+            highPassFilterMode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)];
+}
+
+- (instancetype)
+    initWithEchoCancellation:(BOOL)echoCancellation
+            noiseSuppression:(BOOL)noiseSuppression
+             autoGainControl:(BOOL)autoGainControl
+              highPassFilter:(BOOL)highPassFilter
+        echoCancellationMode:
+            (RTC_OBJC_TYPE(RTCAudioProcessingMode))echoCancellationMode
+        noiseSuppressionMode:
+            (RTC_OBJC_TYPE(RTCAudioProcessingMode))noiseSuppressionMode
+         autoGainControlMode:
+             (RTC_OBJC_TYPE(RTCAudioProcessingMode))autoGainControlMode
+          highPassFilterMode:
+              (RTC_OBJC_TYPE(RTCAudioProcessingMode))highPassFilterMode {
   self = [super init];
   if (self) {
     _echoCancellation = echoCancellation;
     _noiseSuppression = noiseSuppression;
     _autoGainControl = autoGainControl;
     _highPassFilter = highPassFilter;
+    _echoCancellationMode = echoCancellationMode;
+    _noiseSuppressionMode = noiseSuppressionMode;
+    _autoGainControlMode = autoGainControlMode;
+    _highPassFilterMode = highPassFilterMode;
   }
   return self;
 }
@@ -209,6 +258,14 @@
   nativeOptions.noise_suppression = options.noiseSuppression;
   nativeOptions.auto_gain_control = options.autoGainControl;
   nativeOptions.highpass_filter = options.highPassFilter;
+  nativeOptions.echo_cancellation_mode =
+      NativeAudioProcessingMode(options.echoCancellationMode);
+  nativeOptions.noise_suppression_mode =
+      NativeAudioProcessingMode(options.noiseSuppressionMode);
+  nativeOptions.auto_gain_control_mode =
+      NativeAudioProcessingMode(options.autoGainControlMode);
+  nativeOptions.highpass_filter_mode =
+      NativeAudioProcessingMode(options.highPassFilterMode);
   return self.nativeAudioTrack->SetAudioProcessingOptions(nativeOptions);
 }
 

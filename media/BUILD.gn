@@ -670,6 +670,8 @@ rtc_library("rtc_audio_video") {
   sources = [
     "engine/adm_helpers.cc",
     "engine/adm_helpers.h",
+    "engine/audio_processing_controller.cc",
+    "engine/audio_processing_controller.h",
     "engine/webrtc_media_engine.cc",
     "engine/webrtc_media_engine.h",
     "engine/webrtc_video_engine.cc",

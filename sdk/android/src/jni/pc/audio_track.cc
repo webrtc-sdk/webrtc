@@ -17,6 +17,21 @@
 
 namespace webrtc {
 namespace jni {
+namespace {
+
+AudioProcessingMode AudioProcessingModeFromJava(int mode) {
+  switch (mode) {
+    case 1:
+      return AudioProcessingMode::kPlatform;
+    case 2:
+      return AudioProcessingMode::kSoftware;
+    case 0:
+    default:
+      return AudioProcessingMode::kAutomatic;
+  }
+}
+
+}  // namespace
 
 static void JNI_AudioTrack_SetVolume(JNIEnv*, jlong j_p, jdouble volume) {
   reinterpret_cast<AudioTrackInterface*>(j_p)->SetVolume(volume);
@@ -32,13 +47,25 @@ static jboolean JNI_AudioTrack_SetAudioProcessingOptions(
     jboolean echo_cancellation,
     jboolean noise_suppression,
     jboolean auto_gain_control,
-    jboolean high_pass_filter) {
+    jboolean high_pass_filter,
+    jint echo_cancellation_mode,
+    jint noise_suppression_mode,
+    jint auto_gain_control_mode,
+    jint high_pass_filter_mode) {
   AudioTrackInterface* track = reinterpret_cast<AudioTrackInterface*>(j_p);
   AudioOptions options;
   options.echo_cancellation = static_cast<bool>(echo_cancellation);
   options.noise_suppression = static_cast<bool>(noise_suppression);
   options.auto_gain_control = static_cast<bool>(auto_gain_control);
   options.highpass_filter = static_cast<bool>(high_pass_filter);
+  options.echo_cancellation_mode =
+      AudioProcessingModeFromJava(echo_cancellation_mode);
+  options.noise_suppression_mode =
+      AudioProcessingModeFromJava(noise_suppression_mode);
+  options.auto_gain_control_mode =
+      AudioProcessingModeFromJava(auto_gain_control_mode);
+  options.highpass_filter_mode =
+      AudioProcessingModeFromJava(high_pass_filter_mode);
   return track->SetAudioProcessingOptions(options);
 }
 

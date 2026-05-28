@@ -82,6 +82,7 @@
 #include "media/base/media_engine.h"
 #include "media/base/stream_params.h"
 #include "media/engine/adm_helpers.h"
+#include "media/engine/audio_processing_controller.h"
 #include "media/engine/webrtc_media_engine.h"
 #include "modules/async_audio_processing/async_audio_processing.h"
 #include "modules/audio_mixer/audio_mixer_impl.h"
@@ -626,51 +627,9 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
   }
 #endif
 
-  // Delegate to built-in AEC/AGC/NS if the ADM provides them (e.g.
-  // AVAudioEngine VPIO on iOS device / macOS). On platforms where the ADM
-  // reports no built-in processing (Android, iOS Simulator, etc.) the
-  // software APM stays enabled as requested by the SDK.
-  if (options.echo_cancellation) {
-    const bool built_in_aec = adm()->BuiltInAECIsAvailable();
-    if (built_in_aec) {
-      const bool enable_built_in_aec = *options.echo_cancellation;
-      if (adm()->EnableBuiltInAEC(enable_built_in_aec) == 0 &&
-          enable_built_in_aec) {
-        // Disable internal software EC if built-in EC is enabled,
-        // i.e., replace the software EC with the built-in EC.
-        options.echo_cancellation = false;
-        RTC_LOG(LS_INFO)
-            << "Disabling EC since built-in EC will be used instead";
-      }
-    }
-  }
-
-  if (options.auto_gain_control) {
-    bool built_in_agc_avaliable = adm()->BuiltInAGCIsAvailable();
-    if (built_in_agc_avaliable) {
-      if (adm()->EnableBuiltInAGC(*options.auto_gain_control) == 0 &&
-          *options.auto_gain_control) {
-        // Disable internal software AGC if built-in AGC is enabled,
-        // i.e., replace the software AGC with the built-in AGC.
-        options.auto_gain_control = false;
-        RTC_LOG(LS_INFO)
-            << "Disabling AGC since built-in AGC will be used instead";
-      }
-    }
-  }
-
-  if (options.noise_suppression) {
-    if (adm()->BuiltInNSIsAvailable()) {
-      bool builtin_ns = *options.noise_suppression;
-      if (adm()->EnableBuiltInNS(builtin_ns) == 0 && builtin_ns) {
-        // Disable internal software NS if built-in NS is enabled,
-        // i.e., replace the software NS with the built-in NS.
-        options.noise_suppression = false;
-        RTC_LOG(LS_INFO)
-            << "Disabling NS since built-in NS will be used instead";
-      }
-    }
-  }
+  options = ApplyAudioProcessingOptions(apm(), adm(), options);
+  RTC_LOG(LS_INFO) << "Applied audio processing options: "
+                   << options.ToString();
 
   if (options.stereo_swapping) {
     audio_state()->SetStereoChannelSwapping(*options.stereo_swapping);
@@ -689,41 +648,6 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
         *options.audio_jitter_buffer_min_delay_ms;
   }
 
-  AudioProcessing* ap = apm();
-  if (!ap) {
-    return;
-  }
-
-  AudioProcessing::Config apm_config = ap->GetConfig();
-
-  if (options.echo_cancellation) {
-    apm_config.echo_canceller.enabled = *options.echo_cancellation;
-  }
-
-  if (options.auto_gain_control) {
-    const bool enabled = *options.auto_gain_control;
-    apm_config.gain_controller1.enabled = enabled;
-#if defined(WEBRTC_IOS) || defined(WEBRTC_MAC) || defined(WEBRTC_ANDROID)
-    apm_config.gain_controller1.mode =
-        AudioProcessing::Config::GainController1::kFixedDigital;
-#else
-    apm_config.gain_controller1.mode =
-        AudioProcessing::Config::GainController1::kAdaptiveAnalog;
-#endif
-  }
-
-  if (options.highpass_filter) {
-    apm_config.high_pass_filter.enabled = *options.highpass_filter;
-  }
-
-  if (options.noise_suppression) {
-    const bool enabled = *options.noise_suppression;
-    apm_config.noise_suppression.enabled = enabled;
-    apm_config.noise_suppression.level =
-        AudioProcessing::Config::NoiseSuppression::Level::kHigh;
-  }
-
-  ap->ApplyConfig(apm_config);
 }
 
 const std::vector<Codec>& WebRtcVoiceEngine::LegacySendCodecs() const {

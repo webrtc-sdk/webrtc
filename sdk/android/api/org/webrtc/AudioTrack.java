@@ -14,19 +14,42 @@ import java.util.IdentityHashMap;
 
 /** Java wrapper for a C++ AudioTrackInterface */
 public class AudioTrack extends MediaStreamTrack {
+  public enum AudioProcessingMode {
+    AUTOMATIC,
+    PLATFORM,
+    SOFTWARE
+  }
+
   /** Audio processing options for a native local audio track. */
   public static final class AudioProcessingOptions {
     public final boolean echoCancellation;
     public final boolean noiseSuppression;
     public final boolean autoGainControl;
     public final boolean highPassFilter;
+    public final AudioProcessingMode echoCancellationMode;
+    public final AudioProcessingMode noiseSuppressionMode;
+    public final AudioProcessingMode autoGainControlMode;
+    public final AudioProcessingMode highPassFilterMode;
 
     public AudioProcessingOptions(boolean echoCancellation, boolean noiseSuppression,
         boolean autoGainControl, boolean highPassFilter) {
+      this(echoCancellation, noiseSuppression, autoGainControl, highPassFilter,
+          AudioProcessingMode.AUTOMATIC, AudioProcessingMode.AUTOMATIC,
+          AudioProcessingMode.AUTOMATIC, AudioProcessingMode.AUTOMATIC);
+    }
+
+    public AudioProcessingOptions(boolean echoCancellation, boolean noiseSuppression,
+        boolean autoGainControl, boolean highPassFilter, AudioProcessingMode echoCancellationMode,
+        AudioProcessingMode noiseSuppressionMode, AudioProcessingMode autoGainControlMode,
+        AudioProcessingMode highPassFilterMode) {
       this.echoCancellation = echoCancellation;
       this.noiseSuppression = noiseSuppression;
       this.autoGainControl = autoGainControl;
       this.highPassFilter = highPassFilter;
+      this.echoCancellationMode = checkNotNull(echoCancellationMode, "echoCancellationMode");
+      this.noiseSuppressionMode = checkNotNull(noiseSuppressionMode, "noiseSuppressionMode");
+      this.autoGainControlMode = checkNotNull(autoGainControlMode, "autoGainControlMode");
+      this.highPassFilterMode = checkNotNull(highPassFilterMode, "highPassFilterMode");
     }
 
     public static AudioProcessingOptions communication() {
@@ -71,7 +94,9 @@ public class AudioTrack extends MediaStreamTrack {
       throw new IllegalArgumentException("AudioProcessingOptions is not allowed to be null");
     }
     return nativeSetAudioProcessingOptions(getNativeAudioTrack(), options.echoCancellation,
-        options.noiseSuppression, options.autoGainControl, options.highPassFilter);
+        options.noiseSuppression, options.autoGainControl, options.highPassFilter,
+        options.echoCancellationMode.ordinal(), options.noiseSuppressionMode.ordinal(),
+        options.autoGainControlMode.ordinal(), options.highPassFilterMode.ordinal());
   }
 
   public boolean setAudioProcessingOptions(boolean echoCancellation, boolean noiseSuppression,
@@ -125,10 +150,19 @@ public class AudioTrack extends MediaStreamTrack {
     return getNativeMediaStreamTrack();
   }
 
+  private static <T> T checkNotNull(T value, String name) {
+    if (value == null) {
+      throw new IllegalArgumentException(name + " is not allowed to be null");
+    }
+    return value;
+  }
+
   private static native void nativeSetVolume(long track, double volume);
   private static native double nativeGetVolume(long track);
   private static native boolean nativeSetAudioProcessingOptions(long track, boolean echoCancellation,
-      boolean noiseSuppression, boolean autoGainControl, boolean highPassFilter);
+      boolean noiseSuppression, boolean autoGainControl, boolean highPassFilter,
+      int echoCancellationMode, int noiseSuppressionMode, int autoGainControlMode,
+      int highPassFilterMode);
   private static native void nativeAddSink(long track, long nativeSink);
   private static native void nativeRemoveSink(long track, long nativeSink);
   private static native long nativeWrapSink(AudioTrackSink sink);

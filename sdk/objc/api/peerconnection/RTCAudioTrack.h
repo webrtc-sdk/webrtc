@@ -16,6 +16,12 @@ NS_ASSUME_NONNULL_BEGIN
 @protocol RTC_OBJC_TYPE (RTCAudioRenderer);
 @class RTC_OBJC_TYPE(RTCAudioSource);
 
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCAudioProcessingMode)) {
+  RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic) = 0,
+  RTC_OBJC_TYPE(RTCAudioProcessingModePlatform) = 1,
+  RTC_OBJC_TYPE(RTCAudioProcessingModeSoftware) = 2,
+};
+
 RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCAudioProcessingOptions) : NSObject
 
@@ -23,11 +29,34 @@ RTC_OBJC_EXPORT
 @property(nonatomic, readonly) BOOL noiseSuppression;
 @property(nonatomic, readonly) BOOL autoGainControl;
 @property(nonatomic, readonly) BOOL highPassFilter;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioProcessingMode)
+    echoCancellationMode;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioProcessingMode)
+    noiseSuppressionMode;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioProcessingMode)
+    autoGainControlMode;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioProcessingMode)
+    highPassFilterMode;
 
 - (instancetype)initWithEchoCancellation:(BOOL)echoCancellation
                         noiseSuppression:(BOOL)noiseSuppression
                          autoGainControl:(BOOL)autoGainControl
-                          highPassFilter:(BOOL)highPassFilter NS_DESIGNATED_INITIALIZER;
+                          highPassFilter:(BOOL)highPassFilter;
+
+- (instancetype)
+    initWithEchoCancellation:(BOOL)echoCancellation
+            noiseSuppression:(BOOL)noiseSuppression
+             autoGainControl:(BOOL)autoGainControl
+              highPassFilter:(BOOL)highPassFilter
+        echoCancellationMode:
+            (RTC_OBJC_TYPE(RTCAudioProcessingMode))echoCancellationMode
+        noiseSuppressionMode:
+            (RTC_OBJC_TYPE(RTCAudioProcessingMode))noiseSuppressionMode
+         autoGainControlMode:
+             (RTC_OBJC_TYPE(RTCAudioProcessingMode))autoGainControlMode
+          highPassFilterMode:
+              (RTC_OBJC_TYPE(RTCAudioProcessingMode))highPassFilterMode
+    NS_DESIGNATED_INITIALIZER;
 
 + (instancetype)communicationOptions;
 + (instancetype)rawOptions;

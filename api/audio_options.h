@@ -18,6 +18,12 @@
 
 namespace webrtc {
 
+enum class AudioProcessingMode {
+  kAutomatic = 0,
+  kPlatform = 1,
+  kSoftware = 2,
+};
+
 // Options that can be applied to a VoiceMediaChannel or a VoiceMediaEngine.
 // Used to be flags, but that makes it hard to selectively apply options.
 // We are moving all of the setting of options to structs like this,
@@ -35,6 +41,7 @@ struct RTC_EXPORT AudioOptions {
   // Audio processing that attempts to filter away the output signal from
   // later inbound pickup.
   std::optional<bool> echo_cancellation;
+  std::optional<AudioProcessingMode> echo_cancellation_mode;
 #if defined(WEBRTC_IOS)
   // Forces software echo cancellation on iOS. This is a temporary workaround
   // (until Apple fixes the bug) for a device with non-functioning AEC. May
@@ -44,10 +51,13 @@ struct RTC_EXPORT AudioOptions {
 #endif
   // Audio processing to adjust the sensitivity of the local mic dynamically.
   std::optional<bool> auto_gain_control;
+  std::optional<AudioProcessingMode> auto_gain_control_mode;
   // Audio processing to filter out background noise.
   std::optional<bool> noise_suppression;
+  std::optional<AudioProcessingMode> noise_suppression_mode;
   // Audio processing to remove background noise of lower frequencies.
   std::optional<bool> highpass_filter;
+  std::optional<AudioProcessingMode> highpass_filter_mode;
   // Audio processing to swap the left and right channels.
   std::optional<bool> stereo_swapping;
   // Audio receiver jitter buffer (NetEq) max capacity in number of packets.
