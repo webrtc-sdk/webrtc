@@ -199,6 +199,11 @@
   if (!options) {
     return NO;
   }
+  if (!_signalingThread->IsCurrent()) {
+    return _signalingThread->BlockingCall(
+        [self, options] { return [self setAudioProcessingOptions:options]; });
+  }
+
   webrtc::AudioOptions nativeOptions;
   nativeOptions.echo_cancellation = options.echoCancellation;
   nativeOptions.noise_suppression = options.noiseSuppression;
