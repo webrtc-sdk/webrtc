@@ -1021,6 +1021,12 @@ bool AudioEngineDevice::BuiltInNSIsAvailable() const {
 #endif
 }
 
+AudioDeviceModule::BuiltInAudioProcessingTopology
+AudioEngineDevice::GetBuiltInAudioProcessingTopology() const {
+  return BuiltInAudioProcessingTopology::
+      kEchoCancellationAndNoiseSuppressionCoupled;
+}
+
 int32_t AudioEngineDevice::EnableBuiltInAEC(bool enable) {
 #if TARGET_OS_SIMULATOR
   return -1;
@@ -1031,9 +1037,8 @@ int32_t AudioEngineDevice::EnableBuiltInAEC(bool enable) {
   }
   return ModifyEngineState([enable](EngineState state) -> EngineState {
     state.built_in_aec_enabled = enable;
-    // AVAudioEngine exposes VPIO bypass as one knob for AEC, NS, and AGC.
-    const bool use_vpio = state.built_in_aec_enabled || state.built_in_ns_enabled ||
-                          state.voice_processing_agc_enabled;
+    // AVAudioEngine exposes VPIO bypass as one knob for AEC and NS.
+    const bool use_vpio = state.built_in_aec_enabled || state.built_in_ns_enabled;
     state.voice_processing_bypassed = !use_vpio;
     return state;
   });
@@ -1050,9 +1055,6 @@ int32_t AudioEngineDevice::EnableBuiltInAGC(bool enable) {
   }
   return ModifyEngineState([enable](EngineState state) -> EngineState {
     state.voice_processing_agc_enabled = enable;
-    const bool use_vpio = state.built_in_aec_enabled || state.built_in_ns_enabled ||
-                          state.voice_processing_agc_enabled;
-    state.voice_processing_bypassed = !use_vpio;
     return state;
   });
 #endif
@@ -1068,9 +1070,8 @@ int32_t AudioEngineDevice::EnableBuiltInNS(bool enable) {
   }
   return ModifyEngineState([enable](EngineState state) -> EngineState {
     state.built_in_ns_enabled = enable;
-    // AVAudioEngine exposes VPIO bypass as one knob for AEC, NS, and AGC.
-    const bool use_vpio = state.built_in_aec_enabled || state.built_in_ns_enabled ||
-                          state.voice_processing_agc_enabled;
+    // AVAudioEngine exposes VPIO bypass as one knob for AEC and NS.
+    const bool use_vpio = state.built_in_aec_enabled || state.built_in_ns_enabled;
     state.voice_processing_bypassed = !use_vpio;
     return state;
   });

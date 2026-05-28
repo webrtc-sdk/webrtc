@@ -62,6 +62,15 @@ class AudioDeviceModule : public RefCountInterface {
     kEnded,
   };
 
+  enum class BuiltInAudioProcessingTopology {
+    // Platform AEC, NS, and AGC can be controlled independently.
+    kIndependent,
+    // Platform AEC and NS are exposed through one shared voice-processing
+    // bypass switch. Platform AGC has a separate switch, but only has an
+    // effect while the shared AEC/NS voice-processing path is active.
+    kEchoCancellationAndNoiseSuppressionCoupled,
+  };
+
   struct Stats {
     // The fields below correspond to similarly-named fields in the WebRTC stats
     // spec. https://w3c.github.io/webrtc-stats/#playoutstats-dict*
@@ -163,6 +172,11 @@ class AudioDeviceModule : public RefCountInterface {
   virtual bool BuiltInAECIsAvailable() const = 0;
   virtual bool BuiltInAGCIsAvailable() const = 0;
   virtual bool BuiltInNSIsAvailable() const = 0;
+
+  virtual BuiltInAudioProcessingTopology GetBuiltInAudioProcessingTopology()
+      const {
+    return BuiltInAudioProcessingTopology::kIndependent;
+  }
 
   // Enables the built-in audio effects. Only supported on Android.
   virtual int32_t EnableBuiltInAEC(bool enable) = 0;

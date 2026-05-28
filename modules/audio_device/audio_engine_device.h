@@ -150,8 +150,8 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
     bool voice_processing_bypassed = false;
     bool voice_processing_agc_enabled = true;
     // Desired built-in AEC/NS state. AVAudioEngine exposes one VPIO bypass knob
-    // for AEC, NS, and AGC, so these are tracked separately and folded into
-    // bypass state with voice_processing_agc_enabled.
+    // for AEC and NS. AGC has a separate switch, but only has an effect while
+    // VPIO is active.
     bool built_in_aec_enabled = true;
     bool built_in_ns_enabled = true;
     bool advanced_ducking = false;
@@ -337,6 +337,8 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   bool BuiltInAECIsAvailable() const override;
   bool BuiltInAGCIsAvailable() const override;
   bool BuiltInNSIsAvailable() const override;
+  BuiltInAudioProcessingTopology GetBuiltInAudioProcessingTopology()
+      const override;
   int32_t EnableBuiltInAEC(bool enable) override;
   int32_t EnableBuiltInAGC(bool enable) override;
   int32_t EnableBuiltInNS(bool enable) override;

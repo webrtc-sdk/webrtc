@@ -68,6 +68,59 @@ bool ResolveSoftwareProcessing(std::optional<bool> enabled,
   return false;
 }
 
+AudioProcessingMode ModeOrAutomatic(std::optional<AudioProcessingMode> mode) {
+  return mode.value_or(AudioProcessingMode::kAutomatic);
+}
+
+bool WantsPlatformProcessing(std::optional<bool> enabled,
+                             std::optional<AudioProcessingMode> mode) {
+  if (!enabled.value_or(false)) {
+    return false;
+  }
+  AudioProcessingMode processing_mode = ModeOrAutomatic(mode);
+  return processing_mode == AudioProcessingMode::kAutomatic ||
+         processing_mode == AudioProcessingMode::kPlatform;
+}
+
+bool ForcesSoftwareOrDisabled(std::optional<bool> enabled,
+                              std::optional<AudioProcessingMode> mode) {
+  if (!enabled.has_value()) {
+    return false;
+  }
+  return !*enabled || ModeOrAutomatic(mode) == AudioProcessingMode::kSoftware;
+}
+
+bool PlatformEffectIsAvailable(AudioDeviceModule* adm,
+                               AvailabilityFn is_available) {
+  return adm != nullptr && (adm->*is_available)();
+}
+
+bool SetPlatformEffect(AudioDeviceModule* adm, EnableFn enable, bool enabled) {
+  return adm != nullptr && (adm->*enable)(enabled) == 0;
+}
+
+std::optional<bool> ResolveSoftwareProcessingForPlatformState(
+    std::optional<bool> enabled,
+    std::optional<AudioProcessingMode> mode,
+    bool platform_enabled) {
+  if (!enabled.has_value()) {
+    return std::nullopt;
+  }
+  if (!*enabled) {
+    return false;
+  }
+
+  switch (ModeOrAutomatic(mode)) {
+    case AudioProcessingMode::kAutomatic:
+      return !platform_enabled;
+    case AudioProcessingMode::kPlatform:
+      return false;
+    case AudioProcessingMode::kSoftware:
+      return true;
+  }
+  return false;
+}
+
 bool ResolveHighPassFilter(std::optional<bool> enabled,
                            std::optional<AudioProcessingMode> mode) {
   if (!enabled.has_value() || !*enabled) {
@@ -77,6 +130,77 @@ bool ResolveHighPassFilter(std::optional<bool> enabled,
          AudioProcessingMode::kPlatform;
 }
 
+AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
+    AudioDeviceModule* adm,
+    const AudioOptions& options_in) {
+  AudioOptions software_options = options_in;
+
+  const bool has_echo_or_noise_option =
+      options_in.echo_cancellation.has_value() ||
+      options_in.noise_suppression.has_value();
+  const bool echo_or_noise_forces_vpio_off =
+      ForcesSoftwareOrDisabled(options_in.echo_cancellation,
+                               options_in.echo_cancellation_mode) ||
+      ForcesSoftwareOrDisabled(options_in.noise_suppression,
+                               options_in.noise_suppression_mode);
+  const bool echo_or_noise_wants_platform =
+      WantsPlatformProcessing(options_in.echo_cancellation,
+                              options_in.echo_cancellation_mode) ||
+      WantsPlatformProcessing(options_in.noise_suppression,
+                              options_in.noise_suppression_mode);
+  bool vpio_enabled = false;
+
+  if (has_echo_or_noise_option) {
+    const bool vpio_available =
+        PlatformEffectIsAvailable(adm,
+                                  &AudioDeviceModule::BuiltInAECIsAvailable) &&
+        PlatformEffectIsAvailable(adm,
+                                  &AudioDeviceModule::BuiltInNSIsAvailable);
+    vpio_enabled = vpio_available && !echo_or_noise_forces_vpio_off &&
+                   echo_or_noise_wants_platform;
+
+    if (vpio_available) {
+      SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInAEC,
+                        vpio_enabled);
+      SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInNS, vpio_enabled);
+    }
+  }
+
+  if (options_in.echo_cancellation.has_value()) {
+    software_options.echo_cancellation =
+        ResolveSoftwareProcessingForPlatformState(
+            options_in.echo_cancellation, options_in.echo_cancellation_mode,
+            vpio_enabled);
+  }
+
+  if (options_in.noise_suppression.has_value()) {
+    software_options.noise_suppression =
+        ResolveSoftwareProcessingForPlatformState(
+            options_in.noise_suppression, options_in.noise_suppression_mode,
+            vpio_enabled);
+  }
+
+  if (options_in.auto_gain_control.has_value()) {
+    const bool agc_wants_platform =
+        WantsPlatformProcessing(options_in.auto_gain_control,
+                                options_in.auto_gain_control_mode);
+    const bool agc_platform_enabled = vpio_enabled && agc_wants_platform;
+    const bool agc_available =
+        PlatformEffectIsAvailable(adm,
+                                  &AudioDeviceModule::BuiltInAGCIsAvailable);
+    if (agc_available) {
+      SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInAGC,
+                        agc_platform_enabled);
+    }
+    software_options.auto_gain_control =
+        ResolveSoftwareProcessingForPlatformState(
+            options_in.auto_gain_control, options_in.auto_gain_control_mode,
+            agc_available && agc_platform_enabled);
+  }
+
+  return software_options;
+}
+
 }  // namespace
 
 AudioOptions ApplyAudioProcessingOptions(AudioProcessing* apm,
@@ -84,25 +208,33 @@ AudioOptions ApplyAudioProcessingOptions(AudioProcessing* apm,
                                          const AudioOptions& options_in) {
   AudioOptions software_options = options_in;
 
-  if (options_in.echo_cancellation.has_value()) {
-    software_options.echo_cancellation = ResolveSoftwareProcessing(
-        options_in.echo_cancellation, options_in.echo_cancellation_mode, adm,
-        &AudioDeviceModule::BuiltInAECIsAvailable,
-        &AudioDeviceModule::EnableBuiltInAEC);
-  }
+  if (adm != nullptr &&
+      adm->GetBuiltInAudioProcessingTopology() ==
+          AudioDeviceModule::BuiltInAudioProcessingTopology::
+              kEchoCancellationAndNoiseSuppressionCoupled) {
+    software_options =
+        ApplyCoupledEchoNoiseProcessingOptions(adm, options_in);
+  } else {
+    if (options_in.echo_cancellation.has_value()) {
+      software_options.echo_cancellation = ResolveSoftwareProcessing(
+          options_in.echo_cancellation, options_in.echo_cancellation_mode, adm,
+          &AudioDeviceModule::BuiltInAECIsAvailable,
+          &AudioDeviceModule::EnableBuiltInAEC);
+    }
 
-  if (options_in.auto_gain_control.has_value()) {
-    software_options.auto_gain_control = ResolveSoftwareProcessing(
-        options_in.auto_gain_control, options_in.auto_gain_control_mode, adm,
-        &AudioDeviceModule::BuiltInAGCIsAvailable,
-        &AudioDeviceModule::EnableBuiltInAGC);
-  }
+    if (options_in.auto_gain_control.has_value()) {
+      software_options.auto_gain_control = ResolveSoftwareProcessing(
+          options_in.auto_gain_control, options_in.auto_gain_control_mode, adm,
+          &AudioDeviceModule::BuiltInAGCIsAvailable,
+          &AudioDeviceModule::EnableBuiltInAGC);
+    }
 
-  if (options_in.noise_suppression.has_value()) {
-    software_options.noise_suppression = ResolveSoftwareProcessing(
-        options_in.noise_suppression, options_in.noise_suppression_mode, adm,
-        &AudioDeviceModule::BuiltInNSIsAvailable,
-        &AudioDeviceModule::EnableBuiltInNS);
+    if (options_in.noise_suppression.has_value()) {
+      software_options.noise_suppression = ResolveSoftwareProcessing(
+          options_in.noise_suppression, options_in.noise_suppression_mode, adm,
+          &AudioDeviceModule::BuiltInNSIsAvailable,
+          &AudioDeviceModule::EnableBuiltInNS);
+    }
   }
 
   if (options_in.highpass_filter.has_value()) {
