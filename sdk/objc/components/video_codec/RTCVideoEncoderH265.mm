@@ -392,10 +392,9 @@ void compressionOutputCallback(void* encoder, void* params, OSStatus status,
                          kCFBooleanTrue);
   }
 
-  if (@available(iOS 14.5, macCatalyst 14.5, macOS 11.3, tvOS 14.5, visionOS 1.0, *)) {
-    CFDictionarySetValue(encoder_specs, kVTVideoEncoderSpecification_EnableLowLatencyRateControl,
-                         kCFBooleanTrue);
-  }
+  // kVTVideoEncoderSpecification_EnableLowLatencyRateControl restricts the encoder to "High
+  // profiles" per VTCompressionProperties.h. HEVC has no High profile family (Main / Main10 / ...),
+  // so requesting it forces VideoToolbox to disable hardware acceleration for HEVC.
 
   OSStatus status =
       VTCompressionSessionCreate(nullptr,  // use default allocator
