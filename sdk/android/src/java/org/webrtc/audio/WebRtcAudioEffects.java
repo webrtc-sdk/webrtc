@@ -78,8 +78,8 @@ class WebRtcAudioEffects {
       shouldEnableAec = false;
       return false;
     }
-    shouldEnableAec = enable;
     if (aec == null) {
+      shouldEnableAec = enable;
       return true;
     }
     return toggleAEC(enable);
@@ -97,8 +97,8 @@ class WebRtcAudioEffects {
       shouldEnableNs = false;
       return false;
     }
-    shouldEnableNs = enable;
     if (ns == null) {
+      shouldEnableNs = enable;
       return true;
     }
     return toggleNS(enable);
@@ -113,8 +113,10 @@ class WebRtcAudioEffects {
       return false;
     }
     Logging.d(TAG, "toggleAEC(" + enable + ")");
-    shouldEnableAec = enable;
     boolean toggling_succeeded = aec.setEnabled(enable) == AudioEffect.SUCCESS;
+    if (toggling_succeeded) {
+      shouldEnableAec = enable;
+    }
     Logging.d(TAG,
         "AcousticEchoCanceler: is now: " + (aec.getEnabled() ? "enabled" : "disabled"));
     return toggling_succeeded;
@@ -129,8 +131,10 @@ class WebRtcAudioEffects {
       return false;
     }
     Logging.d(TAG, "toggleNS(" + enable + ")");
-    shouldEnableNs = enable;
     boolean toggling_succeeded = ns.setEnabled(enable) == AudioEffect.SUCCESS;
+    if (toggling_succeeded) {
+      shouldEnableNs = enable;
+    }
     Logging.d(TAG, "NoiseSuppressor: is now: " + (ns.getEnabled() ? "enabled" : "disabled"));
     return toggling_succeeded;
   }
