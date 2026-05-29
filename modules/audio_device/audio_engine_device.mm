@@ -994,6 +994,9 @@ int32_t AudioEngineDevice::RegisterAudioCallback(AudioTransport* audioCallback) 
 // ----------------------------------------------------------------------------------------------------
 // Misc
 
+// These availability checks report whether AVAudioEngine voice processing can
+// be used, not whether it is currently unbypassed. Runtime options need a true
+// result while bypassed so they can re-enable platform processing.
 bool AudioEngineDevice::BuiltInAECIsAvailable() const {
 #if TARGET_OS_SIMULATOR
   return false;

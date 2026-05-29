@@ -67,7 +67,8 @@ class AudioDeviceModule : public RefCountInterface {
     kIndependent,
     // Platform AEC and NS are exposed through one shared voice-processing
     // bypass switch. Platform AGC has a separate switch, but only has an
-    // effect while the shared AEC/NS voice-processing path is active.
+    // effect while the shared AEC/NS voice-processing path is active. Enabling
+    // either AEC or NS may activate the shared platform path for both effects.
     kEchoCancellationAndNoiseSuppressionCoupled,
   };
 
