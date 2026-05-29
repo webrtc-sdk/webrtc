@@ -604,6 +604,35 @@ TEST_F(RtpSenderReceiverTest, LocalAudioTrackProcessingOptionsReapplied) {
   DestroyAudioRtpSender();
 }
 
+TEST_F(RtpSenderReceiverTest,
+       DisabledLocalAudioTrackProcessingOptionsAppliedOnEnable) {
+  AudioOptions options;
+  options.echo_cancellation = true;
+  auto source = LocalAudioSource::Create(&options);
+  CreateAudioRtpSender(source);
+
+  audio_track_->set_enabled(false);
+  EXPECT_TRUE(voice_media_send_channel()->IsStreamMuted(kAudioSsrc));
+
+  AudioOptions updated_options;
+  updated_options.echo_cancellation = false;
+  updated_options.echo_cancellation_mode = AudioProcessingMode::kSoftware;
+  EXPECT_TRUE(audio_track_->SetAudioProcessingOptions(updated_options));
+
+  EXPECT_EQ(false, source->options().echo_cancellation);
+  EXPECT_EQ(AudioProcessingMode::kSoftware,
+            source->options().echo_cancellation_mode);
+  EXPECT_EQ(true, voice_media_send_channel()->options().echo_cancellation);
+
+  audio_track_->set_enabled(true);
+  EXPECT_FALSE(voice_media_send_channel()->IsStreamMuted(kAudioSsrc));
+  EXPECT_EQ(false, voice_media_send_channel()->options().echo_cancellation);
+  EXPECT_EQ(AudioProcessingMode::kSoftware,
+            voice_media_send_channel()->options().echo_cancellation_mode);
+
+  DestroyAudioRtpSender();
+}
+
 // Test that the stream is muted when the track is disabled, and unmuted when
 // the track is enabled.
 TEST_F(RtpSenderReceiverTest, LocalAudioTrackDisable) {
