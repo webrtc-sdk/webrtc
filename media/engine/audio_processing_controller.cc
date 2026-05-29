@@ -182,13 +182,16 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
                                   &AudioDeviceModule::BuiltInAECIsAvailable) &&
         PlatformEffectIsAvailable(adm,
                                   &AudioDeviceModule::BuiltInNSIsAvailable);
-    vpio_enabled = vpio_available && !echo_or_noise_forces_vpio_off &&
-                   echo_or_noise_wants_platform;
+    const bool should_enable_vpio =
+        vpio_available && !echo_or_noise_forces_vpio_off &&
+        echo_or_noise_wants_platform;
 
     if (vpio_available) {
-      SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInAEC,
-                        vpio_enabled);
-      SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInNS, vpio_enabled);
+      const bool aec_updated = SetPlatformEffect(
+          adm, &AudioDeviceModule::EnableBuiltInAEC, should_enable_vpio);
+      const bool ns_updated = SetPlatformEffect(
+          adm, &AudioDeviceModule::EnableBuiltInNS, should_enable_vpio);
+      vpio_enabled = should_enable_vpio && aec_updated && ns_updated;
     }
   }
 
