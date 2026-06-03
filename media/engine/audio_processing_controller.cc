@@ -231,17 +231,26 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
     const bool agc_wants_platform =
         WantsPlatformProcessing(options_in.auto_gain_control,
                                 options_in.auto_gain_control_mode);
-    const bool agc_platform_enabled = vpio_enabled && agc_wants_platform;
+    const bool should_enable_agc_platform =
+        vpio_enabled && agc_wants_platform;
+    bool agc_platform_enabled = false;
     const bool agc_available =
         PlatformEffectIsAvailable(adm,
                                   &AudioDeviceModule::BuiltInAGCIsAvailable);
     if (agc_available) {
-      SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInAGC,
-                        agc_platform_enabled);
+      if (should_enable_agc_platform) {
+        agc_platform_enabled =
+            SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInAGC, true);
+        if (!agc_platform_enabled) {
+          SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInAGC, false);
+        }
+      } else {
+        SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInAGC, false);
+      }
     }
     if (IsPlatformOnlyRequest(options_in.auto_gain_control,
                               options_in.auto_gain_control_mode) &&
-        !(agc_available && agc_platform_enabled)) {
+        !agc_platform_enabled) {
       LogPlatformOnlyRequestDisabled("auto gain control",
                                      "the coupled platform processing path is "
                                      "disabled");
@@ -249,7 +258,7 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
     software_options.auto_gain_control =
         ResolveSoftwareProcessingForPlatformState(
             options_in.auto_gain_control, options_in.auto_gain_control_mode,
-            agc_available && agc_platform_enabled);
+            agc_platform_enabled);
   }
 
   return software_options;
