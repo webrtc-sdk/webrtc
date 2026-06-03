@@ -104,6 +104,15 @@ inline void SetOptionalBool(std::optional<bool> value,
   *output_value = value.value_or(false);
 }
 
+inline webrtc::AudioEngineDevice* AudioEngineDeviceOrNull(
+    webrtc::AudioDeviceModule* module,
+    RTC_OBJC_TYPE(RTCAudioDeviceModuleType) module_type) {
+  if (module_type != RTC_OBJC_TYPE(RTCAudioDeviceModuleTypeAudioEngine)) {
+    return nullptr;
+  }
+  return static_cast<webrtc::AudioEngineDevice*>(module);
+}
+
 class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
  public:
   AudioDeviceObserver(RTC_OBJC_TYPE(RTCAudioDeviceModule) * adm) { adm_ = adm; }
@@ -204,6 +213,7 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 @implementation RTC_OBJC_TYPE (RTCAudioDeviceModule) {
   webrtc::Thread *_workerThread;
   webrtc::scoped_refptr<webrtc::AudioDeviceModule> _native;
+  RTC_OBJC_TYPE(RTCAudioDeviceModuleType) _audioDeviceModuleType;
   AudioDeviceObserver *_observer;
 }
 
@@ -219,12 +229,15 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (instancetype)initWithNativeModule:(webrtc::scoped_refptr<webrtc::AudioDeviceModule>)module
-                        workerThread:(webrtc::Thread *)workerThread {
+                        workerThread:(webrtc::Thread *)workerThread
+                audioDeviceModuleType:
+                    (RTC_OBJC_TYPE(RTCAudioDeviceModuleType))audioDeviceModuleType {
   RTCLogInfo(@"RTCAudioDeviceModule initWithNativeModule:workerThread:");
 
   self = [super init];
   _native = module;
   _workerThread = workerThread;
+  _audioDeviceModuleType = audioDeviceModuleType;
 
   _observer = new AudioDeviceObserver(self);
 
@@ -366,7 +379,7 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 - (NSInteger)initAndStartRecording {
   return _workerThread->BlockingCall([self] {
     webrtc::AudioEngineDevice *engine_device =
-        dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+        AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
     if (engine_device != nullptr) {
       return engine_device->InitAndStartRecording();
     } else {
@@ -393,7 +406,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (BOOL)isEngineRunning {
-  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  webrtc::AudioEngineDevice *module =
+      AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return false;
 
   return _workerThread->BlockingCall([module] { return module->IsEngineRunning(); });
@@ -411,7 +425,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (RTC_OBJC_TYPE(RTCAudioEngineState))engineState {
-  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  webrtc::AudioEngineDevice *module =
+      AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return RTC_OBJC_TYPE(RTCAudioEngineState)();
 
   return _workerThread->BlockingCall([module] {
@@ -430,7 +445,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (void)setEngineState:(RTC_OBJC_TYPE(RTCAudioEngineState))state {
-  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  webrtc::AudioEngineDevice *module =
+      AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return;
 
   _workerThread->BlockingCall([module, state] {
@@ -449,7 +465,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 #pragma mark - Unique to AudioEngineDevice
 
 - (NSInteger)setEngineAvailability:(RTC_OBJC_TYPE(RTCAudioEngineAvailability))availability {
-  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  webrtc::AudioEngineDevice *module =
+      AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return -1;
 
   return _workerThread->BlockingCall([module, availability] {
@@ -459,7 +476,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (RTC_OBJC_TYPE(RTCAudioEngineAvailability))engineAvailability {
-  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  webrtc::AudioEngineDevice *module =
+      AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return RTC_OBJC_TYPE(RTCAudioEngineAvailability)(NO, NO);
 
   return _workerThread->BlockingCall([module] {
@@ -515,7 +533,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (BOOL)isRecordingAlwaysPreparedMode {
-  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  webrtc::AudioEngineDevice *module =
+      AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return NO;
 
   return _workerThread->BlockingCall([module] {
@@ -525,7 +544,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (NSInteger)setRecordingAlwaysPreparedMode:(BOOL)enabled {
-  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  webrtc::AudioEngineDevice *module =
+      AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return -1;
 
   return _workerThread->BlockingCall(
@@ -533,7 +553,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (BOOL)isManualRenderingMode {
-  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  webrtc::AudioEngineDevice *module =
+      AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return NO;
 
   return _workerThread->BlockingCall([module] {
@@ -543,7 +564,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (NSInteger)setManualRenderingMode:(BOOL)enabled {
-  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  webrtc::AudioEngineDevice *module =
+      AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return -1;
 
   return _workerThread->BlockingCall(
@@ -551,7 +573,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (BOOL)isAdvancedDuckingEnabled {
-  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  webrtc::AudioEngineDevice *module =
+      AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return NO;
 
   return _workerThread->BlockingCall([module] {
@@ -561,7 +584,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (void)setAdvancedDuckingEnabled:(BOOL)enabled {
-  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  webrtc::AudioEngineDevice *module =
+      AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return;
 
   _workerThread->BlockingCall(
@@ -569,7 +593,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (RTC_OBJC_TYPE(RTCAudioDuckingLevel))duckingLevel {
-  webrtc::AudioEngineDevice* module = dynamic_cast<webrtc::AudioEngineDevice*>(_native.get());
+  webrtc::AudioEngineDevice* module =
+      AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return RTC_OBJC_TYPE(RTCAudioDuckingLevelDefault);
 
   return _workerThread->BlockingCall([module] {
@@ -580,7 +605,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (void)setDuckingLevel:(RTC_OBJC_TYPE(RTCAudioDuckingLevel))value {
-  webrtc::AudioEngineDevice* module = dynamic_cast<webrtc::AudioEngineDevice*>(_native.get());
+  webrtc::AudioEngineDevice* module =
+      AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return;
 
   _workerThread->BlockingCall(
@@ -588,7 +614,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (RTC_OBJC_TYPE(RTCAudioEngineMuteMode))muteMode {
-  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  webrtc::AudioEngineDevice *module =
+      AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return RTC_OBJC_TYPE(RTCAudioEngineMuteModeUnknown);
 
   return _workerThread->BlockingCall([module] {
@@ -599,7 +626,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (NSInteger)setMuteMode:(RTC_OBJC_TYPE(RTCAudioEngineMuteMode))mode {
-  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  webrtc::AudioEngineDevice *module =
+      AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return -1;
 
   return _workerThread->BlockingCall(
@@ -607,7 +635,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (BOOL)isVoiceProcessingEnabled {
-  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  webrtc::AudioEngineDevice *module =
+      AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return NO;
 
   return _workerThread->BlockingCall([module] {
@@ -617,7 +646,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (NSInteger)setVoiceProcessingEnabled:(BOOL)enabled {
-  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  webrtc::AudioEngineDevice *module =
+      AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return -1;
 
   return _workerThread->BlockingCall(
@@ -625,7 +655,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (BOOL)isVoiceProcessingBypassed {
-  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  webrtc::AudioEngineDevice *module =
+      AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return NO;
 
   return _workerThread->BlockingCall([module] {
@@ -635,7 +666,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (void)setVoiceProcessingBypassed:(BOOL)enabled {
-  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  webrtc::AudioEngineDevice *module =
+      AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return;
 
   _workerThread->BlockingCall(
@@ -643,7 +675,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (BOOL)isVoiceProcessingAGCEnabled {
-  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  webrtc::AudioEngineDevice *module =
+      AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return NO;
 
   return _workerThread->BlockingCall([module] {
@@ -653,7 +686,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (void)setVoiceProcessingAGCEnabled:(BOOL)enabled {
-  webrtc::AudioEngineDevice *module = dynamic_cast<webrtc::AudioEngineDevice *>(_native.get());
+  webrtc::AudioEngineDevice *module =
+      AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return;
 
   _workerThread->BlockingCall(
