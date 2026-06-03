@@ -552,15 +552,13 @@ class AndroidAudioDeviceModule : public AudioDeviceModule {
     return isAvailable;
   }
 
-  BuiltInAudioProcessingState GetBuiltInAudioProcessingState()
-      const override {
+  BuiltInAudioProcessingState GetBuiltInAudioProcessingState() const override {
     BuiltInAudioProcessingState state;
     state.topology = GetBuiltInAudioProcessingTopology();
     if (!initialized_) {
       return state;
     }
-    state.echo_cancellation_available =
-        input_->IsAcousticEchoCancelerSupported();
+    state.echo_cancellation_available = input_->IsAcousticEchoCancelerSupported();
     state.noise_suppression_available = input_->IsNoiseSuppressorSupported();
     state.auto_gain_control_available = false;
     state.echo_cancellation_desired = input_->BuiltInAECIsDesired();

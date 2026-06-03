@@ -175,8 +175,8 @@ public class PeerConnection {
       offset += COMPONENT_FIELD_COUNT;
       JavaAudioDeviceModule.BuiltInAudioProcessingState builtIn =
           builtInStateFromNative(values, offset);
-      return new AudioProcessingRuntimeState(topology, echoCancellation, noiseSuppression,
-          autoGainControl, highPassFilter, builtIn);
+      return new AudioProcessingRuntimeState(
+          topology, echoCancellation, noiseSuppression, autoGainControl, highPassFilter, builtIn);
     }
 
     private static AudioProcessingComponentRuntimeState componentFromNative(
@@ -205,7 +205,7 @@ public class PeerConnection {
     }
 
     private static JavaAudioDeviceModule.BuiltInAudioProcessingComponentState
-        builtInComponentFromNative(int[] values, int offset) {
+    builtInComponentFromNative(int[] values, int offset) {
       return new JavaAudioDeviceModule.BuiltInAudioProcessingComponentState(values[offset] != 0,
           optionalBoolFromNative(values[offset + 1]), optionalBoolFromNative(values[offset + 2]));
     }
@@ -220,7 +220,8 @@ public class PeerConnection {
       return value == OPTIONAL_UNKNOWN ? null : AudioTrack.AudioProcessingMode.values()[value];
     }
 
-    private static AudioProcessingImplementation audioProcessingImplementationFromNative(int value) {
+    private static AudioProcessingImplementation audioProcessingImplementationFromNative(
+        int value) {
       return AudioProcessingImplementation.values()[value];
     }
 

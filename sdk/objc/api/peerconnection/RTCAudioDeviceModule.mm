@@ -69,25 +69,21 @@ inline RTC_OBJC_TYPE(RTCAudioDuckingLevel)
   }
 }
 
-inline RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopology)
-    BuiltInAudioProcessingTopologyToObjC(
-        webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology topology) {
+inline RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopology) BuiltInAudioProcessingTopologyToObjC(
+    webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology topology) {
   switch (topology) {
     case webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology::
         kEchoCancellationAndNoiseSuppressionCoupled:
       return RTC_OBJC_TYPE(
           RTCBuiltInAudioProcessingTopologyEchoCancellationAndNoiseSuppressionCoupled);
-    case webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology::
-        kIndependent:
+    case webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology::kIndependent:
       return RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopologyIndependent);
   }
 }
 
 inline RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState)
-    BuiltInAudioProcessingComponentStateToObjC(
-        bool available,
-        std::optional<bool> desired,
-        std::optional<bool> observed) {
+    BuiltInAudioProcessingComponentStateToObjC(bool available, std::optional<bool> desired,
+                                               std::optional<bool> observed) {
   RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) result;
   result.available = available;
   result.hasDesired = desired.has_value();
@@ -97,20 +93,18 @@ inline RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState)
   return result;
 }
 
-inline void SetOptionalBool(std::optional<bool> value,
-                            BOOL* has_value,
-                            BOOL* output_value) {
+inline void SetOptionalBool(std::optional<bool> value, BOOL *has_value, BOOL *output_value) {
   *has_value = value.has_value();
   *output_value = value.value_or(false);
 }
 
-inline webrtc::AudioEngineDevice* AudioEngineDeviceOrNull(
-    webrtc::AudioDeviceModule* module,
-    RTC_OBJC_TYPE(RTCAudioDeviceModuleType) module_type) {
+inline webrtc::AudioEngineDevice *AudioEngineDeviceOrNull(webrtc::AudioDeviceModule *module,
+                                                          RTC_OBJC_TYPE(RTCAudioDeviceModuleType)
+                                                              module_type) {
   if (module_type != RTC_OBJC_TYPE(RTCAudioDeviceModuleTypeAudioEngine)) {
     return nullptr;
   }
-  return static_cast<webrtc::AudioEngineDevice*>(module);
+  return static_cast<webrtc::AudioEngineDevice *>(module);
 }
 
 class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
@@ -230,8 +224,8 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 
 - (instancetype)initWithNativeModule:(webrtc::scoped_refptr<webrtc::AudioDeviceModule>)module
                         workerThread:(webrtc::Thread *)workerThread
-                audioDeviceModuleType:
-                    (RTC_OBJC_TYPE(RTCAudioDeviceModuleType))audioDeviceModuleType {
+               audioDeviceModuleType:
+                   (RTC_OBJC_TYPE(RTCAudioDeviceModuleType))audioDeviceModuleType {
   RTCLogInfo(@"RTCAudioDeviceModule initWithNativeModule:workerThread:");
 
   self = [super init];
@@ -496,19 +490,15 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
         _native->GetBuiltInAudioProcessingState();
 
     RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState) result;
-    result.topology =
-        BuiltInAudioProcessingTopologyToObjC(native_state.topology);
+    result.topology = BuiltInAudioProcessingTopologyToObjC(native_state.topology);
     result.echoCancellation = BuiltInAudioProcessingComponentStateToObjC(
-        native_state.echo_cancellation_available,
-        native_state.echo_cancellation_desired,
+        native_state.echo_cancellation_available, native_state.echo_cancellation_desired,
         native_state.echo_cancellation_observed);
     result.noiseSuppression = BuiltInAudioProcessingComponentStateToObjC(
-        native_state.noise_suppression_available,
-        native_state.noise_suppression_desired,
+        native_state.noise_suppression_available, native_state.noise_suppression_desired,
         native_state.noise_suppression_observed);
     result.autoGainControl = BuiltInAudioProcessingComponentStateToObjC(
-        native_state.auto_gain_control_available,
-        native_state.auto_gain_control_desired,
+        native_state.auto_gain_control_available, native_state.auto_gain_control_desired,
         native_state.auto_gain_control_observed);
     SetOptionalBool(native_state.voice_processing_enabled_desired,
                     &result.hasVoiceProcessingEnabledDesired,
@@ -516,8 +506,7 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
     SetOptionalBool(native_state.voice_processing_bypassed_desired,
                     &result.hasVoiceProcessingBypassedDesired,
                     &result.voiceProcessingBypassedDesired);
-    SetOptionalBool(native_state.voice_processing_agc_desired,
-                    &result.hasVoiceProcessingAGCDesired,
+    SetOptionalBool(native_state.voice_processing_agc_desired, &result.hasVoiceProcessingAGCDesired,
                     &result.voiceProcessingAGCDesired);
     SetOptionalBool(native_state.voice_processing_enabled_observed,
                     &result.hasVoiceProcessingEnabledObserved,
@@ -526,8 +515,7 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
                     &result.hasVoiceProcessingBypassedObserved,
                     &result.voiceProcessingBypassedObserved);
     SetOptionalBool(native_state.voice_processing_agc_observed,
-                    &result.hasVoiceProcessingAGCObserved,
-                    &result.voiceProcessingAGCObserved);
+                    &result.hasVoiceProcessingAGCObserved, &result.voiceProcessingAGCObserved);
     return result;
   });
 }
@@ -593,7 +581,7 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (RTC_OBJC_TYPE(RTCAudioDuckingLevel))duckingLevel {
-  webrtc::AudioEngineDevice* module =
+  webrtc::AudioEngineDevice *module =
       AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return RTC_OBJC_TYPE(RTCAudioDuckingLevelDefault);
 
@@ -605,7 +593,7 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (void)setDuckingLevel:(RTC_OBJC_TYPE(RTCAudioDuckingLevel))value {
-  webrtc::AudioEngineDevice* module =
+  webrtc::AudioEngineDevice *module =
       AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return;
 

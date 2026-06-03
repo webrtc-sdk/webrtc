@@ -326,9 +326,9 @@ int32_t AudioEngineDevice::Terminate() {
 #if TARGET_OS_OSX
   // Remove listeners for global scope.
   AudioObjectPropertyAddress propertyAddress = {
-      kAudioHardwarePropertyDevices,     // selector
-      kAudioObjectPropertyScopeGlobal,   // scope
-      kAudioObjectPropertyElementMain    // element
+      kAudioHardwarePropertyDevices,    // selector
+      kAudioObjectPropertyScopeGlobal,  // scope
+      kAudioObjectPropertyElementMain   // element
   };
 
   OSStatus err = noErr;
@@ -1032,8 +1032,8 @@ AudioEngineDevice::GetBuiltInAudioProcessingTopology() const {
       kEchoCancellationAndNoiseSuppressionCoupled;
 }
 
-AudioDeviceModule::BuiltInAudioProcessingState
-AudioEngineDevice::GetBuiltInAudioProcessingState() const {
+AudioDeviceModule::BuiltInAudioProcessingState AudioEngineDevice::GetBuiltInAudioProcessingState()
+    const {
   BuiltInAudioProcessingState state;
   state.topology = GetBuiltInAudioProcessingTopology();
 #if TARGET_OS_SIMULATOR
@@ -1050,12 +1050,9 @@ AudioEngineDevice::GetBuiltInAudioProcessingState() const {
   state.noise_suppression_desired = engine_state_.built_in_ns_enabled;
   state.auto_gain_control_desired = engine_state_.voice_processing_agc_enabled;
 
-  state.voice_processing_enabled_desired =
-      engine_state_.voice_processing_enabled;
-  state.voice_processing_bypassed_desired =
-      engine_state_.voice_processing_bypassed;
-  state.voice_processing_agc_desired =
-      engine_state_.voice_processing_agc_enabled;
+  state.voice_processing_enabled_desired = engine_state_.voice_processing_enabled;
+  state.voice_processing_bypassed_desired = engine_state_.voice_processing_bypassed;
+  state.voice_processing_agc_desired = engine_state_.voice_processing_agc_enabled;
 
   if (engine_device_ == nil) {
     return state;
@@ -1064,23 +1061,18 @@ AudioEngineDevice::GetBuiltInAudioProcessingState() const {
   AVAudioInputNode* input_node = engine_device_.inputNode;
   @try {
     const bool vp_observed = input_node.isVoiceProcessingEnabled;
-    const bool bypassed_observed =
-        vp_observed ? input_node.voiceProcessingBypassed : true;
-    const bool agc_observed =
-        vp_observed ? input_node.voiceProcessingAGCEnabled : false;
-    const bool shared_echo_noise_observed =
-        vp_observed && !bypassed_observed;
+    const bool bypassed_observed = vp_observed ? input_node.voiceProcessingBypassed : true;
+    const bool agc_observed = vp_observed ? input_node.voiceProcessingAGCEnabled : false;
+    const bool shared_echo_noise_observed = vp_observed && !bypassed_observed;
 
     state.voice_processing_enabled_observed = vp_observed;
     state.voice_processing_bypassed_observed = bypassed_observed;
     state.voice_processing_agc_observed = agc_observed;
     state.echo_cancellation_observed = shared_echo_noise_observed;
     state.noise_suppression_observed = shared_echo_noise_observed;
-    state.auto_gain_control_observed =
-        shared_echo_noise_observed && agc_observed;
+    state.auto_gain_control_observed = shared_echo_noise_observed && agc_observed;
   } @catch (NSException* exception) {
-    LOGW() << "GetBuiltInAudioProcessingState threw exception: "
-           << exception.reason.UTF8String;
+    LOGW() << "GetBuiltInAudioProcessingState threw exception: " << exception.reason.UTF8String;
   }
   return state;
 #endif

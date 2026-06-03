@@ -273,11 +273,9 @@ AudioDeviceGeneric::InitStatus AudioDeviceMac::Init() {
   // notifications. This was the default behaviour on OS X 10.5 and earlier,
   // but now must be explicitly specified. HAL would otherwise try to use the
   // main thread to issue notifications.
-  AudioObjectPropertyAddress propertyAddress = {
-    kAudioHardwarePropertyRunLoop,
-    kAudioObjectPropertyScopeGlobal,
-    kAudioObjectPropertyElementMain
-  };
+  AudioObjectPropertyAddress propertyAddress = {kAudioHardwarePropertyRunLoop,
+                                                kAudioObjectPropertyScopeGlobal,
+                                                kAudioObjectPropertyElementMain};
 
   CFRunLoopRef runLoop = NULL;
   UInt32 size = sizeof(CFRunLoopRef);
@@ -332,9 +330,9 @@ int32_t AudioDeviceMac::Terminate() {
 
   // Remove listeners for global scope.
   AudioObjectPropertyAddress propertyAddress = {
-    kAudioHardwarePropertyDevices, // selector
-    kAudioObjectPropertyScopeGlobal, // scope
-    kAudioObjectPropertyElementMain // element
+      kAudioHardwarePropertyDevices,    // selector
+      kAudioObjectPropertyScopeGlobal,  // scope
+      kAudioObjectPropertyElementMain   // element
   };
 
   WEBRTC_CA_LOG_WARN(AudioObjectRemovePropertyListener(
@@ -1537,9 +1535,9 @@ int32_t AudioDeviceMac::GetNumberDevices(const AudioObjectPropertyScope scope,
   OSStatus err = noErr;
 
   AudioObjectPropertyAddress propertyAddress = {
-    kAudioHardwarePropertyDevices,
-    kAudioObjectPropertyScopeGlobal,
-    kAudioObjectPropertyElementMain,
+      kAudioHardwarePropertyDevices,
+      kAudioObjectPropertyScopeGlobal,
+      kAudioObjectPropertyElementMain,
   };
 
   UInt32 size = 0;

@@ -45,8 +45,7 @@ struct AudioProcessingComponentRuntimeState {
   std::optional<bool> platform_desired;
   std::optional<bool> platform_observed;
 
-  AudioProcessingImplementation effective =
-      AudioProcessingImplementation::kUnknown;
+  AudioProcessingImplementation effective = AudioProcessingImplementation::kUnknown;
 };
 
 struct AudioProcessingRuntimeState {

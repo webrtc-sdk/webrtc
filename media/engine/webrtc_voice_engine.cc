@@ -653,8 +653,8 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
 
 AudioProcessingRuntimeState WebRtcVoiceEngine::GetAudioProcessingRuntimeState() {
   RTC_DCHECK_RUN_ON(&worker_thread_checker_);
-  return webrtc::GetAudioProcessingRuntimeState(
-      apm(), adm(), last_requested_audio_processing_options_);
+  return webrtc::GetAudioProcessingRuntimeState(apm(), adm(),
+                                                last_requested_audio_processing_options_);
 }
 
 const std::vector<Codec>& WebRtcVoiceEngine::LegacySendCodecs() const {

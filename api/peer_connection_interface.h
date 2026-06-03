@@ -964,9 +964,7 @@ class RTC_EXPORT PeerConnectionInterface : public RefCountInterface {
   // Diagnostic snapshot of requested audio processing options, current WebRTC
   // APM state, and platform ADM state. Empty fields mean the state is unknown
   // or not supported by the active ADM.
-  virtual AudioProcessingRuntimeState GetAudioProcessingRuntimeState() {
-    return {};
-  }
+  virtual AudioProcessingRuntimeState GetAudioProcessingRuntimeState() { return {}; }
 
   // Create a data channel with the provided config, or default config if none
   // is provided. Note that an offer/answer negotiation is still necessary

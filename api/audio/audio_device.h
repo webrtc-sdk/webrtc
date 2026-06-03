@@ -75,8 +75,7 @@ class AudioDeviceModule : public RefCountInterface {
   };
 
   struct BuiltInAudioProcessingState {
-    BuiltInAudioProcessingTopology topology =
-        BuiltInAudioProcessingTopology::kIndependent;
+    BuiltInAudioProcessingTopology topology = BuiltInAudioProcessingTopology::kIndependent;
 
     // Capability for the ADM to turn each platform effect on.
     bool echo_cancellation_available = false;

@@ -21,11 +21,11 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface RTC_OBJC_TYPE(RTCAudioDeviceModule) ()
+@interface RTC_OBJC_TYPE (RTCAudioDeviceModule) ()
 
 - (instancetype)initWithNativeModule:(webrtc::scoped_refptr<webrtc::AudioDeviceModule>)module
-                        workerThread:(webrtc::Thread *)workerThread
-                audioDeviceModuleType:(RTC_OBJC_TYPE(RTCAudioDeviceModuleType))audioDeviceModuleType;
+                        workerThread:(webrtc::Thread*)workerThread
+               audioDeviceModuleType:(RTC_OBJC_TYPE(RTCAudioDeviceModuleType))audioDeviceModuleType;
 
 @end
 

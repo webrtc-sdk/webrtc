@@ -28,10 +28,9 @@ AudioOptions ApplyAudioProcessingOptions(AudioProcessing* apm,
                                          AudioDeviceModule* adm,
                                          const AudioOptions& options);
 
-AudioProcessingRuntimeState GetAudioProcessingRuntimeState(
-    AudioProcessing* apm,
-    AudioDeviceModule* adm,
-    const AudioOptions& requested_options);
+AudioProcessingRuntimeState GetAudioProcessingRuntimeState(AudioProcessing* apm,
+                                                           AudioDeviceModule* adm,
+                                                           const AudioOptions& requested_options);
 
 }  // namespace webrtc
 

@@ -186,8 +186,8 @@ class WebRtcAudioEffects {
   }
 
   public synchronized State getState() {
-    return new State(shouldEnableAec, aec == null ? null : aec.getEnabled(),
-        shouldEnableNs, ns == null ? null : ns.getEnabled());
+    return new State(shouldEnableAec, aec == null ? null : aec.getEnabled(), shouldEnableNs,
+        ns == null ? null : ns.getEnabled());
   }
 
   public synchronized void enable(int audioSession) {

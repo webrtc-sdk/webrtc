@@ -2649,8 +2649,7 @@ std::optional<AudioDeviceModule::Stats> PeerConnection::GetAudioDeviceStats() {
 
 AudioProcessingRuntimeState PeerConnection::GetAudioProcessingRuntimeState() {
   if (!worker_thread()->IsCurrent()) {
-    return worker_thread()->BlockingCall(
-        [this] { return GetAudioProcessingRuntimeState(); });
+    return worker_thread()->BlockingCall([this] { return GetAudioProcessingRuntimeState(); });
   }
   RTC_DCHECK_RUN_ON(worker_thread());
   if (context_->is_configured_for_media()) {

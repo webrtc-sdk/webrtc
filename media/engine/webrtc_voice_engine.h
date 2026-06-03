@@ -172,8 +172,7 @@ class WebRtcVoiceEngine final : public VoiceEngineInterface {
   const std::vector<Codec> legacy_recv_codecs_;
   bool is_dumping_aec_ RTC_GUARDED_BY(worker_thread_checker_) = false;
   bool initialized_ RTC_GUARDED_BY(worker_thread_checker_) = false;
-  AudioOptions last_requested_audio_processing_options_
-      RTC_GUARDED_BY(worker_thread_checker_);
+  AudioOptions last_requested_audio_processing_options_ RTC_GUARDED_BY(worker_thread_checker_);
 
   // Jitter buffer settings for new streams.
   size_t audio_jitter_buffer_max_packets_
