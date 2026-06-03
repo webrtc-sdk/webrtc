@@ -192,6 +192,10 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
       const bool ns_updated = SetPlatformEffect(
           adm, &AudioDeviceModule::EnableBuiltInNS, should_enable_vpio);
       vpio_enabled = should_enable_vpio && aec_updated && ns_updated;
+      if (should_enable_vpio && !vpio_enabled) {
+        SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInAEC, false);
+        SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInNS, false);
+      }
     }
   }
 

@@ -424,6 +424,8 @@ TEST(AudioProcessingControllerTest,
   EXPECT_CALL(*adm, BuiltInNSIsAvailable()).WillOnce(Return(true));
   EXPECT_CALL(*adm, EnableBuiltInAEC(true)).WillOnce(Return(-1));
   EXPECT_CALL(*adm, EnableBuiltInNS(true)).WillOnce(Return(0));
+  EXPECT_CALL(*adm, EnableBuiltInAEC(false)).WillOnce(Return(0));
+  EXPECT_CALL(*adm, EnableBuiltInNS(false)).WillOnce(Return(0));
   EXPECT_CALL(*adm, BuiltInAGCIsAvailable()).WillOnce(Return(true));
   EXPECT_CALL(*adm, EnableBuiltInAGC(false)).WillOnce(Return(0));
 
