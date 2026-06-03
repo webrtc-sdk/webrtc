@@ -113,13 +113,13 @@ class WebRtcAudioEffects {
       return false;
     }
     Logging.d(TAG, "toggleAEC(" + enable + ")");
-    boolean toggling_succeeded = aec.setEnabled(enable) == AudioEffect.SUCCESS;
-    if (toggling_succeeded) {
+    boolean togglingSucceeded = aec.setEnabled(enable) == AudioEffect.SUCCESS;
+    if (togglingSucceeded) {
       shouldEnableAec = enable;
     }
     Logging.d(TAG,
         "AcousticEchoCanceler: is now: " + (aec.getEnabled() ? "enabled" : "disabled"));
-    return toggling_succeeded;
+    return togglingSucceeded;
   }
 
   // Toggles an existing NoiseSuppressor to be enabled or disabled.
@@ -131,12 +131,12 @@ class WebRtcAudioEffects {
       return false;
     }
     Logging.d(TAG, "toggleNS(" + enable + ")");
-    boolean toggling_succeeded = ns.setEnabled(enable) == AudioEffect.SUCCESS;
-    if (toggling_succeeded) {
+    boolean togglingSucceeded = ns.setEnabled(enable) == AudioEffect.SUCCESS;
+    if (togglingSucceeded) {
       shouldEnableNs = enable;
     }
     Logging.d(TAG, "NoiseSuppressor: is now: " + (ns.getEnabled() ? "enabled" : "disabled"));
-    return toggling_succeeded;
+    return togglingSucceeded;
   }
 
   public void enable(int audioSession) {
