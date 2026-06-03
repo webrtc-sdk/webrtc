@@ -115,6 +115,8 @@ class WebRtcAudioEffects {
     Logging.d(TAG, "toggleAEC(" + enable + ")");
     boolean togglingSucceeded = aec.setEnabled(enable) == AudioEffect.SUCCESS;
     if (togglingSucceeded) {
+      // Keep the desired state aligned with the live effect. This value is
+      // reused if the effect is recreated for a new audio session.
       shouldEnableAec = enable;
     }
     Logging.d(TAG,
@@ -133,6 +135,8 @@ class WebRtcAudioEffects {
     Logging.d(TAG, "toggleNS(" + enable + ")");
     boolean togglingSucceeded = ns.setEnabled(enable) == AudioEffect.SUCCESS;
     if (togglingSucceeded) {
+      // Keep the desired state aligned with the live effect. This value is
+      // reused if the effect is recreated for a new audio session.
       shouldEnableNs = enable;
     }
     Logging.d(TAG, "NoiseSuppressor: is now: " + (ns.getEnabled() ? "enabled" : "disabled"));

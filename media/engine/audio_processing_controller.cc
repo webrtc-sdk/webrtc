@@ -125,6 +125,9 @@ std::optional<bool> ResolveSoftwareProcessingForPlatformState(
     std::optional<bool> enabled,
     std::optional<AudioProcessingMode> mode,
     bool platform_enabled) {
+  // `platform_enabled` is the effective platform state after availability and
+  // ADM enable calls. `auto` only disables software when the platform path is
+  // known to be active. `platform` never falls back by design.
   if (!enabled.has_value()) {
     return std::nullopt;
   }
@@ -145,6 +148,8 @@ std::optional<bool> ResolveSoftwareProcessingForPlatformState(
 
 bool ResolveHighPassFilter(std::optional<bool> enabled,
                            std::optional<AudioProcessingMode> mode) {
+  // No supported platform HPF exists today. Keep `platform` strict and disabled
+  // instead of silently falling back to software.
   if (!enabled.has_value() || !*enabled) {
     return false;
   }
@@ -159,6 +164,19 @@ bool ResolveHighPassFilter(std::optional<bool> enabled,
 AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
     AudioDeviceModule* adm,
     const AudioOptions& options_in) {
+  // Apple Voice Processing I/O exposes AEC and NS through one shared bypass
+  // switch. We resolve them together so a software or disabled request for
+  // either component keeps the shared platform path off.
+  //
+  // This helper does not toggle AudioEngineDevice::voice_processing_enabled.
+  // That lower level API is reserved for callers that want to leave Apple VPIO
+  // entirely. Runtime component software mode only bypasses platform effects
+  // and enables WebRTC APM.
+  //
+  // A single AEC or NS automatic/platform request can turn the shared path on
+  // for both effects. AGC is resolved after that decision and never turns VPIO
+  // on by itself. This keeps partial AGC-only updates from changing Apple audio
+  // routing.
   AudioOptions software_options = options_in;
 
   const bool has_echo_or_noise_option =
@@ -193,6 +211,9 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
           adm, &AudioDeviceModule::EnableBuiltInNS, should_enable_vpio);
       vpio_enabled = should_enable_vpio && aec_updated && ns_updated;
       if (should_enable_vpio && !vpio_enabled) {
+        // Treat coupled AEC and NS as an all or nothing platform path. If one
+        // enable call fails, turn both off before falling back to software to
+        // avoid mixing a partial platform effect with WebRTC APM.
         SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInAEC, false);
         SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInNS, false);
       }
@@ -228,11 +249,17 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
   }
 
   if (options_in.auto_gain_control.has_value()) {
+    // Apple AGC has its own switch, but it only has effect while the shared
+    // AEC/NS VPIO path is active. AGC alone never enables VPIO, so `auto`
+    // falls back to software when AEC/NS did not enable the shared path.
     const bool agc_wants_platform =
         WantsPlatformProcessing(options_in.auto_gain_control,
                                 options_in.auto_gain_control_mode);
     const bool should_enable_agc_platform =
         vpio_enabled && agc_wants_platform;
+    // Track the effective platform state, not just the requested state. Apple
+    // may reject AGC enable even while VPIO is active, and `auto` must fall
+    // back to software in that case.
     bool agc_platform_enabled = false;
     const bool agc_available =
         PlatformEffectIsAvailable(adm,
@@ -242,6 +269,8 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
         agc_platform_enabled =
             SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInAGC, true);
         if (!agc_platform_enabled) {
+          // Keep AGC off when enabling it fails. This keeps `auto` honest about
+          // the effective platform state and lets software AGC take over.
           SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInAGC, false);
         }
       } else {

@@ -69,6 +69,8 @@ class AudioDeviceModule : public RefCountInterface {
     // bypass switch. Platform AGC has a separate switch, but only has an
     // effect while the shared AEC/NS voice-processing path is active. Enabling
     // either AEC or NS may activate the shared platform path for both effects.
+    // AGC alone must not activate that shared path, so AGC falls back to
+    // software unless AEC or NS already made the shared path active.
     kEchoCancellationAndNoiseSuppressionCoupled,
   };
 
@@ -169,17 +171,20 @@ class AudioDeviceModule : public RefCountInterface {
   // Playout delay
   virtual int32_t PlayoutDelay(uint16_t* delayMS) const = 0;
 
-  // Only supported on Android.
+  // Built-in processing hooks are implemented by ADMs that expose platform
+  // AEC, AGC, or NS. Unsupported ADMs report false and return -1 from enable
+  // calls. Availability means the effect can be enabled, not that it is active.
   virtual bool BuiltInAECIsAvailable() const = 0;
   virtual bool BuiltInAGCIsAvailable() const = 0;
   virtual bool BuiltInNSIsAvailable() const = 0;
 
+  // Describes whether the ADM can switch built-in components independently.
   virtual BuiltInAudioProcessingTopology GetBuiltInAudioProcessingTopology()
       const {
     return BuiltInAudioProcessingTopology::kIndependent;
   }
 
-  // Enables the built-in audio effects. Only supported on Android.
+  // Enables or disables built-in audio effects when the ADM supports them.
   virtual int32_t EnableBuiltInAEC(bool enable) = 0;
   virtual int32_t EnableBuiltInAGC(bool enable) = 0;
   virtual int32_t EnableBuiltInNS(bool enable) = 0;

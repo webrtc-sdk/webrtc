@@ -994,9 +994,11 @@ int32_t AudioEngineDevice::RegisterAudioCallback(AudioTransport* audioCallback) 
 // ----------------------------------------------------------------------------------------------------
 // Misc
 
-// These availability checks report whether AVAudioEngine voice processing can
-// be used, not whether it is currently unbypassed. Runtime options need a true
-// result while bypassed so they can re-enable platform processing.
+// These availability checks report whether AVAudioEngine voice processing is
+// currently usable by the ADM, not whether it is currently unbypassed.
+// Runtime options need a true result while bypassed so they can re-enable
+// platform processing. If callers explicitly disable Voice Processing I/O,
+// these return false and `auto` resolves to software.
 bool AudioEngineDevice::BuiltInAECIsAvailable() const {
 #if TARGET_OS_SIMULATOR
   return false;
@@ -1040,7 +1042,8 @@ int32_t AudioEngineDevice::EnableBuiltInAEC(bool enable) {
   }
   return ModifyEngineState([enable](EngineState state) -> EngineState {
     state.built_in_aec_enabled = enable;
-    // AVAudioEngine exposes VPIO bypass as one knob for AEC and NS.
+    // AVAudioEngine exposes VPIO bypass as one knob for AEC and NS. AGC has a
+    // separate switch, but it only takes effect while this shared path is on.
     const bool use_vpio = state.built_in_aec_enabled || state.built_in_ns_enabled;
     state.voice_processing_bypassed = !use_vpio;
     return state;
@@ -1073,7 +1076,8 @@ int32_t AudioEngineDevice::EnableBuiltInNS(bool enable) {
   }
   return ModifyEngineState([enable](EngineState state) -> EngineState {
     state.built_in_ns_enabled = enable;
-    // AVAudioEngine exposes VPIO bypass as one knob for AEC and NS.
+    // AVAudioEngine exposes VPIO bypass as one knob for AEC and NS. AGC has a
+    // separate switch, but it only takes effect while this shared path is on.
     const bool use_vpio = state.built_in_aec_enabled || state.built_in_ns_enabled;
     state.voice_processing_bypassed = !use_vpio;
     return state;
