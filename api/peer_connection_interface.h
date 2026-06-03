@@ -84,6 +84,7 @@
 #include "api/audio/audio_device.h"
 #include "api/audio/audio_mixer.h"
 #include "api/audio/audio_processing.h"
+#include "api/audio/audio_processing_runtime_state.h"
 #include "api/audio_codecs/audio_decoder_factory.h"
 #include "api/audio_codecs/audio_encoder_factory.h"
 #include "api/audio_options.h"
@@ -959,6 +960,13 @@ class RTC_EXPORT PeerConnectionInterface : public RefCountInterface {
                         scoped_refptr<RTCStatsCollectorCallback> callback) = 0;
   // Clear cached stats in the RTCStatsCollector.
   virtual void ClearStatsCache() {}
+
+  // Diagnostic snapshot of requested audio processing options, current WebRTC
+  // APM state, and platform ADM state. Empty fields mean the state is unknown
+  // or not supported by the active ADM.
+  virtual AudioProcessingRuntimeState GetAudioProcessingRuntimeState() {
+    return {};
+  }
 
   // Create a data channel with the provided config, or default config if none
   // is provided. Note that an offer/answer negotiation is still necessary

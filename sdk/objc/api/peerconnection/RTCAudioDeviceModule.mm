@@ -16,6 +16,8 @@
 
 #include <os/lock.h>
 
+#include <optional>
+
 #import "RTCAudioDeviceModule+Private.h"
 #import "RTCAudioDeviceModule.h"
 #import "RTCIODevice+Private.h"
@@ -65,6 +67,41 @@ inline RTC_OBJC_TYPE(RTCAudioDuckingLevel)
     case webrtc::AudioEngineDevice::AudioDuckingLevelMax:
       return RTC_OBJC_TYPE(RTCAudioDuckingLevelMax);
   }
+}
+
+inline RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopology)
+    BuiltInAudioProcessingTopologyToObjC(
+        webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology topology) {
+  switch (topology) {
+    case webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology::
+        kEchoCancellationAndNoiseSuppressionCoupled:
+      return RTC_OBJC_TYPE(
+          RTCBuiltInAudioProcessingTopologyEchoCancellationAndNoiseSuppressionCoupled);
+    case webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology::
+        kIndependent:
+      return RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopologyIndependent);
+  }
+}
+
+inline RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState)
+    BuiltInAudioProcessingComponentStateToObjC(
+        bool available,
+        std::optional<bool> desired,
+        std::optional<bool> observed) {
+  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) result;
+  result.available = available;
+  result.hasDesired = desired.has_value();
+  result.desired = desired.value_or(false);
+  result.hasObserved = observed.has_value();
+  result.observed = observed.value_or(false);
+  return result;
+}
+
+inline void SetOptionalBool(std::optional<bool> value,
+                            BOOL* has_value,
+                            BOOL* output_value) {
+  *has_value = value.has_value();
+  *output_value = value.value_or(false);
 }
 
 class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
@@ -432,6 +469,48 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
     if (result != 0) return RTC_OBJC_TYPE(RTCAudioEngineAvailability)(NO, NO);
 
     return RTC_OBJC_TYPE(RTCAudioEngineAvailability)(input_available, output_available);
+  });
+}
+
+- (RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState))builtInAudioProcessingState {
+  return _workerThread->BlockingCall([self] {
+    webrtc::AudioDeviceModule::BuiltInAudioProcessingState native_state =
+        _native->GetBuiltInAudioProcessingState();
+
+    RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState) result;
+    result.topology =
+        BuiltInAudioProcessingTopologyToObjC(native_state.topology);
+    result.echoCancellation = BuiltInAudioProcessingComponentStateToObjC(
+        native_state.echo_cancellation_available,
+        native_state.echo_cancellation_desired,
+        native_state.echo_cancellation_observed);
+    result.noiseSuppression = BuiltInAudioProcessingComponentStateToObjC(
+        native_state.noise_suppression_available,
+        native_state.noise_suppression_desired,
+        native_state.noise_suppression_observed);
+    result.autoGainControl = BuiltInAudioProcessingComponentStateToObjC(
+        native_state.auto_gain_control_available,
+        native_state.auto_gain_control_desired,
+        native_state.auto_gain_control_observed);
+    SetOptionalBool(native_state.voice_processing_enabled_desired,
+                    &result.hasVoiceProcessingEnabledDesired,
+                    &result.voiceProcessingEnabledDesired);
+    SetOptionalBool(native_state.voice_processing_bypassed_desired,
+                    &result.hasVoiceProcessingBypassedDesired,
+                    &result.voiceProcessingBypassedDesired);
+    SetOptionalBool(native_state.voice_processing_agc_desired,
+                    &result.hasVoiceProcessingAGCDesired,
+                    &result.voiceProcessingAGCDesired);
+    SetOptionalBool(native_state.voice_processing_enabled_observed,
+                    &result.hasVoiceProcessingEnabledObserved,
+                    &result.voiceProcessingEnabledObserved);
+    SetOptionalBool(native_state.voice_processing_bypassed_observed,
+                    &result.hasVoiceProcessingBypassedObserved,
+                    &result.voiceProcessingBypassedObserved);
+    SetOptionalBool(native_state.voice_processing_agc_observed,
+                    &result.hasVoiceProcessingAGCObserved,
+                    &result.voiceProcessingAGCObserved);
+    return result;
   });
 }
 

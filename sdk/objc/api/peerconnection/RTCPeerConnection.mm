@@ -27,7 +27,9 @@
 #import "helpers/NSString+StdString.h"
 
 #include <memory>
+#include <optional>
 
+#include "api/audio/audio_processing_runtime_state.h"
 #include "api/jsep.h"
 #include "api/rtc_event_log_output_file.h"
 #include "api/set_local_description_observer_interface.h"
@@ -40,6 +42,141 @@ NSString *const RTC_CONSTANT_TYPE(RTCPeerConnectionErrorDomain) = @"org.webrtc.R
 int const RTC_CONSTANT_TYPE(RTCPeerConnnectionSessionDescriptionError) = -1;
 
 namespace {
+
+inline RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopology)
+    BuiltInAudioProcessingTopologyToObjC(
+        webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology topology) {
+  switch (topology) {
+    case webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology::
+        kEchoCancellationAndNoiseSuppressionCoupled:
+      return RTC_OBJC_TYPE(
+          RTCBuiltInAudioProcessingTopologyEchoCancellationAndNoiseSuppressionCoupled);
+    case webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology::
+        kIndependent:
+      return RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopologyIndependent);
+  }
+}
+
+inline RTC_OBJC_TYPE(RTCAudioProcessingMode) AudioProcessingModeToObjC(
+    webrtc::AudioProcessingMode mode) {
+  switch (mode) {
+    case webrtc::AudioProcessingMode::kPlatform:
+      return RTC_OBJC_TYPE(RTCAudioProcessingModePlatform);
+    case webrtc::AudioProcessingMode::kSoftware:
+      return RTC_OBJC_TYPE(RTCAudioProcessingModeSoftware);
+    case webrtc::AudioProcessingMode::kAutomatic:
+      return RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic);
+  }
+}
+
+inline RTC_OBJC_TYPE(RTCAudioProcessingImplementation)
+    AudioProcessingImplementationToObjC(
+        webrtc::AudioProcessingImplementation implementation) {
+  switch (implementation) {
+    case webrtc::AudioProcessingImplementation::kDisabled:
+      return RTC_OBJC_TYPE(RTCAudioProcessingImplementationDisabled);
+    case webrtc::AudioProcessingImplementation::kSoftware:
+      return RTC_OBJC_TYPE(RTCAudioProcessingImplementationSoftware);
+    case webrtc::AudioProcessingImplementation::kPlatform:
+      return RTC_OBJC_TYPE(RTCAudioProcessingImplementationPlatform);
+    case webrtc::AudioProcessingImplementation::kSoftwareAndPlatform:
+      return RTC_OBJC_TYPE(RTCAudioProcessingImplementationSoftwareAndPlatform);
+    case webrtc::AudioProcessingImplementation::kUnknown:
+      return RTC_OBJC_TYPE(RTCAudioProcessingImplementationUnknown);
+  }
+}
+
+inline void SetOptionalBool(std::optional<bool> value,
+                            BOOL* has_value,
+                            BOOL* output_value) {
+  *has_value = value.has_value();
+  *output_value = value.value_or(false);
+}
+
+inline RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState)
+    BuiltInAudioProcessingComponentStateToObjC(
+        bool available,
+        std::optional<bool> desired,
+        std::optional<bool> observed) {
+  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) result;
+  result.available = available;
+  SetOptionalBool(desired, &result.hasDesired, &result.desired);
+  SetOptionalBool(observed, &result.hasObserved, &result.observed);
+  return result;
+}
+
+inline RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState)
+    BuiltInAudioProcessingStateToObjC(
+        const webrtc::AudioDeviceModule::BuiltInAudioProcessingState& state) {
+  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState) result;
+  result.topology = BuiltInAudioProcessingTopologyToObjC(state.topology);
+  result.echoCancellation = BuiltInAudioProcessingComponentStateToObjC(
+      state.echo_cancellation_available, state.echo_cancellation_desired,
+      state.echo_cancellation_observed);
+  result.noiseSuppression = BuiltInAudioProcessingComponentStateToObjC(
+      state.noise_suppression_available, state.noise_suppression_desired,
+      state.noise_suppression_observed);
+  result.autoGainControl = BuiltInAudioProcessingComponentStateToObjC(
+      state.auto_gain_control_available, state.auto_gain_control_desired,
+      state.auto_gain_control_observed);
+  SetOptionalBool(state.voice_processing_enabled_desired,
+                  &result.hasVoiceProcessingEnabledDesired,
+                  &result.voiceProcessingEnabledDesired);
+  SetOptionalBool(state.voice_processing_bypassed_desired,
+                  &result.hasVoiceProcessingBypassedDesired,
+                  &result.voiceProcessingBypassedDesired);
+  SetOptionalBool(state.voice_processing_agc_desired,
+                  &result.hasVoiceProcessingAGCDesired,
+                  &result.voiceProcessingAGCDesired);
+  SetOptionalBool(state.voice_processing_enabled_observed,
+                  &result.hasVoiceProcessingEnabledObserved,
+                  &result.voiceProcessingEnabledObserved);
+  SetOptionalBool(state.voice_processing_bypassed_observed,
+                  &result.hasVoiceProcessingBypassedObserved,
+                  &result.voiceProcessingBypassedObserved);
+  SetOptionalBool(state.voice_processing_agc_observed,
+                  &result.hasVoiceProcessingAGCObserved,
+                  &result.voiceProcessingAGCObserved);
+  return result;
+}
+
+inline RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState)
+    AudioProcessingComponentRuntimeStateToObjC(
+        const webrtc::AudioProcessingComponentRuntimeState& state) {
+  RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState) result;
+  SetOptionalBool(state.requested_enabled, &result.hasRequestedEnabled,
+                  &result.requestedEnabled);
+  result.hasRequestedMode = state.requested_mode.has_value();
+  result.requestedMode = state.requested_mode.has_value()
+                             ? AudioProcessingModeToObjC(*state.requested_mode)
+                             : RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic);
+  SetOptionalBool(state.software_enabled, &result.hasSoftwareEnabled,
+                  &result.softwareEnabled);
+  result.platformAvailable = state.platform_available;
+  SetOptionalBool(state.platform_desired, &result.hasPlatformDesired,
+                  &result.platformDesired);
+  SetOptionalBool(state.platform_observed, &result.hasPlatformObserved,
+                  &result.platformObserved);
+  result.effective = AudioProcessingImplementationToObjC(state.effective);
+  return result;
+}
+
+inline RTC_OBJC_TYPE(RTCAudioProcessingRuntimeState)
+    AudioProcessingRuntimeStateToObjC(
+        const webrtc::AudioProcessingRuntimeState& state) {
+  RTC_OBJC_TYPE(RTCAudioProcessingRuntimeState) result;
+  result.topology = BuiltInAudioProcessingTopologyToObjC(state.topology);
+  result.echoCancellation =
+      AudioProcessingComponentRuntimeStateToObjC(state.echo_cancellation);
+  result.noiseSuppression =
+      AudioProcessingComponentRuntimeStateToObjC(state.noise_suppression);
+  result.autoGainControl =
+      AudioProcessingComponentRuntimeStateToObjC(state.auto_gain_control);
+  result.highPassFilter =
+      AudioProcessingComponentRuntimeStateToObjC(state.high_pass_filter);
+  result.builtIn = BuiltInAudioProcessingStateToObjC(state.built_in);
+  return result;
+}
 
 class SetSessionDescriptionObserver
     : public webrtc::SetLocalDescriptionObserverInterface,
@@ -574,6 +711,11 @@ void PeerConnectionDelegateAdapter::OnRemoveTrack(
 
 - (RTC_OBJC_TYPE(RTCIceGatheringState))iceGatheringState {
   return [[self class] iceGatheringStateForNativeState:self.nativePeerConnection->ice_gathering_state()];
+}
+
+- (RTC_OBJC_TYPE(RTCAudioProcessingRuntimeState))audioProcessingRuntimeState {
+  return AudioProcessingRuntimeStateToObjC(
+      self.nativePeerConnection->GetAudioProcessingRuntimeState());
 }
 
 - (BOOL)setConfiguration:(RTC_OBJC_TYPE(RTCConfiguration) *)configuration {

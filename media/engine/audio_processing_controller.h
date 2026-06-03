@@ -19,6 +19,7 @@
 
 #include "api/audio/audio_device.h"
 #include "api/audio/audio_processing.h"
+#include "api/audio/audio_processing_runtime_state.h"
 #include "api/audio_options.h"
 
 namespace webrtc {
@@ -26,6 +27,11 @@ namespace webrtc {
 AudioOptions ApplyAudioProcessingOptions(AudioProcessing* apm,
                                          AudioDeviceModule* adm,
                                          const AudioOptions& options);
+
+AudioProcessingRuntimeState GetAudioProcessingRuntimeState(
+    AudioProcessing* apm,
+    AudioDeviceModule* adm,
+    const AudioOptions& requested_options);
 
 }  // namespace webrtc
 

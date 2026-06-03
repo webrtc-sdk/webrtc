@@ -161,6 +161,52 @@ bool ResolveHighPassFilter(std::optional<bool> enabled,
          AudioProcessingMode::kPlatform;
 }
 
+AudioProcessingImplementation ResolveEffectiveImplementation(
+    std::optional<bool> software_enabled,
+    bool platform_available,
+    std::optional<bool> platform_desired,
+    std::optional<bool> platform_observed) {
+  const bool software_active = software_enabled.value_or(false);
+  const bool platform_active =
+      platform_observed.value_or(platform_available &&
+                                 platform_desired.value_or(false));
+
+  if (software_active && platform_active) {
+    return AudioProcessingImplementation::kSoftwareAndPlatform;
+  }
+  if (software_active) {
+    return AudioProcessingImplementation::kSoftware;
+  }
+  if (platform_active) {
+    return AudioProcessingImplementation::kPlatform;
+  }
+  if (software_enabled.has_value() || platform_desired.has_value() ||
+      platform_observed.has_value() || platform_available) {
+    return AudioProcessingImplementation::kDisabled;
+  }
+  return AudioProcessingImplementation::kUnknown;
+}
+
+AudioProcessingComponentRuntimeState BuildComponentRuntimeState(
+    std::optional<bool> requested_enabled,
+    std::optional<AudioProcessingMode> requested_mode,
+    std::optional<bool> software_enabled,
+    bool platform_available,
+    std::optional<bool> platform_desired,
+    std::optional<bool> platform_observed) {
+  AudioProcessingComponentRuntimeState state;
+  state.requested_enabled = requested_enabled;
+  state.requested_mode = requested_mode;
+  state.software_enabled = software_enabled;
+  state.platform_available = platform_available;
+  state.platform_desired = platform_desired;
+  state.platform_observed = platform_observed;
+  state.effective = ResolveEffectiveImplementation(
+      state.software_enabled, state.platform_available, state.platform_desired,
+      state.platform_observed);
+  return state;
+}
+
 AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
     AudioDeviceModule* adm,
     const AudioOptions& options_in) {
@@ -293,6 +339,13 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
   return software_options;
 }
 
+std::optional<AudioProcessing::Config> GetApmConfig(AudioProcessing* apm) {
+  if (apm == nullptr) {
+    return std::nullopt;
+  }
+  return apm->GetConfig();
+}
+
 }  // namespace
 
 AudioOptions ApplyAudioProcessingOptions(AudioProcessing* apm,
@@ -369,6 +422,54 @@ AudioOptions ApplyAudioProcessingOptions(AudioProcessing* apm,
 
   apm->ApplyConfig(apm_config);
   return software_options;
+}
+
+AudioProcessingRuntimeState GetAudioProcessingRuntimeState(
+    AudioProcessing* apm,
+    AudioDeviceModule* adm,
+    const AudioOptions& requested_options) {
+  AudioDeviceModule::BuiltInAudioProcessingState built_in;
+  if (adm != nullptr) {
+    built_in = adm->GetBuiltInAudioProcessingState();
+  }
+  std::optional<AudioProcessing::Config> apm_config = GetApmConfig(apm);
+  std::optional<bool> software_echo_cancellation;
+  std::optional<bool> software_noise_suppression;
+  std::optional<bool> software_auto_gain_control;
+  std::optional<bool> software_high_pass_filter;
+  if (apm_config.has_value()) {
+    software_echo_cancellation = apm_config->echo_canceller.enabled;
+    software_noise_suppression = apm_config->noise_suppression.enabled;
+    software_auto_gain_control = apm_config->gain_controller1.enabled ||
+                                 apm_config->gain_controller2.enabled;
+    software_high_pass_filter = apm_config->high_pass_filter.enabled;
+  }
+
+  AudioProcessingRuntimeState state;
+  state.topology = built_in.topology;
+  state.built_in = built_in;
+  state.echo_cancellation = BuildComponentRuntimeState(
+      requested_options.echo_cancellation,
+      requested_options.echo_cancellation_mode, software_echo_cancellation,
+      built_in.echo_cancellation_available,
+      built_in.echo_cancellation_desired,
+      built_in.echo_cancellation_observed);
+  state.noise_suppression = BuildComponentRuntimeState(
+      requested_options.noise_suppression,
+      requested_options.noise_suppression_mode, software_noise_suppression,
+      built_in.noise_suppression_available,
+      built_in.noise_suppression_desired,
+      built_in.noise_suppression_observed);
+  state.auto_gain_control = BuildComponentRuntimeState(
+      requested_options.auto_gain_control,
+      requested_options.auto_gain_control_mode, software_auto_gain_control,
+      built_in.auto_gain_control_available,
+      built_in.auto_gain_control_desired,
+      built_in.auto_gain_control_observed);
+  state.high_pass_filter = BuildComponentRuntimeState(
+      requested_options.highpass_filter, requested_options.highpass_filter_mode,
+      software_high_pass_filter, false, std::nullopt, std::nullopt);
+  return state;
 }
 
 }  // namespace webrtc

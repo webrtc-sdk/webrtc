@@ -1328,6 +1328,7 @@ rtc_library("peer_connection") {
     "../api:uma_metrics",
     "../api/adaptation:resource_adaptation_api",
     "../api/audio:audio_device",
+    "../api/audio:audio_processing_runtime_state",
     "../api/crypto:options",
     "../api/environment",
     "../api/rtc_event_log",

@@ -24,6 +24,7 @@ import org.webrtc.CandidatePairChangeEvent;
 import org.webrtc.DataChannel;
 import org.webrtc.MediaStreamTrack;
 import org.webrtc.RtpTransceiver;
+import org.webrtc.audio.JavaAudioDeviceModule;
 
 /**
  * Java-land version of the PeerConnection APIs; wraps the C++ API
@@ -93,6 +94,138 @@ public class PeerConnection {
     @CalledByNative("SignalingState")
     static SignalingState fromNativeIndex(int nativeIndex) {
       return values()[nativeIndex];
+    }
+  }
+
+  public enum AudioProcessingImplementation {
+    UNKNOWN,
+    DISABLED,
+    SOFTWARE,
+    PLATFORM,
+    SOFTWARE_AND_PLATFORM,
+  }
+
+  public static final class AudioProcessingComponentRuntimeState {
+    public final @Nullable Boolean requestedEnabled;
+    public final @Nullable AudioTrack.AudioProcessingMode requestedMode;
+    public final @Nullable Boolean softwareEnabled;
+    public final boolean platformAvailable;
+    public final @Nullable Boolean platformDesired;
+    public final @Nullable Boolean platformObserved;
+    public final AudioProcessingImplementation effective;
+
+    public AudioProcessingComponentRuntimeState(@Nullable Boolean requestedEnabled,
+        @Nullable AudioTrack.AudioProcessingMode requestedMode, @Nullable Boolean softwareEnabled,
+        boolean platformAvailable, @Nullable Boolean platformDesired,
+        @Nullable Boolean platformObserved, AudioProcessingImplementation effective) {
+      this.requestedEnabled = requestedEnabled;
+      this.requestedMode = requestedMode;
+      this.softwareEnabled = softwareEnabled;
+      this.platformAvailable = platformAvailable;
+      this.platformDesired = platformDesired;
+      this.platformObserved = platformObserved;
+      this.effective = effective;
+    }
+  }
+
+  public static final class AudioProcessingRuntimeState {
+    private static final int OPTIONAL_UNKNOWN = -1;
+    private static final int COMPONENT_FIELD_COUNT = 7;
+    private static final int BUILT_IN_COMPONENT_FIELD_COUNT = 3;
+    private static final int FIELD_COUNT =
+        1 + COMPONENT_FIELD_COUNT * 4 + 1 + BUILT_IN_COMPONENT_FIELD_COUNT * 3;
+
+    public final JavaAudioDeviceModule.BuiltInAudioProcessingTopology topology;
+    public final AudioProcessingComponentRuntimeState echoCancellation;
+    public final AudioProcessingComponentRuntimeState noiseSuppression;
+    public final AudioProcessingComponentRuntimeState autoGainControl;
+    public final AudioProcessingComponentRuntimeState highPassFilter;
+    public final JavaAudioDeviceModule.BuiltInAudioProcessingState builtIn;
+
+    public AudioProcessingRuntimeState(
+        JavaAudioDeviceModule.BuiltInAudioProcessingTopology topology,
+        AudioProcessingComponentRuntimeState echoCancellation,
+        AudioProcessingComponentRuntimeState noiseSuppression,
+        AudioProcessingComponentRuntimeState autoGainControl,
+        AudioProcessingComponentRuntimeState highPassFilter,
+        JavaAudioDeviceModule.BuiltInAudioProcessingState builtIn) {
+      this.topology = topology;
+      this.echoCancellation = echoCancellation;
+      this.noiseSuppression = noiseSuppression;
+      this.autoGainControl = autoGainControl;
+      this.highPassFilter = highPassFilter;
+      this.builtIn = builtIn;
+    }
+
+    private static AudioProcessingRuntimeState fromNative(int[] values) {
+      if (values.length != FIELD_COUNT) {
+        throw new IllegalStateException(
+            "Unexpected audio processing runtime state field count: " + values.length);
+      }
+      int offset = 0;
+      JavaAudioDeviceModule.BuiltInAudioProcessingTopology topology =
+          topologyFromNative(values[offset++]);
+      AudioProcessingComponentRuntimeState echoCancellation = componentFromNative(values, offset);
+      offset += COMPONENT_FIELD_COUNT;
+      AudioProcessingComponentRuntimeState noiseSuppression = componentFromNative(values, offset);
+      offset += COMPONENT_FIELD_COUNT;
+      AudioProcessingComponentRuntimeState autoGainControl = componentFromNative(values, offset);
+      offset += COMPONENT_FIELD_COUNT;
+      AudioProcessingComponentRuntimeState highPassFilter = componentFromNative(values, offset);
+      offset += COMPONENT_FIELD_COUNT;
+      JavaAudioDeviceModule.BuiltInAudioProcessingState builtIn =
+          builtInStateFromNative(values, offset);
+      return new AudioProcessingRuntimeState(topology, echoCancellation, noiseSuppression,
+          autoGainControl, highPassFilter, builtIn);
+    }
+
+    private static AudioProcessingComponentRuntimeState componentFromNative(
+        int[] values, int offset) {
+      return new AudioProcessingComponentRuntimeState(optionalBoolFromNative(values[offset]),
+          audioProcessingModeFromNative(values[offset + 1]),
+          optionalBoolFromNative(values[offset + 2]), values[offset + 3] != 0,
+          optionalBoolFromNative(values[offset + 4]), optionalBoolFromNative(values[offset + 5]),
+          audioProcessingImplementationFromNative(values[offset + 6]));
+    }
+
+    private static JavaAudioDeviceModule.BuiltInAudioProcessingState builtInStateFromNative(
+        int[] values, int offset) {
+      JavaAudioDeviceModule.BuiltInAudioProcessingTopology topology =
+          topologyFromNative(values[offset++]);
+      JavaAudioDeviceModule.BuiltInAudioProcessingComponentState echoCancellation =
+          builtInComponentFromNative(values, offset);
+      offset += BUILT_IN_COMPONENT_FIELD_COUNT;
+      JavaAudioDeviceModule.BuiltInAudioProcessingComponentState noiseSuppression =
+          builtInComponentFromNative(values, offset);
+      offset += BUILT_IN_COMPONENT_FIELD_COUNT;
+      JavaAudioDeviceModule.BuiltInAudioProcessingComponentState autoGainControl =
+          builtInComponentFromNative(values, offset);
+      return new JavaAudioDeviceModule.BuiltInAudioProcessingState(
+          topology, echoCancellation, noiseSuppression, autoGainControl);
+    }
+
+    private static JavaAudioDeviceModule.BuiltInAudioProcessingComponentState
+        builtInComponentFromNative(int[] values, int offset) {
+      return new JavaAudioDeviceModule.BuiltInAudioProcessingComponentState(values[offset] != 0,
+          optionalBoolFromNative(values[offset + 1]), optionalBoolFromNative(values[offset + 2]));
+    }
+
+    private static JavaAudioDeviceModule.BuiltInAudioProcessingTopology topologyFromNative(
+        int value) {
+      return JavaAudioDeviceModule.BuiltInAudioProcessingTopology.values()[value];
+    }
+
+    private static @Nullable AudioTrack.AudioProcessingMode audioProcessingModeFromNative(
+        int value) {
+      return value == OPTIONAL_UNKNOWN ? null : AudioTrack.AudioProcessingMode.values()[value];
+    }
+
+    private static AudioProcessingImplementation audioProcessingImplementationFromNative(int value) {
+      return AudioProcessingImplementation.values()[value];
+    }
+
+    private static @Nullable Boolean optionalBoolFromNative(int value) {
+      return value == OPTIONAL_UNKNOWN ? null : value != 0;
     }
   }
 
@@ -1304,6 +1437,10 @@ public class PeerConnection {
     return nativeGetNativePeerConnection();
   }
 
+  public AudioProcessingRuntimeState getAudioProcessingRuntimeState() {
+    return AudioProcessingRuntimeState.fromNative(nativeGetAudioProcessingRuntimeState());
+  }
+
   @CalledByNative
   long getNativeOwnedPeerConnection() {
     return nativePeerConnection;
@@ -1314,6 +1451,7 @@ public class PeerConnection {
   }
 
   private native long nativeGetNativePeerConnection();
+  private native int[] nativeGetAudioProcessingRuntimeState();
   private native SessionDescription nativeGetLocalDescription();
   private native SessionDescription nativeGetRemoteDescription();
   private native RtcCertificatePem nativeGetCertificate();

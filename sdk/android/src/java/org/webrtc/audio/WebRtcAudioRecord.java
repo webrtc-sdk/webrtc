@@ -357,6 +357,40 @@ class WebRtcAudioRecord {
     return effects.setNS(enable);
   }
 
+  @CalledByNative
+  boolean isBuiltInAECDesired() {
+    return effects.shouldEnableAEC();
+  }
+
+  @CalledByNative
+  boolean hasBuiltInAEC() {
+    return effects.hasAEC();
+  }
+
+  @CalledByNative
+  boolean isBuiltInAECEnabled() {
+    return effects.isAECEnabled();
+  }
+
+  @CalledByNative
+  boolean isBuiltInNSDesired() {
+    return effects.shouldEnableNS();
+  }
+
+  @CalledByNative
+  boolean hasBuiltInNS() {
+    return effects.hasNS();
+  }
+
+  @CalledByNative
+  boolean isBuiltInNSEnabled() {
+    return effects.isNSEnabled();
+  }
+
+  WebRtcAudioEffects.State getBuiltInAudioEffectsState() {
+    return effects.getState();
+  }
+
   public void setUseAudioRecord(boolean enable) {
     Logging.d(TAG, "setUseAudioRecord(" + enable + ")");
     this.useAudioRecord = enable;

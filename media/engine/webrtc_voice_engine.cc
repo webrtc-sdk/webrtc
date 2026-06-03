@@ -606,6 +606,7 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
   RTC_DCHECK_RUN_ON(&worker_thread_checker_);
   RTC_LOG(LS_INFO) << "WebRtcVoiceEngine::ApplyOptions: "
                    << options_in.ToString();
+  last_requested_audio_processing_options_ = options_in;
   AudioOptions options = options_in;  // The options are modified below.
 
 #if defined(WEBRTC_ANDROID)
@@ -648,6 +649,12 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
         *options.audio_jitter_buffer_min_delay_ms;
   }
 
+}
+
+AudioProcessingRuntimeState WebRtcVoiceEngine::GetAudioProcessingRuntimeState() {
+  RTC_DCHECK_RUN_ON(&worker_thread_checker_);
+  return webrtc::GetAudioProcessingRuntimeState(
+      apm(), adm(), last_requested_audio_processing_options_);
 }
 
 const std::vector<Codec>& WebRtcVoiceEngine::LegacySendCodecs() const {

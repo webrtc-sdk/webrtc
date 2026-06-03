@@ -63,6 +63,41 @@ typedef struct {
   BOOL isOutputAvailable;
 } RTC_OBJC_TYPE(RTCAudioEngineAvailability);
 
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopology)) {
+  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopologyIndependent) = 0,
+  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopologyEchoCancellationAndNoiseSuppressionCoupled) = 1,
+};
+
+typedef struct {
+  BOOL available;
+  BOOL hasDesired;
+  BOOL desired;
+  BOOL hasObserved;
+  BOOL observed;
+} RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState);
+
+typedef struct {
+  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopology) topology;
+
+  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) echoCancellation;
+  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) noiseSuppression;
+  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) autoGainControl;
+
+  BOOL hasVoiceProcessingEnabledDesired;
+  BOOL voiceProcessingEnabledDesired;
+  BOOL hasVoiceProcessingBypassedDesired;
+  BOOL voiceProcessingBypassedDesired;
+  BOOL hasVoiceProcessingAGCDesired;
+  BOOL voiceProcessingAGCDesired;
+
+  BOOL hasVoiceProcessingEnabledObserved;
+  BOOL voiceProcessingEnabledObserved;
+  BOOL hasVoiceProcessingBypassedObserved;
+  BOOL voiceProcessingBypassedObserved;
+  BOOL hasVoiceProcessingAGCObserved;
+  BOOL voiceProcessingAGCObserved;
+} RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState);
+
 RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCAudioEngineInputMixerNodeKey);
 
 @class RTC_OBJC_TYPE(RTCAudioDeviceModule);
@@ -202,6 +237,12 @@ RTC_OBJC_EXPORT
 @property(nonatomic, assign, getter=isVoiceProcessingAGCEnabled) BOOL voiceProcessingAGCEnabled;
 
 @property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioEngineAvailability) engineAvailability;
+
+/// Diagnostic snapshot of platform audio processing state. Desired values are
+/// the last state requested from the ADM. Observed values are live OS readback
+/// when the ADM can query the effect.
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState)
+    builtInAudioProcessingState;
 
 @end
 

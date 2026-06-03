@@ -242,6 +242,32 @@ int32_t AudioRecordJni::EnableBuiltInNS(bool enable) {
              : -1;
 }
 
+std::optional<bool> AudioRecordJni::BuiltInAECIsDesired() const {
+  RTC_DCHECK(thread_checker_.IsCurrent());
+  return Java_WebRtcAudioRecord_isBuiltInAECDesired(env_, j_audio_record_);
+}
+
+std::optional<bool> AudioRecordJni::BuiltInAECIsEnabled() const {
+  RTC_DCHECK(thread_checker_.IsCurrent());
+  if (!Java_WebRtcAudioRecord_hasBuiltInAEC(env_, j_audio_record_)) {
+    return std::nullopt;
+  }
+  return Java_WebRtcAudioRecord_isBuiltInAECEnabled(env_, j_audio_record_);
+}
+
+std::optional<bool> AudioRecordJni::BuiltInNSIsDesired() const {
+  RTC_DCHECK(thread_checker_.IsCurrent());
+  return Java_WebRtcAudioRecord_isBuiltInNSDesired(env_, j_audio_record_);
+}
+
+std::optional<bool> AudioRecordJni::BuiltInNSIsEnabled() const {
+  RTC_DCHECK(thread_checker_.IsCurrent());
+  if (!Java_WebRtcAudioRecord_hasBuiltInNS(env_, j_audio_record_)) {
+    return std::nullopt;
+  }
+  return Java_WebRtcAudioRecord_isBuiltInNSEnabled(env_, j_audio_record_);
+}
+
 void AudioRecordJni::CacheDirectBufferAddress(
     JNIEnv* env,
     const jni_zero::JavaParamRef<jobject>& j_caller,

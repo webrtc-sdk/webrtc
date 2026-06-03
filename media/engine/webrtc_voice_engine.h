@@ -27,6 +27,7 @@
 #include "api/audio/audio_frame_processor.h"
 #include "api/audio/audio_mixer.h"
 #include "api/audio/audio_processing.h"
+#include "api/audio/audio_processing_runtime_state.h"
 #include "api/audio_codecs/audio_codec_pair_id.h"
 #include "api/audio_codecs/audio_decoder_factory.h"
 #include "api/audio_codecs/audio_encoder_factory.h"
@@ -59,6 +60,7 @@
 #include "media/base/media_config.h"
 #include "media/base/media_engine.h"
 #include "media/base/stream_params.h"
+#include "media/engine/audio_processing_controller.h"
 #include "modules/rtp_rtcp/include/rtp_header_extension_map.h"
 #include "modules/rtp_rtcp/source/rtp_packet_received.h"
 #include "rtc_base/checks.h"
@@ -136,6 +138,8 @@ class WebRtcVoiceEngine final : public VoiceEngineInterface {
 
   std::optional<webrtc::AudioDeviceModule::Stats> GetAudioDeviceStats() override;
 
+  AudioProcessingRuntimeState GetAudioProcessingRuntimeState() override;
+
  private:
   // Every option that is "set" will be applied. Every option not "set" will be
   // ignored. This allows us to selectively turn on and off different options
@@ -168,6 +172,8 @@ class WebRtcVoiceEngine final : public VoiceEngineInterface {
   const std::vector<Codec> legacy_recv_codecs_;
   bool is_dumping_aec_ RTC_GUARDED_BY(worker_thread_checker_) = false;
   bool initialized_ RTC_GUARDED_BY(worker_thread_checker_) = false;
+  AudioOptions last_requested_audio_processing_options_
+      RTC_GUARDED_BY(worker_thread_checker_);
 
   // Jitter buffer settings for new streams.
   size_t audio_jitter_buffer_max_packets_

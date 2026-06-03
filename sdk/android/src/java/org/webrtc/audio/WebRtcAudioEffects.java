@@ -28,6 +28,21 @@ class WebRtcAudioEffects {
 
   private static final String TAG = "WebRtcAudioEffectsExternal";
 
+  static final class State {
+    final boolean aecDesired;
+    final @Nullable Boolean aecObserved;
+    final boolean nsDesired;
+    final @Nullable Boolean nsObserved;
+
+    State(boolean aecDesired, @Nullable Boolean aecObserved, boolean nsDesired,
+        @Nullable Boolean nsObserved) {
+      this.aecDesired = aecDesired;
+      this.aecObserved = aecObserved;
+      this.nsDesired = nsDesired;
+      this.nsObserved = nsObserved;
+    }
+  }
+
   // UUIDs for Software Audio Effects that we want to avoid using.
   // The implementor field will be set to "The Android Open Source Project".
   private static final UUID AOSP_ACOUSTIC_ECHO_CANCELER =
@@ -45,6 +60,9 @@ class WebRtcAudioEffects {
   private @Nullable AcousticEchoCanceler aec;
   private @Nullable NoiseSuppressor ns;
 
+  // Guard desired flags and live effect objects together so diagnostics can
+  // observe one coherent state while the audio thread creates or releases
+  // platform effects.
   // Affects the final state given to the setEnabled() method on each effect.
   // The default state is set to "disabled" but each effect can also be enabled
   // by calling setAEC() and setNS().
@@ -71,7 +89,7 @@ class WebRtcAudioEffects {
   // AEC effect is set. If the effect is already active, its state is toggled
   // immediately. Returns true if HW AEC is supported and the state was stored
   // or toggled successfully, and false otherwise.
-  public boolean setAEC(boolean enable) {
+  public synchronized boolean setAEC(boolean enable) {
     Logging.d(TAG, "setAEC(" + enable + ")");
     if (!isAcousticEchoCancelerSupported()) {
       Logging.w(TAG, "Platform AEC is not supported");
@@ -90,7 +108,7 @@ class WebRtcAudioEffects {
   // NS effect is set. If the effect is already active, its state is toggled
   // immediately. Returns true if HW NS is supported and the state was stored
   // or toggled successfully, and false otherwise.
-  public boolean setNS(boolean enable) {
+  public synchronized boolean setNS(boolean enable) {
     Logging.d(TAG, "setNS(" + enable + ")");
     if (!isNoiseSuppressorSupported()) {
       Logging.w(TAG, "Platform NS is not supported");
@@ -107,7 +125,7 @@ class WebRtcAudioEffects {
   // Toggles an existing AcousticEchoCanceler to be enabled or disabled.
   // Returns true if the toggling was successful, otherwise false is returned (this is also the case
   // if no AcousticEchoCanceler was present).
-  public boolean toggleAEC(boolean enable) {
+  public synchronized boolean toggleAEC(boolean enable) {
     if (aec == null) {
       Logging.e(TAG, "Attempting to enable or disable nonexistent AcousticEchoCanceler.");
       return false;
@@ -127,7 +145,7 @@ class WebRtcAudioEffects {
   // Toggles an existing NoiseSuppressor to be enabled or disabled.
   // Returns true if the toggling was successful, otherwise false is returned (this is also the case
   // if no NoiseSuppressor was present).
-  public boolean toggleNS(boolean enable) {
+  public synchronized boolean toggleNS(boolean enable) {
     if (ns == null) {
       Logging.e(TAG, "Attempting to enable or disable nonexistent NoiseSuppressor.");
       return false;
@@ -143,7 +161,36 @@ class WebRtcAudioEffects {
     return togglingSucceeded;
   }
 
-  public void enable(int audioSession) {
+  public synchronized boolean shouldEnableAEC() {
+    return shouldEnableAec;
+  }
+
+  public synchronized boolean hasAEC() {
+    return aec != null;
+  }
+
+  public synchronized boolean isAECEnabled() {
+    return aec != null && aec.getEnabled();
+  }
+
+  public synchronized boolean shouldEnableNS() {
+    return shouldEnableNs;
+  }
+
+  public synchronized boolean hasNS() {
+    return ns != null;
+  }
+
+  public synchronized boolean isNSEnabled() {
+    return ns != null && ns.getEnabled();
+  }
+
+  public synchronized State getState() {
+    return new State(shouldEnableAec, aec == null ? null : aec.getEnabled(),
+        shouldEnableNs, ns == null ? null : ns.getEnabled());
+  }
+
+  public synchronized void enable(int audioSession) {
     Logging.d(TAG, "enable(audioSession=" + audioSession + ")");
     assertTrue(aec == null);
     assertTrue(ns == null);
@@ -203,7 +250,7 @@ class WebRtcAudioEffects {
   // Releases all native audio effect resources. It is a good practice to
   // release the effect engine when not in use as control can be returned
   // to other applications or the native resources released.
-  public void release() {
+  public synchronized void release() {
     Logging.d(TAG, "release");
     if (aec != null) {
       aec.release();
