@@ -57,7 +57,8 @@ class MediaConstraints {
 
   // Constraint keys used by a local audio source.
 
-  // These keys are google specific.
+  // These include legacy goog* constraints and web-style audio processing mode
+  // keys used by native local audio sources.
   static const char kGoogEchoCancellation[];  // googEchoCancellation
   static const char kEchoCancellationMode[];  // echoCancellationMode
 
