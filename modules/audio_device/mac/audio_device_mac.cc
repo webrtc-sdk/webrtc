@@ -276,7 +276,7 @@ AudioDeviceGeneric::InitStatus AudioDeviceMac::Init() {
   AudioObjectPropertyAddress propertyAddress = {
     kAudioHardwarePropertyRunLoop,
     kAudioObjectPropertyScopeGlobal,
-    kAudioObjectPropertyElementMaster
+    kAudioObjectPropertyElementMain
   };
 
   CFRunLoopRef runLoop = NULL;
@@ -334,7 +334,7 @@ int32_t AudioDeviceMac::Terminate() {
   AudioObjectPropertyAddress propertyAddress = {
     kAudioHardwarePropertyDevices, // selector
     kAudioObjectPropertyScopeGlobal, // scope
-    kAudioObjectPropertyElementMaster // element
+    kAudioObjectPropertyElementMain // element
   };
 
   WEBRTC_CA_LOG_WARN(AudioObjectRemovePropertyListener(
@@ -1539,7 +1539,7 @@ int32_t AudioDeviceMac::GetNumberDevices(const AudioObjectPropertyScope scope,
   AudioObjectPropertyAddress propertyAddress = {
     kAudioHardwarePropertyDevices,
     kAudioObjectPropertyScopeGlobal,
-    kAudioObjectPropertyElementMaster,
+    kAudioObjectPropertyElementMain,
   };
 
   UInt32 size = 0;
