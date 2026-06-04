@@ -116,6 +116,13 @@ class CoupledAudioProcessingMockAudioDeviceModule
     return AudioDeviceModule::BuiltInAudioProcessingTopology::
         kEchoCancellationAndNoiseSuppressionCoupled;
   }
+
+  AudioDeviceModule::BuiltInAudioProcessingState GetBuiltInAudioProcessingState()
+      const override {
+    return state;
+  }
+
+  AudioDeviceModule::BuiltInAudioProcessingState state;
 };
 
 class RuntimeStateMockAudioDeviceModule : public webrtc::test::MockAudioDeviceModule {
@@ -769,6 +776,30 @@ TEST(AudioProcessingControllerTest, CoupledAgcOnlyDoesNotEnableGraph) {
   webrtc::AudioProcessing::Config apm_config =
       ApplyAudioProcessingOptionsForTest(options, adm.get());
   EXPECT_TRUE(apm_config.gain_controller1.enabled);
+}
+
+TEST(AudioProcessingControllerTest,
+     CoupledAgcOnlyAutomaticUsesActiveSharedPath) {
+  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>
+      adm = webrtc::make_ref_counted<
+          StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
+  adm->state.is_echo_cancellation_available = true;
+  adm->state.is_noise_suppression_available = true;
+  adm->state.is_echo_cancellation_requested = true;
+  adm->state.is_noise_suppression_requested = true;
+  adm->state.is_echo_cancellation_observed = true;
+  adm->state.is_noise_suppression_observed = true;
+
+  webrtc::AudioOptions options;
+  options.auto_gain_control = true;
+  options.auto_gain_control_mode = webrtc::AudioProcessingMode::kAutomatic;
+
+  EXPECT_CALL(*adm, BuiltInAGCIsAvailable()).WillOnce(Return(true));
+  EXPECT_CALL(*adm, EnableBuiltInAGC(true)).WillOnce(Return(0));
+
+  webrtc::AudioProcessing::Config apm_config =
+      ApplyAudioProcessingOptionsForTest(options, adm.get());
+  EXPECT_FALSE(apm_config.gain_controller1.enabled);
 }
 
 class FakeAudioSink : public webrtc::AudioSinkInterface {

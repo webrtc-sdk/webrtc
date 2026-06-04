@@ -121,6 +121,25 @@ bool SetPlatformEffect(AudioDeviceModule* adm, EnableFn enable, bool enabled) {
   return adm != nullptr && (adm->*enable)(enabled) == 0;
 }
 
+bool CoupledEchoNoisePlatformPathIsActive(AudioDeviceModule* adm) {
+  if (adm == nullptr) {
+    return false;
+  }
+
+  AudioDeviceModule::BuiltInAudioProcessingState state =
+      adm->GetBuiltInAudioProcessingState();
+  if (state.is_echo_cancellation_observed.has_value() ||
+      state.is_noise_suppression_observed.has_value()) {
+    return state.is_echo_cancellation_observed.value_or(false) ||
+           state.is_noise_suppression_observed.value_or(false);
+  }
+
+  return (state.is_echo_cancellation_available ||
+          state.is_noise_suppression_available) &&
+         (state.is_echo_cancellation_requested.value_or(false) ||
+          state.is_noise_suppression_requested.value_or(false));
+}
+
 bool BuiltInAudioProcessingGraphIsAvailable(AudioDeviceModule* adm) {
   return adm != nullptr && adm->BuiltInAudioProcessingGraphIsAvailable();
 }
@@ -279,6 +298,8 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
     } else if (graph_available) {
       SetBuiltInAudioProcessingGraph(adm, false);
     }
+  } else {
+    vpio_enabled = CoupledEchoNoisePlatformPathIsActive(adm);
   }
 
   if (options_in.echo_cancellation.has_value()) {
@@ -316,16 +337,15 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
     const bool agc_wants_platform =
         WantsPlatformProcessing(options_in.auto_gain_control,
                                 options_in.auto_gain_control_mode);
-    const bool should_enable_agc_platform = vpio_enabled && agc_wants_platform;
+    const bool agc_switch_available = PlatformEffectIsAvailable(
+        adm, &AudioDeviceModule::BuiltInAGCIsAvailable);
+    const bool should_enable_agc_platform =
+        vpio_enabled && agc_switch_available && agc_wants_platform;
     // Track the effective platform state, not just the requested state. Apple
     // may reject AGC enable even while VPIO is active, and `auto` must fall
     // back to software in that case.
     bool agc_platform_enabled = false;
-    const bool agc_available =
-        (vpio_enabled || !has_echo_or_noise_option) &&
-        PlatformEffectIsAvailable(adm,
-                                  &AudioDeviceModule::BuiltInAGCIsAvailable);
-    if (agc_available) {
+    if (agc_switch_available) {
       if (should_enable_agc_platform) {
         agc_platform_enabled =
             SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInAGC, true);
