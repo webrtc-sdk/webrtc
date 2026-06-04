@@ -10,6 +10,7 @@
 
 #import "RTCPeerConnection+Private.h"
 
+#import "RTCAudioProcessingState+Private.h"
 #import "RTCConfiguration+Private.h"
 #import "RTCDataChannel+Private.h"
 #import "RTCIceCandidate+Private.h"
@@ -43,17 +44,9 @@ int const RTC_CONSTANT_TYPE(RTCPeerConnnectionSessionDescriptionError) = -1;
 
 namespace {
 
-inline RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopology) BuiltInAudioProcessingTopologyToObjC(
-    webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology topology) {
-  switch (topology) {
-    case webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology::
-        kEchoCancellationAndNoiseSuppressionCoupled:
-      return RTC_OBJC_TYPE(
-          RTCBuiltInAudioProcessingTopologyEchoCancellationAndNoiseSuppressionCoupled);
-    case webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology::kIndependent:
-      return RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopologyIndependent);
-  }
-}
+using webrtc::objc::BuiltInAudioProcessingStateToObjC;
+using webrtc::objc::BuiltInAudioProcessingTopologyToObjC;
+using webrtc::objc::SetOptionalBool;
 
 inline RTC_OBJC_TYPE(RTCAudioProcessingMode)
     AudioProcessingModeToObjC(webrtc::AudioProcessingMode mode) {
@@ -81,55 +74,6 @@ inline RTC_OBJC_TYPE(RTCAudioProcessingImplementation)
     case webrtc::AudioProcessingImplementation::kUnknown:
       return RTC_OBJC_TYPE(RTCAudioProcessingImplementationUnknown);
   }
-}
-
-inline void SetOptionalBool(std::optional<bool> value, BOOL *has_value, BOOL *output_value) {
-  *has_value = value.has_value();
-  *output_value = value.value_or(false);
-}
-
-inline RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState)
-    BuiltInAudioProcessingComponentStateToObjC(bool is_available, std::optional<bool> is_requested,
-                                               std::optional<bool> is_observed) {
-  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) result;
-  result.isAvailable = is_available;
-  SetOptionalBool(is_requested, &result.hasRequested, &result.isRequested);
-  SetOptionalBool(is_observed, &result.hasObserved, &result.isObserved);
-  return result;
-}
-
-inline RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState) BuiltInAudioProcessingStateToObjC(
-    const webrtc::AudioDeviceModule::BuiltInAudioProcessingState &state) {
-  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState) result;
-  result.topology = BuiltInAudioProcessingTopologyToObjC(state.topology);
-  result.echoCancellation = BuiltInAudioProcessingComponentStateToObjC(
-      state.is_echo_cancellation_available, state.is_echo_cancellation_requested,
-      state.is_echo_cancellation_observed);
-  result.noiseSuppression = BuiltInAudioProcessingComponentStateToObjC(
-      state.is_noise_suppression_available, state.is_noise_suppression_requested,
-      state.is_noise_suppression_observed);
-  result.autoGainControl = BuiltInAudioProcessingComponentStateToObjC(
-      state.is_auto_gain_control_available, state.is_auto_gain_control_requested,
-      state.is_auto_gain_control_observed);
-  SetOptionalBool(state.is_voice_processing_enabled_requested,
-                  &result.hasVoiceProcessingEnabledRequested,
-                  &result.isVoiceProcessingEnabledRequested);
-  SetOptionalBool(state.is_voice_processing_bypassed_requested,
-                  &result.hasVoiceProcessingBypassedRequested,
-                  &result.isVoiceProcessingBypassedRequested);
-  SetOptionalBool(state.is_voice_processing_agc_enabled_requested,
-                  &result.hasVoiceProcessingAGCEnabledRequested,
-                  &result.isVoiceProcessingAGCEnabledRequested);
-  SetOptionalBool(state.is_voice_processing_enabled_observed,
-                  &result.hasVoiceProcessingEnabledObserved,
-                  &result.isVoiceProcessingEnabledObserved);
-  SetOptionalBool(state.is_voice_processing_bypassed_observed,
-                  &result.hasVoiceProcessingBypassedObserved,
-                  &result.isVoiceProcessingBypassedObserved);
-  SetOptionalBool(state.is_voice_processing_agc_enabled_observed,
-                  &result.hasVoiceProcessingAGCEnabledObserved,
-                  &result.isVoiceProcessingAGCEnabledObserved);
-  return result;
 }
 
 inline RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState)
