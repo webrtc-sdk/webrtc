@@ -121,6 +121,14 @@ bool SetPlatformEffect(AudioDeviceModule* adm, EnableFn enable, bool enabled) {
   return adm != nullptr && (adm->*enable)(enabled) == 0;
 }
 
+bool BuiltInAudioProcessingGraphIsAvailable(AudioDeviceModule* adm) {
+  return adm != nullptr && adm->BuiltInAudioProcessingGraphIsAvailable();
+}
+
+bool SetBuiltInAudioProcessingGraph(AudioDeviceModule* adm, bool enabled) {
+  return adm != nullptr && adm->EnableBuiltInAudioProcessingGraph(enabled) == 0;
+}
+
 std::optional<bool> ResolveSoftwareProcessingForPlatformState(
     std::optional<bool> enabled,
     std::optional<AudioProcessingMode> mode,
@@ -210,14 +218,11 @@ AudioProcessingComponentRuntimeState BuildComponentRuntimeState(
 AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
     AudioDeviceModule* adm,
     const AudioOptions& options_in) {
-  // Apple Voice Processing I/O exposes AEC and NS through one shared bypass
-  // switch. We resolve them together so a software or disabled request for
-  // either component keeps the shared platform path off.
-  //
-  // This helper does not toggle AudioEngineDevice::voice_processing_enabled.
-  // That lower level API is reserved for callers that want to leave Apple VPIO
-  // entirely. Runtime component software mode only bypasses platform effects
-  // and enables WebRTC APM.
+  // Apple Voice Processing I/O exposes AEC and NS through one shared graph.
+  // Bypassing that graph at runtime can leave CoreAudio processing through a
+  // VPIO shaped path while WebRTC APM is also active. For coupled topologies,
+  // software or disabled AEC/NS removes the built-in graph entirely. Platform
+  // AEC/NS recreates the graph and then enables both shared effects.
   //
   // A single AEC or NS automatic/platform request can turn the shared path on
   // for both effects. AGC is resolved after that decision and never turns VPIO
@@ -241,28 +246,38 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
   bool vpio_enabled = false;
 
   if (has_echo_or_noise_option) {
-    const bool vpio_available =
-        PlatformEffectIsAvailable(adm,
-                                  &AudioDeviceModule::BuiltInAECIsAvailable) &&
-        PlatformEffectIsAvailable(adm,
-                                  &AudioDeviceModule::BuiltInNSIsAvailable);
+    const bool graph_available = BuiltInAudioProcessingGraphIsAvailable(adm);
     const bool should_enable_vpio =
-        vpio_available && !echo_or_noise_forces_vpio_off &&
+        graph_available && !echo_or_noise_forces_vpio_off &&
         echo_or_noise_wants_platform;
 
-    if (vpio_available) {
-      const bool aec_updated = SetPlatformEffect(
-          adm, &AudioDeviceModule::EnableBuiltInAEC, should_enable_vpio);
-      const bool ns_updated = SetPlatformEffect(
-          adm, &AudioDeviceModule::EnableBuiltInNS, should_enable_vpio);
-      vpio_enabled = should_enable_vpio && aec_updated && ns_updated;
-      if (should_enable_vpio && !vpio_enabled) {
-        // Treat coupled AEC and NS as an all or nothing platform path. If one
-        // enable call fails, turn both off before falling back to software to
-        // avoid mixing a partial platform effect with WebRTC APM.
-        SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInAEC, false);
-        SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInNS, false);
+    if (should_enable_vpio) {
+      const bool graph_enabled = SetBuiltInAudioProcessingGraph(adm, true);
+      const bool effects_available =
+          graph_enabled &&
+          PlatformEffectIsAvailable(
+              adm, &AudioDeviceModule::BuiltInAECIsAvailable) &&
+          PlatformEffectIsAvailable(
+              adm, &AudioDeviceModule::BuiltInNSIsAvailable);
+      if (effects_available) {
+        const bool aec_updated = SetPlatformEffect(
+            adm, &AudioDeviceModule::EnableBuiltInAEC, true);
+        const bool ns_updated = SetPlatformEffect(
+            adm, &AudioDeviceModule::EnableBuiltInNS, true);
+        vpio_enabled = aec_updated && ns_updated;
       }
+      if (!vpio_enabled) {
+        // Treat coupled AEC and NS as an all or nothing platform path. If the
+        // graph or either effect cannot be enabled, remove the graph before
+        // falling back to software to avoid mixing platform and WebRTC APM.
+        if (graph_enabled) {
+          SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInAEC, false);
+          SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInNS, false);
+          SetBuiltInAudioProcessingGraph(adm, false);
+        }
+      }
+    } else if (graph_available) {
+      SetBuiltInAudioProcessingGraph(adm, false);
     }
   }
 
@@ -307,11 +322,13 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
     // back to software in that case.
     bool agc_platform_enabled = false;
     const bool agc_available =
+        (vpio_enabled || !has_echo_or_noise_option) &&
         PlatformEffectIsAvailable(adm,
                                   &AudioDeviceModule::BuiltInAGCIsAvailable);
     if (agc_available) {
       if (should_enable_agc_platform) {
-        agc_platform_enabled = SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInAGC, true);
+        agc_platform_enabled =
+            SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInAGC, true);
         if (!agc_platform_enabled) {
           // Keep AGC off when enabling it fails. This keeps `auto` honest about
           // the effective platform state and lets software AGC take over.
@@ -321,14 +338,17 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
         SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInAGC, false);
       }
     }
-    if (IsPlatformOnlyRequest(options_in.auto_gain_control, options_in.auto_gain_control_mode) &&
+    if (IsPlatformOnlyRequest(options_in.auto_gain_control,
+                              options_in.auto_gain_control_mode) &&
         !agc_platform_enabled) {
       LogPlatformOnlyRequestDisabled("auto gain control",
                                      "the coupled platform processing path is "
                                      "disabled");
     }
-    software_options.auto_gain_control = ResolveSoftwareProcessingForPlatformState(
-        options_in.auto_gain_control, options_in.auto_gain_control_mode, agc_platform_enabled);
+    software_options.auto_gain_control =
+        ResolveSoftwareProcessingForPlatformState(
+            options_in.auto_gain_control, options_in.auto_gain_control_mode,
+            agc_platform_enabled);
   }
 
   return software_options;

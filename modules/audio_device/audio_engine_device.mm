@@ -996,11 +996,10 @@ int32_t AudioEngineDevice::RegisterAudioCallback(AudioTransport* audioCallback) 
 // ----------------------------------------------------------------------------------------------------
 // Misc
 
-// These availability checks report whether AVAudioEngine voice processing is
-// currently usable by the ADM, not whether it is currently unbypassed.
-// Runtime options need a true result while bypassed so they can re-enable
-// platform processing. If callers explicitly disable Voice Processing I/O,
-// these return false and `auto` resolves to software.
+// These availability checks report whether a component can be used inside the
+// currently configured Voice Processing I/O graph. The coupled controller uses
+// BuiltInAudioProcessingGraphIsAvailable before these checks when it needs to
+// recreate the graph from a software or disabled state.
 bool AudioEngineDevice::BuiltInAECIsAvailable() const {
 #if TARGET_OS_SIMULATOR
   return false;
@@ -1032,6 +1031,23 @@ AudioDeviceModule::BuiltInAudioProcessingTopology
 AudioEngineDevice::GetBuiltInAudioProcessingTopology() const {
   return BuiltInAudioProcessingTopology::
       kEchoCancellationAndNoiseSuppressionCoupled;
+}
+
+bool AudioEngineDevice::BuiltInAudioProcessingGraphIsAvailable() const {
+#if TARGET_OS_SIMULATOR
+  return false;
+#else
+  RTC_DCHECK_RUN_ON(thread_);
+  return true;
+#endif
+}
+
+int32_t AudioEngineDevice::EnableBuiltInAudioProcessingGraph(bool enable) {
+#if TARGET_OS_SIMULATOR
+  return -1;
+#else
+  return SetVoiceProcessingEnabled(enable);
+#endif
 }
 
 AudioDeviceModule::BuiltInAudioProcessingState AudioEngineDevice::GetBuiltInAudioProcessingState()
@@ -1209,6 +1225,19 @@ int32_t AudioEngineDevice::SetVoiceProcessingEnabled(bool enable) {
 
   int32_t result = ModifyEngineState([enable](EngineState state) -> EngineState {
     state.voice_processing_enabled = enable;
+    if (enable) {
+      // Creating a fresh VPIO graph should start unbypassed. Component intent is
+      // still owned by EnableBuiltInAEC, EnableBuiltInNS, and EnableBuiltInAGC.
+      state.voice_processing_bypassed = false;
+    } else {
+      // Disabling voice processing removes Apple's built-in processing path
+      // entirely. Clear component requests so diagnostics do not report stale
+      // Apple AEC, NS, or AGC state while the graph is absent.
+      state.voice_processing_bypassed = true;
+      state.voice_processing_agc_enabled = false;
+      state.built_in_aec_enabled = false;
+      state.built_in_ns_enabled = false;
+    }
     return state;
   });
 
