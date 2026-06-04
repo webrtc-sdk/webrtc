@@ -378,8 +378,10 @@ static webrtc::Environment CreateDefaultEnvironment() {
           });
     }
 
-    _audioDeviceModule = [[RTC_OBJC_TYPE(RTCAudioDeviceModule) alloc] initWithNativeModule: _nativeAudioDeviceModule
-                                                       workerThread: _workerThread.get()];
+    _audioDeviceModule =
+        [[RTC_OBJC_TYPE(RTCAudioDeviceModule) alloc] initWithNativeModule:_nativeAudioDeviceModule
+                                                             workerThread:_workerThread.get()
+                                                    audioDeviceModuleType:audioDeviceModuleType];
     dependencies.adm = _nativeAudioDeviceModule;
     dependencies.audio_encoder_factory = std::move(audioEncoderFactory);
     dependencies.audio_decoder_factory = std::move(audioDecoderFactory);
