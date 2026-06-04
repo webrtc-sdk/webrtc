@@ -82,8 +82,7 @@ inline RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopology) BuiltInAudioProcessingTo
 }
 
 inline RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState)
-    BuiltInAudioProcessingComponentStateToObjC(bool is_available,
-                                               std::optional<bool> is_requested,
+    BuiltInAudioProcessingComponentStateToObjC(bool is_available, std::optional<bool> is_requested,
                                                std::optional<bool> is_observed) {
   RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) result;
   result.isAvailable = is_available;

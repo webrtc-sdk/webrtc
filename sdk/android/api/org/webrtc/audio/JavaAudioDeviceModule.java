@@ -520,8 +520,7 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
         new BuiltInAudioProcessingComponentState(isBuiltInAcousticEchoCancelerSupported(),
             effectState.isAecRequested, effectState.aecObserved),
         new BuiltInAudioProcessingComponentState(
-            isBuiltInNoiseSuppressorSupported(), effectState.isNsRequested,
-            effectState.nsObserved),
+            isBuiltInNoiseSuppressorSupported(), effectState.isNsRequested, effectState.nsObserved),
         new BuiltInAudioProcessingComponentState(false, null, null));
   }
 

@@ -89,8 +89,7 @@ inline void SetOptionalBool(std::optional<bool> value, BOOL *has_value, BOOL *ou
 }
 
 inline RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState)
-    BuiltInAudioProcessingComponentStateToObjC(bool is_available,
-                                               std::optional<bool> is_requested,
+    BuiltInAudioProcessingComponentStateToObjC(bool is_available, std::optional<bool> is_requested,
                                                std::optional<bool> is_observed) {
   RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) result;
   result.isAvailable = is_available;
@@ -137,22 +136,17 @@ inline RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState)
     AudioProcessingComponentRuntimeStateToObjC(
         const webrtc::AudioProcessingComponentRuntimeState &state) {
   RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState) result;
-  SetOptionalBool(state.is_requested_enabled,
-                  &result.hasRequestedEnabled,
+  SetOptionalBool(state.is_requested_enabled, &result.hasRequestedEnabled,
                   &result.isRequestedEnabled);
   result.hasRequestedMode = state.requested_mode.has_value();
   result.requestedMode = state.requested_mode.has_value()
                              ? AudioProcessingModeToObjC(*state.requested_mode)
                              : RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic);
-  SetOptionalBool(state.is_software_enabled,
-                  &result.hasSoftwareEnabled,
-                  &result.isSoftwareEnabled);
+  SetOptionalBool(state.is_software_enabled, &result.hasSoftwareEnabled, &result.isSoftwareEnabled);
   result.isPlatformAvailable = state.is_platform_available;
-  SetOptionalBool(state.is_platform_requested,
-                  &result.hasPlatformRequested,
+  SetOptionalBool(state.is_platform_requested, &result.hasPlatformRequested,
                   &result.isPlatformRequested);
-  SetOptionalBool(state.is_platform_observed,
-                  &result.hasPlatformObserved,
+  SetOptionalBool(state.is_platform_observed, &result.hasPlatformObserved,
                   &result.isPlatformObserved);
   result.effective = AudioProcessingImplementationToObjC(state.effective);
   return result;

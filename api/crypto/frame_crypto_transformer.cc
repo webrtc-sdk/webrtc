@@ -470,8 +470,7 @@ void FrameCryptorTransformer::encryptFrame(
 
   webrtc::ArrayView<const uint8_t> data_in = frame->GetData();
   if (data_in.size() == 0) {
-    RTC_LOG(LS_VERBOSE)
-        << "FrameCryptorTransformer::encryptFrame() empty frame";
+    RTC_LOG(LS_VERBOSE) << "FrameCryptorTransformer::encryptFrame() empty frame";
     if (key_provider_->options().discard_frame_when_cryptor_not_ready) {
       return;
     }
@@ -591,8 +590,7 @@ void FrameCryptorTransformer::decryptFrame(
   webrtc::ArrayView<const uint8_t> data_in = frame->GetData();
 
   if (data_in.size() == 0) {
-    RTC_LOG(LS_VERBOSE)
-        << "FrameCryptorTransformer::decryptFrame() empty frame";
+    RTC_LOG(LS_VERBOSE) << "FrameCryptorTransformer::decryptFrame() empty frame";
     if (key_provider_->options().discard_frame_when_cryptor_not_ready) {
       return;
     }

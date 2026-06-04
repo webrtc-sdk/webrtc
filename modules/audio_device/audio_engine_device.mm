@@ -1076,7 +1076,7 @@ AudioDeviceModule::BuiltInAudioProcessingState AudioEngineDevice::GetBuiltInAudi
     return state;
   }
 
-  AVAudioInputNode* input_node = engine_device_.inputNode;
+  AVAudioInputNode *input_node = engine_device_.inputNode;
   @try {
     const bool vp_observed = input_node.isVoiceProcessingEnabled;
     const bool bypassed_observed = vp_observed ? input_node.voiceProcessingBypassed : true;
@@ -1089,7 +1089,7 @@ AudioDeviceModule::BuiltInAudioProcessingState AudioEngineDevice::GetBuiltInAudi
     state.is_echo_cancellation_observed = shared_echo_noise_observed;
     state.is_noise_suppression_observed = shared_echo_noise_observed;
     state.is_auto_gain_control_observed = shared_echo_noise_observed && agc_observed;
-  } @catch (NSException* exception) {
+  } @catch (NSException *exception) {
     LOGW() << "GetBuiltInAudioProcessingState threw exception: " << exception.reason.UTF8String;
   }
   return state;
@@ -1110,8 +1110,7 @@ int32_t AudioEngineDevice::EnableBuiltInAEC(bool enable) {
     // must update them as a coupled pair when they need a realizable OS state.
     // AVAudioEngine exposes VPIO bypass as one knob for AEC and NS. AGC has a
     // separate switch, but it only takes effect while this shared path is on.
-    const bool use_vpio =
-        state.built_in_aec_enabled || state.built_in_ns_enabled;
+    const bool use_vpio = state.built_in_aec_enabled || state.built_in_ns_enabled;
     state.voice_processing_bypassed = !use_vpio;
     return state;
   });
@@ -1147,8 +1146,7 @@ int32_t AudioEngineDevice::EnableBuiltInNS(bool enable) {
     // must update them as a coupled pair when they need a realizable OS state.
     // AVAudioEngine exposes VPIO bypass as one knob for AEC and NS. AGC has a
     // separate switch, but it only takes effect while this shared path is on.
-    const bool use_vpio =
-        state.built_in_aec_enabled || state.built_in_ns_enabled;
+    const bool use_vpio = state.built_in_aec_enabled || state.built_in_ns_enabled;
     state.voice_processing_bypassed = !use_vpio;
     return state;
   });
