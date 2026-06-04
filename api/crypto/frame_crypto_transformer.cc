@@ -469,12 +469,16 @@ void FrameCryptorTransformer::encryptFrame(
   }
 
   webrtc::ArrayView<const uint8_t> data_in = frame->GetData();
-  if (data_in.size() == 0 || !enabled_cryption) {
-    RTC_LOG(LS_WARNING) << "FrameCryptorTransformer::encryptFrame() "
-                           "data_in.size() == 0 || enabled_cryption == false";
+  if (data_in.size() == 0) {
+    RTC_LOG(LS_VERBOSE)
+        << "FrameCryptorTransformer::encryptFrame() empty frame";
     if (key_provider_->options().discard_frame_when_cryptor_not_ready) {
       return;
     }
+    sink_callback->OnTransformedFrame(std::move(frame));
+    return;
+  }
+  if (!enabled_cryption) {
     sink_callback->OnTransformedFrame(std::move(frame));
     return;
   }
@@ -586,13 +590,17 @@ void FrameCryptorTransformer::decryptFrame(
 
   webrtc::ArrayView<const uint8_t> data_in = frame->GetData();
 
-  if (data_in.size() == 0 || !enabled_cryption) {
-    RTC_LOG(LS_WARNING) << "FrameCryptorTransformer::decryptFrame() "
-                           "data_in.size() == 0 || enabled_cryption == false";
+  if (data_in.size() == 0) {
+    RTC_LOG(LS_VERBOSE)
+        << "FrameCryptorTransformer::decryptFrame() empty frame";
     if (key_provider_->options().discard_frame_when_cryptor_not_ready) {
       return;
     }
 
+    sink_callback->OnTransformedFrame(std::move(frame));
+    return;
+  }
+  if (!enabled_cryption) {
     sink_callback->OnTransformedFrame(std::move(frame));
     return;
   }
