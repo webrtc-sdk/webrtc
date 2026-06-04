@@ -1043,18 +1043,18 @@ AudioDeviceModule::BuiltInAudioProcessingState AudioEngineDevice::GetBuiltInAudi
 #else
   RTC_DCHECK_RUN_ON(thread_);
 
-  const bool platform_available = engine_state_.voice_processing_enabled;
-  state.echo_cancellation_available = platform_available;
-  state.noise_suppression_available = platform_available;
-  state.auto_gain_control_available = platform_available;
+  const bool is_platform_available = engine_state_.voice_processing_enabled;
+  state.is_echo_cancellation_available = is_platform_available;
+  state.is_noise_suppression_available = is_platform_available;
+  state.is_auto_gain_control_available = is_platform_available;
 
-  state.echo_cancellation_desired = engine_state_.built_in_aec_enabled;
-  state.noise_suppression_desired = engine_state_.built_in_ns_enabled;
-  state.auto_gain_control_desired = engine_state_.voice_processing_agc_enabled;
+  state.is_echo_cancellation_requested = engine_state_.built_in_aec_enabled;
+  state.is_noise_suppression_requested = engine_state_.built_in_ns_enabled;
+  state.is_auto_gain_control_requested = engine_state_.voice_processing_agc_enabled;
 
-  state.voice_processing_enabled_desired = engine_state_.voice_processing_enabled;
-  state.voice_processing_bypassed_desired = engine_state_.voice_processing_bypassed;
-  state.voice_processing_agc_desired = engine_state_.voice_processing_agc_enabled;
+  state.is_voice_processing_enabled_requested = engine_state_.voice_processing_enabled;
+  state.is_voice_processing_bypassed_requested = engine_state_.voice_processing_bypassed;
+  state.is_voice_processing_agc_enabled_requested = engine_state_.voice_processing_agc_enabled;
 
   if (engine_device_ == nil) {
     return state;
@@ -1067,12 +1067,12 @@ AudioDeviceModule::BuiltInAudioProcessingState AudioEngineDevice::GetBuiltInAudi
     const bool agc_observed = vp_observed ? input_node.voiceProcessingAGCEnabled : false;
     const bool shared_echo_noise_observed = vp_observed && !bypassed_observed;
 
-    state.voice_processing_enabled_observed = vp_observed;
-    state.voice_processing_bypassed_observed = bypassed_observed;
-    state.voice_processing_agc_observed = agc_observed;
-    state.echo_cancellation_observed = shared_echo_noise_observed;
-    state.noise_suppression_observed = shared_echo_noise_observed;
-    state.auto_gain_control_observed = shared_echo_noise_observed && agc_observed;
+    state.is_voice_processing_enabled_observed = vp_observed;
+    state.is_voice_processing_bypassed_observed = bypassed_observed;
+    state.is_voice_processing_agc_enabled_observed = agc_observed;
+    state.is_echo_cancellation_observed = shared_echo_noise_observed;
+    state.is_noise_suppression_observed = shared_echo_noise_observed;
+    state.is_auto_gain_control_observed = shared_echo_noise_observed && agc_observed;
   } @catch (NSException* exception) {
     LOGW() << "GetBuiltInAudioProcessingState threw exception: " << exception.reason.UTF8String;
   }

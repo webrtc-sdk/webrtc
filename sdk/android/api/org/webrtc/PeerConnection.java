@@ -106,24 +106,24 @@ public class PeerConnection {
   }
 
   public static final class AudioProcessingComponentRuntimeState {
-    public final @Nullable Boolean requestedEnabled;
+    public final @Nullable Boolean isRequestedEnabled;
     public final @Nullable AudioTrack.AudioProcessingMode requestedMode;
-    public final @Nullable Boolean softwareEnabled;
-    public final boolean platformAvailable;
-    public final @Nullable Boolean platformDesired;
-    public final @Nullable Boolean platformObserved;
+    public final @Nullable Boolean isSoftwareEnabled;
+    public final boolean isPlatformAvailable;
+    public final @Nullable Boolean isPlatformRequested;
+    public final @Nullable Boolean isPlatformObserved;
     public final AudioProcessingImplementation effective;
 
-    public AudioProcessingComponentRuntimeState(@Nullable Boolean requestedEnabled,
-        @Nullable AudioTrack.AudioProcessingMode requestedMode, @Nullable Boolean softwareEnabled,
-        boolean platformAvailable, @Nullable Boolean platformDesired,
-        @Nullable Boolean platformObserved, AudioProcessingImplementation effective) {
-      this.requestedEnabled = requestedEnabled;
+    public AudioProcessingComponentRuntimeState(@Nullable Boolean isRequestedEnabled,
+        @Nullable AudioTrack.AudioProcessingMode requestedMode, @Nullable Boolean isSoftwareEnabled,
+        boolean isPlatformAvailable, @Nullable Boolean isPlatformRequested,
+        @Nullable Boolean isPlatformObserved, AudioProcessingImplementation effective) {
+      this.isRequestedEnabled = isRequestedEnabled;
       this.requestedMode = requestedMode;
-      this.softwareEnabled = softwareEnabled;
-      this.platformAvailable = platformAvailable;
-      this.platformDesired = platformDesired;
-      this.platformObserved = platformObserved;
+      this.isSoftwareEnabled = isSoftwareEnabled;
+      this.isPlatformAvailable = isPlatformAvailable;
+      this.isPlatformRequested = isPlatformRequested;
+      this.isPlatformObserved = isPlatformObserved;
       this.effective = effective;
     }
   }

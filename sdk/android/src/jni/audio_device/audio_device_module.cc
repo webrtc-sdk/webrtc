@@ -558,15 +558,15 @@ class AndroidAudioDeviceModule : public AudioDeviceModule {
     if (!initialized_) {
       return state;
     }
-    state.echo_cancellation_available = input_->IsAcousticEchoCancelerSupported();
-    state.noise_suppression_available = input_->IsNoiseSuppressorSupported();
-    state.auto_gain_control_available = false;
-    state.echo_cancellation_desired = input_->BuiltInAECIsDesired();
-    state.noise_suppression_desired = input_->BuiltInNSIsDesired();
-    state.auto_gain_control_desired = false;
-    state.echo_cancellation_observed = input_->BuiltInAECIsEnabled();
-    state.noise_suppression_observed = input_->BuiltInNSIsEnabled();
-    state.auto_gain_control_observed = false;
+    state.is_echo_cancellation_available = input_->IsAcousticEchoCancelerSupported();
+    state.is_noise_suppression_available = input_->IsNoiseSuppressorSupported();
+    state.is_auto_gain_control_available = false;
+    state.is_echo_cancellation_requested = input_->BuiltInAECIsRequested();
+    state.is_noise_suppression_requested = input_->BuiltInNSIsRequested();
+    state.is_auto_gain_control_requested = false;
+    state.is_echo_cancellation_observed = input_->BuiltInAECIsEnabled();
+    state.is_noise_suppression_observed = input_->BuiltInNSIsEnabled();
+    state.is_auto_gain_control_observed = false;
     return state;
   }
 

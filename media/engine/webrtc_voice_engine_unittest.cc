@@ -403,15 +403,15 @@ TEST(AudioProcessingControllerTest, RuntimeStateCombinesRequestedSoftwareAndPlat
       webrtc::make_ref_counted<RuntimeStateMockAudioDeviceModule>();
   adm->state.topology = webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology::
       kEchoCancellationAndNoiseSuppressionCoupled;
-  adm->state.echo_cancellation_available = true;
-  adm->state.echo_cancellation_desired = true;
-  adm->state.echo_cancellation_observed = false;
-  adm->state.noise_suppression_available = true;
-  adm->state.noise_suppression_desired = true;
-  adm->state.noise_suppression_observed = true;
-  adm->state.auto_gain_control_available = true;
-  adm->state.auto_gain_control_desired = false;
-  adm->state.auto_gain_control_observed = false;
+  adm->state.is_echo_cancellation_available = true;
+  adm->state.is_echo_cancellation_requested = true;
+  adm->state.is_echo_cancellation_observed = false;
+  adm->state.is_noise_suppression_available = true;
+  adm->state.is_noise_suppression_requested = true;
+  adm->state.is_noise_suppression_observed = true;
+  adm->state.is_auto_gain_control_available = true;
+  adm->state.is_auto_gain_control_requested = false;
+  adm->state.is_auto_gain_control_observed = false;
 
   webrtc::AudioOptions options;
   options.echo_cancellation = true;
@@ -436,13 +436,13 @@ TEST(AudioProcessingControllerTest, RuntimeStateCombinesRequestedSoftwareAndPlat
   EXPECT_EQ(webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology::
                 kEchoCancellationAndNoiseSuppressionCoupled,
             state.topology);
-  ASSERT_TRUE(state.echo_cancellation.requested_enabled.has_value());
-  EXPECT_TRUE(*state.echo_cancellation.requested_enabled);
+  ASSERT_TRUE(state.echo_cancellation.is_requested_enabled.has_value());
+  EXPECT_TRUE(*state.echo_cancellation.is_requested_enabled);
   EXPECT_EQ(webrtc::AudioProcessingMode::kSoftware, *state.echo_cancellation.requested_mode);
-  EXPECT_TRUE(state.echo_cancellation.software_enabled.value_or(false));
-  EXPECT_TRUE(state.echo_cancellation.platform_available);
-  EXPECT_TRUE(state.echo_cancellation.platform_desired.value_or(false));
-  EXPECT_FALSE(state.echo_cancellation.platform_observed.value_or(true));
+  EXPECT_TRUE(state.echo_cancellation.is_software_enabled.value_or(false));
+  EXPECT_TRUE(state.echo_cancellation.is_platform_available);
+  EXPECT_TRUE(state.echo_cancellation.is_platform_requested.value_or(false));
+  EXPECT_FALSE(state.echo_cancellation.is_platform_observed.value_or(true));
   EXPECT_EQ(webrtc::AudioProcessingImplementation::kSoftware, state.echo_cancellation.effective);
 
   EXPECT_EQ(webrtc::AudioProcessingImplementation::kSoftwareAndPlatform,
@@ -451,11 +451,12 @@ TEST(AudioProcessingControllerTest, RuntimeStateCombinesRequestedSoftwareAndPlat
   EXPECT_EQ(webrtc::AudioProcessingImplementation::kSoftware, state.high_pass_filter.effective);
 }
 
-TEST(AudioProcessingControllerTest, RuntimeStateDoesNotTreatUnavailableDesiredPlatformAsEffective) {
+TEST(AudioProcessingControllerTest,
+     RuntimeStateDoesNotTreatUnavailableRequestedPlatformAsEffective) {
   webrtc::scoped_refptr<RuntimeStateMockAudioDeviceModule> adm =
       webrtc::make_ref_counted<RuntimeStateMockAudioDeviceModule>();
-  adm->state.echo_cancellation_available = false;
-  adm->state.echo_cancellation_desired = true;
+  adm->state.is_echo_cancellation_available = false;
+  adm->state.is_echo_cancellation_requested = true;
 
   webrtc::AudioOptions options;
   options.echo_cancellation = true;
@@ -467,8 +468,8 @@ TEST(AudioProcessingControllerTest, RuntimeStateDoesNotTreatUnavailableDesiredPl
   webrtc::AudioProcessingRuntimeState state =
       GetAudioProcessingRuntimeStateForTest(options, adm.get(), apm_config);
 
-  EXPECT_FALSE(state.echo_cancellation.platform_available);
-  EXPECT_TRUE(state.echo_cancellation.platform_desired.value_or(false));
+  EXPECT_FALSE(state.echo_cancellation.is_platform_available);
+  EXPECT_TRUE(state.echo_cancellation.is_platform_requested.value_or(false));
   EXPECT_EQ(webrtc::AudioProcessingImplementation::kDisabled, state.echo_cancellation.effective);
 }
 

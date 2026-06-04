@@ -34,16 +34,16 @@ enum class AudioProcessingImplementation {
 
 struct AudioProcessingComponentRuntimeState {
   // The options most recently requested by the caller.
-  std::optional<bool> requested_enabled;
+  std::optional<bool> is_requested_enabled;
   std::optional<AudioProcessingMode> requested_mode;
 
   // The current WebRTC APM state from AudioProcessing::GetConfig().
-  std::optional<bool> software_enabled;
-  // Platform state from the ADM. Observed state wins over desired state when
+  std::optional<bool> is_software_enabled;
+  // Platform state from the ADM. Observed state wins over requested state when
   // deriving the effective implementation.
-  bool platform_available = false;
-  std::optional<bool> platform_desired;
-  std::optional<bool> platform_observed;
+  bool is_platform_available = false;
+  std::optional<bool> is_platform_requested;
+  std::optional<bool> is_platform_observed;
 
   AudioProcessingImplementation effective = AudioProcessingImplementation::kUnknown;
 };

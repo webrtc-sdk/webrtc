@@ -78,9 +78,9 @@ class AudioRecordJni : public AudioInput {
   int32_t EnableBuiltInAEC(bool enable) override;
   int32_t EnableBuiltInNS(bool enable) override;
 
-  std::optional<bool> BuiltInAECIsDesired() const override;
+  std::optional<bool> BuiltInAECIsRequested() const override;
   std::optional<bool> BuiltInAECIsEnabled() const override;
-  std::optional<bool> BuiltInNSIsDesired() const override;
+  std::optional<bool> BuiltInNSIsRequested() const override;
   std::optional<bool> BuiltInNSIsEnabled() const override;
 
   // Called from Java side so we can cache the address of the Java-manged

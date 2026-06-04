@@ -69,11 +69,11 @@ typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopology)) {
 };
 
 typedef struct {
-  BOOL available;
-  BOOL hasDesired;
-  BOOL desired;
+  BOOL isAvailable;
+  BOOL hasRequested;
+  BOOL isRequested;
   BOOL hasObserved;
-  BOOL observed;
+  BOOL isObserved;
 } RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState);
 
 typedef struct {
@@ -83,19 +83,19 @@ typedef struct {
   RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) noiseSuppression;
   RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) autoGainControl;
 
-  BOOL hasVoiceProcessingEnabledDesired;
-  BOOL voiceProcessingEnabledDesired;
-  BOOL hasVoiceProcessingBypassedDesired;
-  BOOL voiceProcessingBypassedDesired;
-  BOOL hasVoiceProcessingAGCDesired;
-  BOOL voiceProcessingAGCDesired;
+  BOOL hasVoiceProcessingEnabledRequested;
+  BOOL isVoiceProcessingEnabledRequested;
+  BOOL hasVoiceProcessingBypassedRequested;
+  BOOL isVoiceProcessingBypassedRequested;
+  BOOL hasVoiceProcessingAGCEnabledRequested;
+  BOOL isVoiceProcessingAGCEnabledRequested;
 
   BOOL hasVoiceProcessingEnabledObserved;
-  BOOL voiceProcessingEnabledObserved;
+  BOOL isVoiceProcessingEnabledObserved;
   BOOL hasVoiceProcessingBypassedObserved;
-  BOOL voiceProcessingBypassedObserved;
-  BOOL hasVoiceProcessingAGCObserved;
-  BOOL voiceProcessingAGCObserved;
+  BOOL isVoiceProcessingBypassedObserved;
+  BOOL hasVoiceProcessingAGCEnabledObserved;
+  BOOL isVoiceProcessingAGCEnabledObserved;
 } RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState);
 
 RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCAudioEngineInputMixerNodeKey);
@@ -238,7 +238,7 @@ RTC_OBJC_EXPORT
 
 @property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioEngineAvailability) engineAvailability;
 
-/// Diagnostic snapshot of platform audio processing state. Desired values are
+/// Diagnostic snapshot of platform audio processing state. Requested values are
 /// the last state requested from the ADM. Observed values are live OS readback
 /// when the ADM can query the effect.
 @property(nonatomic, readonly) RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState)

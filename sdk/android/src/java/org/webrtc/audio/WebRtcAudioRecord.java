@@ -358,7 +358,7 @@ class WebRtcAudioRecord {
   }
 
   @CalledByNative
-  boolean isBuiltInAECDesired() {
+  boolean isBuiltInAECRequested() {
     return effects.shouldEnableAEC();
   }
 
@@ -373,7 +373,7 @@ class WebRtcAudioRecord {
   }
 
   @CalledByNative
-  boolean isBuiltInNSDesired() {
+  boolean isBuiltInNSRequested() {
     return effects.shouldEnableNS();
   }
 

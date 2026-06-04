@@ -242,9 +242,9 @@ int32_t AudioRecordJni::EnableBuiltInNS(bool enable) {
              : -1;
 }
 
-std::optional<bool> AudioRecordJni::BuiltInAECIsDesired() const {
+std::optional<bool> AudioRecordJni::BuiltInAECIsRequested() const {
   RTC_DCHECK(thread_checker_.IsCurrent());
-  return Java_WebRtcAudioRecord_isBuiltInAECDesired(env_, j_audio_record_);
+  return Java_WebRtcAudioRecord_isBuiltInAECRequested(env_, j_audio_record_);
 }
 
 std::optional<bool> AudioRecordJni::BuiltInAECIsEnabled() const {
@@ -255,9 +255,9 @@ std::optional<bool> AudioRecordJni::BuiltInAECIsEnabled() const {
   return Java_WebRtcAudioRecord_isBuiltInAECEnabled(env_, j_audio_record_);
 }
 
-std::optional<bool> AudioRecordJni::BuiltInNSIsDesired() const {
+std::optional<bool> AudioRecordJni::BuiltInNSIsRequested() const {
   RTC_DCHECK(thread_checker_.IsCurrent());
-  return Java_WebRtcAudioRecord_isBuiltInNSDesired(env_, j_audio_record_);
+  return Java_WebRtcAudioRecord_isBuiltInNSRequested(env_, j_audio_record_);
 }
 
 std::optional<bool> AudioRecordJni::BuiltInNSIsEnabled() const {

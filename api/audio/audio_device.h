@@ -78,30 +78,30 @@ class AudioDeviceModule : public RefCountInterface {
     BuiltInAudioProcessingTopology topology = BuiltInAudioProcessingTopology::kIndependent;
 
     // Capability for the ADM to turn each platform effect on.
-    bool echo_cancellation_available = false;
-    bool noise_suppression_available = false;
-    bool auto_gain_control_available = false;
+    bool is_echo_cancellation_available = false;
+    bool is_noise_suppression_available = false;
+    bool is_auto_gain_control_available = false;
 
     // Last component state requested through EnableBuiltInAEC, EnableBuiltInNS,
     // or EnableBuiltInAGC when the ADM can store it.
-    std::optional<bool> echo_cancellation_desired;
-    std::optional<bool> noise_suppression_desired;
-    std::optional<bool> auto_gain_control_desired;
+    std::optional<bool> is_echo_cancellation_requested;
+    std::optional<bool> is_noise_suppression_requested;
+    std::optional<bool> is_auto_gain_control_requested;
 
     // Live OS effect state when the ADM can read it back. Empty means unknown,
     // not false.
-    std::optional<bool> echo_cancellation_observed;
-    std::optional<bool> noise_suppression_observed;
-    std::optional<bool> auto_gain_control_observed;
+    std::optional<bool> is_echo_cancellation_observed;
+    std::optional<bool> is_noise_suppression_observed;
+    std::optional<bool> is_auto_gain_control_observed;
 
     // Apple Voice Processing I/O state when the ADM exposes it.
-    std::optional<bool> voice_processing_enabled_desired;
-    std::optional<bool> voice_processing_bypassed_desired;
-    std::optional<bool> voice_processing_agc_desired;
+    std::optional<bool> is_voice_processing_enabled_requested;
+    std::optional<bool> is_voice_processing_bypassed_requested;
+    std::optional<bool> is_voice_processing_agc_enabled_requested;
 
-    std::optional<bool> voice_processing_enabled_observed;
-    std::optional<bool> voice_processing_bypassed_observed;
-    std::optional<bool> voice_processing_agc_observed;
+    std::optional<bool> is_voice_processing_enabled_observed;
+    std::optional<bool> is_voice_processing_bypassed_observed;
+    std::optional<bool> is_voice_processing_agc_enabled_observed;
   };
 
   struct Stats {
@@ -214,16 +214,16 @@ class AudioDeviceModule : public RefCountInterface {
     return BuiltInAudioProcessingTopology::kIndependent;
   }
 
-  // Returns a diagnostic snapshot for platform audio processing. Desired fields
+  // Returns a diagnostic snapshot for platform audio processing. Requested fields
   // describe what the ADM was last asked to use. Observed fields describe live
   // OS effect state when the ADM can read it back. Unsupported fields remain
   // empty because most platforms cannot observe every component.
   virtual BuiltInAudioProcessingState GetBuiltInAudioProcessingState() const {
     BuiltInAudioProcessingState state;
     state.topology = GetBuiltInAudioProcessingTopology();
-    state.echo_cancellation_available = BuiltInAECIsAvailable();
-    state.noise_suppression_available = BuiltInNSIsAvailable();
-    state.auto_gain_control_available = BuiltInAGCIsAvailable();
+    state.is_echo_cancellation_available = BuiltInAECIsAvailable();
+    state.is_noise_suppression_available = BuiltInNSIsAvailable();
+    state.is_auto_gain_control_available = BuiltInAGCIsAvailable();
     return state;
   }
 

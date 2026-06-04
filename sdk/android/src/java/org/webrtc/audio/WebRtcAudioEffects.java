@@ -29,16 +29,16 @@ class WebRtcAudioEffects {
   private static final String TAG = "WebRtcAudioEffectsExternal";
 
   static final class State {
-    final boolean aecDesired;
+    final boolean isAecRequested;
     final @Nullable Boolean aecObserved;
-    final boolean nsDesired;
+    final boolean isNsRequested;
     final @Nullable Boolean nsObserved;
 
-    State(boolean aecDesired, @Nullable Boolean aecObserved, boolean nsDesired,
+    State(boolean isAecRequested, @Nullable Boolean aecObserved, boolean isNsRequested,
         @Nullable Boolean nsObserved) {
-      this.aecDesired = aecDesired;
+      this.isAecRequested = isAecRequested;
       this.aecObserved = aecObserved;
-      this.nsDesired = nsDesired;
+      this.isNsRequested = isNsRequested;
       this.nsObserved = nsObserved;
     }
   }
@@ -60,7 +60,7 @@ class WebRtcAudioEffects {
   private @Nullable AcousticEchoCanceler aec;
   private @Nullable NoiseSuppressor ns;
 
-  // Guard desired flags and live effect objects together so diagnostics can
+  // Guard requested flags and live effect objects together so diagnostics can
   // observe one coherent state while the audio thread creates or releases
   // platform effects.
   // Affects the final state given to the setEnabled() method on each effect.
@@ -133,7 +133,7 @@ class WebRtcAudioEffects {
     Logging.d(TAG, "toggleAEC(" + enable + ")");
     boolean togglingSucceeded = aec.setEnabled(enable) == AudioEffect.SUCCESS;
     if (togglingSucceeded) {
-      // Keep the desired state aligned with the live effect. This value is
+      // Keep the requested state aligned with the live effect. This value is
       // reused if the effect is recreated for a new audio session.
       shouldEnableAec = enable;
     }
@@ -153,7 +153,7 @@ class WebRtcAudioEffects {
     Logging.d(TAG, "toggleNS(" + enable + ")");
     boolean togglingSucceeded = ns.setEnabled(enable) == AudioEffect.SUCCESS;
     if (togglingSucceeded) {
-      // Keep the desired state aligned with the live effect. This value is
+      // Keep the requested state aligned with the live effect. This value is
       // reused if the effect is recreated for a new audio session.
       shouldEnableNs = enable;
     }

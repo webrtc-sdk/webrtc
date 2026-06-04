@@ -89,12 +89,13 @@ inline void SetOptionalBool(std::optional<bool> value, BOOL *has_value, BOOL *ou
 }
 
 inline RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState)
-    BuiltInAudioProcessingComponentStateToObjC(bool available, std::optional<bool> desired,
-                                               std::optional<bool> observed) {
+    BuiltInAudioProcessingComponentStateToObjC(bool is_available,
+                                               std::optional<bool> is_requested,
+                                               std::optional<bool> is_observed) {
   RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) result;
-  result.available = available;
-  SetOptionalBool(desired, &result.hasDesired, &result.desired);
-  SetOptionalBool(observed, &result.hasObserved, &result.observed);
+  result.isAvailable = is_available;
+  SetOptionalBool(is_requested, &result.hasRequested, &result.isRequested);
+  SetOptionalBool(is_observed, &result.hasObserved, &result.isObserved);
   return result;
 }
 
@@ -103,29 +104,32 @@ inline RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState) BuiltInAudioProcessingState
   RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState) result;
   result.topology = BuiltInAudioProcessingTopologyToObjC(state.topology);
   result.echoCancellation = BuiltInAudioProcessingComponentStateToObjC(
-      state.echo_cancellation_available, state.echo_cancellation_desired,
-      state.echo_cancellation_observed);
+      state.is_echo_cancellation_available, state.is_echo_cancellation_requested,
+      state.is_echo_cancellation_observed);
   result.noiseSuppression = BuiltInAudioProcessingComponentStateToObjC(
-      state.noise_suppression_available, state.noise_suppression_desired,
-      state.noise_suppression_observed);
+      state.is_noise_suppression_available, state.is_noise_suppression_requested,
+      state.is_noise_suppression_observed);
   result.autoGainControl = BuiltInAudioProcessingComponentStateToObjC(
-      state.auto_gain_control_available, state.auto_gain_control_desired,
-      state.auto_gain_control_observed);
-  SetOptionalBool(state.voice_processing_enabled_desired, &result.hasVoiceProcessingEnabledDesired,
-                  &result.voiceProcessingEnabledDesired);
-  SetOptionalBool(state.voice_processing_bypassed_desired,
-                  &result.hasVoiceProcessingBypassedDesired,
-                  &result.voiceProcessingBypassedDesired);
-  SetOptionalBool(state.voice_processing_agc_desired, &result.hasVoiceProcessingAGCDesired,
-                  &result.voiceProcessingAGCDesired);
-  SetOptionalBool(state.voice_processing_enabled_observed,
+      state.is_auto_gain_control_available, state.is_auto_gain_control_requested,
+      state.is_auto_gain_control_observed);
+  SetOptionalBool(state.is_voice_processing_enabled_requested,
+                  &result.hasVoiceProcessingEnabledRequested,
+                  &result.isVoiceProcessingEnabledRequested);
+  SetOptionalBool(state.is_voice_processing_bypassed_requested,
+                  &result.hasVoiceProcessingBypassedRequested,
+                  &result.isVoiceProcessingBypassedRequested);
+  SetOptionalBool(state.is_voice_processing_agc_enabled_requested,
+                  &result.hasVoiceProcessingAGCEnabledRequested,
+                  &result.isVoiceProcessingAGCEnabledRequested);
+  SetOptionalBool(state.is_voice_processing_enabled_observed,
                   &result.hasVoiceProcessingEnabledObserved,
-                  &result.voiceProcessingEnabledObserved);
-  SetOptionalBool(state.voice_processing_bypassed_observed,
+                  &result.isVoiceProcessingEnabledObserved);
+  SetOptionalBool(state.is_voice_processing_bypassed_observed,
                   &result.hasVoiceProcessingBypassedObserved,
-                  &result.voiceProcessingBypassedObserved);
-  SetOptionalBool(state.voice_processing_agc_observed, &result.hasVoiceProcessingAGCObserved,
-                  &result.voiceProcessingAGCObserved);
+                  &result.isVoiceProcessingBypassedObserved);
+  SetOptionalBool(state.is_voice_processing_agc_enabled_observed,
+                  &result.hasVoiceProcessingAGCEnabledObserved,
+                  &result.isVoiceProcessingAGCEnabledObserved);
   return result;
 }
 
@@ -133,15 +137,23 @@ inline RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState)
     AudioProcessingComponentRuntimeStateToObjC(
         const webrtc::AudioProcessingComponentRuntimeState &state) {
   RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState) result;
-  SetOptionalBool(state.requested_enabled, &result.hasRequestedEnabled, &result.requestedEnabled);
+  SetOptionalBool(state.is_requested_enabled,
+                  &result.hasRequestedEnabled,
+                  &result.isRequestedEnabled);
   result.hasRequestedMode = state.requested_mode.has_value();
   result.requestedMode = state.requested_mode.has_value()
                              ? AudioProcessingModeToObjC(*state.requested_mode)
                              : RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic);
-  SetOptionalBool(state.software_enabled, &result.hasSoftwareEnabled, &result.softwareEnabled);
-  result.platformAvailable = state.platform_available;
-  SetOptionalBool(state.platform_desired, &result.hasPlatformDesired, &result.platformDesired);
-  SetOptionalBool(state.platform_observed, &result.hasPlatformObserved, &result.platformObserved);
+  SetOptionalBool(state.is_software_enabled,
+                  &result.hasSoftwareEnabled,
+                  &result.isSoftwareEnabled);
+  result.isPlatformAvailable = state.is_platform_available;
+  SetOptionalBool(state.is_platform_requested,
+                  &result.hasPlatformRequested,
+                  &result.isPlatformRequested);
+  SetOptionalBool(state.is_platform_observed,
+                  &result.hasPlatformObserved,
+                  &result.isPlatformObserved);
   result.effective = AudioProcessingImplementationToObjC(state.effective);
   return result;
 }
