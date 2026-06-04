@@ -103,12 +103,9 @@ bool IsPlatformOnlyRequest(std::optional<bool> enabled,
          ModeOrAutomatic(mode) == AudioProcessingMode::kPlatform;
 }
 
-bool RequiresVpioOff(std::optional<bool> enabled,
-                     std::optional<AudioProcessingMode> mode) {
-  if (!enabled.has_value()) {
-    return false;
-  }
-  return !*enabled || ModeOrAutomatic(mode) == AudioProcessingMode::kSoftware;
+bool RequestsSoftwareProcessing(std::optional<bool> enabled,
+                                std::optional<AudioProcessingMode> mode) {
+  return enabled.value_or(false) && ModeOrAutomatic(mode) == AudioProcessingMode::kSoftware;
 }
 
 bool PlatformEffectIsAvailable(AudioDeviceModule* adm,
@@ -247,19 +244,20 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
   // AEC/NS recreates the path and then enables both shared effects.
   //
   // A single AEC or NS automatic/platform request can turn the shared path on
-  // for both effects. AGC is resolved after that decision and never turns VPIO
-  // on by itself. This keeps partial AGC-only updates from changing Apple audio
-  // routing.
+  // for both effects. Disabling the sibling component does not veto that
+  // request because Apple cannot provide platform AEC without the shared path.
+  // A software request still keeps the shared path off to avoid mixing Apple's
+  // coupled processing with WebRTC APM. AGC is resolved after that decision and
+  // never turns VPIO on by itself. This keeps partial AGC-only updates from
+  // changing Apple audio routing.
   AudioOptions software_options = options_in;
 
   const bool has_echo_or_noise_option =
       options_in.echo_cancellation.has_value() ||
       options_in.noise_suppression.has_value();
-  const bool echo_or_noise_forces_vpio_off =
-      RequiresVpioOff(options_in.echo_cancellation,
-                      options_in.echo_cancellation_mode) ||
-      RequiresVpioOff(options_in.noise_suppression,
-                      options_in.noise_suppression_mode);
+  const bool echo_or_noise_requests_software =
+      RequestsSoftwareProcessing(options_in.echo_cancellation, options_in.echo_cancellation_mode) ||
+      RequestsSoftwareProcessing(options_in.noise_suppression, options_in.noise_suppression_mode);
   const bool echo_or_noise_wants_platform =
       WantsPlatformProcessing(options_in.echo_cancellation,
                               options_in.echo_cancellation_mode) ||
@@ -270,7 +268,7 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
   if (has_echo_or_noise_option) {
     const bool path_available = BuiltInVoiceProcessingPathIsAvailable(adm);
     const bool should_enable_vpio =
-        path_available && !echo_or_noise_forces_vpio_off && echo_or_noise_wants_platform;
+        path_available && !echo_or_noise_requests_software && echo_or_noise_wants_platform;
 
     if (should_enable_vpio) {
       const bool path_enabled = SetBuiltInVoiceProcessingPath(adm, true);
