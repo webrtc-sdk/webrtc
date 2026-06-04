@@ -448,6 +448,8 @@ AudioProcessingRuntimeState GetAudioProcessingRuntimeState(AudioProcessing *apm,
   if (apm_config.has_value()) {
     software_echo_cancellation = apm_config->echo_canceller.enabled;
     software_noise_suppression = apm_config->noise_suppression.enabled;
+    // Diagnostics report the effective APM state, not only values written by
+    // this controller. GC2 may be enabled by other WebRTC configuration paths.
     software_auto_gain_control =
         apm_config->gain_controller1.enabled || apm_config->gain_controller2.enabled;
     software_high_pass_filter = apm_config->high_pass_filter.enabled;
