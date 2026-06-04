@@ -22,7 +22,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 // clang-format off
-@interface RTC_OBJC_TYPE (RTCAudioDeviceModule) ()
+@interface RTC_OBJC_TYPE(RTCAudioDeviceModule) ()
 
 - (instancetype)initWithNativeModule:(webrtc::scoped_refptr<webrtc::AudioDeviceModule>)module
                         workerThread:(webrtc::Thread *)workerThread
