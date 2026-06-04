@@ -266,7 +266,7 @@ int32_t AudioEngineDevice::Init() {
   // main thread to issue notifications.
   AudioObjectPropertyAddress propertyAddress = {kAudioHardwarePropertyRunLoop,
                                                 kAudioObjectPropertyScopeGlobal,
-                                                kAudioObjectPropertyElementMaster};
+                                                kAudioObjectPropertyElementMain};
 
   CFRunLoopRef runLoop = NULL;
   UInt32 size = sizeof(CFRunLoopRef);
@@ -323,9 +323,9 @@ int32_t AudioEngineDevice::Terminate() {
 #if TARGET_OS_OSX
   // Remove listeners for global scope.
   AudioObjectPropertyAddress propertyAddress = {
-      kAudioHardwarePropertyDevices,     // selector
-      kAudioObjectPropertyScopeGlobal,   // scope
-      kAudioObjectPropertyElementMaster  // element
+      kAudioHardwarePropertyDevices,    // selector
+      kAudioObjectPropertyScopeGlobal,  // scope
+      kAudioObjectPropertyElementMain   // element
   };
 
   OSStatus err = noErr;
