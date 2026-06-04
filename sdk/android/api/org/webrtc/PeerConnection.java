@@ -24,6 +24,7 @@ import org.webrtc.CandidatePairChangeEvent;
 import org.webrtc.DataChannel;
 import org.webrtc.MediaStreamTrack;
 import org.webrtc.RtpTransceiver;
+import org.webrtc.audio.AudioProcessingMode;
 import org.webrtc.audio.JavaAudioDeviceModule;
 
 /**
@@ -107,7 +108,7 @@ public class PeerConnection {
 
   public static final class AudioProcessingComponentRuntimeState {
     public final @Nullable Boolean isRequestedEnabled;
-    public final @Nullable AudioTrack.AudioProcessingMode requestedMode;
+    public final @Nullable AudioProcessingMode requestedMode;
     public final @Nullable Boolean isSoftwareEnabled;
     public final boolean isPlatformAvailable;
     public final @Nullable Boolean isPlatformRequested;
@@ -115,7 +116,7 @@ public class PeerConnection {
     public final AudioProcessingImplementation effective;
 
     public AudioProcessingComponentRuntimeState(@Nullable Boolean isRequestedEnabled,
-        @Nullable AudioTrack.AudioProcessingMode requestedMode, @Nullable Boolean isSoftwareEnabled,
+        @Nullable AudioProcessingMode requestedMode, @Nullable Boolean isSoftwareEnabled,
         boolean isPlatformAvailable, @Nullable Boolean isPlatformRequested,
         @Nullable Boolean isPlatformObserved, AudioProcessingImplementation effective) {
       this.isRequestedEnabled = isRequestedEnabled;
@@ -215,9 +216,8 @@ public class PeerConnection {
       return JavaAudioDeviceModule.BuiltInAudioProcessingTopology.values()[value];
     }
 
-    private static @Nullable AudioTrack.AudioProcessingMode audioProcessingModeFromNative(
-        int value) {
-      return value == OPTIONAL_UNKNOWN ? null : AudioTrack.AudioProcessingMode.values()[value];
+    private static @Nullable AudioProcessingMode audioProcessingModeFromNative(int value) {
+      return value == OPTIONAL_UNKNOWN ? null : AudioProcessingMode.values()[value];
     }
 
     private static AudioProcessingImplementation audioProcessingImplementationFromNative(

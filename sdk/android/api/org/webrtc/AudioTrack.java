@@ -11,56 +11,10 @@
 package org.webrtc;
 
 import java.util.IdentityHashMap;
+import org.webrtc.audio.AudioProcessingOptions;
 
 /** Java wrapper for a C++ AudioTrackInterface */
 public class AudioTrack extends MediaStreamTrack {
-  public enum AudioProcessingMode {
-    AUTOMATIC,
-    PLATFORM,
-    SOFTWARE
-  }
-
-  /** Audio processing options for a native local audio track. */
-  public static final class AudioProcessingOptions {
-    public final boolean echoCancellation;
-    public final boolean noiseSuppression;
-    public final boolean autoGainControl;
-    public final boolean highPassFilter;
-    public final AudioProcessingMode echoCancellationMode;
-    public final AudioProcessingMode noiseSuppressionMode;
-    public final AudioProcessingMode autoGainControlMode;
-    public final AudioProcessingMode highPassFilterMode;
-
-    public AudioProcessingOptions(boolean echoCancellation, boolean noiseSuppression,
-        boolean autoGainControl, boolean highPassFilter) {
-      this(echoCancellation, noiseSuppression, autoGainControl, highPassFilter,
-          AudioProcessingMode.AUTOMATIC, AudioProcessingMode.AUTOMATIC,
-          AudioProcessingMode.AUTOMATIC, AudioProcessingMode.AUTOMATIC);
-    }
-
-    public AudioProcessingOptions(boolean echoCancellation, boolean noiseSuppression,
-        boolean autoGainControl, boolean highPassFilter, AudioProcessingMode echoCancellationMode,
-        AudioProcessingMode noiseSuppressionMode, AudioProcessingMode autoGainControlMode,
-        AudioProcessingMode highPassFilterMode) {
-      this.echoCancellation = echoCancellation;
-      this.noiseSuppression = noiseSuppression;
-      this.autoGainControl = autoGainControl;
-      this.highPassFilter = highPassFilter;
-      this.echoCancellationMode = checkNotNull(echoCancellationMode, "echoCancellationMode");
-      this.noiseSuppressionMode = checkNotNull(noiseSuppressionMode, "noiseSuppressionMode");
-      this.autoGainControlMode = checkNotNull(autoGainControlMode, "autoGainControlMode");
-      this.highPassFilterMode = checkNotNull(highPassFilterMode, "highPassFilterMode");
-    }
-
-    public static AudioProcessingOptions communication() {
-      return new AudioProcessingOptions(true, true, true, true);
-    }
-
-    public static AudioProcessingOptions raw() {
-      return new AudioProcessingOptions(false, false, false, false);
-    }
-  }
-
   private final IdentityHashMap<AudioTrackSink, Long> sinks = new IdentityHashMap<AudioTrackSink, Long>();
 
   public AudioTrack(long nativeTrack) {
@@ -148,13 +102,6 @@ public class AudioTrack extends MediaStreamTrack {
   /** Returns a pointer to webrtc::AudioTrackInterface. */
   long getNativeAudioTrack() {
     return getNativeMediaStreamTrack();
-  }
-
-  private static <T> T checkNotNull(T value, String name) {
-    if (value == null) {
-      throw new IllegalArgumentException(name + " is not allowed to be null");
-    }
-    return value;
   }
 
   private static native void nativeSetVolume(long track, double volume);

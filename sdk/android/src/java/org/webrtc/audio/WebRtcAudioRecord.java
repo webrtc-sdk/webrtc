@@ -37,7 +37,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import org.webrtc.AudioTrack;
 import org.webrtc.CalledByNative;
 import org.webrtc.Logging;
 import org.webrtc.ThreadUtils;
@@ -358,7 +357,7 @@ class WebRtcAudioRecord {
     return effects.setNS(enable);
   }
 
-  void applyPlatformAudioProcessingOptions(@Nullable AudioTrack.AudioProcessingOptions options) {
+  void applyPlatformAudioProcessingOptions(@Nullable AudioProcessingOptions options) {
     if (options == null) {
       return;
     }
@@ -373,8 +372,8 @@ class WebRtcAudioRecord {
   }
 
   private static boolean shouldUsePlatformEffect(
-      boolean enabled, AudioTrack.AudioProcessingMode mode, boolean available) {
-    return enabled && available && mode != AudioTrack.AudioProcessingMode.SOFTWARE;
+      boolean enabled, AudioProcessingMode mode, boolean available) {
+    return enabled && available && mode != AudioProcessingMode.SOFTWARE;
   }
 
   @CalledByNative

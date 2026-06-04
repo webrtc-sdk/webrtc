@@ -19,7 +19,6 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ScheduledExecutorService;
-import org.webrtc.AudioTrack;
 import org.webrtc.JniCommon;
 import org.webrtc.Logging;
 
@@ -499,7 +498,7 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
     prewarmRecording(null);
   }
 
-  public void prewarmRecording(@Nullable AudioTrack.AudioProcessingOptions options) {
+  public void prewarmRecording(@Nullable AudioProcessingOptions options) {
     audioInput.applyPlatformAudioProcessingOptions(options);
     audioInput.initRecordingIfNeeded();
     audioInput.prewarmRecordingIfNeeded();
@@ -509,7 +508,7 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
     requestStartRecording(null);
   }
 
-  public void requestStartRecording(@Nullable AudioTrack.AudioProcessingOptions options) {
+  public void requestStartRecording(@Nullable AudioProcessingOptions options) {
     audioInput.applyPlatformAudioProcessingOptions(options);
     audioInput.initRecordingIfNeeded();
     audioInput.startRecordingIfNeeded();
