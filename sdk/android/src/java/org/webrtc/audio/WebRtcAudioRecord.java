@@ -37,6 +37,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import org.webrtc.AudioTrack;
 import org.webrtc.CalledByNative;
 import org.webrtc.Logging;
 import org.webrtc.ThreadUtils;
@@ -355,6 +356,25 @@ class WebRtcAudioRecord {
   private boolean enableBuiltInNS(boolean enable) {
     Logging.d(TAG, "enableBuiltInNS(" + enable + ")");
     return effects.setNS(enable);
+  }
+
+  void applyPlatformAudioProcessingOptions(@Nullable AudioTrack.AudioProcessingOptions options) {
+    if (options == null) {
+      return;
+    }
+
+    // AudioRecord prewarm can create the audio session before the sender applies
+    // track options. Apply only Android platform AEC/NS here. WebRTC software
+    // APM processing is still resolved by the voice engine when sending.
+    effects.setAEC(shouldUsePlatformEffect(
+        options.echoCancellation, options.echoCancellationMode, isAcousticEchoCancelerSupported));
+    effects.setNS(shouldUsePlatformEffect(
+        options.noiseSuppression, options.noiseSuppressionMode, isNoiseSuppressorSupported));
+  }
+
+  private static boolean shouldUsePlatformEffect(
+      boolean enabled, AudioTrack.AudioProcessingMode mode, boolean available) {
+    return enabled && available && mode != AudioTrack.AudioProcessingMode.SOFTWARE;
   }
 
   @CalledByNative
