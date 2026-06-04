@@ -985,7 +985,9 @@ int32_t AudioEngineDevice::RegisterAudioCallback(AudioTransport* audioCallback) 
   LOGI() << "RegisterAudioCallback";
   RTC_DCHECK_RUN_ON(thread_);
   RTC_DCHECK(audio_device_buffer_ != nullptr);
-  RTC_DCHECK(audioCallback != nullptr);
+  // audioCallback is nullptr when deregistering (e.g. WebRtcVoiceEngine::Terminate).
+  // AudioDeviceBuffer::RegisterAudioCallback accepts nullptr, so don't DCHECK it
+  // (doing so crashes debug builds on teardown).
 
   return audio_device_buffer_->RegisterAudioCallback(audioCallback);
 }
