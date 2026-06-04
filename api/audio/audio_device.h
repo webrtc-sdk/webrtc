@@ -214,9 +214,9 @@ class AudioDeviceModule : public RefCountInterface {
     return BuiltInAudioProcessingTopology::kIndependent;
   }
 
-  // Coupled ADMs may need to create or remove a platform processing graph as a
-  // unit before individual built-in effects can be toggled. Independent ADMs do
-  // not use this hook.
+  // Coupled ADMs may need to create or remove a platform voice-processing path
+  // before individual built-in effects can be toggled. Independent ADMs expose
+  // component effects directly and do not use this hook.
   virtual bool BuiltInVoiceProcessingPathIsAvailable() const { return false; }
   virtual int32_t EnableBuiltInVoiceProcessingPath(bool) { return -1; }
 

@@ -997,9 +997,9 @@ int32_t AudioEngineDevice::RegisterAudioCallback(AudioTransport* audioCallback) 
 // Misc
 
 // These availability checks report whether a component can be used inside the
-// currently configured Voice Processing I/O graph. The coupled controller uses
+// currently configured Voice Processing I/O path. The coupled controller uses
 // BuiltInVoiceProcessingPathIsAvailable before these checks when it needs to
-// recreate the graph from a software or disabled state.
+// recreate the path from a software or disabled state.
 bool AudioEngineDevice::BuiltInAECIsAvailable() const {
 #if TARGET_OS_SIMULATOR
   return false;
@@ -1106,9 +1106,12 @@ int32_t AudioEngineDevice::EnableBuiltInAEC(bool enable) {
   }
   return ModifyEngineState([enable](EngineState state) -> EngineState {
     state.built_in_aec_enabled = enable;
+    // AEC and NS share AVAudioInputNode.voiceProcessingBypassed, so callers
+    // must update them as a coupled pair when they need a realizable OS state.
     // AVAudioEngine exposes VPIO bypass as one knob for AEC and NS. AGC has a
     // separate switch, but it only takes effect while this shared path is on.
-    const bool use_vpio = state.built_in_aec_enabled || state.built_in_ns_enabled;
+    const bool use_vpio =
+        state.built_in_aec_enabled || state.built_in_ns_enabled;
     state.voice_processing_bypassed = !use_vpio;
     return state;
   });
@@ -1140,9 +1143,12 @@ int32_t AudioEngineDevice::EnableBuiltInNS(bool enable) {
   }
   return ModifyEngineState([enable](EngineState state) -> EngineState {
     state.built_in_ns_enabled = enable;
+    // AEC and NS share AVAudioInputNode.voiceProcessingBypassed, so callers
+    // must update them as a coupled pair when they need a realizable OS state.
     // AVAudioEngine exposes VPIO bypass as one knob for AEC and NS. AGC has a
     // separate switch, but it only takes effect while this shared path is on.
-    const bool use_vpio = state.built_in_aec_enabled || state.built_in_ns_enabled;
+    const bool use_vpio =
+        state.built_in_aec_enabled || state.built_in_ns_enabled;
     state.voice_processing_bypassed = !use_vpio;
     return state;
   });
@@ -1226,13 +1232,13 @@ int32_t AudioEngineDevice::SetVoiceProcessingEnabled(bool enable) {
   int32_t result = ModifyEngineState([enable](EngineState state) -> EngineState {
     state.voice_processing_enabled = enable;
     if (enable) {
-      // Creating a fresh VPIO graph should start unbypassed. Component intent is
+      // Creating a fresh VPIO path should start unbypassed. Component intent is
       // still owned by EnableBuiltInAEC, EnableBuiltInNS, and EnableBuiltInAGC.
       state.voice_processing_bypassed = false;
     } else {
       // Disabling voice processing removes Apple's built-in processing path
       // entirely. Clear component requests so diagnostics do not report stale
-      // Apple AEC, NS, or AGC state while the graph is absent.
+      // Apple AEC, NS, or AGC state while the path is absent.
       state.voice_processing_bypassed = true;
       state.voice_processing_agc_enabled = false;
       state.built_in_aec_enabled = false;

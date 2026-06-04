@@ -545,7 +545,7 @@ TEST(AudioProcessingControllerTest,
 }
 
 TEST(AudioProcessingControllerTest,
-     CoupledAutomaticFallsBackWhenGraphEnableFails) {
+     CoupledAutomaticFallsBackWhenPathEnableFails) {
   webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>
       adm = webrtc::make_ref_counted<
           StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
@@ -624,7 +624,7 @@ TEST(AudioProcessingControllerTest,
 }
 
 TEST(AudioProcessingControllerTest,
-     CoupledEchoNoiseSoftwareEchoDisablesGraphAndFallsBackAutoProcessing) {
+     CoupledEchoNoiseSoftwareEchoDisablesPathAndFallsBackAutoProcessing) {
   webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>
       adm = webrtc::make_ref_counted<
           StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
@@ -649,7 +649,7 @@ TEST(AudioProcessingControllerTest,
 }
 
 TEST(AudioProcessingControllerTest,
-     CoupledEchoNoiseSoftwareAgcKeepsGraphForPlatformEchoNoise) {
+     CoupledEchoNoiseSoftwareAgcKeepsPathForPlatformEchoNoise) {
   webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>
       adm = webrtc::make_ref_counted<
           StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
@@ -705,7 +705,7 @@ TEST(AudioProcessingControllerTest,
 }
 
 TEST(AudioProcessingControllerTest,
-     CoupledEchoPlatformResolvesDisabledWhenGraphUnavailable) {
+     CoupledEchoPlatformResolvesDisabledWhenPathUnavailable) {
   webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>
       adm = webrtc::make_ref_counted<
           StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
@@ -722,7 +722,7 @@ TEST(AudioProcessingControllerTest,
 }
 
 TEST(AudioProcessingControllerTest,
-     CoupledAgcPlatformOnlyDoesNotEnableGraphOrSoftwareFallback) {
+     CoupledAgcPlatformOnlyDoesNotEnablePathOrSoftwareFallback) {
   webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>
       adm = webrtc::make_ref_counted<
           StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
@@ -739,7 +739,7 @@ TEST(AudioProcessingControllerTest,
 }
 
 TEST(AudioProcessingControllerTest,
-     CoupledEchoPlatformWithNoiseUnsetEnablesSharedGraph) {
+     CoupledEchoPlatformWithNoiseUnsetEnablesSharedPath) {
   webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>
       adm = webrtc::make_ref_counted<
           StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
@@ -762,7 +762,7 @@ TEST(AudioProcessingControllerTest,
   EXPECT_FALSE(apm_config.noise_suppression.enabled);
 }
 
-TEST(AudioProcessingControllerTest, CoupledAgcOnlyDoesNotEnableGraph) {
+TEST(AudioProcessingControllerTest, CoupledAgcOnlyDoesNotEnablePath) {
   webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>
       adm = webrtc::make_ref_counted<
           StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();

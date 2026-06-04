@@ -51,12 +51,13 @@ bool EnablePlatformEffect(AudioDeviceModule* adm,
   return (adm->*enable)(true) == 0;
 }
 
-bool ResolveSoftwareProcessing(std::optional<bool> enabled,
-                               std::optional<AudioProcessingMode> mode,
-                               const char* component,
-                               AudioDeviceModule* adm,
-                               AvailabilityFn is_available,
-                               EnableFn enable) {
+bool ApplyIndependentPlatformEffectAndResolveSoftware(
+    std::optional<bool> enabled,
+    std::optional<AudioProcessingMode> mode,
+    const char* component,
+    AudioDeviceModule* adm,
+    AvailabilityFn is_available,
+    EnableFn enable) {
   if (!enabled.has_value()) {
     return false;
   }
@@ -148,13 +149,13 @@ bool SetBuiltInVoiceProcessingPath(AudioDeviceModule* adm, bool enabled) {
   return adm != nullptr && adm->EnableBuiltInVoiceProcessingPath(enabled) == 0;
 }
 
-std::optional<bool> ResolveSoftwareProcessingForPlatformState(
+std::optional<bool> ResolveSoftwareFromPlatformState(
     std::optional<bool> enabled,
     std::optional<AudioProcessingMode> mode,
     bool platform_enabled) {
-  // `platform_enabled` is the effective platform state after availability and
-  // ADM enable calls. `auto` only disables software when the platform path is
-  // known to be active. `platform` never falls back by design.
+  // `platform_enabled` is the effective state after availability and ADM enable
+  // calls. `auto` only disables software when the platform path is known to be
+  // active. `platform` never falls back by design.
   if (!enabled.has_value()) {
     return std::nullopt;
   }
@@ -237,11 +238,11 @@ AudioProcessingComponentRuntimeState BuildComponentRuntimeState(
 AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
     AudioDeviceModule* adm,
     const AudioOptions& options_in) {
-  // Apple Voice Processing I/O exposes AEC and NS through one shared graph.
-  // Bypassing that graph at runtime can leave CoreAudio processing through a
-  // VPIO shaped path while WebRTC APM is also active. For coupled topologies,
-  // software or disabled AEC/NS removes the built-in graph entirely. Platform
-  // AEC/NS recreates the graph and then enables both shared effects.
+  // Apple Voice Processing I/O exposes AEC and NS through one shared path.
+  // Bypassing that path at runtime can leave CoreAudio processing through a
+  // VPIO-shaped route while WebRTC APM is also active. For coupled topologies,
+  // software or disabled AEC/NS removes the built-in path entirely. Platform
+  // AEC/NS recreates the path and then enables both shared effects.
   //
   // A single AEC or NS automatic/platform request can turn the shared path on
   // for both effects. AGC is resolved after that decision and never turns VPIO
@@ -265,15 +266,15 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
   bool vpio_enabled = false;
 
   if (has_echo_or_noise_option) {
-    const bool graph_available = BuiltInVoiceProcessingPathIsAvailable(adm);
+    const bool path_available = BuiltInVoiceProcessingPathIsAvailable(adm);
     const bool should_enable_vpio =
-        graph_available && !echo_or_noise_forces_vpio_off &&
+        path_available && !echo_or_noise_forces_vpio_off &&
         echo_or_noise_wants_platform;
 
     if (should_enable_vpio) {
-      const bool graph_enabled = SetBuiltInVoiceProcessingPath(adm, true);
+      const bool path_enabled = SetBuiltInVoiceProcessingPath(adm, true);
       const bool effects_available =
-          graph_enabled &&
+          path_enabled &&
           PlatformEffectIsAvailable(
               adm, &AudioDeviceModule::BuiltInAECIsAvailable) &&
           PlatformEffectIsAvailable(
@@ -286,16 +287,16 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
         vpio_enabled = aec_updated && ns_updated;
       }
       if (!vpio_enabled) {
-        // Treat coupled AEC and NS as an all or nothing platform path. If the
-        // graph or either effect cannot be enabled, remove the graph before
+        // Treat coupled AEC and NS as an all-or-nothing platform path. If the
+        // path or either effect cannot be enabled, remove the path before
         // falling back to software to avoid mixing platform and WebRTC APM.
-        if (graph_enabled) {
+        if (path_enabled) {
           SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInAEC, false);
           SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInNS, false);
           SetBuiltInVoiceProcessingPath(adm, false);
         }
       }
-    } else if (graph_available) {
+    } else if (path_available) {
       SetBuiltInVoiceProcessingPath(adm, false);
     }
   } else {
@@ -304,7 +305,7 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
 
   if (options_in.echo_cancellation.has_value()) {
     software_options.echo_cancellation =
-        ResolveSoftwareProcessingForPlatformState(
+        ResolveSoftwareFromPlatformState(
             options_in.echo_cancellation, options_in.echo_cancellation_mode,
             vpio_enabled);
     if (IsPlatformOnlyRequest(options_in.echo_cancellation,
@@ -318,7 +319,7 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
 
   if (options_in.noise_suppression.has_value()) {
     software_options.noise_suppression =
-        ResolveSoftwareProcessingForPlatformState(
+        ResolveSoftwareFromPlatformState(
             options_in.noise_suppression, options_in.noise_suppression_mode,
             vpio_enabled);
     if (IsPlatformOnlyRequest(options_in.noise_suppression,
@@ -366,7 +367,7 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
                                      "disabled");
     }
     software_options.auto_gain_control =
-        ResolveSoftwareProcessingForPlatformState(
+        ResolveSoftwareFromPlatformState(
             options_in.auto_gain_control, options_in.auto_gain_control_mode,
             agc_platform_enabled);
   }
@@ -396,24 +397,30 @@ AudioOptions ApplyAudioProcessingOptions(AudioProcessing* apm,
         ApplyCoupledEchoNoiseProcessingOptions(adm, options_in);
   } else {
     if (options_in.echo_cancellation.has_value()) {
-      software_options.echo_cancellation = ResolveSoftwareProcessing(
-          options_in.echo_cancellation, options_in.echo_cancellation_mode,
-          "echo cancellation", adm, &AudioDeviceModule::BuiltInAECIsAvailable,
-          &AudioDeviceModule::EnableBuiltInAEC);
+      software_options.echo_cancellation =
+          ApplyIndependentPlatformEffectAndResolveSoftware(
+              options_in.echo_cancellation, options_in.echo_cancellation_mode,
+              "echo cancellation", adm,
+              &AudioDeviceModule::BuiltInAECIsAvailable,
+              &AudioDeviceModule::EnableBuiltInAEC);
     }
 
     if (options_in.auto_gain_control.has_value()) {
-      software_options.auto_gain_control = ResolveSoftwareProcessing(
-          options_in.auto_gain_control, options_in.auto_gain_control_mode,
-          "auto gain control", adm, &AudioDeviceModule::BuiltInAGCIsAvailable,
-          &AudioDeviceModule::EnableBuiltInAGC);
+      software_options.auto_gain_control =
+          ApplyIndependentPlatformEffectAndResolveSoftware(
+              options_in.auto_gain_control, options_in.auto_gain_control_mode,
+              "auto gain control", adm,
+              &AudioDeviceModule::BuiltInAGCIsAvailable,
+              &AudioDeviceModule::EnableBuiltInAGC);
     }
 
     if (options_in.noise_suppression.has_value()) {
-      software_options.noise_suppression = ResolveSoftwareProcessing(
-          options_in.noise_suppression, options_in.noise_suppression_mode,
-          "noise suppression", adm, &AudioDeviceModule::BuiltInNSIsAvailable,
-          &AudioDeviceModule::EnableBuiltInNS);
+      software_options.noise_suppression =
+          ApplyIndependentPlatformEffectAndResolveSoftware(
+              options_in.noise_suppression, options_in.noise_suppression_mode,
+              "noise suppression", adm,
+              &AudioDeviceModule::BuiltInNSIsAvailable,
+              &AudioDeviceModule::EnableBuiltInNS);
     }
   }
 
