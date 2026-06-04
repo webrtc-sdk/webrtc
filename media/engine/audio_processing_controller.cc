@@ -169,6 +169,19 @@ std::optional<bool> ResolveSoftwareFromPlatformState(std::optional<bool> enabled
   return false;
 }
 
+std::optional<bool> ResolveCoupledSoftwareAndWarnPlatformOnlyDisabled(
+    std::optional<bool> enabled, std::optional<AudioProcessingMode> mode, bool platform_enabled,
+    const char *component) {
+  std::optional<bool> software_enabled =
+      ResolveSoftwareFromPlatformState(enabled, mode, platform_enabled);
+  if (IsPlatformOnlyRequest(enabled, mode) && !platform_enabled) {
+    LogPlatformOnlyRequestDisabled(component,
+                                   "the coupled platform processing path is "
+                                   "disabled");
+  }
+  return software_enabled;
+}
+
 bool ResolveHighPassFilter(std::optional<bool> enabled,
                            std::optional<AudioProcessingMode> mode) {
   // No supported platform HPF exists today. Keep `platform` strict and disabled
@@ -288,27 +301,15 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
   }
 
   if (options_in.echo_cancellation.has_value()) {
-    software_options.echo_cancellation = ResolveSoftwareFromPlatformState(
-        options_in.echo_cancellation, options_in.echo_cancellation_mode, vpio_enabled);
-    if (IsPlatformOnlyRequest(options_in.echo_cancellation,
-                              options_in.echo_cancellation_mode) &&
-        !vpio_enabled) {
-      LogPlatformOnlyRequestDisabled("echo cancellation",
-                                     "the coupled platform processing path is "
-                                     "disabled");
-    }
+    software_options.echo_cancellation = ResolveCoupledSoftwareAndWarnPlatformOnlyDisabled(
+        options_in.echo_cancellation, options_in.echo_cancellation_mode, vpio_enabled,
+        "echo cancellation");
   }
 
   if (options_in.noise_suppression.has_value()) {
-    software_options.noise_suppression = ResolveSoftwareFromPlatformState(
-        options_in.noise_suppression, options_in.noise_suppression_mode, vpio_enabled);
-    if (IsPlatformOnlyRequest(options_in.noise_suppression,
-                              options_in.noise_suppression_mode) &&
-        !vpio_enabled) {
-      LogPlatformOnlyRequestDisabled("noise suppression",
-                                     "the coupled platform processing path is "
-                                     "disabled");
-    }
+    software_options.noise_suppression = ResolveCoupledSoftwareAndWarnPlatformOnlyDisabled(
+        options_in.noise_suppression, options_in.noise_suppression_mode, vpio_enabled,
+        "noise suppression");
   }
 
   if (options_in.auto_gain_control.has_value()) {
@@ -338,14 +339,9 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
         SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInAGC, false);
       }
     }
-    if (IsPlatformOnlyRequest(options_in.auto_gain_control, options_in.auto_gain_control_mode) &&
-        !agc_platform_enabled) {
-      LogPlatformOnlyRequestDisabled("auto gain control",
-                                     "the coupled platform processing path is "
-                                     "disabled");
-    }
-    software_options.auto_gain_control = ResolveSoftwareFromPlatformState(
-        options_in.auto_gain_control, options_in.auto_gain_control_mode, agc_platform_enabled);
+    software_options.auto_gain_control = ResolveCoupledSoftwareAndWarnPlatformOnlyDisabled(
+        options_in.auto_gain_control, options_in.auto_gain_control_mode, agc_platform_enabled,
+        "auto gain control");
   }
 
   return software_options;
