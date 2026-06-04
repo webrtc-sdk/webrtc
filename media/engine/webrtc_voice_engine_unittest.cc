@@ -536,6 +536,8 @@ TEST(AudioProcessingControllerTest,
   EXPECT_CALL(*adm, EnableBuiltInNS(false)).WillOnce(Return(0));
   EXPECT_CALL(*adm, EnableBuiltInVoiceProcessingPath(false))
       .WillOnce(Return(0));
+  EXPECT_CALL(*adm, BuiltInAGCIsAvailable()).WillOnce(Return(true));
+  EXPECT_CALL(*adm, EnableBuiltInAGC(false)).WillOnce(Return(0));
 
   webrtc::AudioProcessing::Config apm_config =
       ApplyAudioProcessingOptionsForTest(options, adm.get());
@@ -561,6 +563,8 @@ TEST(AudioProcessingControllerTest,
       .WillOnce(Return(true));
   EXPECT_CALL(*adm, EnableBuiltInVoiceProcessingPath(true))
       .WillOnce(Return(-1));
+  EXPECT_CALL(*adm, BuiltInAGCIsAvailable()).WillOnce(Return(true));
+  EXPECT_CALL(*adm, EnableBuiltInAGC(false)).WillOnce(Return(0));
 
   webrtc::AudioProcessing::Config apm_config =
       ApplyAudioProcessingOptionsForTest(options, adm.get());
@@ -616,6 +620,8 @@ TEST(AudioProcessingControllerTest,
       .WillOnce(Return(true));
   EXPECT_CALL(*adm, EnableBuiltInVoiceProcessingPath(false))
       .WillOnce(Return(0));
+  EXPECT_CALL(*adm, BuiltInAGCIsAvailable()).WillOnce(Return(true));
+  EXPECT_CALL(*adm, EnableBuiltInAGC(false)).WillOnce(Return(0));
 
   webrtc::AudioProcessing::Config apm_config =
       ApplyAudioProcessingOptionsForTest(options, adm.get());
@@ -640,6 +646,8 @@ TEST(AudioProcessingControllerTest,
       .WillOnce(Return(true));
   EXPECT_CALL(*adm, EnableBuiltInVoiceProcessingPath(false))
       .WillOnce(Return(0));
+  EXPECT_CALL(*adm, BuiltInAGCIsAvailable()).WillOnce(Return(true));
+  EXPECT_CALL(*adm, EnableBuiltInAGC(false)).WillOnce(Return(0));
 
   webrtc::AudioProcessing::Config apm_config =
       ApplyAudioProcessingOptionsForTest(options, adm.get());
