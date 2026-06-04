@@ -20,6 +20,7 @@
 #include <atomic>
 #include <memory>
 
+#include "api/audio_options.h"
 #include "api/environment/environment.h"
 #include "api/scoped_refptr.h"
 #include "api/sequence_checker.h"
@@ -377,7 +378,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   int32_t SetDuckingLevel(AudioDuckingLevel level);
   int32_t DuckingLevel(AudioDuckingLevel* level);
 
-  int32_t SetInitRecordingPersistentMode(bool enable);
+  int32_t SetInitRecordingPersistentMode(bool enable, const AudioOptions *options = nullptr);
   int32_t InitRecordingPersistentMode(bool* enabled);
 
   int32_t SetVoiceProcessingEnabled(bool enable);
@@ -389,7 +390,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   int32_t SetVoiceProcessingAGCEnabled(bool enable);
   int32_t VoiceProcessingAGCEnabled(bool* enabled);
 
-  int32_t InitAndStartRecording();
+  int32_t InitAndStartRecording(const AudioOptions *options = nullptr);
 
   bool IsStopOnMuteModeEnabled() const override;
 

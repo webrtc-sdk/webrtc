@@ -18,6 +18,7 @@
 
 #import "RTCAudioDeviceModule+Private.h"
 #import "RTCAudioDeviceModule.h"
+#import "RTCAudioProcessingOptions+Private.h"
 #import "RTCAudioProcessingState+Private.h"
 #import "RTCIODevice+Private.h"
 #import "base/RTCLogging.h"
@@ -341,10 +342,19 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (NSInteger)initAndStartRecording {
-  return _workerThread->BlockingCall([self] {
+  return [self initAndStartRecordingWithAudioProcessingOptions:nil];
+}
+
+- (NSInteger)initAndStartRecordingWithAudioProcessingOptions:
+    (RTC_OBJC_TYPE(RTCAudioProcessingOptions) *)options {
+  return _workerThread->BlockingCall([self, options] {
     webrtc::AudioEngineDevice *engine_device =
         AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
     if (engine_device != nullptr) {
+      if (options != nil) {
+        webrtc::AudioOptions native_options = webrtc::objc::NativeAudioProcessingOptions(options);
+        return engine_device->InitAndStartRecording(&native_options);
+      }
       return engine_device->InitAndStartRecording();
     } else {
       _native->InitRecording();
@@ -474,12 +484,22 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (NSInteger)setRecordingAlwaysPreparedMode:(BOOL)enabled {
+  return [self setRecordingAlwaysPreparedMode:enabled audioProcessingOptions:nil];
+}
+
+- (NSInteger)setRecordingAlwaysPreparedMode:(BOOL)enabled
+                     audioProcessingOptions:(RTC_OBJC_TYPE(RTCAudioProcessingOptions) *)options {
   webrtc::AudioEngineDevice *module =
       AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return -1;
 
-  return _workerThread->BlockingCall(
-      [module, enabled] { return module->SetInitRecordingPersistentMode(enabled); });
+  return _workerThread->BlockingCall([module, enabled, options] {
+    if (options != nil) {
+      webrtc::AudioOptions native_options = webrtc::objc::NativeAudioProcessingOptions(options);
+      return module->SetInitRecordingPersistentMode(enabled, &native_options);
+    }
+    return module->SetInitRecordingPersistentMode(enabled);
+  });
 }
 
 - (BOOL)isManualRenderingMode {

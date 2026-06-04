@@ -18,6 +18,7 @@
 
 #include <optional>
 
+#include "api/audio/audio_processing_options_resolver.h"
 #include "rtc_base/logging.h"
 
 namespace webrtc {
@@ -64,7 +65,7 @@ bool ApplyIndependentPlatformEffectAndResolveSoftware(std::optional<bool> enable
     return false;
   }
 
-  switch (mode.value_or(AudioProcessingMode::kAutomatic)) {
+  switch (AudioProcessingModeOrAutomatic(mode)) {
     case AudioProcessingMode::kAutomatic:
       return !EnablePlatformEffect(adm, is_available, enable);
     case AudioProcessingMode::kPlatform: {
@@ -81,31 +82,6 @@ bool ApplyIndependentPlatformEffectAndResolveSoftware(std::optional<bool> enable
       return true;
   }
   return false;
-}
-
-AudioProcessingMode ModeOrAutomatic(std::optional<AudioProcessingMode> mode) {
-  return mode.value_or(AudioProcessingMode::kAutomatic);
-}
-
-bool WantsPlatformProcessing(std::optional<bool> enabled,
-                             std::optional<AudioProcessingMode> mode) {
-  if (!enabled.value_or(false)) {
-    return false;
-  }
-  AudioProcessingMode processing_mode = ModeOrAutomatic(mode);
-  return processing_mode == AudioProcessingMode::kAutomatic ||
-         processing_mode == AudioProcessingMode::kPlatform;
-}
-
-bool IsPlatformOnlyRequest(std::optional<bool> enabled,
-                           std::optional<AudioProcessingMode> mode) {
-  return enabled.value_or(false) &&
-         ModeOrAutomatic(mode) == AudioProcessingMode::kPlatform;
-}
-
-bool RequestsSoftwareProcessing(std::optional<bool> enabled,
-                                std::optional<AudioProcessingMode> mode) {
-  return enabled.value_or(false) && ModeOrAutomatic(mode) == AudioProcessingMode::kSoftware;
 }
 
 bool PlatformEffectIsAvailable(AudioDeviceModule* adm,
@@ -142,36 +118,12 @@ bool SetBuiltInVoiceProcessingPath(AudioDeviceModule *adm, bool enabled) {
   return adm != nullptr && adm->EnableBuiltInVoiceProcessingPath(enabled) == 0;
 }
 
-std::optional<bool> ResolveSoftwareFromPlatformState(std::optional<bool> enabled,
-                                                     std::optional<AudioProcessingMode> mode,
-                                                     bool platform_enabled) {
-  // `platform_enabled` is the effective state after availability and ADM enable
-  // calls. `auto` only disables software when the platform path is known to be
-  // active. `platform` never falls back by design.
-  if (!enabled.has_value()) {
-    return std::nullopt;
-  }
-  if (!*enabled) {
-    return false;
-  }
-
-  switch (ModeOrAutomatic(mode)) {
-    case AudioProcessingMode::kAutomatic:
-      return !platform_enabled;
-    case AudioProcessingMode::kPlatform:
-      return false;
-    case AudioProcessingMode::kSoftware:
-      return true;
-  }
-  return false;
-}
-
 std::optional<bool> ResolveCoupledSoftwareAndWarnPlatformOnlyDisabled(
     std::optional<bool> enabled, std::optional<AudioProcessingMode> mode, bool platform_enabled,
     const char *component) {
   std::optional<bool> software_enabled =
-      ResolveSoftwareFromPlatformState(enabled, mode, platform_enabled);
-  if (IsPlatformOnlyRequest(enabled, mode) && !platform_enabled) {
+      ResolveAudioProcessingSoftwareFromPlatformState(enabled, mode, platform_enabled);
+  if (AudioProcessingOptionIsPlatformOnly(enabled, mode) && !platform_enabled) {
     LogPlatformOnlyRequestDisabled(component,
                                    "the coupled platform processing path is "
                                    "disabled");
@@ -186,12 +138,11 @@ bool ResolveHighPassFilter(std::optional<bool> enabled,
   if (!enabled.has_value() || !*enabled) {
     return false;
   }
-  if (IsPlatformOnlyRequest(enabled, mode)) {
+  if (AudioProcessingOptionIsPlatformOnly(enabled, mode)) {
     LogPlatformOnlyRequestDisabled("high-pass filter",
                                    "no platform high-pass filter is available");
   }
-  return mode.value_or(AudioProcessingMode::kAutomatic) !=
-         AudioProcessingMode::kPlatform;
+  return AudioProcessingModeOrAutomatic(mode) != AudioProcessingMode::kPlatform;
 }
 
 AudioProcessingImplementation ResolveEffectiveImplementation(
@@ -252,23 +203,14 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
   // changing Apple audio routing.
   AudioOptions software_options = options_in;
 
-  const bool has_echo_or_noise_option =
-      options_in.echo_cancellation.has_value() ||
-      options_in.noise_suppression.has_value();
-  const bool echo_or_noise_requests_software =
-      RequestsSoftwareProcessing(options_in.echo_cancellation, options_in.echo_cancellation_mode) ||
-      RequestsSoftwareProcessing(options_in.noise_suppression, options_in.noise_suppression_mode);
-  const bool echo_or_noise_wants_platform =
-      WantsPlatformProcessing(options_in.echo_cancellation,
-                              options_in.echo_cancellation_mode) ||
-      WantsPlatformProcessing(options_in.noise_suppression,
-                              options_in.noise_suppression_mode);
+  CoupledAudioProcessingPathResolution path_resolution =
+      ResolveCoupledAudioProcessingPath(options_in, CoupledEchoNoisePlatformPathIsActive(adm));
   bool vpio_enabled = false;
 
-  if (has_echo_or_noise_option) {
+  if (path_resolution.should_update_echo_noise_platform_path) {
     const bool path_available = BuiltInVoiceProcessingPathIsAvailable(adm);
     const bool should_enable_vpio =
-        path_available && !echo_or_noise_requests_software && echo_or_noise_wants_platform;
+        path_available && path_resolution.should_use_echo_noise_platform_path;
 
     if (should_enable_vpio) {
       const bool path_enabled = SetBuiltInVoiceProcessingPath(adm, true);
@@ -295,7 +237,7 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
       SetBuiltInVoiceProcessingPath(adm, false);
     }
   } else {
-    vpio_enabled = CoupledEchoNoisePlatformPathIsActive(adm);
+    vpio_enabled = path_resolution.should_use_echo_noise_platform_path;
   }
 
   if (options_in.echo_cancellation.has_value()) {
@@ -314,13 +256,10 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
     // Apple AGC has its own switch, but it only has effect while the shared
     // AEC/NS VPIO path is active. AGC alone never enables VPIO, so `auto`
     // falls back to software when AEC/NS did not enable the shared path.
-    const bool agc_wants_platform =
-        WantsPlatformProcessing(options_in.auto_gain_control,
-                                options_in.auto_gain_control_mode);
     const bool agc_switch_available =
         PlatformEffectIsAvailable(adm, &AudioDeviceModule::BuiltInAGCIsAvailable);
     const bool should_enable_agc_platform =
-        vpio_enabled && agc_switch_available && agc_wants_platform;
+        vpio_enabled && agc_switch_available && path_resolution.auto_gain_control_wants_platform;
     // Track the effective platform state, not just the requested state. Apple
     // may reject AGC enable even while VPIO is active, and `auto` must fall
     // back to software in that case.

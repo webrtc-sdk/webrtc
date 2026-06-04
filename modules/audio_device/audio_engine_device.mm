@@ -21,8 +21,10 @@
 
 #include <mach/mach_time.h>
 #include <cmath>
+#include <optional>
 
 #include "api/array_view.h"
+#include "api/audio/audio_processing_options_resolver.h"
 #include "api/task_queue/default_task_queue_factory.h"
 #include "api/task_queue/pending_task_safety_flag.h"
 #include "modules/audio_device/fine_audio_buffer.h"
@@ -58,6 +60,35 @@ const useconds_t kStartEngineRetryDelayMs = 100;
 
 const size_t kMaximumFramesPerBuffer = 3072;
 const size_t kAudioSampleSize = 2;  // Signed 16-bit integer
+
+namespace {
+
+AudioEngineDevice::EngineState ApplyAudioProcessingOptionsToEngineState(
+    AudioEngineDevice::EngineState state, const AudioOptions &options) {
+  const bool is_echo_noise_platform_path_active =
+      state.voice_processing_enabled && !state.voice_processing_bypassed &&
+      (state.built_in_aec_enabled || state.built_in_ns_enabled);
+  CoupledAudioProcessingPathResolution resolution =
+      ResolveCoupledAudioProcessingPath(options, is_echo_noise_platform_path_active);
+
+  if (resolution.should_update_echo_noise_platform_path) {
+    // Seed Apple VPIO before the first engine start. The sender applies the
+    // full APM config later, but waiting until then starts capture with ADM
+    // defaults and can immediately recreate the engine.
+    state.voice_processing_enabled = resolution.should_use_echo_noise_platform_path;
+    state.voice_processing_bypassed = !resolution.should_use_echo_noise_platform_path;
+    state.built_in_aec_enabled = resolution.should_use_echo_noise_platform_path;
+    state.built_in_ns_enabled = resolution.should_use_echo_noise_platform_path;
+  }
+
+  if (options.auto_gain_control.has_value()) {
+    state.voice_processing_agc_enabled = resolution.should_use_echo_noise_platform_path &&
+                                         resolution.auto_gain_control_wants_platform;
+  }
+  return state;
+}
+
+}  // namespace
 
 // Maps AudioDuckingLevel to AVAudioVoiceProcessingOtherAudioDuckingLevel.
 // Uses explicit mapping to avoid assuming integer values match between enums.
@@ -1378,11 +1409,14 @@ int32_t AudioEngineDevice::SetMuteMode(MuteMode mode) {
   return result;
 }
 
-int32_t AudioEngineDevice::InitAndStartRecording() {
+int32_t AudioEngineDevice::InitAndStartRecording(const AudioOptions *options) {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "InitAndStartRecording";
 
-  int32_t result = ModifyEngineState([](EngineState state) -> EngineState {
+  int32_t result = ModifyEngineState([options](EngineState state) -> EngineState {
+    if (options != nullptr) {
+      state = ApplyAudioProcessingOptionsToEngineState(state, *options);
+    }
     state.input_enabled = true;
     state.input_running = true;
     state.input_muted = false;  // Always unmute
@@ -1443,11 +1477,15 @@ int32_t AudioEngineDevice::DuckingLevel(AudioDuckingLevel* level) {
   return 0;
 }
 
-int32_t AudioEngineDevice::SetInitRecordingPersistentMode(bool enable) {
+int32_t AudioEngineDevice::SetInitRecordingPersistentMode(bool enable,
+                                                          const AudioOptions *options) {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "SetInitRecordingPersistentMode: " << enable;
 
-  int32_t result = ModifyEngineState([enable](EngineState state) -> EngineState {
+  int32_t result = ModifyEngineState([enable, options](EngineState state) -> EngineState {
+    if (enable && options != nullptr) {
+      state = ApplyAudioProcessingOptionsToEngineState(state, *options);
+    }
     state.input_enabled_persistent_mode = enable;
     return state;
   });

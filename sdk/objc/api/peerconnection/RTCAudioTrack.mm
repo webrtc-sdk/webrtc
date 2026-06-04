@@ -13,6 +13,7 @@
 
 #import "RTCAudioTrack+Private.h"
 
+#import "RTCAudioProcessingOptions+Private.h"
 #import "RTCAudioRenderer.h"
 #import "RTCAudioSource+Private.h"
 #import "RTCMediaStreamTrack+Private.h"
@@ -21,23 +22,6 @@
 #import "helpers/NSString+StdString.h"
 
 #include "rtc_base/checks.h"
-
-namespace {
-
-webrtc::AudioProcessingMode NativeAudioProcessingMode(
-    RTC_OBJC_TYPE(RTCAudioProcessingMode) mode) {
-  switch (mode) {
-    case RTC_OBJC_TYPE(RTCAudioProcessingModePlatform):
-      return webrtc::AudioProcessingMode::kPlatform;
-    case RTC_OBJC_TYPE(RTCAudioProcessingModeSoftware):
-      return webrtc::AudioProcessingMode::kSoftware;
-    case RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic):
-    default:
-      return webrtc::AudioProcessingMode::kAutomatic;
-  }
-}
-
-}  // namespace
 
 @implementation RTC_OBJC_TYPE (RTCAudioProcessingOptions)
 
@@ -253,19 +237,7 @@ webrtc::AudioProcessingMode NativeAudioProcessingMode(
         [self, options] { return [self setAudioProcessingOptions:options]; });
   }
 
-  webrtc::AudioOptions nativeOptions;
-  nativeOptions.echo_cancellation = options.echoCancellation;
-  nativeOptions.noise_suppression = options.noiseSuppression;
-  nativeOptions.auto_gain_control = options.autoGainControl;
-  nativeOptions.highpass_filter = options.highPassFilter;
-  nativeOptions.echo_cancellation_mode =
-      NativeAudioProcessingMode(options.echoCancellationMode);
-  nativeOptions.noise_suppression_mode =
-      NativeAudioProcessingMode(options.noiseSuppressionMode);
-  nativeOptions.auto_gain_control_mode =
-      NativeAudioProcessingMode(options.autoGainControlMode);
-  nativeOptions.highpass_filter_mode =
-      NativeAudioProcessingMode(options.highPassFilterMode);
+  webrtc::AudioOptions nativeOptions = webrtc::objc::NativeAudioProcessingOptions(options);
   return self.nativeAudioTrack->SetAudioProcessingOptions(nativeOptions);
 }
 

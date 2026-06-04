@@ -101,6 +101,7 @@ typedef struct {
 RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCAudioEngineInputMixerNodeKey);
 
 @class RTC_OBJC_TYPE(RTCAudioDeviceModule);
+@class RTC_OBJC_TYPE(RTCAudioProcessingOptions);
 
 RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
 (RTCAudioDeviceModuleDelegate)<NSObject>
@@ -189,6 +190,9 @@ RTC_OBJC_EXPORT
 - (NSInteger)initRecording;
 
 - (NSInteger)initAndStartRecording;
+- (NSInteger)initAndStartRecordingWithAudioProcessingOptions:
+    (nullable RTC_OBJC_TYPE(RTCAudioProcessingOptions) *)options
+    NS_SWIFT_NAME(initAndStartRecording(audioProcessingOptions:));
 
 - (NSInteger)setEngineAvailability:(RTC_OBJC_TYPE(RTCAudioEngineAvailability))availability;
 
@@ -207,6 +211,10 @@ RTC_OBJC_EXPORT
 @property(nonatomic, readonly, getter=isRecordingAlwaysPreparedMode)
     BOOL recordingAlwaysPreparedMode;
 - (NSInteger)setRecordingAlwaysPreparedMode:(BOOL)enabled;
+- (NSInteger)setRecordingAlwaysPreparedMode:(BOOL)enabled
+                     audioProcessingOptions:
+                         (nullable RTC_OBJC_TYPE(RTCAudioProcessingOptions) *)options
+    NS_SWIFT_NAME(setRecordingAlwaysPreparedMode(_:audioProcessingOptions:));
 
 @property(nonatomic, weak, nullable) id<RTC_OBJC_TYPE(RTCAudioDeviceModuleDelegate)> observer;
 

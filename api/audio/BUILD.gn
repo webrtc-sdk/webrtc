@@ -29,6 +29,18 @@ rtc_source_set("audio_processing_runtime_state") {
   ]
 }
 
+rtc_library("audio_processing_options_resolver") {
+  visibility = [ "*" ]
+  sources = [
+    "audio_processing_options_resolver.cc",
+    "audio_processing_options_resolver.h",
+  ]
+  deps = [
+    "..:audio_options_api",
+    "../../rtc_base/system:rtc_export",
+  ]
+}
+
 if (rtc_include_internal_audio_device) {
   rtc_library("create_audio_device_module") {
     visibility = [ "*" ]

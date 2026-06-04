@@ -25,6 +25,7 @@
 #include "absl/strings/string_view.h"
 #include "api/array_view.h"
 #include "api/audio/audio_processing.h"
+#include "api/audio/audio_processing_options_resolver.h"
 #include "api/audio/builtin_audio_processing_builder.h"
 #include "api/audio_codecs/audio_codec_pair_id.h"
 #include "api/audio_codecs/audio_format.h"
@@ -302,6 +303,97 @@ TEST(WebRtcVoiceEngineTestStubLibrary, StartupShutdown) {
       AutoInitTerminate init_term(engine);
     }
   }
+}
+
+TEST(AudioProcessingOptionsResolverTest, CoupledAllAutomaticUsesPlatformPath) {
+  webrtc::AudioOptions options;
+  options.echo_cancellation = true;
+  options.echo_cancellation_mode = webrtc::AudioProcessingMode::kAutomatic;
+  options.noise_suppression = true;
+  options.noise_suppression_mode = webrtc::AudioProcessingMode::kAutomatic;
+  options.auto_gain_control = true;
+  options.auto_gain_control_mode = webrtc::AudioProcessingMode::kAutomatic;
+
+  webrtc::CoupledAudioProcessingPathResolution resolution =
+      webrtc::ResolveCoupledAudioProcessingPath(options, false);
+
+  EXPECT_TRUE(resolution.has_echo_or_noise_option);
+  EXPECT_TRUE(resolution.should_update_echo_noise_platform_path);
+  EXPECT_TRUE(resolution.should_use_echo_noise_platform_path);
+  EXPECT_TRUE(resolution.auto_gain_control_wants_platform);
+}
+
+TEST(AudioProcessingOptionsResolverTest, CoupledAllDisabledDisablesPlatformPath) {
+  webrtc::AudioOptions options;
+  options.echo_cancellation = false;
+  options.noise_suppression = false;
+  options.auto_gain_control = false;
+
+  webrtc::CoupledAudioProcessingPathResolution resolution =
+      webrtc::ResolveCoupledAudioProcessingPath(options, true);
+
+  EXPECT_TRUE(resolution.has_echo_or_noise_option);
+  EXPECT_TRUE(resolution.should_update_echo_noise_platform_path);
+  EXPECT_FALSE(resolution.should_use_echo_noise_platform_path);
+  EXPECT_FALSE(resolution.auto_gain_control_wants_platform);
+}
+
+TEST(AudioProcessingOptionsResolverTest, CoupledSoftwareRequestVetoesPlatformPath) {
+  webrtc::AudioOptions options;
+  options.echo_cancellation = true;
+  options.echo_cancellation_mode = webrtc::AudioProcessingMode::kSoftware;
+  options.noise_suppression = true;
+  options.noise_suppression_mode = webrtc::AudioProcessingMode::kAutomatic;
+  options.auto_gain_control = true;
+  options.auto_gain_control_mode = webrtc::AudioProcessingMode::kAutomatic;
+
+  webrtc::CoupledAudioProcessingPathResolution resolution =
+      webrtc::ResolveCoupledAudioProcessingPath(options, true);
+
+  EXPECT_TRUE(resolution.should_update_echo_noise_platform_path);
+  EXPECT_FALSE(resolution.should_use_echo_noise_platform_path);
+  EXPECT_TRUE(resolution.auto_gain_control_wants_platform);
+}
+
+TEST(AudioProcessingOptionsResolverTest, CoupledPlatformRequestWinsOverDisabledSibling) {
+  webrtc::AudioOptions options;
+  options.echo_cancellation = true;
+  options.echo_cancellation_mode = webrtc::AudioProcessingMode::kPlatform;
+  options.noise_suppression = false;
+  options.noise_suppression_mode = webrtc::AudioProcessingMode::kPlatform;
+
+  webrtc::CoupledAudioProcessingPathResolution resolution =
+      webrtc::ResolveCoupledAudioProcessingPath(options, false);
+
+  EXPECT_TRUE(resolution.should_update_echo_noise_platform_path);
+  EXPECT_TRUE(resolution.should_use_echo_noise_platform_path);
+}
+
+TEST(AudioProcessingOptionsResolverTest, CoupledAgcOnlyDoesNotEnableInactivePath) {
+  webrtc::AudioOptions options;
+  options.auto_gain_control = true;
+  options.auto_gain_control_mode = webrtc::AudioProcessingMode::kAutomatic;
+
+  webrtc::CoupledAudioProcessingPathResolution resolution =
+      webrtc::ResolveCoupledAudioProcessingPath(options, false);
+
+  EXPECT_FALSE(resolution.has_echo_or_noise_option);
+  EXPECT_FALSE(resolution.should_update_echo_noise_platform_path);
+  EXPECT_FALSE(resolution.should_use_echo_noise_platform_path);
+  EXPECT_TRUE(resolution.auto_gain_control_wants_platform);
+}
+
+TEST(AudioProcessingOptionsResolverTest, CoupledAgcOnlyKeepsActivePath) {
+  webrtc::AudioOptions options;
+  options.auto_gain_control = true;
+  options.auto_gain_control_mode = webrtc::AudioProcessingMode::kAutomatic;
+
+  webrtc::CoupledAudioProcessingPathResolution resolution =
+      webrtc::ResolveCoupledAudioProcessingPath(options, true);
+
+  EXPECT_FALSE(resolution.should_update_echo_noise_platform_path);
+  EXPECT_TRUE(resolution.should_use_echo_noise_platform_path);
+  EXPECT_TRUE(resolution.auto_gain_control_wants_platform);
 }
 
 TEST(AudioProcessingControllerTest, AutomaticUsesPlatformWhenAvailable) {
