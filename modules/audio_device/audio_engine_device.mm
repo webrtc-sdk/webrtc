@@ -998,7 +998,7 @@ int32_t AudioEngineDevice::RegisterAudioCallback(AudioTransport* audioCallback) 
 
 // These availability checks report whether a component can be used inside the
 // currently configured Voice Processing I/O graph. The coupled controller uses
-// BuiltInAudioProcessingGraphIsAvailable before these checks when it needs to
+// BuiltInVoiceProcessingPathIsAvailable before these checks when it needs to
 // recreate the graph from a software or disabled state.
 bool AudioEngineDevice::BuiltInAECIsAvailable() const {
 #if TARGET_OS_SIMULATOR
@@ -1033,7 +1033,7 @@ AudioEngineDevice::GetBuiltInAudioProcessingTopology() const {
       kEchoCancellationAndNoiseSuppressionCoupled;
 }
 
-bool AudioEngineDevice::BuiltInAudioProcessingGraphIsAvailable() const {
+bool AudioEngineDevice::BuiltInVoiceProcessingPathIsAvailable() const {
 #if TARGET_OS_SIMULATOR
   return false;
 #else
@@ -1042,7 +1042,7 @@ bool AudioEngineDevice::BuiltInAudioProcessingGraphIsAvailable() const {
 #endif
 }
 
-int32_t AudioEngineDevice::EnableBuiltInAudioProcessingGraph(bool enable) {
+int32_t AudioEngineDevice::EnableBuiltInVoiceProcessingPath(bool enable) {
 #if TARGET_OS_SIMULATOR
   return -1;
 #else

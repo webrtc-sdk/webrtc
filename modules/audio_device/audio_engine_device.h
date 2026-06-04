@@ -339,8 +339,8 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   bool BuiltInNSIsAvailable() const override;
   BuiltInAudioProcessingTopology GetBuiltInAudioProcessingTopology()
       const override;
-  bool BuiltInAudioProcessingGraphIsAvailable() const override;
-  int32_t EnableBuiltInAudioProcessingGraph(bool enable) override;
+  bool BuiltInVoiceProcessingPathIsAvailable() const override;
+  int32_t EnableBuiltInVoiceProcessingPath(bool enable) override;
   BuiltInAudioProcessingState GetBuiltInAudioProcessingState() const override;
   int32_t EnableBuiltInAEC(bool enable) override;
   int32_t EnableBuiltInAGC(bool enable) override;

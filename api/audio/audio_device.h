@@ -217,8 +217,8 @@ class AudioDeviceModule : public RefCountInterface {
   // Coupled ADMs may need to create or remove a platform processing graph as a
   // unit before individual built-in effects can be toggled. Independent ADMs do
   // not use this hook.
-  virtual bool BuiltInAudioProcessingGraphIsAvailable() const { return false; }
-  virtual int32_t EnableBuiltInAudioProcessingGraph(bool) { return -1; }
+  virtual bool BuiltInVoiceProcessingPathIsAvailable() const { return false; }
+  virtual int32_t EnableBuiltInVoiceProcessingPath(bool) { return -1; }
 
   // Returns a diagnostic snapshot for platform audio processing. Requested fields
   // describe what the ADM was last asked to use. Observed fields describe live

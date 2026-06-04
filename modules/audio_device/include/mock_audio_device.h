@@ -137,11 +137,11 @@ class MockAudioDeviceModule : public AudioDeviceModule {
   MOCK_METHOD(bool, BuiltInAGCIsAvailable, (), (const, override));
   MOCK_METHOD(bool, BuiltInNSIsAvailable, (), (const, override));
   MOCK_METHOD(bool,
-              BuiltInAudioProcessingGraphIsAvailable,
+              BuiltInVoiceProcessingPathIsAvailable,
               (),
               (const, override));
   MOCK_METHOD(int32_t,
-              EnableBuiltInAudioProcessingGraph,
+              EnableBuiltInVoiceProcessingPath,
               (bool enable),
               (override));
   MOCK_METHOD(int32_t, EnableBuiltInAEC, (bool enable), (override));

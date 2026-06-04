@@ -140,12 +140,12 @@ bool CoupledEchoNoisePlatformPathIsActive(AudioDeviceModule* adm) {
           state.is_noise_suppression_requested.value_or(false));
 }
 
-bool BuiltInAudioProcessingGraphIsAvailable(AudioDeviceModule* adm) {
-  return adm != nullptr && adm->BuiltInAudioProcessingGraphIsAvailable();
+bool BuiltInVoiceProcessingPathIsAvailable(AudioDeviceModule* adm) {
+  return adm != nullptr && adm->BuiltInVoiceProcessingPathIsAvailable();
 }
 
-bool SetBuiltInAudioProcessingGraph(AudioDeviceModule* adm, bool enabled) {
-  return adm != nullptr && adm->EnableBuiltInAudioProcessingGraph(enabled) == 0;
+bool SetBuiltInVoiceProcessingPath(AudioDeviceModule* adm, bool enabled) {
+  return adm != nullptr && adm->EnableBuiltInVoiceProcessingPath(enabled) == 0;
 }
 
 std::optional<bool> ResolveSoftwareProcessingForPlatformState(
@@ -265,13 +265,13 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
   bool vpio_enabled = false;
 
   if (has_echo_or_noise_option) {
-    const bool graph_available = BuiltInAudioProcessingGraphIsAvailable(adm);
+    const bool graph_available = BuiltInVoiceProcessingPathIsAvailable(adm);
     const bool should_enable_vpio =
         graph_available && !echo_or_noise_forces_vpio_off &&
         echo_or_noise_wants_platform;
 
     if (should_enable_vpio) {
-      const bool graph_enabled = SetBuiltInAudioProcessingGraph(adm, true);
+      const bool graph_enabled = SetBuiltInVoiceProcessingPath(adm, true);
       const bool effects_available =
           graph_enabled &&
           PlatformEffectIsAvailable(
@@ -292,11 +292,11 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
         if (graph_enabled) {
           SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInAEC, false);
           SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInNS, false);
-          SetBuiltInAudioProcessingGraph(adm, false);
+          SetBuiltInVoiceProcessingPath(adm, false);
         }
       }
     } else if (graph_available) {
-      SetBuiltInAudioProcessingGraph(adm, false);
+      SetBuiltInVoiceProcessingPath(adm, false);
     }
   } else {
     vpio_enabled = CoupledEchoNoisePlatformPathIsActive(adm);
