@@ -65,7 +65,7 @@ std::optional<bool> ResolveAudioProcessingSoftwareFromPlatformState(
 }
 
 CoupledAudioProcessingPathResolution ResolveCoupledAudioProcessingPath(
-    const AudioOptions &options, bool is_echo_noise_platform_path_active) {
+    const AudioOptions &options, FunctionView<bool()> is_echo_noise_platform_path_active) {
   CoupledAudioProcessingPathResolution resolution;
   resolution.has_echo_or_noise_option =
       options.echo_cancellation.has_value() || options.noise_suppression.has_value();
@@ -85,7 +85,7 @@ CoupledAudioProcessingPathResolution ResolveCoupledAudioProcessingPath(
     resolution.should_use_echo_noise_platform_path =
         echo_or_noise_wants_platform && !echo_or_noise_requests_software;
   } else {
-    resolution.should_use_echo_noise_platform_path = is_echo_noise_platform_path_active;
+    resolution.should_use_echo_noise_platform_path = is_echo_noise_platform_path_active();
   }
 
   resolution.auto_gain_control_wants_platform =

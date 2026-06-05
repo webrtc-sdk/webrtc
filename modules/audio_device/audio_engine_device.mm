@@ -65,11 +65,11 @@ namespace {
 
 AudioEngineDevice::EngineState ApplyAudioProcessingOptionsToEngineState(
     AudioEngineDevice::EngineState state, const AudioOptions &options) {
-  const bool is_echo_noise_platform_path_active =
-      state.voice_processing_enabled && !state.voice_processing_bypassed &&
-      (state.built_in_aec_enabled || state.built_in_ns_enabled);
-  CoupledAudioProcessingPathResolution resolution =
-      ResolveCoupledAudioProcessingPath(options, is_echo_noise_platform_path_active);
+  CoupledAudioProcessingPathResolution resolution = ResolveCoupledAudioProcessingPath(
+      options, [&state] {
+        return state.voice_processing_enabled && !state.voice_processing_bypassed &&
+               (state.built_in_aec_enabled || state.built_in_ns_enabled);
+      });
 
   if (resolution.should_update_echo_noise_platform_path) {
     // Seed Apple VPIO before the first engine start. The sender applies the

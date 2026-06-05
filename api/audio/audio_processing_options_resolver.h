@@ -20,6 +20,7 @@
 #include <optional>
 
 #include "api/audio_options.h"
+#include "api/function_view.h"
 #include "rtc_base/system/rtc_export.h"
 
 namespace webrtc {
@@ -65,8 +66,13 @@ RTC_EXPORT std::optional<bool> ResolveAudioProcessingSoftwareFromPlatformState(
 // - Disabled AEC or NS does not veto a sibling platform request because the
 //   platform path is shared.
 // - AGC alone never turns the shared AEC/NS path on.
+//
+// `is_echo_noise_platform_path_active` is queried only when both AEC and NS are
+// absent from `options` (the AGC-only case), so callers may supply an ADM probe
+// without paying for it on every update.
 RTC_EXPORT CoupledAudioProcessingPathResolution ResolveCoupledAudioProcessingPath(
-    const AudioOptions &options, bool is_echo_noise_platform_path_active);
+    const AudioOptions &options,
+    FunctionView<bool()> is_echo_noise_platform_path_active);
 
 }  // namespace webrtc
 

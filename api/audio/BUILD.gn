@@ -37,6 +37,7 @@ rtc_library("audio_processing_options_resolver") {
   ]
   deps = [
     "..:audio_options_api",
+    "..:function_view",
     "../../rtc_base/system:rtc_export",
   ]
 }

@@ -203,8 +203,8 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
   // changing Apple audio routing.
   AudioOptions software_options = options_in;
 
-  CoupledAudioProcessingPathResolution path_resolution =
-      ResolveCoupledAudioProcessingPath(options_in, CoupledEchoNoisePlatformPathIsActive(adm));
+  CoupledAudioProcessingPathResolution path_resolution = ResolveCoupledAudioProcessingPath(
+      options_in, [adm] { return CoupledEchoNoisePlatformPathIsActive(adm); });
   bool vpio_enabled = false;
 
   if (path_resolution.should_update_echo_noise_platform_path) {
