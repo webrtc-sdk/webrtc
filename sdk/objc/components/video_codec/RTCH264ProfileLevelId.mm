@@ -15,6 +15,9 @@
 #if defined(WEBRTC_IOS)
 #import "UIDevice+H264Profile.h"
 #endif
+#if defined(WEBRTC_MAC)
+#import <VideoToolbox/VideoToolbox.h>
+#endif
 
 #include "api/video_codecs/h264_profile_level_id.h"
 #include "media/base/media_constants.h"
@@ -38,6 +41,180 @@ namespace {
 
 #if defined(WEBRTC_IOS) || defined(WEBRTC_MAC)
 
+#if defined(WEBRTC_MAC)
+
+struct VideoToolboxH264ProfileLevels {
+  std::optional<webrtc::H264Level> constrainedBaseline;
+  std::optional<webrtc::H264Level> constrainedHigh;
+};
+
+enum class VideoToolboxH264ProfileFamily {
+  kBaseline,
+  kHigh,
+};
+
+struct VideoToolboxH264ProfileLevel {
+  CFStringRef profileLevel;
+  VideoToolboxH264ProfileFamily family;
+  webrtc::H264Level level;
+};
+
+bool H264LevelIsHigherThan(std::optional<webrtc::H264Level> current,
+                           webrtc::H264Level candidate) {
+  return !current ||
+      static_cast<int>(candidate) > static_cast<int>(*current);
+}
+
+void UpdateMaxH264Level(std::optional<webrtc::H264Level> *current,
+                        webrtc::H264Level candidate) {
+  if (H264LevelIsHigherThan(*current, candidate)) {
+    *current = candidate;
+  }
+}
+
+VideoToolboxH264ProfileLevels ParseSupportedH264ProfileLevels(
+    NSDictionary *supportedProperties) {
+  VideoToolboxH264ProfileLevels levels;
+  NSDictionary *profileLevelProperty = [supportedProperties
+      objectForKey:(__bridge NSString *)kVTCompressionPropertyKey_ProfileLevel];
+  if (![profileLevelProperty isKindOfClass:[NSDictionary class]]) {
+    return levels;
+  }
+
+  NSArray *supportedValues =
+      [profileLevelProperty objectForKey:(__bridge NSString *)kVTPropertySupportedValueListKey];
+  if (![supportedValues isKindOfClass:[NSArray class]]) {
+    return levels;
+  }
+
+  const VideoToolboxH264ProfileLevel kKnownProfileLevels[] = {
+      {kVTProfileLevel_H264_Baseline_3_0, VideoToolboxH264ProfileFamily::kBaseline,
+       webrtc::H264Level::kLevel3},
+      {kVTProfileLevel_H264_Baseline_3_1, VideoToolboxH264ProfileFamily::kBaseline,
+       webrtc::H264Level::kLevel3_1},
+      {kVTProfileLevel_H264_Baseline_3_2, VideoToolboxH264ProfileFamily::kBaseline,
+       webrtc::H264Level::kLevel3_2},
+      {kVTProfileLevel_H264_Baseline_4_0, VideoToolboxH264ProfileFamily::kBaseline,
+       webrtc::H264Level::kLevel4},
+      {kVTProfileLevel_H264_Baseline_4_1, VideoToolboxH264ProfileFamily::kBaseline,
+       webrtc::H264Level::kLevel4_1},
+      {kVTProfileLevel_H264_Baseline_4_2, VideoToolboxH264ProfileFamily::kBaseline,
+       webrtc::H264Level::kLevel4_2},
+      {kVTProfileLevel_H264_Baseline_5_0, VideoToolboxH264ProfileFamily::kBaseline,
+       webrtc::H264Level::kLevel5},
+      {kVTProfileLevel_H264_Baseline_5_1, VideoToolboxH264ProfileFamily::kBaseline,
+       webrtc::H264Level::kLevel5_1},
+      {kVTProfileLevel_H264_Baseline_5_2, VideoToolboxH264ProfileFamily::kBaseline,
+       webrtc::H264Level::kLevel5_2},
+      {kVTProfileLevel_H264_High_3_0, VideoToolboxH264ProfileFamily::kHigh,
+       webrtc::H264Level::kLevel3},
+      {kVTProfileLevel_H264_High_3_1, VideoToolboxH264ProfileFamily::kHigh,
+       webrtc::H264Level::kLevel3_1},
+      {kVTProfileLevel_H264_High_3_2, VideoToolboxH264ProfileFamily::kHigh,
+       webrtc::H264Level::kLevel3_2},
+      {kVTProfileLevel_H264_High_4_0, VideoToolboxH264ProfileFamily::kHigh,
+       webrtc::H264Level::kLevel4},
+      {kVTProfileLevel_H264_High_4_1, VideoToolboxH264ProfileFamily::kHigh,
+       webrtc::H264Level::kLevel4_1},
+      {kVTProfileLevel_H264_High_4_2, VideoToolboxH264ProfileFamily::kHigh,
+       webrtc::H264Level::kLevel4_2},
+      {kVTProfileLevel_H264_High_5_0, VideoToolboxH264ProfileFamily::kHigh,
+       webrtc::H264Level::kLevel5},
+      {kVTProfileLevel_H264_High_5_1, VideoToolboxH264ProfileFamily::kHigh,
+       webrtc::H264Level::kLevel5_1},
+      {kVTProfileLevel_H264_High_5_2, VideoToolboxH264ProfileFamily::kHigh,
+       webrtc::H264Level::kLevel5_2},
+  };
+
+  for (id value in supportedValues) {
+    if (![value isKindOfClass:[NSString class]]) {
+      continue;
+    }
+
+    CFStringRef profileLevel = (__bridge CFStringRef)value;
+    for (const VideoToolboxH264ProfileLevel &knownProfileLevel : kKnownProfileLevels) {
+      if (CFStringCompare(profileLevel, knownProfileLevel.profileLevel, 0) !=
+          kCFCompareEqualTo) {
+        continue;
+      }
+
+      switch (knownProfileLevel.family) {
+        case VideoToolboxH264ProfileFamily::kBaseline:
+          UpdateMaxH264Level(&levels.constrainedBaseline, knownProfileLevel.level);
+          break;
+        case VideoToolboxH264ProfileFamily::kHigh:
+          UpdateMaxH264Level(&levels.constrainedHigh, knownProfileLevel.level);
+          break;
+      }
+    }
+  }
+
+  return levels;
+}
+
+VideoToolboxH264ProfileLevels QueryVideoToolboxH264ProfileLevelsForSize(
+    int32_t width,
+    int32_t height) {
+  VideoToolboxH264ProfileLevels levels;
+
+  if (@available(macOS 10.13, *)) {
+    NSDictionary *encoderSpecification = @{
+      (__bridge NSString *)kVTVideoEncoderSpecification_RequireHardwareAcceleratedVideoEncoder :
+          @(YES),
+    };
+
+    CFDictionaryRef supportedPropertiesRef = nullptr;
+    OSStatus status = VTCopySupportedPropertyDictionaryForEncoder(
+        width,
+        height,
+        kCMVideoCodecType_H264,
+        (__bridge CFDictionaryRef)encoderSpecification,
+        nullptr,
+        &supportedPropertiesRef);
+    if (status != noErr || supportedPropertiesRef == nullptr) {
+      return levels;
+    }
+
+    NSDictionary *supportedProperties = CFBridgingRelease(supportedPropertiesRef);
+    return ParseSupportedH264ProfileLevels(supportedProperties);
+  }
+
+  return levels;
+}
+
+VideoToolboxH264ProfileLevels QueryVideoToolboxH264ProfileLevels() {
+  VideoToolboxH264ProfileLevels levels;
+  const struct {
+    int32_t width;
+    int32_t height;
+  } kQuerySizes[] = {
+      {3840, 2160},
+      {1920, 1080},
+      {1280, 720},
+  };
+
+  for (const auto &querySize : kQuerySizes) {
+    VideoToolboxH264ProfileLevels queryLevels =
+        QueryVideoToolboxH264ProfileLevelsForSize(querySize.width, querySize.height);
+    if (queryLevels.constrainedBaseline) {
+      UpdateMaxH264Level(&levels.constrainedBaseline, *queryLevels.constrainedBaseline);
+    }
+    if (queryLevels.constrainedHigh) {
+      UpdateMaxH264Level(&levels.constrainedHigh, *queryLevels.constrainedHigh);
+    }
+  }
+
+  return levels;
+}
+
+const VideoToolboxH264ProfileLevels &MaxSupportedH264ProfileLevelsFromVideoToolbox() {
+  static const VideoToolboxH264ProfileLevels levels =
+      QueryVideoToolboxH264ProfileLevels();
+  return levels;
+}
+
+#endif
+
 NSString *MaxSupportedLevelForProfile(webrtc::H264Profile profile) {
 #if defined(WEBRTC_IOS)
   const std::optional<webrtc::H264ProfileLevelId> profileLevelId =
@@ -50,7 +227,33 @@ NSString *MaxSupportedLevelForProfile(webrtc::H264Profile profile) {
     }
   }
 #elif defined(WEBRTC_MAC)
-  // macOS has no per-device H264 table here; Level 3.1 rejects 1080p30 in VideoToolbox.
+  const VideoToolboxH264ProfileLevels &profileLevels =
+      MaxSupportedH264ProfileLevelsFromVideoToolbox();
+  std::optional<webrtc::H264Level> supportedLevel;
+  switch (profile) {
+    case webrtc::H264Profile::kProfileConstrainedBaseline:
+    case webrtc::H264Profile::kProfileBaseline:
+      supportedLevel = profileLevels.constrainedBaseline;
+      break;
+    case webrtc::H264Profile::kProfileConstrainedHigh:
+    case webrtc::H264Profile::kProfileHigh:
+    case webrtc::H264Profile::kProfilePredictiveHigh444:
+      supportedLevel = profileLevels.constrainedHigh;
+      break;
+    case webrtc::H264Profile::kProfileMain:
+      break;
+  }
+
+  if (supportedLevel) {
+    const std::optional<std::string> profileString = H264ProfileLevelIdToString(
+        webrtc::H264ProfileLevelId(profile, *supportedLevel));
+    if (profileString) {
+      return [NSString stringForStdString:*profileString];
+    }
+  }
+
+  // Keep macOS above Level 3.1 if VideoToolbox cannot return a useful profile
+  // list. Level 3.1 rejects 1080p30 before encoding starts.
   const std::optional<std::string> profileString = H264ProfileLevelIdToString(
       webrtc::H264ProfileLevelId(profile, webrtc::H264Level::kLevel5));
   if (profileString) {
