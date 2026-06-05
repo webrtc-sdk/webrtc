@@ -36,9 +36,10 @@ NSString *const RTC_CONSTANT_TYPE(RTCMaxSupportedH264ProfileLevelConstrainedBase
 
 namespace {
 
-#if defined(WEBRTC_IOS)
+#if defined(WEBRTC_IOS) || defined(WEBRTC_MAC)
 
 NSString *MaxSupportedLevelForProfile(webrtc::H264Profile profile) {
+#if defined(WEBRTC_IOS)
   const std::optional<webrtc::H264ProfileLevelId> profileLevelId =
       [UIDevice maxSupportedH264Profile];
   if (profileLevelId && profileLevelId->profile >= profile) {
@@ -48,12 +49,20 @@ NSString *MaxSupportedLevelForProfile(webrtc::H264Profile profile) {
       return [NSString stringForStdString:*profileString];
     }
   }
+#elif defined(WEBRTC_MAC)
+  // macOS has no per-device H264 table here; Level 3.1 rejects 1080p30 in VideoToolbox.
+  const std::optional<std::string> profileString = H264ProfileLevelIdToString(
+      webrtc::H264ProfileLevelId(profile, webrtc::H264Level::kLevel5));
+  if (profileString) {
+    return [NSString stringForStdString:*profileString];
+  }
+#endif
   return nil;
 }
 #endif
 
 NSString *MaxSupportedProfileLevelConstrainedBaseline() {
-#if defined(WEBRTC_IOS)
+#if defined(WEBRTC_IOS) || defined(WEBRTC_MAC)
   NSString *profile = MaxSupportedLevelForProfile(
       webrtc::H264Profile::kProfileConstrainedBaseline);
   if (profile != nil) {
@@ -64,7 +73,7 @@ NSString *MaxSupportedProfileLevelConstrainedBaseline() {
 }
 
 NSString *MaxSupportedProfileLevelConstrainedHigh() {
-#if defined(WEBRTC_IOS)
+#if defined(WEBRTC_IOS) || defined(WEBRTC_MAC)
   NSString *profile =
       MaxSupportedLevelForProfile(webrtc::H264Profile::kProfileConstrainedHigh);
   if (profile != nil) {
