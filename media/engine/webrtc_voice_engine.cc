@@ -629,6 +629,7 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
 #endif
 
   options = ApplyAudioProcessingOptions(apm(), adm(), options);
+  last_resolved_audio_processing_options_ = options;
   RTC_LOG(LS_INFO) << "Applied audio processing options: "
                    << options.ToString();
 
@@ -648,13 +649,14 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
     audio_jitter_buffer_min_delay_ms_ =
         *options.audio_jitter_buffer_min_delay_ms;
   }
-
 }
 
-AudioProcessingRuntimeState WebRtcVoiceEngine::GetAudioProcessingRuntimeState() {
+AudioProcessingRuntimeState
+WebRtcVoiceEngine::GetAudioProcessingRuntimeState() {
   RTC_DCHECK_RUN_ON(&worker_thread_checker_);
-  return webrtc::GetAudioProcessingRuntimeState(apm(), adm(),
-                                                last_requested_audio_processing_options_);
+  return webrtc::GetAudioProcessingRuntimeState(
+      apm(), adm(), last_requested_audio_processing_options_,
+      last_resolved_audio_processing_options_);
 }
 
 const std::vector<Codec>& WebRtcVoiceEngine::LegacySendCodecs() const {

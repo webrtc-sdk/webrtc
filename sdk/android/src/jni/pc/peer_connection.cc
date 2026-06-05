@@ -117,10 +117,12 @@ int32_t BuiltInAudioProcessingTopologyToJava(
   return static_cast<int32_t>(topology);
 }
 
-void AppendAudioProcessingComponentRuntimeState(std::vector<int32_t> *values,
-                                                const AudioProcessingComponentRuntimeState &state) {
+void AppendAudioProcessingComponentRuntimeState(
+    std::vector<int32_t>* values,
+    const AudioProcessingComponentRuntimeState& state) {
   values->push_back(OptionalBoolToJava(state.is_requested_enabled));
   values->push_back(OptionalAudioProcessingModeToJava(state.requested_mode));
+  values->push_back(OptionalBoolToJava(state.is_resolved_software_enabled));
   values->push_back(OptionalBoolToJava(state.is_software_enabled));
   values->push_back(state.is_platform_available ? 1 : 0);
   values->push_back(OptionalBoolToJava(state.is_platform_requested));
@@ -128,7 +130,8 @@ void AppendAudioProcessingComponentRuntimeState(std::vector<int32_t> *values,
   values->push_back(AudioProcessingImplementationToJava(state.effective));
 }
 
-void AppendBuiltInAudioProcessingComponentState(std::vector<int32_t> *values, bool available,
+void AppendBuiltInAudioProcessingComponentState(std::vector<int32_t>* values,
+                                                bool available,
                                                 std::optional<bool> requested,
                                                 std::optional<bool> observed) {
   values->push_back(available ? 1 : 0);
@@ -137,24 +140,32 @@ void AppendBuiltInAudioProcessingComponentState(std::vector<int32_t> *values, bo
 }
 
 void AppendBuiltInAudioProcessingState(
-    std::vector<int32_t> *values, const AudioDeviceModule::BuiltInAudioProcessingState &state) {
+    std::vector<int32_t>* values,
+    const AudioDeviceModule::BuiltInAudioProcessingState& state) {
   values->push_back(BuiltInAudioProcessingTopologyToJava(state.topology));
-  AppendBuiltInAudioProcessingComponentState(values, state.is_echo_cancellation_available,
-                                             state.is_echo_cancellation_requested,
-                                             state.is_echo_cancellation_observed);
-  AppendBuiltInAudioProcessingComponentState(values, state.is_noise_suppression_available,
-                                             state.is_noise_suppression_requested,
-                                             state.is_noise_suppression_observed);
-  AppendBuiltInAudioProcessingComponentState(values, state.is_auto_gain_control_available,
-                                             state.is_auto_gain_control_requested,
-                                             state.is_auto_gain_control_observed);
+  AppendBuiltInAudioProcessingComponentState(
+      values, state.is_echo_cancellation_available,
+      state.is_echo_cancellation_requested,
+      state.is_echo_cancellation_observed);
+  AppendBuiltInAudioProcessingComponentState(
+      values, state.is_noise_suppression_available,
+      state.is_noise_suppression_requested,
+      state.is_noise_suppression_observed);
+  AppendBuiltInAudioProcessingComponentState(
+      values, state.is_auto_gain_control_available,
+      state.is_auto_gain_control_requested,
+      state.is_auto_gain_control_observed);
 }
 
 std::vector<int32_t> AudioProcessingRuntimeStateToJavaValues(
-    const AudioProcessingRuntimeState &state) {
+    const AudioProcessingRuntimeState& state) {
   std::vector<int32_t> values;
-  values.reserve(39);
+  values.reserve(47);
   values.push_back(BuiltInAudioProcessingTopologyToJava(state.topology));
+  values.push_back(state.has_audio_processing_module ? 1 : 0);
+  values.push_back(state.has_audio_processing_config ? 1 : 0);
+  values.push_back(state.has_requested_audio_processing_options ? 1 : 0);
+  values.push_back(state.has_resolved_audio_processing_options ? 1 : 0);
   AppendAudioProcessingComponentRuntimeState(&values, state.echo_cancellation);
   AppendAudioProcessingComponentRuntimeState(&values, state.noise_suppression);
   AppendAudioProcessingComponentRuntimeState(&values, state.auto_gain_control);

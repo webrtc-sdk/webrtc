@@ -98,6 +98,8 @@ typedef struct {
   BOOL hasRequestedMode;
   RTC_OBJC_TYPE(RTCAudioProcessingMode) requestedMode;
 
+  BOOL hasResolvedSoftwareEnabled;
+  BOOL isResolvedSoftwareEnabled;
   BOOL hasSoftwareEnabled;
   BOOL isSoftwareEnabled;
   BOOL isPlatformAvailable;
@@ -111,6 +113,11 @@ typedef struct {
 
 typedef struct {
   RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopology) topology;
+
+  BOOL hasAudioProcessingModule;
+  BOOL hasAudioProcessingConfig;
+  BOOL hasRequestedAudioProcessingOptions;
+  BOOL hasResolvedAudioProcessingOptions;
 
   RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState) echoCancellation;
   RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState) noiseSuppression;

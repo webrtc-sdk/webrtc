@@ -169,12 +169,17 @@ AudioProcessingImplementation ResolveEffectiveImplementation(
 }
 
 AudioProcessingComponentRuntimeState BuildComponentRuntimeState(
-    std::optional<bool> is_requested_enabled, std::optional<AudioProcessingMode> requested_mode,
-    std::optional<bool> is_software_enabled, bool is_platform_available,
-    std::optional<bool> is_platform_requested, std::optional<bool> is_platform_observed) {
+    std::optional<bool> is_requested_enabled,
+    std::optional<AudioProcessingMode> requested_mode,
+    std::optional<bool> is_resolved_software_enabled,
+    std::optional<bool> is_software_enabled,
+    bool is_platform_available,
+    std::optional<bool> is_platform_requested,
+    std::optional<bool> is_platform_observed) {
   AudioProcessingComponentRuntimeState state;
   state.is_requested_enabled = is_requested_enabled;
   state.requested_mode = requested_mode;
+  state.is_resolved_software_enabled = is_resolved_software_enabled;
   state.is_software_enabled = is_software_enabled;
   state.is_platform_available = is_platform_available;
   state.is_platform_requested = is_platform_requested;
@@ -366,9 +371,11 @@ AudioOptions ApplyAudioProcessingOptions(AudioProcessing* apm,
   return software_options;
 }
 
-AudioProcessingRuntimeState GetAudioProcessingRuntimeState(AudioProcessing *apm,
-                                                           AudioDeviceModule *adm,
-                                                           const AudioOptions &requested_options) {
+AudioProcessingRuntimeState GetAudioProcessingRuntimeState(
+    AudioProcessing* apm,
+    AudioDeviceModule* adm,
+    const std::optional<AudioOptions>& requested_options,
+    const std::optional<AudioOptions>& resolved_options) {
   AudioDeviceModule::BuiltInAudioProcessingState built_in;
   if (adm != nullptr) {
     built_in = adm->GetBuiltInAudioProcessingState();
@@ -383,28 +390,44 @@ AudioProcessingRuntimeState GetAudioProcessingRuntimeState(AudioProcessing *apm,
     software_noise_suppression = apm_config->noise_suppression.enabled;
     // Diagnostics report the effective APM state, not only values written by
     // this controller. GC2 may be enabled by other WebRTC configuration paths.
-    software_auto_gain_control =
-        apm_config->gain_controller1.enabled || apm_config->gain_controller2.enabled;
+    software_auto_gain_control = apm_config->gain_controller1.enabled ||
+                                 apm_config->gain_controller2.enabled;
     software_high_pass_filter = apm_config->high_pass_filter.enabled;
   }
 
   AudioProcessingRuntimeState state;
+  state.has_audio_processing_module = apm != nullptr;
+  state.has_audio_processing_config = apm_config.has_value();
+  state.has_requested_audio_processing_options = requested_options.has_value();
+  state.has_resolved_audio_processing_options = resolved_options.has_value();
   state.topology = built_in.topology;
   state.built_in = built_in;
   state.echo_cancellation = BuildComponentRuntimeState(
-      requested_options.echo_cancellation, requested_options.echo_cancellation_mode,
+      requested_options ? requested_options->echo_cancellation : std::nullopt,
+      requested_options ? requested_options->echo_cancellation_mode
+                        : std::nullopt,
+      resolved_options ? resolved_options->echo_cancellation : std::nullopt,
       software_echo_cancellation, built_in.is_echo_cancellation_available,
-      built_in.is_echo_cancellation_requested, built_in.is_echo_cancellation_observed);
+      built_in.is_echo_cancellation_requested,
+      built_in.is_echo_cancellation_observed);
   state.noise_suppression = BuildComponentRuntimeState(
-      requested_options.noise_suppression, requested_options.noise_suppression_mode,
+      requested_options ? requested_options->noise_suppression : std::nullopt,
+      requested_options ? requested_options->noise_suppression_mode
+                        : std::nullopt,
+      resolved_options ? resolved_options->noise_suppression : std::nullopt,
       software_noise_suppression, built_in.is_noise_suppression_available,
-      built_in.is_noise_suppression_requested, built_in.is_noise_suppression_observed);
+      built_in.is_noise_suppression_requested,
+      built_in.is_noise_suppression_observed);
   state.auto_gain_control = BuildComponentRuntimeState(
-      requested_options.auto_gain_control, requested_options.auto_gain_control_mode,
+      requested_options ? requested_options->auto_gain_control : std::nullopt,
+      requested_options ? requested_options->auto_gain_control_mode : std::nullopt,
+      resolved_options ? resolved_options->auto_gain_control : std::nullopt,
       software_auto_gain_control, built_in.is_auto_gain_control_available,
       built_in.is_auto_gain_control_requested, built_in.is_auto_gain_control_observed);
   state.high_pass_filter = BuildComponentRuntimeState(
-      requested_options.highpass_filter, requested_options.highpass_filter_mode,
+      requested_options ? requested_options->highpass_filter : std::nullopt,
+      requested_options ? requested_options->highpass_filter_mode : std::nullopt,
+      resolved_options ? resolved_options->highpass_filter : std::nullopt,
       software_high_pass_filter, false, std::nullopt, std::nullopt);
   return state;
 }

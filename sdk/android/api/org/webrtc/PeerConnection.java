@@ -109,6 +109,7 @@ public class PeerConnection {
   public static final class AudioProcessingComponentRuntimeState {
     public final @Nullable Boolean isRequestedEnabled;
     public final @Nullable AudioProcessingMode requestedMode;
+    public final @Nullable Boolean isResolvedSoftwareEnabled;
     public final @Nullable Boolean isSoftwareEnabled;
     public final boolean isPlatformAvailable;
     public final @Nullable Boolean isPlatformRequested;
@@ -116,11 +117,13 @@ public class PeerConnection {
     public final AudioProcessingImplementation effective;
 
     public AudioProcessingComponentRuntimeState(@Nullable Boolean isRequestedEnabled,
-        @Nullable AudioProcessingMode requestedMode, @Nullable Boolean isSoftwareEnabled,
-        boolean isPlatformAvailable, @Nullable Boolean isPlatformRequested,
-        @Nullable Boolean isPlatformObserved, AudioProcessingImplementation effective) {
+        @Nullable AudioProcessingMode requestedMode, @Nullable Boolean isResolvedSoftwareEnabled,
+        @Nullable Boolean isSoftwareEnabled, boolean isPlatformAvailable,
+        @Nullable Boolean isPlatformRequested, @Nullable Boolean isPlatformObserved,
+        AudioProcessingImplementation effective) {
       this.isRequestedEnabled = isRequestedEnabled;
       this.requestedMode = requestedMode;
+      this.isResolvedSoftwareEnabled = isResolvedSoftwareEnabled;
       this.isSoftwareEnabled = isSoftwareEnabled;
       this.isPlatformAvailable = isPlatformAvailable;
       this.isPlatformRequested = isPlatformRequested;
@@ -131,12 +134,17 @@ public class PeerConnection {
 
   public static final class AudioProcessingRuntimeState {
     private static final int OPTIONAL_UNKNOWN = -1;
-    private static final int COMPONENT_FIELD_COUNT = 7;
+    private static final int TOP_LEVEL_FIELD_COUNT = 5;
+    private static final int COMPONENT_FIELD_COUNT = 8;
     private static final int BUILT_IN_COMPONENT_FIELD_COUNT = 3;
     private static final int FIELD_COUNT =
-        1 + COMPONENT_FIELD_COUNT * 4 + 1 + BUILT_IN_COMPONENT_FIELD_COUNT * 3;
+        TOP_LEVEL_FIELD_COUNT + COMPONENT_FIELD_COUNT * 4 + 1 + BUILT_IN_COMPONENT_FIELD_COUNT * 3;
 
     public final JavaAudioDeviceModule.BuiltInAudioProcessingTopology topology;
+    public final boolean hasAudioProcessingModule;
+    public final boolean hasAudioProcessingConfig;
+    public final boolean hasRequestedAudioProcessingOptions;
+    public final boolean hasResolvedAudioProcessingOptions;
     public final AudioProcessingComponentRuntimeState echoCancellation;
     public final AudioProcessingComponentRuntimeState noiseSuppression;
     public final AudioProcessingComponentRuntimeState autoGainControl;
@@ -145,12 +153,20 @@ public class PeerConnection {
 
     public AudioProcessingRuntimeState(
         JavaAudioDeviceModule.BuiltInAudioProcessingTopology topology,
+        boolean hasAudioProcessingModule,
+        boolean hasAudioProcessingConfig,
+        boolean hasRequestedAudioProcessingOptions,
+        boolean hasResolvedAudioProcessingOptions,
         AudioProcessingComponentRuntimeState echoCancellation,
         AudioProcessingComponentRuntimeState noiseSuppression,
         AudioProcessingComponentRuntimeState autoGainControl,
         AudioProcessingComponentRuntimeState highPassFilter,
         JavaAudioDeviceModule.BuiltInAudioProcessingState builtIn) {
       this.topology = topology;
+      this.hasAudioProcessingModule = hasAudioProcessingModule;
+      this.hasAudioProcessingConfig = hasAudioProcessingConfig;
+      this.hasRequestedAudioProcessingOptions = hasRequestedAudioProcessingOptions;
+      this.hasResolvedAudioProcessingOptions = hasResolvedAudioProcessingOptions;
       this.echoCancellation = echoCancellation;
       this.noiseSuppression = noiseSuppression;
       this.autoGainControl = autoGainControl;
@@ -166,6 +182,10 @@ public class PeerConnection {
       int offset = 0;
       JavaAudioDeviceModule.BuiltInAudioProcessingTopology topology =
           topologyFromNative(values[offset++]);
+      boolean hasAudioProcessingModule = values[offset++] != 0;
+      boolean hasAudioProcessingConfig = values[offset++] != 0;
+      boolean hasRequestedAudioProcessingOptions = values[offset++] != 0;
+      boolean hasResolvedAudioProcessingOptions = values[offset++] != 0;
       AudioProcessingComponentRuntimeState echoCancellation = componentFromNative(values, offset);
       offset += COMPONENT_FIELD_COUNT;
       AudioProcessingComponentRuntimeState noiseSuppression = componentFromNative(values, offset);
@@ -177,16 +197,19 @@ public class PeerConnection {
       JavaAudioDeviceModule.BuiltInAudioProcessingState builtIn =
           builtInStateFromNative(values, offset);
       return new AudioProcessingRuntimeState(
-          topology, echoCancellation, noiseSuppression, autoGainControl, highPassFilter, builtIn);
+          topology, hasAudioProcessingModule, hasAudioProcessingConfig,
+          hasRequestedAudioProcessingOptions, hasResolvedAudioProcessingOptions, echoCancellation,
+          noiseSuppression, autoGainControl, highPassFilter, builtIn);
     }
 
     private static AudioProcessingComponentRuntimeState componentFromNative(
         int[] values, int offset) {
       return new AudioProcessingComponentRuntimeState(optionalBoolFromNative(values[offset]),
           audioProcessingModeFromNative(values[offset + 1]),
-          optionalBoolFromNative(values[offset + 2]), values[offset + 3] != 0,
-          optionalBoolFromNative(values[offset + 4]), optionalBoolFromNative(values[offset + 5]),
-          audioProcessingImplementationFromNative(values[offset + 6]));
+          optionalBoolFromNative(values[offset + 2]), optionalBoolFromNative(values[offset + 3]),
+          values[offset + 4] != 0, optionalBoolFromNative(values[offset + 5]),
+          optionalBoolFromNative(values[offset + 6]),
+          audioProcessingImplementationFromNative(values[offset + 7]));
     }
 
     private static JavaAudioDeviceModule.BuiltInAudioProcessingState builtInStateFromNative(

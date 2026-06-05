@@ -37,6 +37,11 @@ struct AudioProcessingComponentRuntimeState {
   std::optional<bool> is_requested_enabled;
   std::optional<AudioProcessingMode> requested_mode;
 
+  // The software state selected by the platform/software resolver before it is
+  // applied to APM. This lets diagnostics distinguish "ApplyOptions never ran"
+  // from "ApplyOptions ran and selected disabled/software".
+  std::optional<bool> is_resolved_software_enabled;
+
   // The current WebRTC APM state from AudioProcessing::GetConfig().
   std::optional<bool> is_software_enabled;
   // Platform state from the ADM. Observed state wins over requested state when
@@ -45,12 +50,18 @@ struct AudioProcessingComponentRuntimeState {
   std::optional<bool> is_platform_requested;
   std::optional<bool> is_platform_observed;
 
-  AudioProcessingImplementation effective = AudioProcessingImplementation::kUnknown;
+  AudioProcessingImplementation effective =
+      AudioProcessingImplementation::kUnknown;
 };
 
 struct AudioProcessingRuntimeState {
   AudioDeviceModule::BuiltInAudioProcessingTopology topology =
       AudioDeviceModule::BuiltInAudioProcessingTopology::kIndependent;
+
+  bool has_audio_processing_module = false;
+  bool has_audio_processing_config = false;
+  bool has_requested_audio_processing_options = false;
+  bool has_resolved_audio_processing_options = false;
 
   AudioProcessingComponentRuntimeState echo_cancellation;
   AudioProcessingComponentRuntimeState noise_suppression;

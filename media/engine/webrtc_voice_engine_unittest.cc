@@ -269,12 +269,18 @@ webrtc::AudioProcessing::Config ApplyAudioProcessingOptionsForTest(
 }
 
 webrtc::AudioProcessingRuntimeState GetAudioProcessingRuntimeStateForTest(
-    const webrtc::AudioOptions &options, webrtc::AudioDeviceModule *adm,
-    const webrtc::AudioProcessing::Config &apm_config) {
+    const webrtc::AudioOptions& options,
+    webrtc::AudioDeviceModule* adm,
+    const webrtc::AudioProcessing::Config& apm_config,
+    std::optional<webrtc::AudioOptions> resolved_options = std::nullopt) {
   webrtc::scoped_refptr<StrictMock<webrtc::test::MockAudioProcessing>> apm =
       webrtc::make_ref_counted<StrictMock<webrtc::test::MockAudioProcessing>>();
   EXPECT_CALL(*apm, GetConfig()).WillOnce(Return(apm_config));
-  return webrtc::GetAudioProcessingRuntimeState(apm.get(), adm, options);
+  if (!resolved_options.has_value()) {
+    resolved_options = options;
+  }
+  return webrtc::GetAudioProcessingRuntimeState(apm.get(), adm, options,
+                                                resolved_options);
 }
 
 // Tests that our stub library "works".
@@ -565,7 +571,66 @@ TEST(AudioProcessingControllerTest,
 
   EXPECT_FALSE(state.echo_cancellation.is_platform_available);
   EXPECT_TRUE(state.echo_cancellation.is_platform_requested.value_or(false));
-  EXPECT_EQ(webrtc::AudioProcessingImplementation::kDisabled, state.echo_cancellation.effective);
+  EXPECT_EQ(webrtc::AudioProcessingImplementation::kDisabled,
+            state.echo_cancellation.effective);
+}
+
+TEST(AudioProcessingControllerTest,
+     RuntimeStateReportsDiagnosticSnapshotAvailability) {
+  webrtc::scoped_refptr<RuntimeStateMockAudioDeviceModule> adm =
+      webrtc::make_ref_counted<RuntimeStateMockAudioDeviceModule>();
+
+  webrtc::AudioOptions requested_options;
+  requested_options.echo_cancellation = true;
+  requested_options.echo_cancellation_mode =
+      webrtc::AudioProcessingMode::kAutomatic;
+
+  webrtc::AudioOptions resolved_options = requested_options;
+  resolved_options.echo_cancellation = true;
+
+  webrtc::AudioProcessing::Config apm_config;
+  apm_config.echo_canceller.enabled = true;
+
+  webrtc::AudioProcessingRuntimeState state =
+      GetAudioProcessingRuntimeStateForTest(requested_options, adm.get(),
+                                            apm_config, resolved_options);
+
+  EXPECT_TRUE(state.has_audio_processing_module);
+  EXPECT_TRUE(state.has_audio_processing_config);
+  EXPECT_TRUE(state.has_requested_audio_processing_options);
+  EXPECT_TRUE(state.has_resolved_audio_processing_options);
+  EXPECT_TRUE(state.echo_cancellation.is_requested_enabled.value_or(false));
+  EXPECT_EQ(webrtc::AudioProcessingMode::kAutomatic,
+            state.echo_cancellation.requested_mode.value());
+  EXPECT_TRUE(
+      state.echo_cancellation.is_resolved_software_enabled.value_or(false));
+  EXPECT_TRUE(state.echo_cancellation.is_software_enabled.value_or(false));
+  EXPECT_EQ(webrtc::AudioProcessingImplementation::kSoftware,
+            state.echo_cancellation.effective);
+}
+
+TEST(AudioProcessingControllerTest,
+     RuntimeStateReportsMissingOptionSnapshotsExplicitly) {
+  webrtc::scoped_refptr<RuntimeStateMockAudioDeviceModule> adm =
+      webrtc::make_ref_counted<RuntimeStateMockAudioDeviceModule>();
+  webrtc::scoped_refptr<StrictMock<webrtc::test::MockAudioProcessing>> apm =
+      webrtc::make_ref_counted<StrictMock<webrtc::test::MockAudioProcessing>>();
+  webrtc::AudioProcessing::Config apm_config;
+  EXPECT_CALL(*apm, GetConfig()).WillOnce(Return(apm_config));
+
+  webrtc::AudioProcessingRuntimeState state =
+      webrtc::GetAudioProcessingRuntimeState(apm.get(), adm.get(), std::nullopt,
+                                             std::nullopt);
+
+  EXPECT_TRUE(state.has_audio_processing_module);
+  EXPECT_TRUE(state.has_audio_processing_config);
+  EXPECT_FALSE(state.has_requested_audio_processing_options);
+  EXPECT_FALSE(state.has_resolved_audio_processing_options);
+  EXPECT_FALSE(state.echo_cancellation.is_requested_enabled.has_value());
+  EXPECT_FALSE(state.echo_cancellation.requested_mode.has_value());
+  EXPECT_FALSE(
+      state.echo_cancellation.is_resolved_software_enabled.has_value());
+  EXPECT_TRUE(state.echo_cancellation.is_software_enabled.has_value());
 }
 
 TEST(AudioProcessingControllerTest,

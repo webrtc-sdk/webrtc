@@ -745,6 +745,9 @@ void AudioRtpSender::OnChanged() {
   cached_track_enabled_ = track_enabled;
 
   if (can_send_track() && (enabled_changed || options_changed)) {
+    RTC_LOG(LS_INFO) << "AudioRtpSender::OnChanged reapplying send state, "
+                     << "enabled_changed=" << enabled_changed
+                     << ", options_changed=" << options_changed;
     SetSend();
   }
 }

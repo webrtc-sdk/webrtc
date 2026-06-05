@@ -18,6 +18,7 @@
 #include "api/media_stream_track.h"
 #include "api/scoped_refptr.h"
 #include "api/sequence_checker.h"
+#include "rtc_base/logging.h"
 
 namespace webrtc {
 
@@ -58,6 +59,8 @@ bool AudioTrack::SetAudioProcessingOptions(const AudioOptions& options) {
   if (!audio_source_ || audio_source_->remote()) {
     return false;
   }
+  RTC_LOG(LS_INFO) << "AudioTrack::SetAudioProcessingOptions: "
+                   << options.ToString();
 
   AudioOptions processing_options;
   processing_options.echo_cancellation = options.echo_cancellation;

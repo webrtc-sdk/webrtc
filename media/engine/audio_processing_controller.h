@@ -17,6 +17,8 @@
 #ifndef MEDIA_ENGINE_AUDIO_PROCESSING_CONTROLLER_H_
 #define MEDIA_ENGINE_AUDIO_PROCESSING_CONTROLLER_H_
 
+#include <optional>
+
 #include "api/audio/audio_device.h"
 #include "api/audio/audio_processing.h"
 #include "api/audio/audio_processing_runtime_state.h"
@@ -28,9 +30,11 @@ AudioOptions ApplyAudioProcessingOptions(AudioProcessing* apm,
                                          AudioDeviceModule* adm,
                                          const AudioOptions& options);
 
-AudioProcessingRuntimeState GetAudioProcessingRuntimeState(AudioProcessing *apm,
-                                                           AudioDeviceModule *adm,
-                                                           const AudioOptions &requested_options);
+AudioProcessingRuntimeState GetAudioProcessingRuntimeState(
+    AudioProcessing* apm,
+    AudioDeviceModule* adm,
+    const std::optional<AudioOptions>& requested_options,
+    const std::optional<AudioOptions>& resolved_options);
 
 }  // namespace webrtc
 
