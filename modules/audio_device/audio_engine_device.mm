@@ -71,7 +71,7 @@ AudioEngineDevice::EngineState ApplyAudioProcessingOptionsToEngineState(
                (state.built_in_aec_enabled || state.built_in_ns_enabled);
       });
 
-  if (resolution.should_update_echo_noise_platform_path) {
+  if (resolution.has_echo_or_noise_option) {
     // Seed Apple VPIO before the first engine start. The sender applies the
     // full APM config later, but waiting until then starts capture with ADM
     // defaults and can immediately recreate the engine.

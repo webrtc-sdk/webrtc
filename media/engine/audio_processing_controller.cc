@@ -207,7 +207,7 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
       options_in, [adm] { return CoupledEchoNoisePlatformPathIsActive(adm); });
   bool vpio_enabled = false;
 
-  if (path_resolution.should_update_echo_noise_platform_path) {
+  if (path_resolution.has_echo_or_noise_option) {
     const bool path_available = BuiltInVoiceProcessingPathIsAvailable(adm);
     const bool should_enable_vpio =
         path_available && path_resolution.should_use_echo_noise_platform_path;

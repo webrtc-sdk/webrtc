@@ -69,7 +69,6 @@ CoupledAudioProcessingPathResolution ResolveCoupledAudioProcessingPath(
   CoupledAudioProcessingPathResolution resolution;
   resolution.has_echo_or_noise_option =
       options.echo_cancellation.has_value() || options.noise_suppression.has_value();
-  resolution.should_update_echo_noise_platform_path = resolution.has_echo_or_noise_option;
 
   if (resolution.has_echo_or_noise_option) {
     const bool echo_or_noise_requests_software =
