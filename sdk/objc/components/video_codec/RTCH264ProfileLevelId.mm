@@ -52,6 +52,16 @@ struct VideoToolboxH264ProfileLevels {
   std::optional<webrtc::H264Level> constrainedHigh;
 };
 
+bool HasAnyVideoToolboxH264ProfileLevel(
+    const VideoToolboxH264ProfileLevels &levels) {
+  return levels.constrainedBaseline || levels.main || levels.constrainedHigh;
+}
+
+struct VideoToolboxH264LevelSupport {
+  std::optional<webrtc::H264Level> level;
+  bool queried;
+};
+
 enum class VideoToolboxH264ProfileFamily {
   kBaseline,
   kMain,
@@ -301,22 +311,23 @@ const VideoToolboxH264ProfileLevels &MaxSupportedVideoToolboxH264ProfileLevels()
   return levels;
 }
 
-std::optional<webrtc::H264Level> SupportedVideoToolboxLevelForProfile(
+VideoToolboxH264LevelSupport SupportedVideoToolboxLevelForProfile(
     webrtc::H264Profile profile) {
   const VideoToolboxH264ProfileLevels &profileLevels =
       MaxSupportedVideoToolboxH264ProfileLevels();
+  const bool queried = HasAnyVideoToolboxH264ProfileLevel(profileLevels);
   switch (profile) {
     case webrtc::H264Profile::kProfileConstrainedBaseline:
     case webrtc::H264Profile::kProfileBaseline:
-      return profileLevels.constrainedBaseline;
+      return {profileLevels.constrainedBaseline, queried};
     case webrtc::H264Profile::kProfileMain:
-      return profileLevels.main;
+      return {profileLevels.main, queried};
     case webrtc::H264Profile::kProfileConstrainedHigh:
     case webrtc::H264Profile::kProfileHigh:
     case webrtc::H264Profile::kProfilePredictiveHigh444:
-      return profileLevels.constrainedHigh;
+      return {profileLevels.constrainedHigh, queried};
   }
-  return std::nullopt;
+  return {std::nullopt, queried};
 }
 
 #if defined(WEBRTC_IOS)
@@ -363,16 +374,20 @@ NSString *MaxSupportedLevelForProfile(webrtc::H264Profile profile) {
   // 1. Prefer VideoToolbox, because it reflects the current machine/OS encoder.
   // 2. On iOS, keep the UIDevice table as a conservative fallback for older OSes
   //    where VideoToolbox cannot be constrained to the hardware encoder.
-  // 3. For non-iOS-device Apple platforms, fall back to Level 5 rather than the
-  //    historical WebRTC Level 3.1 constants that break 1080p30 sends.
-  std::optional<webrtc::H264Level> supportedLevel =
+  // 3. For non-iOS-device Apple platforms, fall back to Level 5 only when
+  //    VideoToolbox returned no useful H264 profile list. If VideoToolbox
+  //    reports a list but omits this profile family, avoid inventing support for
+  //    it and let the caller use the historical WebRTC constants instead.
+  const VideoToolboxH264LevelSupport videoToolboxSupport =
       SupportedVideoToolboxLevelForProfile(profile);
+  std::optional<webrtc::H264Level> supportedLevel =
+      videoToolboxSupport.level;
 #if defined(WEBRTC_IOS)
   if (!supportedLevel) {
     supportedLevel = SupportedUIDeviceLevelForProfile(profile);
   }
 #endif
-  if (!supportedLevel) {
+  if (!supportedLevel && !videoToolboxSupport.queried) {
     supportedLevel = FallbackLevelForCurrentPlatform();
   }
 
