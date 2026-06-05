@@ -42,6 +42,10 @@ namespace {
 
 #if defined(WEBRTC_IOS) || defined(WEBRTC_MAC)
 
+// H264 sender capabilities are advertised through SDP profile-level-id strings,
+// but the Apple encoder is configured with VideoToolbox profile-level constants.
+// Keep this helper as the single place where Apple runtime capabilities are
+// converted back into WebRTC's H264Profile/H264Level model.
 struct VideoToolboxH264ProfileLevels {
   std::optional<webrtc::H264Level> constrainedBaseline;
   std::optional<webrtc::H264Level> main;
@@ -88,6 +92,11 @@ VideoToolboxH264ProfileLevels ParseSupportedH264ProfileLevels(
     return levels;
   }
 
+  // This is not a device capability table. VideoToolbox returns its supported
+  // profile levels as CFString constants, while WebRTC stores them as enums.
+  // The fixed list below is only the ABI translation layer between those two
+  // representations; the actual capability decision comes from VideoToolbox's
+  // supported value list.
   const VideoToolboxH264ProfileLevel kKnownProfileLevels[] = {
       {kVTProfileLevel_H264_Baseline_3_0, VideoToolboxH264ProfileFamily::kBaseline,
        webrtc::H264Level::kLevel3},
@@ -189,6 +198,10 @@ bool CanRequireHardwareAcceleratedVideoToolboxEncoder() {
 }
 
 NSDictionary *HardwareRequiredVideoToolboxEncoderSpecification() {
+  // On platforms where this key is available, ask VideoToolbox specifically for
+  // the hardware encoder's property dictionary. The encoder path itself also
+  // prefers hardware acceleration, so advertising software-only H264 levels here
+  // would create SDP that may not be encodable by the session we later create.
   if (@available(iOS 17.4, macCatalyst 17.4, macOS 10.9, tvOS 17.4, visionOS 1.1, *)) {
     return @{
       (__bridge NSString *)kVTVideoEncoderSpecification_RequireHardwareAcceleratedVideoEncoder :
@@ -200,8 +213,16 @@ NSDictionary *HardwareRequiredVideoToolboxEncoderSpecification() {
 
 bool ShouldQueryVideoToolboxWithoutHardwareRequirement() {
 #if defined(WEBRTC_IOS) && TARGET_OS_IOS && !TARGET_OS_SIMULATOR && !TARGET_OS_MACCATALYST
+  // Before iOS 17.4, VideoToolbox exposes the property query API but not the
+  // "require hardware encoder" selector. For physical iPhone/iPad builds, keep
+  // using the known device table in that case instead of accepting a possibly
+  // software-backed capability list.
   return false;
 #else
+  // Other Apple targets either do not have an iOS device table fallback
+  // (macOS/Catalyst/tvOS/visionOS) or are simulator builds where software
+  // encoding is already expected. Querying VideoToolbox is still the best
+  // available signal for those targets when the hardware selector is unavailable.
   return true;
 #endif
 }
@@ -241,6 +262,10 @@ VideoToolboxH264ProfileLevels QueryVideoToolboxH264ProfileLevelsForSize(
 
 VideoToolboxH264ProfileLevels QueryVideoToolboxH264ProfileLevels() {
   VideoToolboxH264ProfileLevels levels;
+  // VideoToolbox capability dictionaries can vary by requested dimensions.
+  // Probe representative high-to-common sender sizes and keep the highest level
+  // returned for each profile family so we do not under-advertise devices that
+  // expose their larger H264 levels only for larger encode configurations.
   const struct {
     int32_t width;
     int32_t height;
@@ -268,6 +293,9 @@ VideoToolboxH264ProfileLevels QueryVideoToolboxH264ProfileLevels() {
 }
 
 const VideoToolboxH264ProfileLevels &MaxSupportedVideoToolboxH264ProfileLevels() {
+  // The advertised codec list is built repeatedly, but Apple encoder
+  // capabilities are effectively static for the process. Cache the query result
+  // to avoid creating VideoToolbox property dictionaries on every factory call.
   static const VideoToolboxH264ProfileLevels levels =
       QueryVideoToolboxH264ProfileLevels();
   return levels;
@@ -305,10 +333,17 @@ std::optional<webrtc::H264Level> SupportedUIDeviceLevelForProfile(
 
 std::optional<webrtc::H264Level> FallbackLevelForCurrentPlatform() {
 #if defined(WEBRTC_IOS) && TARGET_OS_IOS && !TARGET_OS_SIMULATOR && !TARGET_OS_MACCATALYST
+  // Physical iOS has the UIDevice table fallback above. If both VideoToolbox and
+  // the table fail, fall through to the historical WebRTC Level 3.1 constants
+  // rather than inventing a level for an unknown iOS device.
   return std::nullopt;
 #else
-  // Keep non-iOS-device Apple platforms above Level 3.1 if VideoToolbox cannot
-  // return a useful profile list. Level 3.1 rejects 1080p30 before encoding starts.
+  // Native macOS used to fall back to Level 3.1 because it did not have the iOS
+  // UIDevice table. That is too low for common captures: Level 3.1 caps
+  // 1920x1080 to roughly 13 fps, which causes VideoToolbox to reject 1080p30
+  // and the sender to time out. Level 5 matches the previous LiveKit workaround
+  // and keeps non-iOS-device Apple targets above that failure mode when the
+  // runtime query cannot return a useful profile list.
   return webrtc::H264Level::kLevel5;
 #endif
 }
@@ -324,6 +359,12 @@ NSString *ProfileStringForProfileAndLevel(webrtc::H264Profile profile,
 }
 
 NSString *MaxSupportedLevelForProfile(webrtc::H264Profile profile) {
+  // Selection order:
+  // 1. Prefer VideoToolbox, because it reflects the current machine/OS encoder.
+  // 2. On iOS, keep the UIDevice table as a conservative fallback for older OSes
+  //    where VideoToolbox cannot be constrained to the hardware encoder.
+  // 3. For non-iOS-device Apple platforms, fall back to Level 5 rather than the
+  //    historical WebRTC Level 3.1 constants that break 1080p30 sends.
   std::optional<webrtc::H264Level> supportedLevel =
       SupportedVideoToolboxLevelForProfile(profile);
 #if defined(WEBRTC_IOS)
