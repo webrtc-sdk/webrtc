@@ -42,6 +42,9 @@ public class AudioTrack extends MediaStreamTrack {
    * already being sent, active senders observe the track update and reapply the updated options.
    * The effective audio processing module configuration is shared by the voice engine/channel, so
    * conflicting updates from multiple local tracks are not isolated per track.
+   *
+   * @return true when the request was accepted and stored on the local source. Platform
+   *     availability and the effective implementation are reported through runtime diagnostics.
    */
   public boolean setAudioProcessingOptions(AudioProcessingOptions options) {
     if (options == null) {

@@ -315,7 +315,10 @@ class RTC_EXPORT AudioTrackInterface : public MediaStreamTrackInterface {
   // may notify track observers so active senders can reapply the updated
   // options without replacing the track. The effective audio processing module
   // configuration is shared by the voice engine/channel, so conflicting updates
-  // from multiple local tracks are not isolated per track.
+  // from multiple local tracks are not isolated per track. Returns true when
+  // the request was accepted and stored on the local source. Platform
+  // availability and the effective implementation are reported through runtime
+  // diagnostics.
   virtual bool SetAudioProcessingOptions(const AudioOptions& options);
 
   // Add/Remove a sink that will receive the audio data from the track.
