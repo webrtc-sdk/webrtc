@@ -93,20 +93,15 @@ typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCAudioProcessingImplementation)) {
 };
 
 typedef struct {
-  BOOL hasRequestedEnabled;
-  BOOL isRequestedEnabled;
+  RTC_OBJC_TYPE(RTCOptionalBool) requestedEnabled;
   BOOL hasRequestedMode;
   RTC_OBJC_TYPE(RTCAudioProcessingMode) requestedMode;
 
-  BOOL hasResolvedSoftwareEnabled;
-  BOOL isResolvedSoftwareEnabled;
-  BOOL hasSoftwareEnabled;
-  BOOL isSoftwareEnabled;
+  RTC_OBJC_TYPE(RTCOptionalBool) resolvedSoftwareEnabled;
+  RTC_OBJC_TYPE(RTCOptionalBool) softwareEnabled;
   BOOL isPlatformAvailable;
-  BOOL hasPlatformRequested;
-  BOOL isPlatformRequested;
-  BOOL hasPlatformActive;
-  BOOL isPlatformActive;
+  RTC_OBJC_TYPE(RTCOptionalBool) platformRequested;
+  RTC_OBJC_TYPE(RTCOptionalBool) platformActive;
 
   RTC_OBJC_TYPE(RTCAudioProcessingImplementation) effective;
 } RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState);

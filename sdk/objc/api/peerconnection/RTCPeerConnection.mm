@@ -46,7 +46,7 @@ namespace {
 
 using webrtc::objc::BuiltInAudioProcessingStateToObjC;
 using webrtc::objc::BuiltInAudioProcessingTopologyToObjC;
-using webrtc::objc::SetOptionalBool;
+using webrtc::objc::OptionalBoolToObjC;
 
 inline RTC_OBJC_TYPE(RTCAudioProcessingMode)
     AudioProcessingModeToObjC(webrtc::AudioProcessingMode mode) {
@@ -80,26 +80,16 @@ inline RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState)
     AudioProcessingComponentRuntimeStateToObjC(
         const webrtc::AudioProcessingComponentRuntimeState &state) {
   RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState) result;
-  SetOptionalBool(state.is_requested_enabled,
-                  &result.hasRequestedEnabled,
-                  &result.isRequestedEnabled);
+  result.requestedEnabled = OptionalBoolToObjC(state.is_requested_enabled);
   result.hasRequestedMode = state.requested_mode.has_value();
   result.requestedMode = state.requested_mode.has_value() ?
       AudioProcessingModeToObjC(*state.requested_mode) :
       RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic);
-  SetOptionalBool(state.is_resolved_software_enabled,
-                  &result.hasResolvedSoftwareEnabled,
-                  &result.isResolvedSoftwareEnabled);
-  SetOptionalBool(state.is_software_enabled,
-                  &result.hasSoftwareEnabled,
-                  &result.isSoftwareEnabled);
+  result.resolvedSoftwareEnabled = OptionalBoolToObjC(state.is_resolved_software_enabled);
+  result.softwareEnabled = OptionalBoolToObjC(state.is_software_enabled);
   result.isPlatformAvailable = state.is_platform_available;
-  SetOptionalBool(state.is_platform_requested,
-                  &result.hasPlatformRequested,
-                  &result.isPlatformRequested);
-  SetOptionalBool(state.is_platform_active,
-                  &result.hasPlatformActive,
-                  &result.isPlatformActive);
+  result.platformRequested = OptionalBoolToObjC(state.is_platform_requested);
+  result.platformActive = OptionalBoolToObjC(state.is_platform_active);
   result.effective = AudioProcessingImplementationToObjC(state.effective);
   return result;
 }

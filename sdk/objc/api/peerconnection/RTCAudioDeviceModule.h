@@ -68,12 +68,18 @@ typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopology)) {
   RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopologyEchoCancellationAndNoiseSuppressionCoupled) = 1,
 };
 
+// Nullable boolean for diagnostic state. Unknown means the ADM or OS path did
+// not report the value.
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCOptionalBool)) {
+  RTC_OBJC_TYPE(RTCOptionalBoolUnknown) = 0,
+  RTC_OBJC_TYPE(RTCOptionalBoolNo) = 1,
+  RTC_OBJC_TYPE(RTCOptionalBoolYes) = 2,
+};
+
 typedef struct {
   BOOL isAvailable;
-  BOOL hasRequested;
-  BOOL isRequested;
-  BOOL hasActive;
-  BOOL isActive;
+  RTC_OBJC_TYPE(RTCOptionalBool) requested;
+  RTC_OBJC_TYPE(RTCOptionalBool) active;
 } RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState);
 
 typedef struct {
@@ -83,19 +89,13 @@ typedef struct {
   RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) noiseSuppression;
   RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) autoGainControl;
 
-  BOOL hasVoiceProcessingEnabledRequested;
-  BOOL isVoiceProcessingEnabledRequested;
-  BOOL hasVoiceProcessingBypassedRequested;
-  BOOL isVoiceProcessingBypassedRequested;
-  BOOL hasVoiceProcessingAGCEnabledRequested;
-  BOOL isVoiceProcessingAGCEnabledRequested;
+  RTC_OBJC_TYPE(RTCOptionalBool) voiceProcessingEnabledRequested;
+  RTC_OBJC_TYPE(RTCOptionalBool) voiceProcessingBypassedRequested;
+  RTC_OBJC_TYPE(RTCOptionalBool) voiceProcessingAGCEnabledRequested;
 
-  BOOL hasVoiceProcessingEnabledActive;
-  BOOL isVoiceProcessingEnabledActive;
-  BOOL hasVoiceProcessingBypassedActive;
-  BOOL isVoiceProcessingBypassedActive;
-  BOOL hasVoiceProcessingAGCEnabledActive;
-  BOOL isVoiceProcessingAGCEnabledActive;
+  RTC_OBJC_TYPE(RTCOptionalBool) voiceProcessingEnabledActive;
+  RTC_OBJC_TYPE(RTCOptionalBool) voiceProcessingBypassedActive;
+  RTC_OBJC_TYPE(RTCOptionalBool) voiceProcessingAGCEnabledActive;
 } RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState);
 
 RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCAudioEngineInputMixerNodeKey);
