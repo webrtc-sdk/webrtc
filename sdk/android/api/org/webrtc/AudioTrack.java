@@ -19,15 +19,34 @@ import org.webrtc.audio.JavaAudioDeviceModule;
 /** Java wrapper for a C++ AudioTrackInterface */
 public class AudioTrack extends MediaStreamTrack {
   private final IdentityHashMap<AudioTrackSink, Long> sinks = new IdentityHashMap<AudioTrackSink, Long>();
-  @Nullable private final JavaAudioDeviceModule audioDeviceModule;
+  @Nullable private final AudioProcessingPlatformPolicy audioProcessingPlatformPolicy;
+
+  static final class AudioProcessingPlatformPolicy {
+    final boolean isEchoCancellationPlatformAvailable;
+    final boolean isNoiseSuppressionPlatformAvailable;
+
+    AudioProcessingPlatformPolicy(
+        boolean isEchoCancellationPlatformAvailable, boolean isNoiseSuppressionPlatformAvailable) {
+      this.isEchoCancellationPlatformAvailable = isEchoCancellationPlatformAvailable;
+      this.isNoiseSuppressionPlatformAvailable = isNoiseSuppressionPlatformAvailable;
+    }
+
+    static AudioProcessingPlatformPolicy fromJavaAudioDeviceModule(
+        JavaAudioDeviceModule audioDeviceModule) {
+      JavaAudioDeviceModule.BuiltInAudioProcessingState state =
+          audioDeviceModule.getBuiltInAudioProcessingState();
+      return new AudioProcessingPlatformPolicy(
+          state.echoCancellation.isAvailable, state.noiseSuppression.isAvailable);
+    }
+  }
 
   public AudioTrack(long nativeTrack) {
     this(nativeTrack, null);
   }
 
-  AudioTrack(long nativeTrack, @Nullable JavaAudioDeviceModule audioDeviceModule) {
+  AudioTrack(long nativeTrack, @Nullable AudioProcessingPlatformPolicy audioProcessingPlatformPolicy) {
     super(nativeTrack);
-    this.audioDeviceModule = audioDeviceModule;
+    this.audioProcessingPlatformPolicy = audioProcessingPlatformPolicy;
   }
 
   /** Sets the volume for the underlying MediaSource. Volume is a gain value in the range
@@ -63,14 +82,12 @@ public class AudioTrack extends MediaStreamTrack {
     // Factory-created local tracks carry the Java ADM policy, which can be
     // stricter than static device support when hardware AEC/NS was disabled by
     // the ADM builder. Tracks without that context fall back to device support.
-    JavaAudioDeviceModule.BuiltInAudioProcessingState builtInState =
-        audioDeviceModule == null ? null : audioDeviceModule.getBuiltInAudioProcessingState();
-    boolean isEchoCancellationPlatformAvailable = builtInState == null
+    boolean isEchoCancellationPlatformAvailable = audioProcessingPlatformPolicy == null
         ? JavaAudioDeviceModule.isBuiltInAcousticEchoCancelerSupported()
-        : builtInState.echoCancellation.isAvailable;
-    boolean isNoiseSuppressionPlatformAvailable = builtInState == null
+        : audioProcessingPlatformPolicy.isEchoCancellationPlatformAvailable;
+    boolean isNoiseSuppressionPlatformAvailable = audioProcessingPlatformPolicy == null
         ? JavaAudioDeviceModule.isBuiltInNoiseSuppressorSupported()
-        : builtInState.noiseSuppression.isAvailable;
+        : audioProcessingPlatformPolicy.isNoiseSuppressionPlatformAvailable;
     return AudioProcessingOptionsResult.fromNativeResult(nativeSetAudioProcessingOptions(
         getNativeAudioTrack(), options.echoCancellation,
         options.noiseSuppression, options.autoGainControl, options.highPassFilter,

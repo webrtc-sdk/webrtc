@@ -56,7 +56,7 @@ public class PeerConnectionFactory {
   @Nullable private volatile ThreadInfo networkThread;
   @Nullable private volatile ThreadInfo workerThread;
   @Nullable private volatile ThreadInfo signalingThread;
-  @Nullable private JavaAudioDeviceModule javaAudioDeviceModule;
+  @Nullable private AudioTrack.AudioProcessingPlatformPolicy audioProcessingPlatformPolicy;
 
   public static class InitializationOptions {
     final Context applicationContext;
@@ -306,7 +306,9 @@ public class PeerConnectionFactory {
             neteqFactoryFactory == null ? 0 : neteqFactoryFactory.createNativeNetEqFactory(),
             audioFrameProcessor == null ? 0 : audioFrameProcessor.getNativeAudioFrameProcessor());
         if (adm instanceof JavaAudioDeviceModule) {
-          factory.javaAudioDeviceModule = (JavaAudioDeviceModule) adm;
+          factory.audioProcessingPlatformPolicy =
+              AudioTrack.AudioProcessingPlatformPolicy.fromJavaAudioDeviceModule(
+                  (JavaAudioDeviceModule) adm);
         }
         return factory;
       }
@@ -494,7 +496,8 @@ public class PeerConnectionFactory {
   public AudioTrack createAudioTrack(String id, AudioSource source) {
     checkPeerConnectionFactoryExists();
     return new AudioTrack(
-        nativeCreateAudioTrack(nativeFactory, id, source.getNativeAudioSource()), javaAudioDeviceModule);
+        nativeCreateAudioTrack(nativeFactory, id, source.getNativeAudioSource()),
+        audioProcessingPlatformPolicy);
   }
 
   public RtpCapabilities getRtpReceiverCapabilities(MediaStreamTrack.MediaType mediaType) {
