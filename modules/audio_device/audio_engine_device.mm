@@ -93,8 +93,8 @@ AudioProcessingOptionsValidationContext AudioProcessingValidationContextForEngin
 
 AudioEngineDevice::EngineState ApplyAudioProcessingOptionsToEngineState(
     AudioEngineDevice::EngineState state, const AudioOptions &options) {
-  AudioProcessingOptionsResult validation =
-      ValidateAudioProcessingOptions(options, AudioProcessingValidationContextForEngineState(state));
+  AudioProcessingOptionsValidationContext validation_context = AudioProcessingValidationContextForEngineState(state);
+  AudioProcessingOptionsResult validation = ValidateAudioProcessingOptions(options, validation_context);
   if (!validation.ok()) {
     // The seed path only prepares Apple VPIO state before capture starts. The
     // track or voice-engine path owns API-level rejection. If invalid options
@@ -107,21 +107,29 @@ AudioEngineDevice::EngineState ApplyAudioProcessingOptionsToEngineState(
   CoupledAudioProcessingPathResolution resolution = ResolveCoupledAudioProcessingPath(
       options, [&state] { return EngineStateEchoNoisePlatformPathIsActive(state); });
 
+  // Only seed the platform path when the options resolve to it AND the device can
+  // provide it. If the path is unavailable (e.g. simulator), keep it off and let
+  // WebRTC APM handle automatic fallback later. Mirrors the runtime apply gate
+  // (path_available && should_use_echo_noise_platform_path).
+  const bool should_seed_platform_path =
+      validation_context.is_echo_noise_platform_path_available &&
+      resolution.should_use_echo_noise_platform_path;
+
   if (resolution.has_echo_or_noise_option) {
-    // Seed Apple VPIO before the first engine start. The sender applies the
-    // full APM config later, but waiting until then starts capture with ADM
-    // defaults and can immediately recreate the engine. Per the path-ownership
-    // rule (see SetVoiceProcessingEnabled), an automatic/platform AEC/NS request
-    // seeds the VPIO path on even if it was previously disabled.
-    state.voice_processing_enabled = resolution.should_use_echo_noise_platform_path;
-    state.voice_processing_bypassed = !resolution.should_use_echo_noise_platform_path;
-    state.built_in_aec_enabled = resolution.should_use_echo_noise_platform_path;
-    state.built_in_ns_enabled = resolution.should_use_echo_noise_platform_path;
+    // Seed Apple VPIO before the first engine start. The sender applies the full
+    // APM config later, but waiting until then starts capture with ADM defaults
+    // and can immediately recreate the engine. Per the path-ownership rule (see
+    // SetVoiceProcessingEnabled), an automatic/platform AEC/NS request seeds the
+    // VPIO path on even if it was previously disabled.
+    state.voice_processing_enabled = should_seed_platform_path;
+    state.voice_processing_bypassed = !should_seed_platform_path;
+    state.built_in_aec_enabled = should_seed_platform_path;
+    state.built_in_ns_enabled = should_seed_platform_path;
   }
 
   if (options.auto_gain_control.has_value()) {
-    state.voice_processing_agc_enabled = resolution.should_use_echo_noise_platform_path &&
-                                         resolution.auto_gain_control_wants_platform;
+    state.voice_processing_agc_enabled =
+        should_seed_platform_path && resolution.auto_gain_control_wants_platform;
   }
   return state;
 }
