@@ -2283,8 +2283,8 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     NSString* category = [AVAudioSession sharedInstance].category;
     bool isCategoryValid = IsAudioSessionCategoryValid(category, state.next.IsInputEnabled(),
                                                        state.next.IsOutputEnabled());
-    LOGI() << "AudioEngine pre-enable check, audio session category: " << isCategoryValid ? "true"
-                                                                                          : "false";
+    LOGI() << "AudioEngine pre-enable check, audio session category: "
+           << (isCategoryValid ? "true" : "false");
     if (!isCategoryValid) {
       return rollback(kAudioEngineErrorAudioSessionInvalidCategory);
     }
@@ -2300,8 +2300,8 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     LOGI() << "setVoiceProcessingEnabled (input): "
            << (state.next.voice_processing_enabled ? "YES" : "NO") << " (Ignored on Simulator)";
 #else
-    LOGI() << "setVoiceProcessingEnabled (input): " << state.next.voice_processing_enabled ? "YES"
-                                                                                           : "NO";
+    LOGI() << "setVoiceProcessingEnabled (input): "
+           << (state.next.voice_processing_enabled ? "YES" : "NO");
     NSError* error = nil;
     BOOL set_vp_result = NO;
     @try {
