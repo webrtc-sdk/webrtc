@@ -97,9 +97,9 @@ inline RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState)
   SetOptionalBool(state.is_platform_requested,
                   &result.hasPlatformRequested,
                   &result.isPlatformRequested);
-  SetOptionalBool(state.is_platform_observed,
-                  &result.hasPlatformObserved,
-                  &result.isPlatformObserved);
+  SetOptionalBool(state.is_platform_active,
+                  &result.hasPlatformActive,
+                  &result.isPlatformActive);
   result.effective = AudioProcessingImplementationToObjC(state.effective);
   return result;
 }

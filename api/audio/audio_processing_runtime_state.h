@@ -44,11 +44,11 @@ struct AudioProcessingComponentRuntimeState {
 
   // The current WebRTC APM state from AudioProcessing::GetConfig().
   std::optional<bool> is_software_enabled;
-  // Platform state from the ADM. Observed state wins over requested state when
+  // Platform state from the ADM. Active state wins over requested state when
   // deriving the effective implementation.
   bool is_platform_available = false;
   std::optional<bool> is_platform_requested;
-  std::optional<bool> is_platform_observed;
+  std::optional<bool> is_platform_active;
 
   AudioProcessingImplementation effective =
       AudioProcessingImplementation::kUnknown;

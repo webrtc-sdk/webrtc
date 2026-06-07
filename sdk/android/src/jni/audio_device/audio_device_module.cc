@@ -563,8 +563,8 @@ class AndroidAudioDeviceModule : public AudioDeviceModule {
     state.is_auto_gain_control_available = false;
     state.is_echo_cancellation_requested = input_->BuiltInAECIsRequested();
     state.is_noise_suppression_requested = input_->BuiltInNSIsRequested();
-    state.is_echo_cancellation_observed = input_->BuiltInAECIsEnabled();
-    state.is_noise_suppression_observed = input_->BuiltInNSIsEnabled();
+    state.is_echo_cancellation_active = input_->BuiltInAECIsEnabled();
+    state.is_noise_suppression_active = input_->BuiltInNSIsEnabled();
     return state;
   }
 

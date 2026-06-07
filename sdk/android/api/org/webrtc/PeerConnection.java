@@ -113,13 +113,13 @@ public class PeerConnection {
     public final @Nullable Boolean isSoftwareEnabled;
     public final boolean isPlatformAvailable;
     public final @Nullable Boolean isPlatformRequested;
-    public final @Nullable Boolean isPlatformObserved;
+    public final @Nullable Boolean isPlatformActive;
     public final AudioProcessingImplementation effective;
 
     public AudioProcessingComponentRuntimeState(@Nullable Boolean isRequestedEnabled,
         @Nullable AudioProcessingMode requestedMode, @Nullable Boolean isResolvedSoftwareEnabled,
         @Nullable Boolean isSoftwareEnabled, boolean isPlatformAvailable,
-        @Nullable Boolean isPlatformRequested, @Nullable Boolean isPlatformObserved,
+        @Nullable Boolean isPlatformRequested, @Nullable Boolean isPlatformActive,
         AudioProcessingImplementation effective) {
       this.isRequestedEnabled = isRequestedEnabled;
       this.requestedMode = requestedMode;
@@ -127,7 +127,7 @@ public class PeerConnection {
       this.isSoftwareEnabled = isSoftwareEnabled;
       this.isPlatformAvailable = isPlatformAvailable;
       this.isPlatformRequested = isPlatformRequested;
-      this.isPlatformObserved = isPlatformObserved;
+      this.isPlatformActive = isPlatformActive;
       this.effective = effective;
     }
   }

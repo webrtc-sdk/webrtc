@@ -1109,17 +1109,17 @@ AudioDeviceModule::BuiltInAudioProcessingState AudioEngineDevice::GetBuiltInAudi
 
   AVAudioInputNode *input_node = engine_device_.inputNode;
   @try {
-    const bool vp_observed = input_node.isVoiceProcessingEnabled;
-    const bool bypassed_observed = vp_observed ? input_node.voiceProcessingBypassed : true;
-    const bool agc_observed = vp_observed ? input_node.voiceProcessingAGCEnabled : false;
-    const bool shared_echo_noise_observed = vp_observed && !bypassed_observed;
+    const bool vp_active = input_node.isVoiceProcessingEnabled;
+    const bool bypassed_active = vp_active ? input_node.voiceProcessingBypassed : true;
+    const bool agc_active = vp_active ? input_node.voiceProcessingAGCEnabled : false;
+    const bool shared_echo_noise_active = vp_active && !bypassed_active;
 
-    state.is_voice_processing_enabled_observed = vp_observed;
-    state.is_voice_processing_bypassed_observed = bypassed_observed;
-    state.is_voice_processing_agc_enabled_observed = agc_observed;
-    state.is_echo_cancellation_observed = shared_echo_noise_observed;
-    state.is_noise_suppression_observed = shared_echo_noise_observed;
-    state.is_auto_gain_control_observed = shared_echo_noise_observed && agc_observed;
+    state.is_voice_processing_enabled_active = vp_active;
+    state.is_voice_processing_bypassed_active = bypassed_active;
+    state.is_voice_processing_agc_enabled_active = agc_active;
+    state.is_echo_cancellation_active = shared_echo_noise_active;
+    state.is_noise_suppression_active = shared_echo_noise_active;
+    state.is_auto_gain_control_active = shared_echo_noise_active && agc_active;
   } @catch (NSException *exception) {
     LOGW() << "GetBuiltInAudioProcessingState threw exception: " << exception.reason.UTF8String;
   }

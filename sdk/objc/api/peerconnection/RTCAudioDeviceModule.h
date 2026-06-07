@@ -72,8 +72,8 @@ typedef struct {
   BOOL isAvailable;
   BOOL hasRequested;
   BOOL isRequested;
-  BOOL hasObserved;
-  BOOL isObserved;
+  BOOL hasActive;
+  BOOL isActive;
 } RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState);
 
 typedef struct {
@@ -90,12 +90,12 @@ typedef struct {
   BOOL hasVoiceProcessingAGCEnabledRequested;
   BOOL isVoiceProcessingAGCEnabledRequested;
 
-  BOOL hasVoiceProcessingEnabledObserved;
-  BOOL isVoiceProcessingEnabledObserved;
-  BOOL hasVoiceProcessingBypassedObserved;
-  BOOL isVoiceProcessingBypassedObserved;
-  BOOL hasVoiceProcessingAGCEnabledObserved;
-  BOOL isVoiceProcessingAGCEnabledObserved;
+  BOOL hasVoiceProcessingEnabledActive;
+  BOOL isVoiceProcessingEnabledActive;
+  BOOL hasVoiceProcessingBypassedActive;
+  BOOL isVoiceProcessingBypassedActive;
+  BOOL hasVoiceProcessingAGCEnabledActive;
+  BOOL isVoiceProcessingAGCEnabledActive;
 } RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState);
 
 RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCAudioEngineInputMixerNodeKey);
@@ -247,7 +247,7 @@ RTC_OBJC_EXPORT
 @property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioEngineAvailability) engineAvailability;
 
 /// Diagnostic snapshot of platform audio processing state. Requested values are
-/// the last state requested from the ADM. Observed values are live OS readback
+/// the last state requested from the ADM. Active values are live OS readback
 /// when the ADM can query the effect.
 @property(nonatomic, readonly) RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState)
     builtInAudioProcessingState;

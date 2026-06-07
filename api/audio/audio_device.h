@@ -90,18 +90,18 @@ class AudioDeviceModule : public RefCountInterface {
 
     // Live OS effect state when the ADM can read it back. Empty means unknown,
     // not false.
-    std::optional<bool> is_echo_cancellation_observed;
-    std::optional<bool> is_noise_suppression_observed;
-    std::optional<bool> is_auto_gain_control_observed;
+    std::optional<bool> is_echo_cancellation_active;
+    std::optional<bool> is_noise_suppression_active;
+    std::optional<bool> is_auto_gain_control_active;
 
     // Apple Voice Processing I/O state when the ADM exposes it.
     std::optional<bool> is_voice_processing_enabled_requested;
     std::optional<bool> is_voice_processing_bypassed_requested;
     std::optional<bool> is_voice_processing_agc_enabled_requested;
 
-    std::optional<bool> is_voice_processing_enabled_observed;
-    std::optional<bool> is_voice_processing_bypassed_observed;
-    std::optional<bool> is_voice_processing_agc_enabled_observed;
+    std::optional<bool> is_voice_processing_enabled_active;
+    std::optional<bool> is_voice_processing_bypassed_active;
+    std::optional<bool> is_voice_processing_agc_enabled_active;
   };
 
   struct Stats {
@@ -221,9 +221,9 @@ class AudioDeviceModule : public RefCountInterface {
   virtual int32_t EnableBuiltInVoiceProcessingPath(bool) { return -1; }
 
   // Returns a diagnostic snapshot for platform audio processing. Requested fields
-  // describe what the ADM was last asked to use. Observed fields describe live
-  // OS effect state when the ADM can read it back. Unsupported fields remain
-  // empty because most platforms cannot observe every component.
+  // describe what the ADM was last asked to use. Active fields describe live OS
+  // effect state when the ADM can read it back. Unsupported fields remain empty
+  // because most platforms cannot read every component.
   virtual BuiltInAudioProcessingState GetBuiltInAudioProcessingState() const {
     BuiltInAudioProcessingState state;
     state.topology = GetBuiltInAudioProcessingTopology();

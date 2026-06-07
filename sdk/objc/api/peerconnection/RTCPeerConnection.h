@@ -105,8 +105,8 @@ typedef struct {
   BOOL isPlatformAvailable;
   BOOL hasPlatformRequested;
   BOOL isPlatformRequested;
-  BOOL hasPlatformObserved;
-  BOOL isPlatformObserved;
+  BOOL hasPlatformActive;
+  BOOL isPlatformActive;
 
   RTC_OBJC_TYPE(RTCAudioProcessingImplementation) effective;
 } RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState);

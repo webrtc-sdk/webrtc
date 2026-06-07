@@ -126,17 +126,17 @@ void AppendAudioProcessingComponentRuntimeState(
   values->push_back(OptionalBoolToJava(state.is_software_enabled));
   values->push_back(state.is_platform_available ? 1 : 0);
   values->push_back(OptionalBoolToJava(state.is_platform_requested));
-  values->push_back(OptionalBoolToJava(state.is_platform_observed));
+  values->push_back(OptionalBoolToJava(state.is_platform_active));
   values->push_back(AudioProcessingImplementationToJava(state.effective));
 }
 
 void AppendBuiltInAudioProcessingComponentState(std::vector<int32_t>* values,
                                                 bool available,
                                                 std::optional<bool> requested,
-                                                std::optional<bool> observed) {
+                                                std::optional<bool> active) {
   values->push_back(available ? 1 : 0);
   values->push_back(OptionalBoolToJava(requested));
-  values->push_back(OptionalBoolToJava(observed));
+  values->push_back(OptionalBoolToJava(active));
 }
 
 void AppendBuiltInAudioProcessingState(
@@ -146,15 +146,14 @@ void AppendBuiltInAudioProcessingState(
   AppendBuiltInAudioProcessingComponentState(
       values, state.is_echo_cancellation_available,
       state.is_echo_cancellation_requested,
-      state.is_echo_cancellation_observed);
+      state.is_echo_cancellation_active);
   AppendBuiltInAudioProcessingComponentState(
       values, state.is_noise_suppression_available,
       state.is_noise_suppression_requested,
-      state.is_noise_suppression_observed);
+      state.is_noise_suppression_active);
   AppendBuiltInAudioProcessingComponentState(
       values, state.is_auto_gain_control_available,
-      state.is_auto_gain_control_requested,
-      state.is_auto_gain_control_observed);
+      state.is_auto_gain_control_requested, state.is_auto_gain_control_active);
 }
 
 std::vector<int32_t> AudioProcessingRuntimeStateToJavaValues(

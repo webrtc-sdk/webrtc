@@ -506,13 +506,13 @@ TEST(AudioProcessingControllerTest, RuntimeStateCombinesRequestedSoftwareAndPlat
       kEchoCancellationAndNoiseSuppressionCoupled;
   adm->state.is_echo_cancellation_available = true;
   adm->state.is_echo_cancellation_requested = true;
-  adm->state.is_echo_cancellation_observed = false;
+  adm->state.is_echo_cancellation_active = false;
   adm->state.is_noise_suppression_available = true;
   adm->state.is_noise_suppression_requested = true;
-  adm->state.is_noise_suppression_observed = true;
+  adm->state.is_noise_suppression_active = true;
   adm->state.is_auto_gain_control_available = true;
   adm->state.is_auto_gain_control_requested = false;
-  adm->state.is_auto_gain_control_observed = false;
+  adm->state.is_auto_gain_control_active = false;
 
   webrtc::AudioOptions options;
   options.echo_cancellation = true;
@@ -543,7 +543,7 @@ TEST(AudioProcessingControllerTest, RuntimeStateCombinesRequestedSoftwareAndPlat
   EXPECT_TRUE(state.echo_cancellation.is_software_enabled.value_or(false));
   EXPECT_TRUE(state.echo_cancellation.is_platform_available);
   EXPECT_TRUE(state.echo_cancellation.is_platform_requested.value_or(false));
-  EXPECT_FALSE(state.echo_cancellation.is_platform_observed.value_or(true));
+  EXPECT_FALSE(state.echo_cancellation.is_platform_active.value_or(true));
   EXPECT_EQ(webrtc::AudioProcessingImplementation::kSoftware, state.echo_cancellation.effective);
 
   EXPECT_EQ(webrtc::AudioProcessingImplementation::kSoftwareAndPlatform,
@@ -961,8 +961,8 @@ TEST(AudioProcessingControllerTest, CoupledAgcOnlyAutomaticUsesActiveSharedPath)
   adm->state.is_noise_suppression_available = true;
   adm->state.is_echo_cancellation_requested = true;
   adm->state.is_noise_suppression_requested = true;
-  adm->state.is_echo_cancellation_observed = true;
-  adm->state.is_noise_suppression_observed = true;
+  adm->state.is_echo_cancellation_active = true;
+  adm->state.is_noise_suppression_active = true;
 
   webrtc::AudioOptions options;
   options.auto_gain_control = true;

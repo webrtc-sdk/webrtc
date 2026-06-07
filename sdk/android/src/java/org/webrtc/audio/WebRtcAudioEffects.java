@@ -30,16 +30,16 @@ class WebRtcAudioEffects {
 
   static final class State {
     final boolean isAecRequested;
-    final @Nullable Boolean aecObserved;
+    final @Nullable Boolean aecActive;
     final boolean isNsRequested;
-    final @Nullable Boolean nsObserved;
+    final @Nullable Boolean nsActive;
 
-    State(boolean isAecRequested, @Nullable Boolean aecObserved, boolean isNsRequested,
-        @Nullable Boolean nsObserved) {
+    State(boolean isAecRequested, @Nullable Boolean aecActive, boolean isNsRequested,
+        @Nullable Boolean nsActive) {
       this.isAecRequested = isAecRequested;
-      this.aecObserved = aecObserved;
+      this.aecActive = aecActive;
       this.isNsRequested = isNsRequested;
-      this.nsObserved = nsObserved;
+      this.nsActive = nsActive;
     }
   }
 
