@@ -43,8 +43,7 @@ RTC_OBJC_EXPORT
 - (instancetype)initWithEnabled:(BOOL)enabled;
 
 - (instancetype)initWithEnabled:(BOOL)enabled
-                           mode:(RTC_OBJC_TYPE(RTCAudioProcessingMode))mode
-    NS_DESIGNATED_INITIALIZER;
+                           mode:(RTC_OBJC_TYPE(RTCAudioProcessingMode))mode NS_DESIGNATED_INITIALIZER;
 
 - (instancetype)init NS_UNAVAILABLE;
 
@@ -72,14 +71,10 @@ RTC_OBJC_EXPORT
                           highPassFilter:(BOOL)highPassFilter;
 
 - (instancetype)
-    initWithEchoCancellationOptions:
-        (RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)echoCancellationOptions
-            noiseSuppressionOptions:
-                (RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)noiseSuppressionOptions
-             autoGainControlOptions:
-                 (RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)autoGainControlOptions
-              highPassFilterOptions:
-                  (RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)highPassFilterOptions
+    initWithEchoCancellationOptions:(RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)echoCancellationOptions
+            noiseSuppressionOptions:(RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)noiseSuppressionOptions
+             autoGainControlOptions:(RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)autoGainControlOptions
+              highPassFilterOptions:(RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)highPassFilterOptions
     NS_DESIGNATED_INITIALIZER;
 
 + (instancetype)communicationOptions;

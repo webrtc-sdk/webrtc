@@ -130,10 +130,8 @@ void AppendAudioProcessingComponentRuntimeState(
   values->push_back(AudioProcessingImplementationToJava(state.effective));
 }
 
-void AppendBuiltInAudioProcessingComponentState(std::vector<int32_t>* values,
-                                                bool available,
-                                                std::optional<bool> requested,
-                                                std::optional<bool> active) {
+void AppendBuiltInAudioProcessingComponentState(std::vector<int32_t> *values, bool available,
+                                                std::optional<bool> requested, std::optional<bool> active) {
   values->push_back(available ? 1 : 0);
   values->push_back(OptionalBoolToJava(requested));
   values->push_back(OptionalBoolToJava(active));
@@ -143,17 +141,12 @@ void AppendBuiltInAudioProcessingState(
     std::vector<int32_t>* values,
     const AudioDeviceModule::BuiltInAudioProcessingState& state) {
   values->push_back(BuiltInAudioProcessingTopologyToJava(state.topology));
-  AppendBuiltInAudioProcessingComponentState(
-      values, state.is_echo_cancellation_available,
-      state.is_echo_cancellation_requested,
-      state.is_echo_cancellation_active);
-  AppendBuiltInAudioProcessingComponentState(
-      values, state.is_noise_suppression_available,
-      state.is_noise_suppression_requested,
-      state.is_noise_suppression_active);
-  AppendBuiltInAudioProcessingComponentState(
-      values, state.is_auto_gain_control_available,
-      state.is_auto_gain_control_requested, state.is_auto_gain_control_active);
+  AppendBuiltInAudioProcessingComponentState(values, state.is_echo_cancellation_available,
+                                             state.is_echo_cancellation_requested, state.is_echo_cancellation_active);
+  AppendBuiltInAudioProcessingComponentState(values, state.is_noise_suppression_available,
+                                             state.is_noise_suppression_requested, state.is_noise_suppression_active);
+  AppendBuiltInAudioProcessingComponentState(values, state.is_auto_gain_control_available,
+                                             state.is_auto_gain_control_requested, state.is_auto_gain_control_active);
 }
 
 std::vector<int32_t> AudioProcessingRuntimeStateToJavaValues(

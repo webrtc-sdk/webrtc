@@ -29,12 +29,10 @@
 @synthesize mode = _mode;
 
 - (instancetype)initWithEnabled:(BOOL)enabled {
-  return [self initWithEnabled:enabled
-                          mode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)];
+  return [self initWithEnabled:enabled mode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)];
 }
 
-- (instancetype)initWithEnabled:(BOOL)enabled
-                           mode:(RTC_OBJC_TYPE(RTCAudioProcessingMode))mode {
+- (instancetype)initWithEnabled:(BOOL)enabled mode:(RTC_OBJC_TYPE(RTCAudioProcessingMode))mode {
   self = [super init];
   if (self) {
     _enabled = enabled;
@@ -60,34 +58,25 @@
                         noiseSuppression:(BOOL)noiseSuppression
                          autoGainControl:(BOOL)autoGainControl
                           highPassFilter:(BOOL)highPassFilter {
-  return [self
-      initWithEchoCancellationOptions:
-          [[RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) alloc]
-              initWithEnabled:echoCancellation
-                         mode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)]
-          noiseSuppressionOptions:
-              [[RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) alloc]
-                  initWithEnabled:noiseSuppression
-                             mode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)]
-           autoGainControlOptions:
-               [[RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) alloc]
-                   initWithEnabled:autoGainControl
-                              mode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)]
-            highPassFilterOptions:
-                [[RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) alloc]
-                    initWithEnabled:highPassFilter
-                               mode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)]];
+  return [self initWithEchoCancellationOptions:[[RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) alloc]
+                                                   initWithEnabled:echoCancellation
+                                                              mode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)]
+                       noiseSuppressionOptions:[[RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) alloc]
+                                                   initWithEnabled:noiseSuppression
+                                                              mode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)]
+                        autoGainControlOptions:[[RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) alloc]
+                                                   initWithEnabled:autoGainControl
+                                                              mode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)]
+                         highPassFilterOptions:[[RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) alloc]
+                                                   initWithEnabled:highPassFilter
+                                                              mode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)]];
 }
 
 - (instancetype)
-    initWithEchoCancellationOptions:
-        (RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)echoCancellationOptions
-            noiseSuppressionOptions:
-                (RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)noiseSuppressionOptions
-             autoGainControlOptions:
-                 (RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)autoGainControlOptions
-              highPassFilterOptions:
-                  (RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)highPassFilterOptions {
+    initWithEchoCancellationOptions:(RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)echoCancellationOptions
+            noiseSuppressionOptions:(RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)noiseSuppressionOptions
+             autoGainControlOptions:(RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)autoGainControlOptions
+              highPassFilterOptions:(RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)highPassFilterOptions {
   NSParameterAssert(echoCancellationOptions);
   NSParameterAssert(noiseSuppressionOptions);
   NSParameterAssert(autoGainControlOptions);
