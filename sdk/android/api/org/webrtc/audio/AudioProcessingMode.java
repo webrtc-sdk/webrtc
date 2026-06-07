@@ -22,7 +22,7 @@ public enum AudioProcessingMode {
    */
   AUTOMATIC,
 
-  /** Uses only platform processing. If platform support is unavailable, the component is disabled. */
+  /** Uses only platform processing. Unavailable platform requests are rejected. */
   PLATFORM,
 
   /** Disables the matching platform effect and uses WebRTC software processing. */
