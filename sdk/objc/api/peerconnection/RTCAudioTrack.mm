@@ -10,7 +10,6 @@
 
 #import <AVFoundation/AVFoundation.h>
 #import <TargetConditionals.h>
-#import <os/lock.h>
 
 #import "RTCAudioTrack+Private.h"
 
