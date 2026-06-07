@@ -63,18 +63,56 @@ const size_t kAudioSampleSize = 2;  // Signed 16-bit integer
 
 namespace {
 
+// Whether the coupled Apple VPIO path is currently active for `state`. Shared by
+// the validation context and the platform-path resolver below so the two cannot
+// drift.
+bool EngineStateEchoNoisePlatformPathIsActive(const AudioEngineDevice::EngineState &state) {
+  return state.voice_processing_enabled && !state.voice_processing_bypassed &&
+         (state.built_in_aec_enabled || state.built_in_ns_enabled);
+}
+
+AudioProcessingOptionsValidationContext AudioProcessingValidationContextForEngineState(
+    const AudioEngineDevice::EngineState &state) {
+  AudioProcessingOptionsValidationContext context;
+  context.topology = AudioDeviceModule::BuiltInAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled;
+  // Availability is a device capability (Apple VPIO is unavailable on the
+  // simulator), independent of whether voice processing is currently enabled.
+  // Mirrors AudioEngineDevice::BuiltInVoiceProcessingPathIsAvailable().
+#if TARGET_OS_SIMULATOR
+  const bool path_available = false;
+#else
+  const bool path_available = true;
+#endif
+  context.is_echo_noise_platform_path_available = path_available;
+  context.is_echo_cancellation_platform_available = path_available;
+  context.is_noise_suppression_platform_available = path_available;
+  context.is_auto_gain_control_platform_available = path_available;
+  context.is_echo_noise_platform_path_active = EngineStateEchoNoisePlatformPathIsActive(state);
+  return context;
+}
+
 AudioEngineDevice::EngineState ApplyAudioProcessingOptionsToEngineState(
     AudioEngineDevice::EngineState state, const AudioOptions &options) {
+  AudioProcessingOptionsResult validation =
+      ValidateAudioProcessingOptions(options, AudioProcessingValidationContextForEngineState(state));
+  if (!validation.ok()) {
+    // The seed path only prepares Apple VPIO state before capture starts. The
+    // track or voice-engine path owns API-level rejection. If invalid options
+    // reach ADM directly, leave the requested ADM state unchanged and let
+    // recording continue.
+    LOGW() << "Skipping audio processing seed: " << validation.message;
+    return state;
+  }
+
   CoupledAudioProcessingPathResolution resolution = ResolveCoupledAudioProcessingPath(
-      options, [&state] {
-        return state.voice_processing_enabled && !state.voice_processing_bypassed &&
-               (state.built_in_aec_enabled || state.built_in_ns_enabled);
-      });
+      options, [&state] { return EngineStateEchoNoisePlatformPathIsActive(state); });
 
   if (resolution.has_echo_or_noise_option) {
     // Seed Apple VPIO before the first engine start. The sender applies the
     // full APM config later, but waiting until then starts capture with ADM
-    // defaults and can immediately recreate the engine.
+    // defaults and can immediately recreate the engine. Per the path-ownership
+    // rule (see SetVoiceProcessingEnabled), an automatic/platform AEC/NS request
+    // seeds the VPIO path on even if it was previously disabled.
     state.voice_processing_enabled = resolution.should_use_echo_noise_platform_path;
     state.voice_processing_bypassed = !resolution.should_use_echo_noise_platform_path;
     state.built_in_aec_enabled = resolution.should_use_echo_noise_platform_path;
@@ -1254,6 +1292,13 @@ int32_t AudioEngineDevice::VoiceProcessingBypassed(bool* enabled) {
   return 0;
 }
 
+// Voice-processing path ownership: the per-component audio-processing options
+// (echo cancellation / noise suppression, via AudioProcessingMode) own the
+// desired VPIO state. An `automatic` or `platform` AEC/NS request re-creates the
+// VPIO path here -- including from a previously disabled state -- while a
+// `software` request (or disabling both) tears it down. There is intentionally
+// no separate "hard off" switch: callers that must guarantee no Apple VPIO
+// should request `software` mode, which never re-enables the path.
 int32_t AudioEngineDevice::SetVoiceProcessingEnabled(bool enable) {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "SetVoiceProcessingEnabled: " << enable;
