@@ -14,7 +14,7 @@ package org.webrtc.audio;
  * <p>Disabled components do not use platform or software processing regardless of mode. Android
  * exposes platform acoustic echo cancellation and noise suppression when the device supports them.
  * Android does not expose platform automatic gain control or high-pass filter through this path
- * today, so platform AGC and HPF resolve to disabled.
+ * today, so those platform requests are rejected by {@code AudioTrack}.
  */
 public enum AudioProcessingMode {
   /**

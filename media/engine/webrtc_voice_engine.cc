@@ -602,11 +602,10 @@ WebRtcVoiceEngine::CreateReceiveChannel(const Environment& env,
       env, this, config, options, crypto_options, call, codec_pair_id);
 }
 
-void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
+AudioProcessingOptionsResult WebRtcVoiceEngine::ApplyOptions(const AudioOptions &options_in) {
   RTC_DCHECK_RUN_ON(&worker_thread_checker_);
   RTC_LOG(LS_INFO) << "WebRtcVoiceEngine::ApplyOptions: "
                    << options_in.ToString();
-  last_requested_audio_processing_options_ = options_in;
   AudioOptions options = options_in;  // The options are modified below.
 
 #if defined(WEBRTC_ANDROID)
@@ -628,6 +627,13 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
   }
 #endif
 
+  AudioProcessingOptionsResult validation = ValidateAudioProcessingOptionsForApply(adm(), options);
+  if (!validation.ok()) {
+    RTC_LOG(LS_WARNING) << "Rejected audio processing options: " << validation.message;
+    return validation;
+  }
+
+  last_requested_audio_processing_options_ = options_in;
   options = ApplyAudioProcessingOptions(apm(), adm(), options);
   last_resolved_audio_processing_options_ = options;
   RTC_LOG(LS_INFO) << "Applied audio processing options: "
@@ -649,6 +655,7 @@ void WebRtcVoiceEngine::ApplyOptions(const AudioOptions& options_in) {
     audio_jitter_buffer_min_delay_ms_ =
         *options.audio_jitter_buffer_min_delay_ms;
   }
+  return AudioProcessingOptionsResult::Applied();
 }
 
 AudioProcessingRuntimeState
@@ -1225,8 +1232,14 @@ bool WebRtcVoiceSendChannel::SetOptions(const AudioOptions& options) {
   // We retain all of the existing options, and apply the given ones
   // on top.  This means there is no way to "clear" options such that
   // they go back to the engine default.
-  options_.SetAll(options);
-  engine()->ApplyOptions(options_);
+  AudioOptions updated_options = options_;
+  updated_options.SetAll(options);
+  AudioProcessingOptionsResult result = engine()->ApplyOptions(updated_options);
+  if (!result.ok()) {
+    RTC_LOG(LS_WARNING) << "Rejected voice channel options: " << result.message;
+    return false;
+  }
+  options_ = updated_options;
 
   std::optional<std::string> audio_network_adaptor_config =
       GetAudioNetworkAdaptorConfig(options_);
@@ -2187,8 +2200,14 @@ bool WebRtcVoiceReceiveChannel::SetOptions(const AudioOptions& options) {
   // We retain all of the existing options, and apply the given ones
   // on top.  This means there is no way to "clear" options such that
   // they go back to the engine default.
-  options_.SetAll(options);
-  engine()->ApplyOptions(options_);
+  AudioOptions updated_options = options_;
+  updated_options.SetAll(options);
+  AudioProcessingOptionsResult result = engine()->ApplyOptions(updated_options);
+  if (!result.ok()) {
+    RTC_LOG(LS_WARNING) << "Rejected voice channel options: " << result.message;
+    return false;
+  }
+  options_ = updated_options;
 
   RTC_LOG(LS_INFO) << "Set voice receive channel options. Current options: "
                    << options_.ToString();

@@ -21,10 +21,14 @@
 
 #include "api/audio/audio_device.h"
 #include "api/audio/audio_processing.h"
+#include "api/audio/audio_processing_options_result.h"
 #include "api/audio/audio_processing_runtime_state.h"
 #include "api/audio_options.h"
 
 namespace webrtc {
+
+AudioProcessingOptionsResult ValidateAudioProcessingOptionsForApply(AudioDeviceModule *adm,
+                                                                    const AudioOptions &options);
 
 AudioOptions ApplyAudioProcessingOptions(AudioProcessing* apm,
                                          AudioDeviceModule* adm,

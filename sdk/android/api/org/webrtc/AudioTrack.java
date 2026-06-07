@@ -11,7 +11,9 @@
 package org.webrtc;
 
 import java.util.IdentityHashMap;
+import org.webrtc.audio.AudioProcessingMode;
 import org.webrtc.audio.AudioProcessingOptions;
+import org.webrtc.audio.AudioProcessingOptionsResult;
 
 /** Java wrapper for a C++ AudioTrackInterface */
 public class AudioTrack extends MediaStreamTrack {
@@ -43,17 +45,27 @@ public class AudioTrack extends MediaStreamTrack {
    * The effective audio processing module configuration is shared by the voice engine/channel, so
    * conflicting updates from multiple local tracks are not isolated per track.
    *
-   * @return true when the request was accepted and stored on the local source. Platform
-   *     availability and the effective implementation are reported through runtime diagnostics.
+   * @return true when the request was accepted. Use {@link
+   *     #setAudioProcessingOptionsWithResult(AudioProcessingOptions)} for the detailed result code.
    */
   public boolean setAudioProcessingOptions(AudioProcessingOptions options) {
+    return setAudioProcessingOptionsWithResult(options).isSuccess();
+  }
+
+  public AudioProcessingOptionsResult setAudioProcessingOptionsWithResult(
+      AudioProcessingOptions options) {
     if (options == null) {
       throw new IllegalArgumentException("AudioProcessingOptions is not allowed to be null");
     }
-    return nativeSetAudioProcessingOptions(getNativeAudioTrack(), options.echoCancellation,
+    AudioProcessingOptionsResult validation = validateAndroidAudioProcessingOptions(options);
+    if (!validation.isSuccess()) {
+      return validation;
+    }
+    return AudioProcessingOptionsResult.fromNativeCode(nativeSetAudioProcessingOptions(
+        getNativeAudioTrack(), options.echoCancellation,
         options.noiseSuppression, options.autoGainControl, options.highPassFilter,
         options.echoCancellationMode.ordinal(), options.noiseSuppressionMode.ordinal(),
-        options.autoGainControlMode.ordinal(), options.highPassFilterMode.ordinal());
+        options.autoGainControlMode.ordinal(), options.highPassFilterMode.ordinal()));
   }
 
   public boolean setAudioProcessingOptions(boolean echoCancellation, boolean noiseSuppression,
@@ -109,7 +121,22 @@ public class AudioTrack extends MediaStreamTrack {
 
   private static native void nativeSetVolume(long track, double volume);
   private static native double nativeGetVolume(long track);
-  private static native boolean nativeSetAudioProcessingOptions(long track, boolean echoCancellation,
+  private static AudioProcessingOptionsResult validateAndroidAudioProcessingOptions(
+      AudioProcessingOptions options) {
+    if (options.autoGainControl && options.autoGainControlMode == AudioProcessingMode.PLATFORM) {
+      return AudioProcessingOptionsResult.rejected(
+          AudioProcessingOptionsResult.Code.REJECTED_UNSUPPORTED_MODE,
+          "Platform automatic gain control is not supported on Android");
+    }
+    if (options.highPassFilter && options.highPassFilterMode == AudioProcessingMode.PLATFORM) {
+      return AudioProcessingOptionsResult.rejected(
+          AudioProcessingOptionsResult.Code.REJECTED_UNSUPPORTED_MODE,
+          "Platform high-pass filter is not supported on Android");
+    }
+    return AudioProcessingOptionsResult.stored();
+  }
+
+  private static native int nativeSetAudioProcessingOptions(long track, boolean echoCancellation,
       boolean noiseSuppression, boolean autoGainControl, boolean highPassFilter,
       int echoCancellationMode, int noiseSuppressionMode, int autoGainControlMode,
       int highPassFilterMode);

@@ -359,18 +359,18 @@ TEST(AudioProcessingOptionsResolverTest, CoupledSoftwareRequestVetoesPlatformPat
   EXPECT_TRUE(resolution.auto_gain_control_wants_platform);
 }
 
-TEST(AudioProcessingOptionsResolverTest, CoupledPlatformRequestWinsOverDisabledSibling) {
+TEST(AudioProcessingOptionsResolverTest, CoupledAutomaticRequestHonorsDisabledSibling) {
   webrtc::AudioOptions options;
   options.echo_cancellation = true;
-  options.echo_cancellation_mode = webrtc::AudioProcessingMode::kPlatform;
+  options.echo_cancellation_mode = webrtc::AudioProcessingMode::kAutomatic;
   options.noise_suppression = false;
-  options.noise_suppression_mode = webrtc::AudioProcessingMode::kPlatform;
+  options.noise_suppression_mode = webrtc::AudioProcessingMode::kAutomatic;
 
   webrtc::CoupledAudioProcessingPathResolution resolution =
       webrtc::ResolveCoupledAudioProcessingPath(options, [] { return false; });
 
   EXPECT_TRUE(resolution.has_echo_or_noise_option);
-  EXPECT_TRUE(resolution.should_use_echo_noise_platform_path);
+  EXPECT_FALSE(resolution.should_use_echo_noise_platform_path);
 }
 
 TEST(AudioProcessingOptionsResolverTest, CoupledAgcOnlyDoesNotEnableInactivePath) {
@@ -397,6 +397,58 @@ TEST(AudioProcessingOptionsResolverTest, CoupledAgcOnlyKeepsActivePath) {
   EXPECT_FALSE(resolution.has_echo_or_noise_option);
   EXPECT_TRUE(resolution.should_use_echo_noise_platform_path);
   EXPECT_TRUE(resolution.auto_gain_control_wants_platform);
+}
+
+TEST(AudioProcessingControllerValidationTest, RejectsCoupledPlatformEchoWithDisabledNoise) {
+  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>> adm =
+      webrtc::make_ref_counted<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
+  webrtc::AudioOptions options;
+  options.echo_cancellation = true;
+  options.echo_cancellation_mode = webrtc::AudioProcessingMode::kPlatform;
+  options.noise_suppression = false;
+  options.noise_suppression_mode = webrtc::AudioProcessingMode::kAutomatic;
+
+  webrtc::AudioProcessingOptionsResult result = webrtc::ValidateAudioProcessingOptionsForApply(adm.get(), options);
+
+  EXPECT_EQ(webrtc::AudioProcessingOptionsResultCode::kRejectedInvalidCombination, result.code);
+}
+
+TEST(AudioProcessingControllerValidationTest, RejectsCoupledPlatformEchoWithSoftwareNoise) {
+  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>> adm =
+      webrtc::make_ref_counted<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
+  webrtc::AudioOptions options;
+  options.echo_cancellation = true;
+  options.echo_cancellation_mode = webrtc::AudioProcessingMode::kPlatform;
+  options.noise_suppression = true;
+  options.noise_suppression_mode = webrtc::AudioProcessingMode::kSoftware;
+
+  webrtc::AudioProcessingOptionsResult result = webrtc::ValidateAudioProcessingOptionsForApply(adm.get(), options);
+
+  EXPECT_EQ(webrtc::AudioProcessingOptionsResultCode::kRejectedInvalidCombination, result.code);
+}
+
+TEST(AudioProcessingControllerValidationTest, RejectsCoupledPlatformAgcWithoutEchoNoisePath) {
+  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>> adm =
+      webrtc::make_ref_counted<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
+  webrtc::AudioOptions options;
+  options.echo_cancellation = false;
+  options.noise_suppression = false;
+  options.auto_gain_control = true;
+  options.auto_gain_control_mode = webrtc::AudioProcessingMode::kPlatform;
+
+  webrtc::AudioProcessingOptionsResult result = webrtc::ValidateAudioProcessingOptionsForApply(adm.get(), options);
+
+  EXPECT_EQ(webrtc::AudioProcessingOptionsResultCode::kRejectedInvalidCombination, result.code);
+}
+
+TEST(AudioProcessingControllerValidationTest, RejectsPlatformHighPassFilter) {
+  webrtc::AudioOptions options;
+  options.highpass_filter = true;
+  options.highpass_filter_mode = webrtc::AudioProcessingMode::kPlatform;
+
+  webrtc::AudioProcessingOptionsResult result = webrtc::ValidateAudioProcessingOptionsForApply(nullptr, options);
+
+  EXPECT_EQ(webrtc::AudioProcessingOptionsResultCode::kRejectedUnsupportedMode, result.code);
 }
 
 TEST(AudioProcessingControllerTest, AutomaticUsesPlatformWhenAvailable) {

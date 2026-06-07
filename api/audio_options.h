@@ -22,11 +22,11 @@ namespace webrtc {
 // Disabled components do not use platform or software processing regardless of
 // mode. Automatic uses platform processing when available and otherwise falls
 // back to WebRTC software processing. Platform uses only platform processing, so
-// unavailable platform support resolves to disabled. Software disables the
-// matching platform effect and uses WebRTC software processing. Some ADMs expose
-// coupled platform effects, such as Apple Voice Processing I/O for AEC and NS.
-// High-pass filter has no platform implementation today, so platform HPF
-// resolves to disabled.
+// unavailable or physically impossible platform requests can be rejected.
+// Software disables the matching platform effect and uses WebRTC software
+// processing. Some ADMs expose coupled platform effects, such as Apple Voice
+// Processing I/O for AEC and NS. High-pass filter has no platform
+// implementation today.
 enum class AudioProcessingMode {
   kAutomatic = 0,
   kPlatform = 1,

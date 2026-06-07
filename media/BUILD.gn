@@ -608,6 +608,7 @@ rtc_library("rtc_audio_video") {
     "../api/audio:audio_frame_processor",
     "../api/audio:audio_mixer_api",
     "../api/audio:audio_processing",
+    "../api/audio:audio_processing_options_result",
     "../api/audio:audio_processing_options_resolver",
     "../api/audio:audio_processing_runtime_state",
     "../api/audio:audio_processing_statistics",

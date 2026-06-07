@@ -21,17 +21,37 @@ NS_ASSUME_NONNULL_BEGIN
  * Disabled components do not use platform or software processing regardless of
  * mode. Automatic uses platform processing when available and otherwise falls
  * back to WebRTC software processing. Platform uses only platform processing, so
- * unavailable platform support resolves to disabled. Software disables the
- * matching platform effect and uses WebRTC software processing. Some ADMs expose
- * coupled platform effects, such as Apple Voice Processing I/O for AEC and NS.
- * High-pass filter has no platform implementation today, so platform HPF
- * resolves to disabled.
+ * unavailable or physically impossible platform requests are rejected. Software
+ * disables the matching platform effect and uses WebRTC software processing.
+ * Some ADMs expose coupled platform effects, such as Apple Voice Processing I/O
+ * for AEC and NS. High-pass filter has no platform implementation today.
  */
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCAudioProcessingMode)) {
   RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic) = 0,
   RTC_OBJC_TYPE(RTCAudioProcessingModePlatform) = 1,
   RTC_OBJC_TYPE(RTCAudioProcessingModeSoftware) = 2,
 };
+
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCode)) {
+  RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeApplied) = 0,
+  RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeStored) = 1,
+  RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedRemoteTrack) = 2,
+  RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedInvalidCombination) = 3,
+  RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedUnsupportedMode) = 4,
+  RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedPlatformUnavailable) = 5,
+  RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeApplyFailed) = 6,
+};
+
+RTC_OBJC_EXPORT
+@interface RTC_OBJC_TYPE (RTCAudioProcessingOptionsResult) : NSObject
+
+@property(nonatomic, readonly, getter=isSuccess) BOOL success;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCode) code;
+@property(nonatomic, readonly) NSString *message;
+
+- (instancetype)init NS_UNAVAILABLE;
+
+@end
 
 /** Enabled flag and implementation mode for one audio processing component. */
 RTC_OBJC_EXPORT
@@ -103,10 +123,11 @@ RTC_OBJC_EXPORT
  * If the track is already being sent, active senders observe the track update
  * and reapply the updated options. The effective audio processing module
  * configuration is shared by the voice engine/channel, so conflicting updates
- * from multiple local tracks are not isolated per track. Returns YES when the
- * request was accepted and stored on the local source. Platform availability
- * and the effective implementation are reported through runtime diagnostics.
+ * from multiple local tracks are not isolated per track.
  */
+- (RTC_OBJC_TYPE(RTCAudioProcessingOptionsResult) *)setAudioProcessingOptionsWithResult:
+    (RTC_OBJC_TYPE(RTCAudioProcessingOptions) *)options;
+
 - (BOOL)setAudioProcessingOptions:
     (RTC_OBJC_TYPE(RTCAudioProcessingOptions) *)options;
 

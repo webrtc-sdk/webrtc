@@ -29,6 +29,12 @@ rtc_source_set("audio_processing_runtime_state") {
   ]
 }
 
+rtc_source_set("audio_processing_options_result") {
+  visibility = [ "*" ]
+  sources = [ "audio_processing_options_result.h" ]
+  deps = [ "../../rtc_base/system:rtc_export" ]
+}
+
 rtc_library("audio_processing_options_resolver") {
   visibility = [ "*" ]
   sources = [

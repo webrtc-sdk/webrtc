@@ -41,17 +41,11 @@ static jdouble JNI_AudioTrack_GetVolume(JNIEnv*, jlong j_p) {
   return reinterpret_cast<AudioTrackInterface*>(j_p)->GetVolume();
 }
 
-static jboolean JNI_AudioTrack_SetAudioProcessingOptions(
-    JNIEnv*,
-    jlong j_p,
-    jboolean echo_cancellation,
-    jboolean noise_suppression,
-    jboolean auto_gain_control,
-    jboolean high_pass_filter,
-    jint echo_cancellation_mode,
-    jint noise_suppression_mode,
-    jint auto_gain_control_mode,
-    jint high_pass_filter_mode) {
+static jint JNI_AudioTrack_SetAudioProcessingOptions(JNIEnv *, jlong j_p, jboolean echo_cancellation,
+                                                     jboolean noise_suppression, jboolean auto_gain_control,
+                                                     jboolean high_pass_filter, jint echo_cancellation_mode,
+                                                     jint noise_suppression_mode, jint auto_gain_control_mode,
+                                                     jint high_pass_filter_mode) {
   AudioTrackInterface* track = reinterpret_cast<AudioTrackInterface*>(j_p);
   AudioOptions options;
   options.echo_cancellation = static_cast<bool>(echo_cancellation);
@@ -66,7 +60,8 @@ static jboolean JNI_AudioTrack_SetAudioProcessingOptions(
       AudioProcessingModeFromJava(auto_gain_control_mode);
   options.highpass_filter_mode =
       AudioProcessingModeFromJava(high_pass_filter_mode);
-  return track->SetAudioProcessingOptions(options);
+  AudioProcessingOptionsResult result = track->SetAudioProcessingOptionsWithResult(options);
+  return static_cast<jint>(result.code);
 }
 
 static void JNI_AudioTrack_AddSink(JNIEnv* jni,

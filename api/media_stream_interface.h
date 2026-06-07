@@ -23,6 +23,7 @@
 #include <string>
 #include <vector>
 
+#include "api/audio/audio_processing_options_result.h"
 #include "api/audio/audio_processing_statistics.h"
 #include "api/audio_options.h"
 #include "api/ref_count.h"
@@ -315,10 +316,10 @@ class RTC_EXPORT AudioTrackInterface : public MediaStreamTrackInterface {
   // may notify track observers so active senders can reapply the updated
   // options without replacing the track. The effective audio processing module
   // configuration is shared by the voice engine/channel, so conflicting updates
-  // from multiple local tracks are not isolated per track. Returns true when
-  // the request was accepted and stored on the local source. Platform
-  // availability and the effective implementation are reported through runtime
-  // diagnostics.
+  // from multiple local tracks are not isolated per track.
+  virtual AudioProcessingOptionsResult SetAudioProcessingOptionsWithResult(const AudioOptions &options);
+
+  // Compatibility helper for callers that only need success/failure.
   virtual bool SetAudioProcessingOptions(const AudioOptions& options);
 
   // Add/Remove a sink that will receive the audio data from the track.

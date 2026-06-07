@@ -27,6 +27,7 @@
 #include "api/audio/audio_frame_processor.h"
 #include "api/audio/audio_mixer.h"
 #include "api/audio/audio_processing.h"
+#include "api/audio/audio_processing_options_result.h"
 #include "api/audio/audio_processing_runtime_state.h"
 #include "api/audio_codecs/audio_codec_pair_id.h"
 #include "api/audio_codecs/audio_decoder_factory.h"
@@ -144,7 +145,7 @@ class WebRtcVoiceEngine final : public VoiceEngineInterface {
   // Every option that is "set" will be applied. Every option not "set" will be
   // ignored. This allows us to selectively turn on and off different options
   // easily at any time.
-  void ApplyOptions(const AudioOptions& options);
+  AudioProcessingOptionsResult ApplyOptions(const AudioOptions &options);
 
   const Environment env_;
   std::unique_ptr<TaskQueueBase, TaskQueueDeleter> low_priority_worker_queue_;

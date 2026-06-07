@@ -44,6 +44,8 @@ bool AudioProcessingOptionIsPlatformOnly(std::optional<bool> enabled,
          AudioProcessingModeOrAutomatic(mode) == AudioProcessingMode::kPlatform;
 }
 
+bool AudioProcessingOptionIsDisabled(std::optional<bool> enabled) { return enabled.has_value() && !*enabled; }
+
 std::optional<bool> ResolveAudioProcessingSoftwareFromPlatformState(
     std::optional<bool> enabled, std::optional<AudioProcessingMode> mode, bool platform_enabled) {
   if (!enabled.has_value()) {
@@ -81,8 +83,10 @@ CoupledAudioProcessingPathResolution ResolveCoupledAudioProcessingPath(
                                            options.echo_cancellation_mode) ||
         AudioProcessingOptionWantsPlatform(options.noise_suppression,
                                            options.noise_suppression_mode);
+    const bool echo_or_noise_has_disabled_component = AudioProcessingOptionIsDisabled(options.echo_cancellation) ||
+                                                      AudioProcessingOptionIsDisabled(options.noise_suppression);
     resolution.should_use_echo_noise_platform_path =
-        echo_or_noise_wants_platform && !echo_or_noise_requests_software;
+        echo_or_noise_wants_platform && !echo_or_noise_requests_software && !echo_or_noise_has_disabled_component;
   } else {
     resolution.should_use_echo_noise_platform_path = is_echo_noise_platform_path_active();
   }
