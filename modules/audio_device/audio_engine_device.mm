@@ -1305,8 +1305,8 @@ int32_t AudioEngineDevice::VoiceProcessingBypassed(bool* enabled) {
 
 // Voice-processing path ownership: the per-component audio-processing options
 // (echo cancellation / noise suppression, via AudioProcessingMode) own the
-// desired VPIO state. An `automatic` or `platform` AEC/NS request re-creates the
-// VPIO path here -- including from a previously disabled state -- while a
+// requested VPIO state. An `automatic` or `platform` AEC/NS request re-creates the
+// VPIO path here, including from a previously disabled state, while a
 // `software` request (or disabling both) tears it down. There is intentionally
 // no separate "hard off" switch: callers that must guarantee no Apple VPIO
 // should request `software` mode, which never re-enables the path.

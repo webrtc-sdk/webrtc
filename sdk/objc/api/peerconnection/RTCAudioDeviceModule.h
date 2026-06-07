@@ -92,8 +92,8 @@ typedef struct {
   RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) noiseSuppression;
   RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) autoGainControl;
 
-  // Requested values are the ADM's desired Apple Voice Processing I/O state.
-  // They are stored by the ADM and can be known before input is configured.
+  // Requested values are the Apple Voice Processing I/O state stored by the ADM.
+  // They can be known before input is configured.
   //
   // voiceProcessingEnabledRequested maps to AVAudioInputNode
   // setVoiceProcessingEnabled. Turning it off removes the VPIO graph entirely.

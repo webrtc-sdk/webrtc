@@ -30,9 +30,9 @@ namespace webrtc {
 struct RTC_EXPORT CoupledAudioProcessingPathResolution {
   // True when AEC or NS is explicitly present in AudioOptions. Callers update
   // the shared platform path (to should_use_echo_noise_platform_path) only when
-  // this is true; an AGC-only update leaves the path untouched.
+  // this is true. An AGC-only update leaves the path untouched.
   bool has_echo_or_noise_option = false;
-  // Desired AEC/NS platform path state after applying the options. If AEC and
+  // Requested AEC/NS platform path state after applying the options. If AEC and
   // NS are absent, this mirrors the current platform path argument.
   bool should_use_echo_noise_platform_path = false;
   // Whether the AGC option asks for platform AGC. The caller must still gate
