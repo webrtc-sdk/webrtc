@@ -19,6 +19,8 @@
 
 #include <optional>
 
+#include "api/audio/audio_device.h"
+#include "api/audio/audio_processing_options_result.h"
 #include "api/audio_options.h"
 #include "api/function_view.h"
 #include "rtc_base/system/rtc_export.h"
@@ -39,6 +41,19 @@ struct RTC_EXPORT CoupledAudioProcessingPathResolution {
   bool auto_gain_control_wants_platform = false;
 };
 
+struct RTC_EXPORT AudioProcessingOptionsValidationContext {
+  AudioDeviceModule::BuiltInAudioProcessingTopology topology =
+      AudioDeviceModule::BuiltInAudioProcessingTopology::kIndependent;
+
+  bool is_echo_cancellation_platform_available = false;
+  bool is_noise_suppression_platform_available = false;
+  bool is_auto_gain_control_platform_available = false;
+  bool is_highpass_filter_platform_available = false;
+
+  bool is_echo_noise_platform_path_available = false;
+  bool is_echo_noise_platform_path_active = false;
+};
+
 RTC_EXPORT AudioProcessingMode
 AudioProcessingModeOrAutomatic(std::optional<AudioProcessingMode> mode);
 
@@ -54,6 +69,9 @@ RTC_EXPORT bool AudioProcessingOptionIsPlatformOnly(std::optional<bool> enabled,
 RTC_EXPORT std::optional<bool> ResolveAudioProcessingSoftwareFromPlatformState(
     std::optional<bool> enabled, std::optional<AudioProcessingMode> mode, bool platform_enabled);
 
+RTC_EXPORT AudioProcessingOptionsResult
+ValidateAudioProcessingOptions(const AudioOptions &options, const AudioProcessingOptionsValidationContext &context);
+
 // Resolves the shared platform path for ADMs where AEC and NS cannot be
 // controlled independently. This only computes intent. ADM and APM side effects
 // stay in the caller.
@@ -62,8 +80,8 @@ RTC_EXPORT std::optional<bool> ResolveAudioProcessingSoftwareFromPlatformState(
 // - Any enabled AEC or NS software request keeps the shared platform path off.
 // - Any enabled AEC or NS auto/platform request turns the shared path on unless
 //   a software request vetoes it.
-// - Disabled AEC or NS does not veto a sibling platform request because the
-//   platform path is shared.
+// - Disabled AEC or NS does not veto an enabled sibling that wants platform
+//   processing because the platform path is shared.
 // - AGC alone never turns the shared AEC/NS path on.
 //
 // `is_echo_noise_platform_path_active` is queried only when both AEC and NS are

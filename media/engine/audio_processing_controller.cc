@@ -17,8 +17,6 @@
 #include "media/engine/audio_processing_controller.h"
 
 #include <optional>
-#include <string>
-#include <utility>
 
 #include "api/audio/audio_processing_options_resolver.h"
 #include "rtc_base/logging.h"
@@ -118,96 +116,31 @@ bool SetBuiltInVoiceProcessingPath(AudioDeviceModule *adm, bool enabled) {
   return adm != nullptr && adm->EnableBuiltInVoiceProcessingPath(enabled) == 0;
 }
 
-bool IsEnabledPlatformOnly(std::optional<bool> enabled, std::optional<AudioProcessingMode> mode) {
-  return AudioProcessingOptionIsPlatformOnly(enabled, mode);
-}
-
-bool IsEnabledSoftware(std::optional<bool> enabled, std::optional<AudioProcessingMode> mode) {
-  return AudioProcessingOptionRequestsSoftware(enabled, mode);
-}
-
-bool IsDisabled(std::optional<bool> enabled) { return enabled.has_value() && !*enabled; }
-
-AudioProcessingOptionsResult RejectInvalidCombination(const char *message) {
-  return AudioProcessingOptionsResult::Rejected(AudioProcessingOptionsResultCode::kRejectedInvalidCombination, message);
-}
-
-AudioProcessingOptionsResult RejectUnsupportedMode(const char *message) {
-  return AudioProcessingOptionsResult::Rejected(AudioProcessingOptionsResultCode::kRejectedUnsupportedMode, message);
-}
-
-AudioProcessingOptionsResult RejectPlatformUnavailable(const char *message) {
-  return AudioProcessingOptionsResult::Rejected(AudioProcessingOptionsResultCode::kRejectedPlatformUnavailable,
-                                                message);
-}
-
-AudioProcessingOptionsResult ValidateHighPassFilter(const AudioOptions &options) {
-  if (IsEnabledPlatformOnly(options.highpass_filter, options.highpass_filter_mode)) {
-    return RejectUnsupportedMode("Platform high-pass filter is not supported");
-  }
-  return AudioProcessingOptionsResult::Applied();
-}
-
-bool CoupledPlatformPathWouldBeActive(AudioDeviceModule *adm, const AudioOptions &options) {
-  CoupledAudioProcessingPathResolution path_resolution =
-      ResolveCoupledAudioProcessingPath(options, [adm] { return CoupledEchoNoisePlatformPathIsActive(adm); });
-  return path_resolution.should_use_echo_noise_platform_path;
-}
-
-AudioProcessingOptionsResult ValidateCoupledEchoNoiseOptions(AudioDeviceModule *adm, const AudioOptions &options) {
-  if (IsEnabledPlatformOnly(options.echo_cancellation, options.echo_cancellation_mode) &&
-      IsDisabled(options.noise_suppression)) {
-    return RejectInvalidCombination(
-        "Platform echo cancellation cannot be combined with disabled noise suppression on this ADM");
-  }
-  if (IsEnabledPlatformOnly(options.noise_suppression, options.noise_suppression_mode) &&
-      IsDisabled(options.echo_cancellation)) {
-    return RejectInvalidCombination(
-        "Platform noise suppression cannot be combined with disabled echo cancellation on this ADM");
-  }
-  if (IsEnabledPlatformOnly(options.echo_cancellation, options.echo_cancellation_mode) &&
-      IsEnabledSoftware(options.noise_suppression, options.noise_suppression_mode)) {
-    return RejectInvalidCombination(
-        "Platform echo cancellation cannot be combined with software noise suppression on this ADM");
-  }
-  if (IsEnabledPlatformOnly(options.noise_suppression, options.noise_suppression_mode) &&
-      IsEnabledSoftware(options.echo_cancellation, options.echo_cancellation_mode)) {
-    return RejectInvalidCombination(
-        "Platform noise suppression cannot be combined with software echo cancellation on this ADM");
+AudioProcessingOptionsValidationContext AudioProcessingValidationContextForAdm(AudioDeviceModule *adm) {
+  AudioProcessingOptionsValidationContext context;
+  if (adm == nullptr) {
+    return context;
   }
 
-  if ((IsEnabledPlatformOnly(options.echo_cancellation, options.echo_cancellation_mode) ||
-       IsEnabledPlatformOnly(options.noise_suppression, options.noise_suppression_mode)) &&
-      !BuiltInVoiceProcessingPathIsAvailable(adm)) {
-    return RejectPlatformUnavailable("Platform AEC/NS path is not available");
+  context.topology = adm->GetBuiltInAudioProcessingTopology();
+  if (context.topology ==
+      AudioDeviceModule::BuiltInAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled) {
+    const bool path_available = BuiltInVoiceProcessingPathIsAvailable(adm);
+    context.is_echo_noise_platform_path_available = path_available;
+    context.is_echo_noise_platform_path_active = CoupledEchoNoisePlatformPathIsActive(adm);
+    context.is_echo_cancellation_platform_available = path_available;
+    context.is_noise_suppression_platform_available = path_available;
+    context.is_auto_gain_control_platform_available = path_available;
+    return context;
   }
 
-  if (IsEnabledPlatformOnly(options.auto_gain_control, options.auto_gain_control_mode)) {
-    if (!CoupledPlatformPathWouldBeActive(adm, options)) {
-      return RejectInvalidCombination("Platform automatic gain control requires the shared AEC/NS platform path");
-    }
-    if (!BuiltInVoiceProcessingPathIsAvailable(adm)) {
-      return RejectPlatformUnavailable("Platform automatic gain control requires available Apple voice processing");
-    }
-  }
-
-  return AudioProcessingOptionsResult::Applied();
-}
-
-AudioProcessingOptionsResult ValidateIndependentPlatformOption(AudioDeviceModule *adm, std::optional<bool> enabled,
-                                                               std::optional<AudioProcessingMode> mode,
-                                                               AvailabilityFn is_available, const char *component) {
-  if (!IsEnabledPlatformOnly(enabled, mode)) {
-    return AudioProcessingOptionsResult::Applied();
-  }
-  if (!PlatformEffectIsAvailable(adm, is_available)) {
-    std::string message = "Platform ";
-    message += component;
-    message += " processing is not available";
-    return AudioProcessingOptionsResult::Rejected(AudioProcessingOptionsResultCode::kRejectedPlatformUnavailable,
-                                                  std::move(message));
-  }
-  return AudioProcessingOptionsResult::Applied();
+  context.is_echo_cancellation_platform_available =
+      PlatformEffectIsAvailable(adm, &AudioDeviceModule::BuiltInAECIsAvailable);
+  context.is_noise_suppression_platform_available =
+      PlatformEffectIsAvailable(adm, &AudioDeviceModule::BuiltInNSIsAvailable);
+  context.is_auto_gain_control_platform_available =
+      PlatformEffectIsAvailable(adm, &AudioDeviceModule::BuiltInAGCIsAvailable);
+  return context;
 }
 
 std::optional<bool> ResolveCoupledSoftwareAndWarnPlatformOnlyDisabled(
@@ -389,31 +322,7 @@ std::optional<AudioProcessing::Config> GetApmConfig(AudioProcessing *apm) {
 
 AudioProcessingOptionsResult ValidateAudioProcessingOptionsForApply(AudioDeviceModule *adm,
                                                                     const AudioOptions &options) {
-  AudioProcessingOptionsResult hpf_result = ValidateHighPassFilter(options);
-  if (!hpf_result.ok()) {
-    return hpf_result;
-  }
-
-  if (adm != nullptr &&
-      adm->GetBuiltInAudioProcessingTopology() ==
-          AudioDeviceModule::BuiltInAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled) {
-    return ValidateCoupledEchoNoiseOptions(adm, options);
-  }
-
-  AudioProcessingOptionsResult echo_result =
-      ValidateIndependentPlatformOption(adm, options.echo_cancellation, options.echo_cancellation_mode,
-                                        &AudioDeviceModule::BuiltInAECIsAvailable, "echo cancellation");
-  if (!echo_result.ok()) {
-    return echo_result;
-  }
-  AudioProcessingOptionsResult noise_result =
-      ValidateIndependentPlatformOption(adm, options.noise_suppression, options.noise_suppression_mode,
-                                        &AudioDeviceModule::BuiltInNSIsAvailable, "noise suppression");
-  if (!noise_result.ok()) {
-    return noise_result;
-  }
-  return ValidateIndependentPlatformOption(adm, options.auto_gain_control, options.auto_gain_control_mode,
-                                           &AudioDeviceModule::BuiltInAGCIsAvailable, "automatic gain control");
+  return ValidateAudioProcessingOptions(options, AudioProcessingValidationContextForAdm(adm));
 }
 
 AudioOptions ApplyAudioProcessingOptions(AudioProcessing* apm,

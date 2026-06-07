@@ -37,9 +37,8 @@ typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCode)) {
   RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeStored) = 1,
   RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedRemoteTrack) = 2,
   RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedInvalidCombination) = 3,
-  RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedUnsupportedMode) = 4,
-  RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedPlatformUnavailable) = 5,
-  RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeApplyFailed) = 6,
+  RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedPlatformUnavailable) = 4,
+  RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeApplyFailed) = 5,
 };
 
 RTC_OBJC_EXPORT
@@ -125,16 +124,8 @@ RTC_OBJC_EXPORT
  * configuration is shared by the voice engine/channel, so conflicting updates
  * from multiple local tracks are not isolated per track.
  */
-- (RTC_OBJC_TYPE(RTCAudioProcessingOptionsResult) *)setAudioProcessingOptionsWithResult:
+- (RTC_OBJC_TYPE(RTCAudioProcessingOptionsResult) *)setAudioProcessingOptions:
     (RTC_OBJC_TYPE(RTCAudioProcessingOptions) *)options;
-
-- (BOOL)setAudioProcessingOptions:
-    (RTC_OBJC_TYPE(RTCAudioProcessingOptions) *)options;
-
-- (BOOL)setAudioProcessingOptionsWithEchoCancellation:(BOOL)echoCancellation
-                                    noiseSuppression:(BOOL)noiseSuppression
-                                     autoGainControl:(BOOL)autoGainControl
-                                      highPassFilter:(BOOL)highPassFilter;
 
 @end
 

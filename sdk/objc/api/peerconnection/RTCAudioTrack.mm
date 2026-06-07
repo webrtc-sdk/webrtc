@@ -9,6 +9,7 @@
  */
 
 #import <AVFoundation/AVFoundation.h>
+#import <TargetConditionals.h>
 #import <os/lock.h>
 
 #import "RTCAudioTrack+Private.h"
@@ -21,23 +22,8 @@
 #import "api/RTCAudioRendererAdapter+Private.h"
 #import "helpers/NSString+StdString.h"
 
+#include "api/audio/audio_processing_options_resolver.h"
 #include "rtc_base/checks.h"
-
-namespace {
-
-bool IsPlatform(BOOL enabled, RTC_OBJC_TYPE(RTCAudioProcessingMode) mode) {
-  return enabled && mode == RTC_OBJC_TYPE(RTCAudioProcessingModePlatform);
-}
-
-bool IsSoftware(BOOL enabled, RTC_OBJC_TYPE(RTCAudioProcessingMode) mode) {
-  return enabled && mode == RTC_OBJC_TYPE(RTCAudioProcessingModeSoftware);
-}
-
-bool IsAutomaticOrPlatform(BOOL enabled, RTC_OBJC_TYPE(RTCAudioProcessingMode) mode) {
-  return enabled && mode != RTC_OBJC_TYPE(RTCAudioProcessingModeSoftware);
-}
-
-}  // namespace
 
 // clang-format off
 @interface RTC_OBJC_TYPE(RTCAudioProcessingOptionsResult) ()
@@ -168,8 +154,6 @@ ObjCResultCode(webrtc::AudioProcessingOptionsResultCode code) {
       return RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedRemoteTrack);
     case webrtc::AudioProcessingOptionsResultCode::kRejectedInvalidCombination:
       return RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedInvalidCombination);
-    case webrtc::AudioProcessingOptionsResultCode::kRejectedUnsupportedMode:
-      return RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedUnsupportedMode);
     case webrtc::AudioProcessingOptionsResultCode::kRejectedPlatformUnavailable:
       return RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedPlatformUnavailable);
     case webrtc::AudioProcessingOptionsResultCode::kApplyFailed:
@@ -188,45 +172,17 @@ RTC_OBJC_TYPE(RTCAudioProcessingOptionsResult) * ResultFromNative(const webrtc::
   return ResultWithCode(ObjCResultCode(result.code), message);
 }
 
-RTC_OBJC_TYPE(RTCAudioProcessingOptionsResult) *
-    ValidateAppleAudioProcessingOptions(RTC_OBJC_TYPE(RTCAudioProcessingOptions) * options) {
-  if (IsPlatform(options.highPassFilter, options.highPassFilterMode)) {
-    return ResultWithCode(RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedUnsupportedMode),
-                          @"Platform high-pass filter is not supported");
-  }
-
-  if (IsPlatform(options.echoCancellation, options.echoCancellationMode) && !options.noiseSuppression) {
-    return ResultWithCode(RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedInvalidCombination),
-                          @"Platform echo cancellation cannot be combined with disabled noise suppression");
-  }
-  if (IsPlatform(options.noiseSuppression, options.noiseSuppressionMode) && !options.echoCancellation) {
-    return ResultWithCode(RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedInvalidCombination),
-                          @"Platform noise suppression cannot be combined with disabled echo cancellation");
-  }
-  if (IsPlatform(options.echoCancellation, options.echoCancellationMode) &&
-      IsSoftware(options.noiseSuppression, options.noiseSuppressionMode)) {
-    return ResultWithCode(RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedInvalidCombination),
-                          @"Platform echo cancellation cannot be combined with software noise suppression");
-  }
-  if (IsPlatform(options.noiseSuppression, options.noiseSuppressionMode) &&
-      IsSoftware(options.echoCancellation, options.echoCancellationMode)) {
-    return ResultWithCode(RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedInvalidCombination),
-                          @"Platform noise suppression cannot be combined with software echo cancellation");
-  }
-
-  const BOOL echoRequestsSharedPath = IsAutomaticOrPlatform(options.echoCancellation, options.echoCancellationMode) &&
-                                      !IsSoftware(options.noiseSuppression, options.noiseSuppressionMode) &&
-                                      options.noiseSuppression;
-  const BOOL noiseRequestsSharedPath = IsAutomaticOrPlatform(options.noiseSuppression, options.noiseSuppressionMode) &&
-                                       !IsSoftware(options.echoCancellation, options.echoCancellationMode) &&
-                                       options.echoCancellation;
-  const BOOL echoNoisePlatformPathRequested = echoRequestsSharedPath || noiseRequestsSharedPath;
-  if (IsPlatform(options.autoGainControl, options.autoGainControlMode) && !echoNoisePlatformPathRequested) {
-    return ResultWithCode(RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedInvalidCombination),
-                          @"Platform automatic gain control requires the shared AEC/NS platform path");
-  }
-
-  return ResultWithCode(RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeStored), @"");
+webrtc::AudioProcessingOptionsValidationContext AppleAudioProcessingValidationContext() {
+  webrtc::AudioProcessingOptionsValidationContext context;
+  context.topology =
+      webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled;
+#if !TARGET_OS_SIMULATOR
+  context.is_echo_cancellation_platform_available = true;
+  context.is_noise_suppression_platform_available = true;
+  context.is_auto_gain_control_platform_available = true;
+  context.is_echo_noise_platform_path_available = true;
+#endif
+  return context;
 }
 
 }  // namespace
@@ -353,25 +309,7 @@ RTC_OBJC_TYPE(RTCAudioProcessingOptionsResult) *
   [_adapters removeAllObjects];
 }
 
-- (BOOL)setAudioProcessingOptionsWithEchoCancellation:(BOOL)echoCancellation
-                                    noiseSuppression:(BOOL)noiseSuppression
-                                     autoGainControl:(BOOL)autoGainControl
-                                      highPassFilter:(BOOL)highPassFilter {
-  RTC_OBJC_TYPE(RTCAudioProcessingOptions) *options =
-      [[RTC_OBJC_TYPE(RTCAudioProcessingOptions) alloc] initWithEchoCancellation:echoCancellation
-                                                                noiseSuppression:noiseSuppression
-                                                                 autoGainControl:autoGainControl
-                                                                  highPassFilter:highPassFilter];
-  return [self setAudioProcessingOptions:options];
-}
-
-- (BOOL)setAudioProcessingOptions:
-    (RTC_OBJC_TYPE(RTCAudioProcessingOptions) *)options {
-  RTC_OBJC_TYPE(RTCAudioProcessingOptionsResult) *result = [self setAudioProcessingOptionsWithResult:options];
-  return [result isSuccess];
-}
-
-- (RTC_OBJC_TYPE(RTCAudioProcessingOptionsResult) *)setAudioProcessingOptionsWithResult:
+- (RTC_OBJC_TYPE(RTCAudioProcessingOptionsResult) *)setAudioProcessingOptions:
     (RTC_OBJC_TYPE(RTCAudioProcessingOptions) *)options {
   NSParameterAssert(options);
   if (!options) {
@@ -379,17 +317,17 @@ RTC_OBJC_TYPE(RTCAudioProcessingOptionsResult) *
                           @"Audio processing options must not be nil");
   }
   if (!_signalingThread->IsCurrent()) {
-    return _signalingThread->BlockingCall(
-        [self, options] { return [self setAudioProcessingOptionsWithResult:options]; });
-  }
-
-  RTC_OBJC_TYPE(RTCAudioProcessingOptionsResult) *validation = ValidateAppleAudioProcessingOptions(options);
-  if (![validation isSuccess]) {
-    return validation;
+    return _signalingThread->BlockingCall([self, options] { return [self setAudioProcessingOptions:options]; });
   }
 
   webrtc::AudioOptions nativeOptions = webrtc::objc::NativeAudioProcessingOptions(options);
-  return ResultFromNative(self.nativeAudioTrack->SetAudioProcessingOptionsWithResult(nativeOptions));
+  webrtc::AudioProcessingOptionsResult validation =
+      webrtc::ValidateAudioProcessingOptions(nativeOptions, AppleAudioProcessingValidationContext());
+  if (!validation.ok()) {
+    return ResultFromNative(validation);
+  }
+
+  return ResultFromNative(self.nativeAudioTrack->SetAudioProcessingOptions(nativeOptions));
 }
 
 #pragma mark - Private

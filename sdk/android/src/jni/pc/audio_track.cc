@@ -10,10 +10,10 @@
 
 #include <jni.h>
 
+#include "api/audio/audio_processing_options_resolver.h"
 #include "api/media_stream_interface.h"
-#include "sdk/android/src/jni/pc/audio_sink.h"
-
 #include "sdk/android/generated_peerconnection_jni/AudioTrack_jni.h"
+#include "sdk/android/src/jni/pc/audio_sink.h"
 
 namespace webrtc {
 namespace jni {
@@ -60,7 +60,14 @@ static jint JNI_AudioTrack_SetAudioProcessingOptions(JNIEnv *, jlong j_p, jboole
       AudioProcessingModeFromJava(auto_gain_control_mode);
   options.highpass_filter_mode =
       AudioProcessingModeFromJava(high_pass_filter_mode);
-  AudioProcessingOptionsResult result = track->SetAudioProcessingOptionsWithResult(options);
+  AudioProcessingOptionsValidationContext validation_context;
+  validation_context.is_echo_cancellation_platform_available = true;
+  validation_context.is_noise_suppression_platform_available = true;
+  AudioProcessingOptionsResult validation = ValidateAudioProcessingOptions(options, validation_context);
+  if (!validation.ok()) {
+    return static_cast<jint>(validation.code);
+  }
+  AudioProcessingOptionsResult result = track->SetAudioProcessingOptions(options);
   return static_cast<jint>(result.code);
 }
 

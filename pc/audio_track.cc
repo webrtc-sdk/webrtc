@@ -54,7 +54,7 @@ AudioSourceInterface* AudioTrack::GetSource() const {
   return audio_source_.get();
 }
 
-AudioProcessingOptionsResult AudioTrack::SetAudioProcessingOptionsWithResult(const AudioOptions &options) {
+AudioProcessingOptionsResult AudioTrack::SetAudioProcessingOptions(const AudioOptions &options) {
   RTC_DCHECK_RUN_ON(&signaling_thread_checker_);
   if (!audio_source_ || audio_source_->remote()) {
     return AudioProcessingOptionsResult::Rejected(AudioProcessingOptionsResultCode::kRejectedRemoteTrack,

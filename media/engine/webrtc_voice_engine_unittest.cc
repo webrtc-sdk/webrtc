@@ -359,7 +359,7 @@ TEST(AudioProcessingOptionsResolverTest, CoupledSoftwareRequestVetoesPlatformPat
   EXPECT_TRUE(resolution.auto_gain_control_wants_platform);
 }
 
-TEST(AudioProcessingOptionsResolverTest, CoupledAutomaticRequestHonorsDisabledSibling) {
+TEST(AudioProcessingOptionsResolverTest, CoupledAutomaticRequestEnablesSharedPathWithDisabledSibling) {
   webrtc::AudioOptions options;
   options.echo_cancellation = true;
   options.echo_cancellation_mode = webrtc::AudioProcessingMode::kAutomatic;
@@ -370,7 +370,7 @@ TEST(AudioProcessingOptionsResolverTest, CoupledAutomaticRequestHonorsDisabledSi
       webrtc::ResolveCoupledAudioProcessingPath(options, [] { return false; });
 
   EXPECT_TRUE(resolution.has_echo_or_noise_option);
-  EXPECT_FALSE(resolution.should_use_echo_noise_platform_path);
+  EXPECT_TRUE(resolution.should_use_echo_noise_platform_path);
 }
 
 TEST(AudioProcessingOptionsResolverTest, CoupledAgcOnlyDoesNotEnableInactivePath) {
@@ -399,7 +399,7 @@ TEST(AudioProcessingOptionsResolverTest, CoupledAgcOnlyKeepsActivePath) {
   EXPECT_TRUE(resolution.auto_gain_control_wants_platform);
 }
 
-TEST(AudioProcessingControllerValidationTest, RejectsCoupledPlatformEchoWithDisabledNoise) {
+TEST(AudioProcessingControllerValidationTest, AcceptsCoupledPlatformEchoWithDisabledNoise) {
   webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>> adm =
       webrtc::make_ref_counted<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
   webrtc::AudioOptions options;
@@ -408,9 +408,11 @@ TEST(AudioProcessingControllerValidationTest, RejectsCoupledPlatformEchoWithDisa
   options.noise_suppression = false;
   options.noise_suppression_mode = webrtc::AudioProcessingMode::kAutomatic;
 
+  EXPECT_CALL(*adm, BuiltInVoiceProcessingPathIsAvailable()).WillOnce(Return(true));
+
   webrtc::AudioProcessingOptionsResult result = webrtc::ValidateAudioProcessingOptionsForApply(adm.get(), options);
 
-  EXPECT_EQ(webrtc::AudioProcessingOptionsResultCode::kRejectedInvalidCombination, result.code);
+  EXPECT_TRUE(result.ok());
 }
 
 TEST(AudioProcessingControllerValidationTest, RejectsCoupledPlatformEchoWithSoftwareNoise) {
@@ -448,7 +450,7 @@ TEST(AudioProcessingControllerValidationTest, RejectsPlatformHighPassFilter) {
 
   webrtc::AudioProcessingOptionsResult result = webrtc::ValidateAudioProcessingOptionsForApply(nullptr, options);
 
-  EXPECT_EQ(webrtc::AudioProcessingOptionsResultCode::kRejectedUnsupportedMode, result.code);
+  EXPECT_EQ(webrtc::AudioProcessingOptionsResultCode::kRejectedInvalidCombination, result.code);
 }
 
 TEST(AudioProcessingControllerTest, AutomaticUsesPlatformWhenAvailable) {

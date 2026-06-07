@@ -23,7 +23,6 @@ public final class AudioProcessingOptionsResult {
     STORED,
     REJECTED_REMOTE_TRACK,
     REJECTED_INVALID_COMBINATION,
-    REJECTED_UNSUPPORTED_MODE,
     REJECTED_PLATFORM_UNAVAILABLE,
     APPLY_FAILED
   }
@@ -66,8 +65,6 @@ public final class AudioProcessingOptionsResult {
         return "Audio processing options can only be set on local audio tracks";
       case REJECTED_INVALID_COMBINATION:
         return "Audio processing options contain an invalid platform/software combination";
-      case REJECTED_UNSUPPORTED_MODE:
-        return "Requested audio processing mode is not supported";
       case REJECTED_PLATFORM_UNAVAILABLE:
         return "Requested platform audio processing is not available";
       case APPLY_FAILED:

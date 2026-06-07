@@ -16,7 +16,91 @@
 
 #include "api/audio/audio_processing_options_resolver.h"
 
+#include <string>
+#include <utility>
+
 namespace webrtc {
+namespace {
+
+bool PlatformPathWouldBeActive(const AudioOptions &options, const AudioProcessingOptionsValidationContext &context) {
+  CoupledAudioProcessingPathResolution resolution =
+      ResolveCoupledAudioProcessingPath(options, [&context] { return context.is_echo_noise_platform_path_active; });
+  return resolution.should_use_echo_noise_platform_path;
+}
+
+AudioProcessingOptionsResult RejectInvalidCombination(const char *message) {
+  return AudioProcessingOptionsResult::Rejected(AudioProcessingOptionsResultCode::kRejectedInvalidCombination, message);
+}
+
+AudioProcessingOptionsResult RejectPlatformUnavailable(const char *message) {
+  return AudioProcessingOptionsResult::Rejected(AudioProcessingOptionsResultCode::kRejectedPlatformUnavailable,
+                                                message);
+}
+
+AudioProcessingOptionsResult ValidatePlatformOnlyComponent(std::optional<bool> enabled,
+                                                           std::optional<AudioProcessingMode> mode, bool is_available,
+                                                           const char *component) {
+  if (!AudioProcessingOptionIsPlatformOnly(enabled, mode)) {
+    return AudioProcessingOptionsResult::Applied();
+  }
+  if (!is_available) {
+    std::string message = "Platform ";
+    message += component;
+    message += " processing is not available";
+    return AudioProcessingOptionsResult::Rejected(AudioProcessingOptionsResultCode::kRejectedPlatformUnavailable,
+                                                  std::move(message));
+  }
+  return AudioProcessingOptionsResult::Applied();
+}
+
+AudioProcessingOptionsResult ValidateCoupledEchoNoiseOptions(const AudioOptions &options,
+                                                             const AudioProcessingOptionsValidationContext &context) {
+  if (AudioProcessingOptionIsPlatformOnly(options.echo_cancellation, options.echo_cancellation_mode) &&
+      AudioProcessingOptionRequestsSoftware(options.noise_suppression, options.noise_suppression_mode)) {
+    return RejectInvalidCombination("Platform echo cancellation cannot be combined with software noise suppression");
+  }
+  if (AudioProcessingOptionIsPlatformOnly(options.noise_suppression, options.noise_suppression_mode) &&
+      AudioProcessingOptionRequestsSoftware(options.echo_cancellation, options.echo_cancellation_mode)) {
+    return RejectInvalidCombination("Platform noise suppression cannot be combined with software echo cancellation");
+  }
+
+  if ((AudioProcessingOptionIsPlatformOnly(options.echo_cancellation, options.echo_cancellation_mode) ||
+       AudioProcessingOptionIsPlatformOnly(options.noise_suppression, options.noise_suppression_mode)) &&
+      !context.is_echo_noise_platform_path_available) {
+    return RejectPlatformUnavailable("Platform AEC/NS path is not available");
+  }
+
+  if (AudioProcessingOptionIsPlatformOnly(options.auto_gain_control, options.auto_gain_control_mode)) {
+    if (!PlatformPathWouldBeActive(options, context)) {
+      return RejectInvalidCombination("Platform automatic gain control requires the shared AEC/NS platform path");
+    }
+    if (!context.is_echo_noise_platform_path_available || !context.is_auto_gain_control_platform_available) {
+      return RejectPlatformUnavailable("Platform automatic gain control is not available");
+    }
+  }
+
+  return AudioProcessingOptionsResult::Applied();
+}
+
+AudioProcessingOptionsResult ValidateIndependentOptions(const AudioOptions &options,
+                                                        const AudioProcessingOptionsValidationContext &context) {
+  AudioProcessingOptionsResult echo_result =
+      ValidatePlatformOnlyComponent(options.echo_cancellation, options.echo_cancellation_mode,
+                                    context.is_echo_cancellation_platform_available, "echo cancellation");
+  if (!echo_result.ok()) {
+    return echo_result;
+  }
+  AudioProcessingOptionsResult noise_result =
+      ValidatePlatformOnlyComponent(options.noise_suppression, options.noise_suppression_mode,
+                                    context.is_noise_suppression_platform_available, "noise suppression");
+  if (!noise_result.ok()) {
+    return noise_result;
+  }
+  return ValidatePlatformOnlyComponent(options.auto_gain_control, options.auto_gain_control_mode,
+                                       context.is_auto_gain_control_platform_available, "automatic gain control");
+}
+
+}  // namespace
 
 AudioProcessingMode AudioProcessingModeOrAutomatic(std::optional<AudioProcessingMode> mode) {
   return mode.value_or(AudioProcessingMode::kAutomatic);
@@ -43,8 +127,6 @@ bool AudioProcessingOptionIsPlatformOnly(std::optional<bool> enabled,
   return enabled.value_or(false) &&
          AudioProcessingModeOrAutomatic(mode) == AudioProcessingMode::kPlatform;
 }
-
-bool AudioProcessingOptionIsDisabled(std::optional<bool> enabled) { return enabled.has_value() && !*enabled; }
 
 std::optional<bool> ResolveAudioProcessingSoftwareFromPlatformState(
     std::optional<bool> enabled, std::optional<AudioProcessingMode> mode, bool platform_enabled) {
@@ -83,10 +165,7 @@ CoupledAudioProcessingPathResolution ResolveCoupledAudioProcessingPath(
                                            options.echo_cancellation_mode) ||
         AudioProcessingOptionWantsPlatform(options.noise_suppression,
                                            options.noise_suppression_mode);
-    const bool echo_or_noise_has_disabled_component = AudioProcessingOptionIsDisabled(options.echo_cancellation) ||
-                                                      AudioProcessingOptionIsDisabled(options.noise_suppression);
-    resolution.should_use_echo_noise_platform_path =
-        echo_or_noise_wants_platform && !echo_or_noise_requests_software && !echo_or_noise_has_disabled_component;
+    resolution.should_use_echo_noise_platform_path = echo_or_noise_wants_platform && !echo_or_noise_requests_software;
   } else {
     resolution.should_use_echo_noise_platform_path = is_echo_noise_platform_path_active();
   }
@@ -94,6 +173,22 @@ CoupledAudioProcessingPathResolution ResolveCoupledAudioProcessingPath(
   resolution.auto_gain_control_wants_platform =
       AudioProcessingOptionWantsPlatform(options.auto_gain_control, options.auto_gain_control_mode);
   return resolution;
+}
+
+AudioProcessingOptionsResult ValidateAudioProcessingOptions(const AudioOptions &options,
+                                                            const AudioProcessingOptionsValidationContext &context) {
+  if (AudioProcessingOptionIsPlatformOnly(options.highpass_filter, options.highpass_filter_mode)) {
+    if (!context.is_highpass_filter_platform_available) {
+      return RejectInvalidCombination("Platform high-pass filter is not supported");
+    }
+  }
+
+  if (context.topology ==
+      AudioDeviceModule::BuiltInAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled) {
+    return ValidateCoupledEchoNoiseOptions(options, context);
+  }
+
+  return ValidateIndependentOptions(options, context);
 }
 
 }  // namespace webrtc

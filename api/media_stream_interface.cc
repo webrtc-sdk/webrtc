@@ -36,14 +36,9 @@ AudioTrackInterface::GetAudioProcessor() {
   return nullptr;
 }
 
-AudioProcessingOptionsResult AudioTrackInterface::SetAudioProcessingOptionsWithResult(
-    const AudioOptions & /* options */) {
+AudioProcessingOptionsResult AudioTrackInterface::SetAudioProcessingOptions(const AudioOptions & /* options */) {
   return AudioProcessingOptionsResult::Rejected(AudioProcessingOptionsResultCode::kApplyFailed,
                                                 "Audio processing options are not supported by this track");
-}
-
-bool AudioTrackInterface::SetAudioProcessingOptions(const AudioOptions &options) {
-  return SetAudioProcessingOptionsWithResult(options).ok();
 }
 
 const AudioOptions AudioSourceInterface::options() const {

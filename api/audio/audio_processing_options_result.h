@@ -29,9 +29,8 @@ enum class AudioProcessingOptionsResultCode {
   kStored = 1,
   kRejectedRemoteTrack = 2,
   kRejectedInvalidCombination = 3,
-  kRejectedUnsupportedMode = 4,
-  kRejectedPlatformUnavailable = 5,
-  kApplyFailed = 6,
+  kRejectedPlatformUnavailable = 4,
+  kApplyFailed = 5,
 };
 
 struct RTC_EXPORT AudioProcessingOptionsResult {

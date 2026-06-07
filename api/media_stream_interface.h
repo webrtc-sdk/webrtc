@@ -317,10 +317,7 @@ class RTC_EXPORT AudioTrackInterface : public MediaStreamTrackInterface {
   // options without replacing the track. The effective audio processing module
   // configuration is shared by the voice engine/channel, so conflicting updates
   // from multiple local tracks are not isolated per track.
-  virtual AudioProcessingOptionsResult SetAudioProcessingOptionsWithResult(const AudioOptions &options);
-
-  // Compatibility helper for callers that only need success/failure.
-  virtual bool SetAudioProcessingOptions(const AudioOptions& options);
+  virtual AudioProcessingOptionsResult SetAudioProcessingOptions(const AudioOptions &options);
 
   // Add/Remove a sink that will receive the audio data from the track.
   virtual void AddSink(AudioTrackSinkInterface* sink) = 0;

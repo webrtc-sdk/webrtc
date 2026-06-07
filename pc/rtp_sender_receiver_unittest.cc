@@ -592,7 +592,7 @@ TEST_F(RtpSenderReceiverTest, LocalAudioTrackProcessingOptionsReapplied) {
   AudioOptions updated_options;
   updated_options.echo_cancellation = false;
   updated_options.echo_cancellation_mode = AudioProcessingMode::kSoftware;
-  EXPECT_TRUE(audio_track_->SetAudioProcessingOptions(updated_options));
+  EXPECT_TRUE(audio_track_->SetAudioProcessingOptions(updated_options).ok());
 
   EXPECT_EQ(false, source->options().echo_cancellation);
   EXPECT_EQ(AudioProcessingMode::kSoftware,
@@ -617,7 +617,7 @@ TEST_F(RtpSenderReceiverTest,
   AudioOptions updated_options;
   updated_options.echo_cancellation = false;
   updated_options.echo_cancellation_mode = AudioProcessingMode::kSoftware;
-  EXPECT_TRUE(audio_track_->SetAudioProcessingOptions(updated_options));
+  EXPECT_TRUE(audio_track_->SetAudioProcessingOptions(updated_options).ok());
 
   EXPECT_EQ(false, source->options().echo_cancellation);
   EXPECT_EQ(AudioProcessingMode::kSoftware,

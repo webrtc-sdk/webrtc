@@ -881,6 +881,7 @@ if (current_os == "linux" || is_android) {
       "../../api/audio:audio_device",
       "../../api/audio:audio_frame_processor",
       "../../api/audio:audio_processing",
+      "../../api/audio:audio_processing_options_resolver",
       "../../api/audio:builtin_audio_processing_builder",
       "../../api/audio_codecs:audio_codecs_api",
       "../../api/crypto:frame_decryptor_interface",
