@@ -37,6 +37,8 @@ AudioProcessingOptionsResult RejectPlatformUnavailable(const char *message) {
                                                 message);
 }
 
+bool AudioProcessingOptionIsDisabled(std::optional<bool> enabled) { return enabled.has_value() && !*enabled; }
+
 AudioProcessingOptionsResult ValidatePlatformOnlyComponent(std::optional<bool> enabled,
                                                            std::optional<AudioProcessingMode> mode, bool is_available,
                                                            const char *component) {
@@ -59,9 +61,17 @@ AudioProcessingOptionsResult ValidateCoupledEchoNoiseOptions(const AudioOptions 
       AudioProcessingOptionRequestsSoftware(options.noise_suppression, options.noise_suppression_mode)) {
     return RejectInvalidCombination("Platform echo cancellation cannot be combined with software noise suppression");
   }
+  if (AudioProcessingOptionIsPlatformOnly(options.echo_cancellation, options.echo_cancellation_mode) &&
+      AudioProcessingOptionIsDisabled(options.noise_suppression)) {
+    return RejectInvalidCombination("Platform echo cancellation cannot be combined with disabled noise suppression");
+  }
   if (AudioProcessingOptionIsPlatformOnly(options.noise_suppression, options.noise_suppression_mode) &&
       AudioProcessingOptionRequestsSoftware(options.echo_cancellation, options.echo_cancellation_mode)) {
     return RejectInvalidCombination("Platform noise suppression cannot be combined with software echo cancellation");
+  }
+  if (AudioProcessingOptionIsPlatformOnly(options.noise_suppression, options.noise_suppression_mode) &&
+      AudioProcessingOptionIsDisabled(options.echo_cancellation)) {
+    return RejectInvalidCombination("Platform noise suppression cannot be combined with disabled echo cancellation");
   }
 
   if ((AudioProcessingOptionIsPlatformOnly(options.echo_cancellation, options.echo_cancellation_mode) ||
@@ -160,12 +170,15 @@ CoupledAudioProcessingPathResolution ResolveCoupledAudioProcessingPath(
                                               options.echo_cancellation_mode) ||
         AudioProcessingOptionRequestsSoftware(options.noise_suppression,
                                               options.noise_suppression_mode);
+    const bool echo_or_noise_has_disabled_component = AudioProcessingOptionIsDisabled(options.echo_cancellation) ||
+                                                      AudioProcessingOptionIsDisabled(options.noise_suppression);
     const bool echo_or_noise_wants_platform =
         AudioProcessingOptionWantsPlatform(options.echo_cancellation,
                                            options.echo_cancellation_mode) ||
         AudioProcessingOptionWantsPlatform(options.noise_suppression,
                                            options.noise_suppression_mode);
-    resolution.should_use_echo_noise_platform_path = echo_or_noise_wants_platform && !echo_or_noise_requests_software;
+    resolution.should_use_echo_noise_platform_path =
+        echo_or_noise_wants_platform && !echo_or_noise_requests_software && !echo_or_noise_has_disabled_component;
   } else {
     resolution.should_use_echo_noise_platform_path = is_echo_noise_platform_path_active();
   }

@@ -222,12 +222,13 @@ AudioOptions ApplyCoupledEchoNoiseProcessingOptions(
   // AEC/NS recreates the path and then enables both shared effects.
   //
   // A single AEC or NS automatic/platform request can turn the shared path on
-  // for both effects. Disabling the sibling component does not veto that
-  // request because Apple cannot provide platform AEC without the shared path.
-  // A software request still keeps the shared path off to avoid mixing Apple's
-  // coupled processing with WebRTC APM. AGC is resolved after that decision and
-  // never turns VPIO on by itself. This keeps partial AGC-only updates from
-  // changing Apple audio routing.
+  // for both effects. A disabled or software sibling keeps the shared path off
+  // so the effective state does not enable processing that the caller disabled
+  // or mix Apple's coupled processing with WebRTC APM. Strict platform requests
+  // with a disabled or software sibling are rejected before this function is
+  // called. AGC is resolved after that decision and never turns VPIO on by
+  // itself. This keeps partial AGC-only updates from changing Apple audio
+  // routing.
   AudioOptions software_options = options_in;
 
   CoupledAudioProcessingPathResolution path_resolution = ResolveCoupledAudioProcessingPath(

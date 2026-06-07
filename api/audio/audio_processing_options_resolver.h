@@ -79,9 +79,9 @@ ValidateAudioProcessingOptions(const AudioOptions &options, const AudioProcessin
 // Rules:
 // - Any enabled AEC or NS software request keeps the shared platform path off.
 // - Any enabled AEC or NS auto/platform request turns the shared path on unless
-//   a software request vetoes it.
-// - Disabled AEC or NS does not veto an enabled sibling that wants platform
-//   processing because the platform path is shared.
+//   a software request or disabled sibling vetoes it.
+// - Strict platform requests with a disabled sibling are rejected by
+//   ValidateAudioProcessingOptions before apply.
 // - AGC alone never turns the shared AEC/NS path on.
 //
 // `is_echo_noise_platform_path_active` is queried only when both AEC and NS are

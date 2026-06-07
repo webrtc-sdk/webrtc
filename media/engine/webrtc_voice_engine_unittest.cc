@@ -359,7 +359,7 @@ TEST(AudioProcessingOptionsResolverTest, CoupledSoftwareRequestVetoesPlatformPat
   EXPECT_TRUE(resolution.auto_gain_control_wants_platform);
 }
 
-TEST(AudioProcessingOptionsResolverTest, CoupledAutomaticRequestEnablesSharedPathWithDisabledSibling) {
+TEST(AudioProcessingOptionsResolverTest, CoupledAutomaticRequestFallsBackWithDisabledSibling) {
   webrtc::AudioOptions options;
   options.echo_cancellation = true;
   options.echo_cancellation_mode = webrtc::AudioProcessingMode::kAutomatic;
@@ -370,7 +370,7 @@ TEST(AudioProcessingOptionsResolverTest, CoupledAutomaticRequestEnablesSharedPat
       webrtc::ResolveCoupledAudioProcessingPath(options, [] { return false; });
 
   EXPECT_TRUE(resolution.has_echo_or_noise_option);
-  EXPECT_TRUE(resolution.should_use_echo_noise_platform_path);
+  EXPECT_FALSE(resolution.should_use_echo_noise_platform_path);
 }
 
 TEST(AudioProcessingOptionsResolverTest, CoupledAgcOnlyDoesNotEnableInactivePath) {
@@ -399,7 +399,7 @@ TEST(AudioProcessingOptionsResolverTest, CoupledAgcOnlyKeepsActivePath) {
   EXPECT_TRUE(resolution.auto_gain_control_wants_platform);
 }
 
-TEST(AudioProcessingControllerValidationTest, AcceptsCoupledPlatformEchoWithDisabledNoise) {
+TEST(AudioProcessingControllerValidationTest, RejectsCoupledPlatformEchoWithDisabledNoise) {
   webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>> adm =
       webrtc::make_ref_counted<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
   webrtc::AudioOptions options;
@@ -408,11 +408,23 @@ TEST(AudioProcessingControllerValidationTest, AcceptsCoupledPlatformEchoWithDisa
   options.noise_suppression = false;
   options.noise_suppression_mode = webrtc::AudioProcessingMode::kAutomatic;
 
-  EXPECT_CALL(*adm, BuiltInVoiceProcessingPathIsAvailable()).WillOnce(Return(true));
+  webrtc::AudioProcessingOptionsResult result = webrtc::ValidateAudioProcessingOptionsForApply(adm.get(), options);
+
+  EXPECT_EQ(webrtc::AudioProcessingOptionsResultCode::kRejectedInvalidCombination, result.code);
+}
+
+TEST(AudioProcessingControllerValidationTest, RejectsCoupledPlatformNoiseWithDisabledEcho) {
+  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>> adm =
+      webrtc::make_ref_counted<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
+  webrtc::AudioOptions options;
+  options.echo_cancellation = false;
+  options.echo_cancellation_mode = webrtc::AudioProcessingMode::kAutomatic;
+  options.noise_suppression = true;
+  options.noise_suppression_mode = webrtc::AudioProcessingMode::kPlatform;
 
   webrtc::AudioProcessingOptionsResult result = webrtc::ValidateAudioProcessingOptionsForApply(adm.get(), options);
 
-  EXPECT_TRUE(result.ok());
+  EXPECT_EQ(webrtc::AudioProcessingOptionsResultCode::kRejectedInvalidCombination, result.code);
 }
 
 TEST(AudioProcessingControllerValidationTest, RejectsCoupledPlatformEchoWithSoftwareNoise) {
@@ -948,7 +960,7 @@ TEST(AudioProcessingControllerTest, CoupledEchoPlatformWithNoiseUnsetEnablesShar
   EXPECT_FALSE(apm_config.noise_suppression.enabled);
 }
 
-TEST(AudioProcessingControllerTest, CoupledEchoPlatformWithNoiseDisabledEnablesSharedPath) {
+TEST(AudioProcessingControllerTest, CoupledEchoPlatformWithNoiseDisabledKeepsSharedPathOff) {
   webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>> adm =
       webrtc::make_ref_counted<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
   webrtc::AudioOptions options;
@@ -958,11 +970,7 @@ TEST(AudioProcessingControllerTest, CoupledEchoPlatformWithNoiseDisabledEnablesS
   options.noise_suppression_mode = webrtc::AudioProcessingMode::kPlatform;
 
   EXPECT_CALL(*adm, BuiltInVoiceProcessingPathIsAvailable()).WillOnce(Return(true));
-  EXPECT_CALL(*adm, EnableBuiltInVoiceProcessingPath(true)).WillOnce(Return(0));
-  EXPECT_CALL(*adm, BuiltInAECIsAvailable()).WillOnce(Return(true));
-  EXPECT_CALL(*adm, BuiltInNSIsAvailable()).WillOnce(Return(true));
-  EXPECT_CALL(*adm, EnableBuiltInAEC(true)).WillOnce(Return(0));
-  EXPECT_CALL(*adm, EnableBuiltInNS(true)).WillOnce(Return(0));
+  EXPECT_CALL(*adm, EnableBuiltInVoiceProcessingPath(false)).WillOnce(Return(0));
 
   webrtc::AudioProcessing::Config apm_config =
       ApplyAudioProcessingOptionsForTest(options, adm.get());
@@ -970,7 +978,7 @@ TEST(AudioProcessingControllerTest, CoupledEchoPlatformWithNoiseDisabledEnablesS
   EXPECT_FALSE(apm_config.noise_suppression.enabled);
 }
 
-TEST(AudioProcessingControllerTest, CoupledNoisePlatformWithEchoDisabledEnablesSharedPath) {
+TEST(AudioProcessingControllerTest, CoupledNoisePlatformWithEchoDisabledKeepsSharedPathOff) {
   webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>> adm =
       webrtc::make_ref_counted<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
   webrtc::AudioOptions options;
@@ -980,11 +988,7 @@ TEST(AudioProcessingControllerTest, CoupledNoisePlatformWithEchoDisabledEnablesS
   options.noise_suppression_mode = webrtc::AudioProcessingMode::kPlatform;
 
   EXPECT_CALL(*adm, BuiltInVoiceProcessingPathIsAvailable()).WillOnce(Return(true));
-  EXPECT_CALL(*adm, EnableBuiltInVoiceProcessingPath(true)).WillOnce(Return(0));
-  EXPECT_CALL(*adm, BuiltInAECIsAvailable()).WillOnce(Return(true));
-  EXPECT_CALL(*adm, BuiltInNSIsAvailable()).WillOnce(Return(true));
-  EXPECT_CALL(*adm, EnableBuiltInAEC(true)).WillOnce(Return(0));
-  EXPECT_CALL(*adm, EnableBuiltInNS(true)).WillOnce(Return(0));
+  EXPECT_CALL(*adm, EnableBuiltInVoiceProcessingPath(false)).WillOnce(Return(0));
 
   webrtc::AudioProcessing::Config apm_config =
       ApplyAudioProcessingOptionsForTest(options, adm.get());
