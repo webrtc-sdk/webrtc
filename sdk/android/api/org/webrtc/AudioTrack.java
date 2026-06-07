@@ -10,6 +10,7 @@
 
 package org.webrtc;
 
+import androidx.annotation.Nullable;
 import java.util.IdentityHashMap;
 import org.webrtc.audio.AudioProcessingOptions;
 import org.webrtc.audio.AudioProcessingOptionsResult;
@@ -18,9 +19,15 @@ import org.webrtc.audio.JavaAudioDeviceModule;
 /** Java wrapper for a C++ AudioTrackInterface */
 public class AudioTrack extends MediaStreamTrack {
   private final IdentityHashMap<AudioTrackSink, Long> sinks = new IdentityHashMap<AudioTrackSink, Long>();
+  @Nullable private final JavaAudioDeviceModule audioDeviceModule;
 
   public AudioTrack(long nativeTrack) {
+    this(nativeTrack, null);
+  }
+
+  AudioTrack(long nativeTrack, @Nullable JavaAudioDeviceModule audioDeviceModule) {
     super(nativeTrack);
+    this.audioDeviceModule = audioDeviceModule;
   }
 
   /** Sets the volume for the underlying MediaSource. Volume is a gain value in the range
@@ -53,10 +60,17 @@ public class AudioTrack extends MediaStreamTrack {
     if (options == null) {
       throw new IllegalArgumentException("AudioProcessingOptions is not allowed to be null");
     }
-    boolean isEchoCancellationPlatformAvailable =
-        JavaAudioDeviceModule.isBuiltInAcousticEchoCancelerSupported();
-    boolean isNoiseSuppressionPlatformAvailable =
-        JavaAudioDeviceModule.isBuiltInNoiseSuppressorSupported();
+    // Factory-created local tracks carry the Java ADM policy, which can be
+    // stricter than static device support when hardware AEC/NS was disabled by
+    // the ADM builder. Tracks without that context fall back to device support.
+    JavaAudioDeviceModule.BuiltInAudioProcessingState builtInState =
+        audioDeviceModule == null ? null : audioDeviceModule.getBuiltInAudioProcessingState();
+    boolean isEchoCancellationPlatformAvailable = builtInState == null
+        ? JavaAudioDeviceModule.isBuiltInAcousticEchoCancelerSupported()
+        : builtInState.echoCancellation.isAvailable;
+    boolean isNoiseSuppressionPlatformAvailable = builtInState == null
+        ? JavaAudioDeviceModule.isBuiltInNoiseSuppressorSupported()
+        : builtInState.noiseSuppression.isAvailable;
     return AudioProcessingOptionsResult.fromNativeResult(nativeSetAudioProcessingOptions(
         getNativeAudioTrack(), options.echoCancellation,
         options.noiseSuppression, options.autoGainControl, options.highPassFilter,
