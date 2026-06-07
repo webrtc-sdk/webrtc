@@ -412,37 +412,42 @@ AudioProcessingApplyResult ApplyAudioProcessingOptions(AudioProcessing* apm,
     }
   } else {
     AudioOptions& software_options = apply_result.resolved_options;
-    if (options_in.echo_cancellation.has_value()) {
-      ComponentApplyResult component_result = ApplyIndependentPlatformEffectAndResolveSoftware(
-          options_in.echo_cancellation, options_in.echo_cancellation_mode, "echo cancellation", adm,
-          &AudioDeviceModule::BuiltInAECIsAvailable, &AudioDeviceModule::EnableBuiltInAEC);
-      if (!component_result.result.ok()) {
-        apply_result.result = std::move(component_result.result);
-        return apply_result;
-      }
-      software_options.echo_cancellation = component_result.software_enabled;
-    }
+    auto apply_independent_component =
+        [&](std::optional<bool>& software_enabled, std::optional<bool> enabled,
+            std::optional<AudioProcessingMode> mode, const char* component,
+            AvailabilityFn is_available, EnableFn enable) {
+          if (!enabled.has_value()) {
+            return true;
+          }
 
-    if (options_in.auto_gain_control.has_value()) {
-      ComponentApplyResult component_result = ApplyIndependentPlatformEffectAndResolveSoftware(
-          options_in.auto_gain_control, options_in.auto_gain_control_mode, "auto gain control", adm,
-          &AudioDeviceModule::BuiltInAGCIsAvailable, &AudioDeviceModule::EnableBuiltInAGC);
-      if (!component_result.result.ok()) {
-        apply_result.result = std::move(component_result.result);
-        return apply_result;
-      }
-      software_options.auto_gain_control = component_result.software_enabled;
-    }
+          ComponentApplyResult component_result =
+              ApplyIndependentPlatformEffectAndResolveSoftware(
+                  enabled, mode, component, adm, is_available, enable);
+          if (!component_result.result.ok()) {
+            apply_result.result = std::move(component_result.result);
+            return false;
+          }
+          software_enabled = component_result.software_enabled;
+          return true;
+        };
 
-    if (options_in.noise_suppression.has_value()) {
-      ComponentApplyResult component_result = ApplyIndependentPlatformEffectAndResolveSoftware(
-          options_in.noise_suppression, options_in.noise_suppression_mode, "noise suppression", adm,
-          &AudioDeviceModule::BuiltInNSIsAvailable, &AudioDeviceModule::EnableBuiltInNS);
-      if (!component_result.result.ok()) {
-        apply_result.result = std::move(component_result.result);
-        return apply_result;
-      }
-      software_options.noise_suppression = component_result.software_enabled;
+    if (!apply_independent_component(
+            software_options.echo_cancellation, options_in.echo_cancellation,
+            options_in.echo_cancellation_mode, "echo cancellation",
+            &AudioDeviceModule::BuiltInAECIsAvailable, &AudioDeviceModule::EnableBuiltInAEC)) {
+      return apply_result;
+    }
+    if (!apply_independent_component(
+            software_options.auto_gain_control, options_in.auto_gain_control,
+            options_in.auto_gain_control_mode, "auto gain control",
+            &AudioDeviceModule::BuiltInAGCIsAvailable, &AudioDeviceModule::EnableBuiltInAGC)) {
+      return apply_result;
+    }
+    if (!apply_independent_component(
+            software_options.noise_suppression, options_in.noise_suppression,
+            options_in.noise_suppression_mode, "noise suppression",
+            &AudioDeviceModule::BuiltInNSIsAvailable, &AudioDeviceModule::EnableBuiltInNS)) {
+      return apply_result;
     }
   }
 
