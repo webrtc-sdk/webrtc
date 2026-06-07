@@ -200,6 +200,7 @@ if (is_android) {
     sources = [
       "api/org/webrtc/AudioDecoderFactoryFactory.java",
       "api/org/webrtc/AudioEncoderFactoryFactory.java",
+      "api/org/webrtc/audio/AudioProcessingComponentOptions.java",
       "api/org/webrtc/audio/AudioProcessingMode.java",
       "api/org/webrtc/audio/AudioProcessingOptions.java",
       "api/org/webrtc/audio/AudioDeviceModule.java",

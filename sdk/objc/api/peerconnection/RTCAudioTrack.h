@@ -33,6 +33,23 @@ typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCAudioProcessingMode)) {
   RTC_OBJC_TYPE(RTCAudioProcessingModeSoftware) = 2,
 };
 
+/** Enabled flag and implementation mode for one audio processing component. */
+RTC_OBJC_EXPORT
+@interface RTC_OBJC_TYPE (RTCAudioProcessingComponentOptions) : NSObject
+
+@property(nonatomic, readonly, getter=isEnabled) BOOL enabled;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioProcessingMode) mode;
+
+- (instancetype)initWithEnabled:(BOOL)enabled;
+
+- (instancetype)initWithEnabled:(BOOL)enabled
+                           mode:(RTC_OBJC_TYPE(RTCAudioProcessingMode))mode
+    NS_DESIGNATED_INITIALIZER;
+
+- (instancetype)init NS_UNAVAILABLE;
+
+@end
+
 RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCAudioProcessingOptions) : NSObject
 
@@ -55,18 +72,14 @@ RTC_OBJC_EXPORT
                           highPassFilter:(BOOL)highPassFilter;
 
 - (instancetype)
-    initWithEchoCancellation:(BOOL)echoCancellation
-            noiseSuppression:(BOOL)noiseSuppression
-             autoGainControl:(BOOL)autoGainControl
-              highPassFilter:(BOOL)highPassFilter
-        echoCancellationMode:
-            (RTC_OBJC_TYPE(RTCAudioProcessingMode))echoCancellationMode
-        noiseSuppressionMode:
-            (RTC_OBJC_TYPE(RTCAudioProcessingMode))noiseSuppressionMode
-         autoGainControlMode:
-             (RTC_OBJC_TYPE(RTCAudioProcessingMode))autoGainControlMode
-          highPassFilterMode:
-              (RTC_OBJC_TYPE(RTCAudioProcessingMode))highPassFilterMode
+    initWithEchoCancellationOptions:
+        (RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)echoCancellationOptions
+            noiseSuppressionOptions:
+                (RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)noiseSuppressionOptions
+             autoGainControlOptions:
+                 (RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)autoGainControlOptions
+              highPassFilterOptions:
+                  (RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)highPassFilterOptions
     NS_DESIGNATED_INITIALIZER;
 
 + (instancetype)communicationOptions;

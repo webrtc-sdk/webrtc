@@ -21,23 +21,32 @@ public final class AudioProcessingOptions {
 
   public AudioProcessingOptions(boolean echoCancellation, boolean noiseSuppression,
       boolean autoGainControl, boolean highPassFilter) {
-    this(echoCancellation, noiseSuppression, autoGainControl, highPassFilter,
-        AudioProcessingMode.AUTOMATIC, AudioProcessingMode.AUTOMATIC,
-        AudioProcessingMode.AUTOMATIC, AudioProcessingMode.AUTOMATIC);
+    this(new AudioProcessingComponentOptions(
+             echoCancellation, AudioProcessingMode.AUTOMATIC),
+        new AudioProcessingComponentOptions(
+            noiseSuppression, AudioProcessingMode.AUTOMATIC),
+        new AudioProcessingComponentOptions(
+            autoGainControl, AudioProcessingMode.AUTOMATIC),
+        new AudioProcessingComponentOptions(
+            highPassFilter, AudioProcessingMode.AUTOMATIC));
   }
 
-  public AudioProcessingOptions(boolean echoCancellation, boolean noiseSuppression,
-      boolean autoGainControl, boolean highPassFilter, AudioProcessingMode echoCancellationMode,
-      AudioProcessingMode noiseSuppressionMode, AudioProcessingMode autoGainControlMode,
-      AudioProcessingMode highPassFilterMode) {
-    this.echoCancellation = echoCancellation;
-    this.noiseSuppression = noiseSuppression;
-    this.autoGainControl = autoGainControl;
-    this.highPassFilter = highPassFilter;
-    this.echoCancellationMode = checkNotNull(echoCancellationMode, "echoCancellationMode");
-    this.noiseSuppressionMode = checkNotNull(noiseSuppressionMode, "noiseSuppressionMode");
-    this.autoGainControlMode = checkNotNull(autoGainControlMode, "autoGainControlMode");
-    this.highPassFilterMode = checkNotNull(highPassFilterMode, "highPassFilterMode");
+  public AudioProcessingOptions(AudioProcessingComponentOptions echoCancellationOptions,
+      AudioProcessingComponentOptions noiseSuppressionOptions,
+      AudioProcessingComponentOptions autoGainControlOptions,
+      AudioProcessingComponentOptions highPassFilterOptions) {
+    echoCancellationOptions = checkNotNull(echoCancellationOptions, "echoCancellationOptions");
+    noiseSuppressionOptions = checkNotNull(noiseSuppressionOptions, "noiseSuppressionOptions");
+    autoGainControlOptions = checkNotNull(autoGainControlOptions, "autoGainControlOptions");
+    highPassFilterOptions = checkNotNull(highPassFilterOptions, "highPassFilterOptions");
+    this.echoCancellation = echoCancellationOptions.enabled;
+    this.noiseSuppression = noiseSuppressionOptions.enabled;
+    this.autoGainControl = autoGainControlOptions.enabled;
+    this.highPassFilter = highPassFilterOptions.enabled;
+    this.echoCancellationMode = echoCancellationOptions.mode;
+    this.noiseSuppressionMode = noiseSuppressionOptions.mode;
+    this.autoGainControlMode = autoGainControlOptions.mode;
+    this.highPassFilterMode = highPassFilterOptions.mode;
   }
 
   public static AudioProcessingOptions communication() {

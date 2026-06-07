@@ -23,6 +23,28 @@
 
 #include "rtc_base/checks.h"
 
+@implementation RTC_OBJC_TYPE (RTCAudioProcessingComponentOptions)
+
+@synthesize enabled = _enabled;
+@synthesize mode = _mode;
+
+- (instancetype)initWithEnabled:(BOOL)enabled {
+  return [self initWithEnabled:enabled
+                          mode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)];
+}
+
+- (instancetype)initWithEnabled:(BOOL)enabled
+                           mode:(RTC_OBJC_TYPE(RTCAudioProcessingMode))mode {
+  self = [super init];
+  if (self) {
+    _enabled = enabled;
+    _mode = mode;
+  }
+  return self;
+}
+
+@end
+
 @implementation RTC_OBJC_TYPE (RTCAudioProcessingOptions)
 
 @synthesize echoCancellation = _echoCancellation;
@@ -39,39 +61,47 @@
                          autoGainControl:(BOOL)autoGainControl
                           highPassFilter:(BOOL)highPassFilter {
   return [self
-      initWithEchoCancellation:echoCancellation
-              noiseSuppression:noiseSuppression
-               autoGainControl:autoGainControl
-                highPassFilter:highPassFilter
-          echoCancellationMode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)
-          noiseSuppressionMode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)
-           autoGainControlMode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)
-            highPassFilterMode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)];
+      initWithEchoCancellationOptions:
+          [[RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) alloc]
+              initWithEnabled:echoCancellation
+                         mode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)]
+          noiseSuppressionOptions:
+              [[RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) alloc]
+                  initWithEnabled:noiseSuppression
+                             mode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)]
+           autoGainControlOptions:
+               [[RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) alloc]
+                   initWithEnabled:autoGainControl
+                              mode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)]
+            highPassFilterOptions:
+                [[RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) alloc]
+                    initWithEnabled:highPassFilter
+                               mode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)]];
 }
 
 - (instancetype)
-    initWithEchoCancellation:(BOOL)echoCancellation
-            noiseSuppression:(BOOL)noiseSuppression
-             autoGainControl:(BOOL)autoGainControl
-              highPassFilter:(BOOL)highPassFilter
-        echoCancellationMode:
-            (RTC_OBJC_TYPE(RTCAudioProcessingMode))echoCancellationMode
-        noiseSuppressionMode:
-            (RTC_OBJC_TYPE(RTCAudioProcessingMode))noiseSuppressionMode
-         autoGainControlMode:
-             (RTC_OBJC_TYPE(RTCAudioProcessingMode))autoGainControlMode
-          highPassFilterMode:
-              (RTC_OBJC_TYPE(RTCAudioProcessingMode))highPassFilterMode {
+    initWithEchoCancellationOptions:
+        (RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)echoCancellationOptions
+            noiseSuppressionOptions:
+                (RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)noiseSuppressionOptions
+             autoGainControlOptions:
+                 (RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)autoGainControlOptions
+              highPassFilterOptions:
+                  (RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)highPassFilterOptions {
+  NSParameterAssert(echoCancellationOptions);
+  NSParameterAssert(noiseSuppressionOptions);
+  NSParameterAssert(autoGainControlOptions);
+  NSParameterAssert(highPassFilterOptions);
   self = [super init];
   if (self) {
-    _echoCancellation = echoCancellation;
-    _noiseSuppression = noiseSuppression;
-    _autoGainControl = autoGainControl;
-    _highPassFilter = highPassFilter;
-    _echoCancellationMode = echoCancellationMode;
-    _noiseSuppressionMode = noiseSuppressionMode;
-    _autoGainControlMode = autoGainControlMode;
-    _highPassFilterMode = highPassFilterMode;
+    _echoCancellation = echoCancellationOptions.enabled;
+    _noiseSuppression = noiseSuppressionOptions.enabled;
+    _autoGainControl = autoGainControlOptions.enabled;
+    _highPassFilter = highPassFilterOptions.enabled;
+    _echoCancellationMode = echoCancellationOptions.mode;
+    _noiseSuppressionMode = noiseSuppressionOptions.mode;
+    _autoGainControlMode = autoGainControlOptions.mode;
+    _highPassFilterMode = highPassFilterOptions.mode;
   }
   return self;
 }
