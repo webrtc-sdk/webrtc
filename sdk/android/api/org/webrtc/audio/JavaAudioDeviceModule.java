@@ -396,6 +396,7 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
     return WebRtcAudioEffects.isNoiseSuppressorSupported();
   }
 
+  /** Order must match {@code webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology}. */
   public enum BuiltInAudioProcessingTopology {
     INDEPENDENT,
     ECHO_CANCELLATION_AND_NOISE_SUPPRESSION_COUPLED,

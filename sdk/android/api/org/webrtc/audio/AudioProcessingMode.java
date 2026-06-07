@@ -15,6 +15,8 @@ package org.webrtc.audio;
  * exposes platform acoustic echo cancellation and noise suppression when the device supports them.
  * Android does not expose platform automatic gain control or high-pass filter through this path
  * today, so those platform requests are rejected by {@code AudioTrack}.
+ *
+ * <p>Order must match {@code webrtc::AudioProcessingMode} because JNI passes ordinal values.
  */
 public enum AudioProcessingMode {
   /**

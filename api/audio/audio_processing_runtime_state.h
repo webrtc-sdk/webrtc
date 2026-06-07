@@ -24,12 +24,14 @@
 
 namespace webrtc {
 
+// Keep numeric values in sync with the Java and ObjC API enums because
+// diagnostics pass these values across language boundaries.
 enum class AudioProcessingImplementation {
-  kUnknown,
-  kDisabled,
-  kSoftware,
-  kPlatform,
-  kSoftwareAndPlatform,
+  kUnknown = 0,
+  kDisabled = 1,
+  kSoftware = 2,
+  kPlatform = 3,
+  kSoftwareAndPlatform = 4,
 };
 
 struct AudioProcessingComponentRuntimeState {

@@ -18,6 +18,7 @@ package org.webrtc.audio;
 
 /** Result returned when updating runtime audio processing options. */
 public final class AudioProcessingOptionsResult {
+  /** Order must match {@code webrtc::AudioProcessingOptionsResultCode}. */
   public enum Code {
     APPLIED,
     STORED,

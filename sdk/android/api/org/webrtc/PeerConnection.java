@@ -98,6 +98,7 @@ public class PeerConnection {
     }
   }
 
+  /** Order must match {@code webrtc::AudioProcessingImplementation}. */
   public enum AudioProcessingImplementation {
     UNKNOWN,
     DISABLED,

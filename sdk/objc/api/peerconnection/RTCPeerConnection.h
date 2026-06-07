@@ -84,6 +84,7 @@ typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCStatsOutputLevel)) {
   RTC_OBJC_TYPE(RTCStatsOutputLevelDebug),
 };
 
+// Values must match webrtc::AudioProcessingImplementation.
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCAudioProcessingImplementation)) {
   RTC_OBJC_TYPE(RTCAudioProcessingImplementationUnknown) = 0,
   RTC_OBJC_TYPE(RTCAudioProcessingImplementationDisabled) = 1,

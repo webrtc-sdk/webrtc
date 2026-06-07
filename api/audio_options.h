@@ -27,6 +27,8 @@ namespace webrtc {
 // processing. Some ADMs expose coupled platform effects, such as Apple Voice
 // Processing I/O for AEC and NS. High-pass filter has no platform
 // implementation today.
+// Keep numeric values in sync with the Java and ObjC API enums because bridges
+// pass these values across language boundaries.
 enum class AudioProcessingMode {
   kAutomatic = 0,
   kPlatform = 1,

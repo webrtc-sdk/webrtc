@@ -63,6 +63,7 @@ typedef struct {
   BOOL isOutputAvailable;
 } RTC_OBJC_TYPE(RTCAudioEngineAvailability);
 
+// Values must match webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology.
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopology)) {
   RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopologyIndependent) = 0,
   RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopologyEchoCancellationAndNoiseSuppressionCoupled) = 1,

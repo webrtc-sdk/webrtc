@@ -24,6 +24,8 @@
 
 namespace webrtc {
 
+// Keep numeric values in sync with the Java and ObjC API enums because bridges
+// pass these values across language boundaries.
 enum class AudioProcessingOptionsResultCode {
   // Options were applied immediately by the component handling the request.
   kApplied = 0,

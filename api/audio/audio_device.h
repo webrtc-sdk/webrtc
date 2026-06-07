@@ -62,16 +62,18 @@ class AudioDeviceModule : public RefCountInterface {
     kEnded,
   };
 
+  // Keep numeric values in sync with the Java and ObjC API enums because
+  // diagnostics pass these values across language boundaries.
   enum class BuiltInAudioProcessingTopology {
     // Platform AEC, NS, and AGC can be controlled independently.
-    kIndependent,
+    kIndependent = 0,
     // Platform AEC and NS are exposed through one shared voice-processing
     // bypass switch. Platform AGC has a separate switch, but only has an
     // effect while the shared AEC/NS voice-processing path is active. Enabling
     // either AEC or NS may activate the shared platform path for both effects.
     // AGC alone must not activate that shared path, so AGC falls back to
     // software unless AEC or NS already made the shared path active.
-    kEchoCancellationAndNoiseSuppressionCoupled,
+    kEchoCancellationAndNoiseSuppressionCoupled = 1,
   };
 
   struct BuiltInAudioProcessingState {

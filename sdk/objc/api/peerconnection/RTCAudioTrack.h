@@ -25,6 +25,8 @@ NS_ASSUME_NONNULL_BEGIN
  * disables the matching platform effect and uses WebRTC software processing.
  * Some ADMs expose coupled platform effects, such as Apple Voice Processing I/O
  * for AEC and NS. High-pass filter has no platform implementation today.
+ *
+ * Values must match webrtc::AudioProcessingMode.
  */
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCAudioProcessingMode)) {
   RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic) = 0,
@@ -32,6 +34,7 @@ typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCAudioProcessingMode)) {
   RTC_OBJC_TYPE(RTCAudioProcessingModeSoftware) = 2,
 };
 
+// Values must match webrtc::AudioProcessingOptionsResultCode.
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCode)) {
   /** Options were applied immediately by the component handling the request. */
   RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeApplied) = 0,
