@@ -57,7 +57,7 @@ public class AudioTrack extends MediaStreamTrack {
         JavaAudioDeviceModule.isBuiltInAcousticEchoCancelerSupported();
     boolean isNoiseSuppressionPlatformAvailable =
         JavaAudioDeviceModule.isBuiltInNoiseSuppressorSupported();
-    return AudioProcessingOptionsResult.fromNativeCode(nativeSetAudioProcessingOptions(
+    return AudioProcessingOptionsResult.fromNativeResult(nativeSetAudioProcessingOptions(
         getNativeAudioTrack(), options.echoCancellation,
         options.noiseSuppression, options.autoGainControl, options.highPassFilter,
         isEchoCancellationPlatformAvailable, isNoiseSuppressionPlatformAvailable,
@@ -112,7 +112,7 @@ public class AudioTrack extends MediaStreamTrack {
 
   private static native void nativeSetVolume(long track, double volume);
   private static native double nativeGetVolume(long track);
-  private static native int nativeSetAudioProcessingOptions(long track, boolean echoCancellation,
+  private static native String nativeSetAudioProcessingOptions(long track, boolean echoCancellation,
       boolean noiseSuppression, boolean autoGainControl, boolean highPassFilter,
       boolean isEchoCancellationPlatformAvailable, boolean isNoiseSuppressionPlatformAvailable,
       int echoCancellationMode, int noiseSuppressionMode, int autoGainControlMode,

@@ -10,9 +10,12 @@
 
 #include <jni.h>
 
+#include <string>
+
 #include "api/audio/audio_processing_options_resolver.h"
 #include "api/media_stream_interface.h"
 #include "sdk/android/generated_peerconnection_jni/AudioTrack_jni.h"
+#include "sdk/android/native_api/jni/java_types.h"
 #include "sdk/android/src/jni/pc/audio_sink.h"
 
 namespace webrtc {
@@ -31,6 +34,10 @@ AudioProcessingMode AudioProcessingModeFromJava(int mode) {
   }
 }
 
+std::string NativeAudioProcessingResult(const AudioProcessingOptionsResult& result) {
+  return std::to_string(static_cast<int>(result.code)) + "\n" + result.message;
+}
+
 }  // namespace
 
 static void JNI_AudioTrack_SetVolume(JNIEnv*, jlong j_p, jdouble volume) {
@@ -41,13 +48,12 @@ static jdouble JNI_AudioTrack_GetVolume(JNIEnv*, jlong j_p) {
   return reinterpret_cast<AudioTrackInterface*>(j_p)->GetVolume();
 }
 
-static jint JNI_AudioTrack_SetAudioProcessingOptions(JNIEnv *, jlong j_p, jboolean echo_cancellation,
-                                                     jboolean noise_suppression, jboolean auto_gain_control,
-                                                     jboolean high_pass_filter,
-                                                     jboolean is_echo_cancellation_platform_available,
-                                                     jboolean is_noise_suppression_platform_available,
-                                                     jint echo_cancellation_mode, jint noise_suppression_mode,
-                                                     jint auto_gain_control_mode, jint high_pass_filter_mode) {
+static ScopedJavaLocalRef<jstring> JNI_AudioTrack_SetAudioProcessingOptions(
+    JNIEnv *jni, jlong j_p, jboolean echo_cancellation, jboolean noise_suppression,
+    jboolean auto_gain_control, jboolean high_pass_filter,
+    jboolean is_echo_cancellation_platform_available,
+    jboolean is_noise_suppression_platform_available, jint echo_cancellation_mode,
+    jint noise_suppression_mode, jint auto_gain_control_mode, jint high_pass_filter_mode) {
   AudioTrackInterface* track = reinterpret_cast<AudioTrackInterface*>(j_p);
   AudioOptions options;
   options.echo_cancellation = static_cast<bool>(echo_cancellation);
@@ -69,10 +75,10 @@ static jint JNI_AudioTrack_SetAudioProcessingOptions(JNIEnv *, jlong j_p, jboole
       static_cast<bool>(is_noise_suppression_platform_available);
   AudioProcessingOptionsResult validation = ValidateAudioProcessingOptions(options, validation_context);
   if (!validation.ok()) {
-    return static_cast<jint>(validation.code);
+    return NativeToJavaString(jni, NativeAudioProcessingResult(validation));
   }
   AudioProcessingOptionsResult result = track->SetAudioProcessingOptions(options);
-  return static_cast<jint>(result.code);
+  return NativeToJavaString(jni, NativeAudioProcessingResult(result));
 }
 
 static void JNI_AudioTrack_AddSink(JNIEnv* jni,

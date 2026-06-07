@@ -48,12 +48,34 @@ public final class AudioProcessingOptionsResult {
   }
 
   public static AudioProcessingOptionsResult fromNativeCode(int nativeCode) {
+    return fromNativeCodeAndMessage(nativeCode, "");
+  }
+
+  public static AudioProcessingOptionsResult fromNativeResult(String nativeResult) {
+    if (nativeResult == null) {
+      return rejected(Code.APPLY_FAILED, "Missing native audio processing result");
+    }
+    int separator = nativeResult.indexOf('\n');
+    String nativeCode = separator < 0 ? nativeResult : nativeResult.substring(0, separator);
+    String message = separator < 0 ? "" : nativeResult.substring(separator + 1);
+    try {
+      return fromNativeCodeAndMessage(Integer.parseInt(nativeCode), message);
+    } catch (NumberFormatException e) {
+      return rejected(Code.APPLY_FAILED, "Invalid native audio processing result");
+    }
+  }
+
+  private static AudioProcessingOptionsResult fromNativeCodeAndMessage(
+      int nativeCode, String message) {
     Code[] values = Code.values();
     if (nativeCode < 0 || nativeCode >= values.length) {
       return rejected(Code.APPLY_FAILED, "Unknown native audio processing result code");
     }
     Code code = values[nativeCode];
-    return new AudioProcessingOptionsResult(code, defaultMessage(code));
+    if (message == null || message.isEmpty()) {
+      message = defaultMessage(code);
+    }
+    return new AudioProcessingOptionsResult(code, message);
   }
 
   private static String defaultMessage(Code code) {
