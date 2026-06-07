@@ -16,6 +16,17 @@ NS_ASSUME_NONNULL_BEGIN
 @protocol RTC_OBJC_TYPE (RTCAudioRenderer);
 @class RTC_OBJC_TYPE(RTCAudioSource);
 
+/** Selects the implementation for one enabled audio processing component.
+ *
+ * Disabled components do not use platform or software processing regardless of
+ * mode. Automatic uses platform processing when available and otherwise falls
+ * back to WebRTC software processing. Platform uses only platform processing, so
+ * unavailable platform support resolves to disabled. Software disables the
+ * matching platform effect and uses WebRTC software processing. Some ADMs expose
+ * coupled platform effects, such as Apple Voice Processing I/O for AEC and NS.
+ * High-pass filter has no platform implementation today, so platform HPF
+ * resolves to disabled.
+ */
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCAudioProcessingMode)) {
   RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic) = 0,
   RTC_OBJC_TYPE(RTCAudioProcessingModePlatform) = 1,
