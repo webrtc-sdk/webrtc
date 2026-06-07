@@ -312,11 +312,13 @@ class RTC_EXPORT AudioTrackInterface : public MediaStreamTrackInterface {
   }
 
   // Updates echo cancellation, noise suppression, automatic gain control, and
-  // high-pass filter options on the underlying local source. Implementations
-  // may notify track observers so active senders can reapply the updated
-  // options without replacing the track. The effective audio processing module
-  // configuration is shared by the voice engine/channel, so conflicting updates
-  // from multiple local tracks are not isolated per track.
+  // high-pass filter options on the underlying local source. Returns kStored
+  // when the request was accepted and stored. Implementations may notify track
+  // observers so active senders can reapply the updated options without
+  // replacing the track. Rejections mean the options were not stored. The
+  // effective audio processing module configuration is shared by the voice
+  // engine/channel, so conflicting updates from multiple local tracks are not
+  // isolated per track.
   virtual AudioProcessingOptionsResult SetAudioProcessingOptions(const AudioOptions &options);
 
   // Add/Remove a sink that will receive the audio data from the track.

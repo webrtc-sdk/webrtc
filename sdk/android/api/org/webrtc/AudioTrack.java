@@ -44,7 +44,9 @@ public class AudioTrack extends MediaStreamTrack {
    * The effective audio processing module configuration is shared by the voice engine/channel, so
    * conflicting updates from multiple local tracks are not isolated per track.
    *
-   * @return result code describing whether the request was accepted or why it was rejected.
+   * @return result code describing whether the request was accepted or why it was rejected. {@code
+   *     STORED} means the request was accepted and stored. Rejections mean the options were not
+   *     stored.
    */
   public AudioProcessingOptionsResult setAudioProcessingOptions(AudioProcessingOptions options) {
     if (options == null) {

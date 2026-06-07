@@ -25,7 +25,9 @@
 namespace webrtc {
 
 enum class AudioProcessingOptionsResultCode {
+  // Options were applied immediately by the component handling the request.
   kApplied = 0,
+  // Options were accepted and stored. Active senders may reapply them later.
   kStored = 1,
   kRejectedRemoteTrack = 2,
   kRejectedInvalidCombination = 3,

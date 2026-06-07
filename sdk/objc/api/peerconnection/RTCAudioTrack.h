@@ -33,7 +33,9 @@ typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCAudioProcessingMode)) {
 };
 
 typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCode)) {
+  /** Options were applied immediately by the component handling the request. */
   RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeApplied) = 0,
+  /** Options were accepted and stored. Active senders reapply them separately. */
   RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeStored) = 1,
   RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedRemoteTrack) = 2,
   RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedInvalidCombination) = 3,
@@ -119,10 +121,12 @@ RTC_OBJC_EXPORT
 
 /** Updates local source audio processing options without restarting capture.
  *
+ * Returns Stored when the request was accepted and stored on the local source.
  * If the track is already being sent, active senders observe the track update
- * and reapply the updated options. The effective audio processing module
- * configuration is shared by the voice engine/channel, so conflicting updates
- * from multiple local tracks are not isolated per track.
+ * and reapply the updated options through the voice engine. Rejections mean the
+ * options were not stored. The effective audio processing module configuration
+ * is shared by the voice engine/channel, so conflicting updates from multiple
+ * local tracks are not isolated per track.
  */
 - (RTC_OBJC_TYPE(RTCAudioProcessingOptionsResult) *)setAudioProcessingOptions:
     (RTC_OBJC_TYPE(RTCAudioProcessingOptions) *)options;
