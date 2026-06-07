@@ -1070,12 +1070,12 @@ int32_t AudioEngineDevice::RegisterAudioCallback(AudioTransport* audioCallback) 
 // BuiltInVoiceProcessingPathIsAvailable before these checks when it needs to
 // recreate the path from a software or disabled state.
 bool AudioEngineDevice::BuiltInAECIsAvailable() const {
-#if TARGET_OS_SIMULATOR
-  return false;
-#else
-  RTC_DCHECK_RUN_ON(thread_);
-  return engine_state_.voice_processing_enabled;
-#endif
+  // Echo cancellation is a device capability provided by the VPIO path, not a
+  // function of whether VPIO is currently on -- an automatic/platform request
+  // re-creates the path. Mirrors GetBuiltInAudioProcessingState() and matches
+  // the Android ADM, where availability means device support. Current on/off
+  // state is exposed separately via is_echo_cancellation_active.
+  return BuiltInVoiceProcessingPathIsAvailable();
 }
 
 bool AudioEngineDevice::BuiltInAGCIsAvailable() const {
@@ -1088,12 +1088,9 @@ bool AudioEngineDevice::BuiltInAGCIsAvailable() const {
 }
 
 bool AudioEngineDevice::BuiltInNSIsAvailable() const {
-#if TARGET_OS_SIMULATOR
-  return false;
-#else
-  RTC_DCHECK_RUN_ON(thread_);
-  return engine_state_.voice_processing_enabled;
-#endif
+  // Noise suppression is a device capability provided by the VPIO path; see
+  // BuiltInAECIsAvailable.
+  return BuiltInVoiceProcessingPathIsAvailable();
 }
 
 AudioDeviceModule::BuiltInAudioProcessingTopology
@@ -1128,10 +1125,16 @@ AudioDeviceModule::BuiltInAudioProcessingState AudioEngineDevice::GetBuiltInAudi
 #else
   RTC_DCHECK_RUN_ON(thread_);
 
-  const bool is_platform_available = engine_state_.voice_processing_enabled;
-  state.is_echo_cancellation_available = is_platform_available;
-  state.is_noise_suppression_available = is_platform_available;
-  state.is_auto_gain_control_available = is_platform_available;
+  // AEC and NS availability is a device capability: a platform request recreates
+  // the shared VPIO path even when it is currently off (see
+  // SetVoiceProcessingEnabled), so report capability rather than the current
+  // on/off state. AGC differs -- Apple AGC can only be toggled while VPIO is
+  // active and AGC alone never creates the path, so its availability tracks the
+  // current VP state, matching ValidateAudioProcessingOptions.
+  const bool path_available = BuiltInVoiceProcessingPathIsAvailable();
+  state.is_echo_cancellation_available = path_available;
+  state.is_noise_suppression_available = path_available;
+  state.is_auto_gain_control_available = engine_state_.voice_processing_enabled;
 
   state.is_echo_cancellation_requested = engine_state_.built_in_aec_enabled;
   state.is_noise_suppression_requested = engine_state_.built_in_ns_enabled;
