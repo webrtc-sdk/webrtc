@@ -30,9 +30,17 @@ namespace webrtc {
 AudioProcessingOptionsResult ValidateAudioProcessingOptionsForApply(AudioDeviceModule *adm,
                                                                     const AudioOptions &options);
 
-AudioOptions ApplyAudioProcessingOptions(AudioProcessing* apm,
-                                         AudioDeviceModule* adm,
-                                         const AudioOptions& options);
+struct AudioProcessingApplyResult {
+  // Apply outcome for ADM platform effects and APM software config.
+  AudioProcessingOptionsResult result = AudioProcessingOptionsResult::Applied();
+  // AudioOptions after platform/software resolution. These are the values written
+  // to WebRTC APM when result is successful.
+  AudioOptions resolved_options;
+};
+
+AudioProcessingApplyResult ApplyAudioProcessingOptions(AudioProcessing* apm,
+                                                       AudioDeviceModule* adm,
+                                                       const AudioOptions& options);
 
 AudioProcessingRuntimeState GetAudioProcessingRuntimeState(
     AudioProcessing* apm,

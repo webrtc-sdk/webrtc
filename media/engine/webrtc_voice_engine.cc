@@ -653,8 +653,15 @@ AudioProcessingOptionsResult WebRtcVoiceEngine::ApplyOptions(const AudioOptions 
     return validation;
   }
 
+  AudioProcessingApplyResult apply_result =
+      ApplyAudioProcessingOptions(apm(), adm(), options);
+  if (!apply_result.result.ok()) {
+    RTC_LOG(LS_WARNING) << "Failed to apply audio processing options: "
+                        << apply_result.result.message;
+    return apply_result.result;
+  }
   last_requested_audio_processing_options_ = options_in;
-  options = ApplyAudioProcessingOptions(apm(), adm(), options);
+  options = apply_result.resolved_options;
   last_resolved_audio_processing_options_ = options;
   RTC_LOG(LS_INFO) << "Applied audio processing options: " << options.ToString();
 
