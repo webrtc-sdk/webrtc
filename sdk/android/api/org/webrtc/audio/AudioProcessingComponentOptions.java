@@ -10,15 +10,15 @@ package org.webrtc.audio;
 
 /** Enabled flag and implementation mode for one audio processing component. */
 public final class AudioProcessingComponentOptions {
-  public final boolean enabled;
+  public final boolean isEnabled;
   public final AudioProcessingMode mode;
 
-  public AudioProcessingComponentOptions(boolean enabled) {
-    this(enabled, AudioProcessingMode.AUTOMATIC);
+  public AudioProcessingComponentOptions(boolean isEnabled) {
+    this(isEnabled, AudioProcessingMode.AUTOMATIC);
   }
 
-  public AudioProcessingComponentOptions(boolean enabled, AudioProcessingMode mode) {
-    this.enabled = enabled;
+  public AudioProcessingComponentOptions(boolean isEnabled, AudioProcessingMode mode) {
+    this.isEnabled = isEnabled;
     this.mode = checkNotNull(mode, "mode");
   }
 

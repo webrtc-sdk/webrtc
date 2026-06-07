@@ -39,10 +39,10 @@ public final class AudioProcessingOptions {
     noiseSuppressionOptions = checkNotNull(noiseSuppressionOptions, "noiseSuppressionOptions");
     autoGainControlOptions = checkNotNull(autoGainControlOptions, "autoGainControlOptions");
     highPassFilterOptions = checkNotNull(highPassFilterOptions, "highPassFilterOptions");
-    this.echoCancellation = echoCancellationOptions.enabled;
-    this.noiseSuppression = noiseSuppressionOptions.enabled;
-    this.autoGainControl = autoGainControlOptions.enabled;
-    this.highPassFilter = highPassFilterOptions.enabled;
+    this.echoCancellation = echoCancellationOptions.isEnabled;
+    this.noiseSuppression = noiseSuppressionOptions.isEnabled;
+    this.autoGainControl = autoGainControlOptions.isEnabled;
+    this.highPassFilter = highPassFilterOptions.isEnabled;
     this.echoCancellationMode = echoCancellationOptions.mode;
     this.noiseSuppressionMode = noiseSuppressionOptions.mode;
     this.autoGainControlMode = autoGainControlOptions.mode;

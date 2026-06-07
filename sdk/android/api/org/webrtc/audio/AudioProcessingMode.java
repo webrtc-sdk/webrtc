@@ -11,9 +11,10 @@ package org.webrtc.audio;
 /**
  * Selects the implementation for one enabled audio processing component.
  *
- * <p>Disabled components do not use platform or software processing regardless of mode. Some audio
- * device modules expose coupled platform effects, such as Apple Voice Processing I/O for AEC and
- * NS. High-pass filter has no platform implementation today, so platform HPF resolves to disabled.
+ * <p>Disabled components do not use platform or software processing regardless of mode. Android
+ * exposes platform acoustic echo cancellation and noise suppression when the device supports them.
+ * Android does not expose platform automatic gain control or high-pass filter through this path
+ * today, so platform AGC and HPF resolve to disabled.
  */
 public enum AudioProcessingMode {
   /**
