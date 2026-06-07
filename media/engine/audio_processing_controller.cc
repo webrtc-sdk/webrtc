@@ -536,28 +536,25 @@ AudioProcessingRuntimeState GetAudioProcessingRuntimeState(
   state.has_resolved_audio_processing_options = resolved_options.has_value();
   state.topology = built_in.topology;
   state.built_in = built_in;
+  const AudioOptions requested = requested_options.value_or(AudioOptions());
+  const AudioOptions resolved = resolved_options.value_or(AudioOptions());
   state.echo_cancellation =
-      BuildComponentRuntimeState(requested_options ? requested_options->echo_cancellation : std::nullopt,
-                                 requested_options ? requested_options->echo_cancellation_mode : std::nullopt,
-                                 resolved_options ? resolved_options->echo_cancellation : std::nullopt,
-                                 software_echo_cancellation, built_in.is_echo_cancellation_available,
+      BuildComponentRuntimeState(requested.echo_cancellation, requested.echo_cancellation_mode,
+                                 resolved.echo_cancellation, software_echo_cancellation,
+                                 built_in.is_echo_cancellation_available,
                                  built_in.is_echo_cancellation_requested, built_in.is_echo_cancellation_active);
   state.noise_suppression =
-      BuildComponentRuntimeState(requested_options ? requested_options->noise_suppression : std::nullopt,
-                                 requested_options ? requested_options->noise_suppression_mode : std::nullopt,
-                                 resolved_options ? resolved_options->noise_suppression : std::nullopt,
-                                 software_noise_suppression, built_in.is_noise_suppression_available,
+      BuildComponentRuntimeState(requested.noise_suppression, requested.noise_suppression_mode,
+                                 resolved.noise_suppression, software_noise_suppression,
+                                 built_in.is_noise_suppression_available,
                                  built_in.is_noise_suppression_requested, built_in.is_noise_suppression_active);
   state.auto_gain_control =
-      BuildComponentRuntimeState(requested_options ? requested_options->auto_gain_control : std::nullopt,
-                                 requested_options ? requested_options->auto_gain_control_mode : std::nullopt,
-                                 resolved_options ? resolved_options->auto_gain_control : std::nullopt,
-                                 software_auto_gain_control, built_in.is_auto_gain_control_available,
+      BuildComponentRuntimeState(requested.auto_gain_control, requested.auto_gain_control_mode,
+                                 resolved.auto_gain_control, software_auto_gain_control,
+                                 built_in.is_auto_gain_control_available,
                                  built_in.is_auto_gain_control_requested, built_in.is_auto_gain_control_active);
   state.high_pass_filter = BuildComponentRuntimeState(
-      requested_options ? requested_options->highpass_filter : std::nullopt,
-      requested_options ? requested_options->highpass_filter_mode : std::nullopt,
-      resolved_options ? resolved_options->highpass_filter : std::nullopt,
+      requested.highpass_filter, requested.highpass_filter_mode, resolved.highpass_filter,
       software_high_pass_filter, false, std::nullopt, std::nullopt);
   return state;
 }
