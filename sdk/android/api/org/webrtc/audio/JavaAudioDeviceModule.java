@@ -526,11 +526,13 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
 
   public BuiltInAudioProcessingState getBuiltInAudioProcessingState() {
     WebRtcAudioEffects.State effectState = audioInput.getBuiltInAudioEffectsState();
+    boolean isAcousticEchoCancelerAvailable = audioInput.isAcousticEchoCancelerSupported();
+    boolean isNoiseSuppressorAvailable = audioInput.isNoiseSuppressorSupported();
     return new BuiltInAudioProcessingState(BuiltInAudioProcessingTopology.INDEPENDENT,
-        new BuiltInAudioProcessingComponentState(isBuiltInAcousticEchoCancelerSupported(),
-            effectState.isAecRequested, effectState.aecActive),
         new BuiltInAudioProcessingComponentState(
-            isBuiltInNoiseSuppressorSupported(), effectState.isNsRequested, effectState.nsActive),
+            isAcousticEchoCancelerAvailable, effectState.isAecRequested, effectState.aecActive),
+        new BuiltInAudioProcessingComponentState(
+            isNoiseSuppressorAvailable, effectState.isNsRequested, effectState.nsActive),
         new BuiltInAudioProcessingComponentState(false, null, null));
   }
 
