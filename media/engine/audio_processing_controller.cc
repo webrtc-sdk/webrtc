@@ -27,11 +27,30 @@ namespace {
 using AvailabilityFn = bool (AudioDeviceModule::*)() const;
 using EnableFn = int32_t (AudioDeviceModule::*)(bool);
 
+enum class PlatformEffectEnableResult {
+  kEnabled,
+  kNoAudioDeviceModule,
+  kUnavailable,
+  kEnableFailed,
+};
+
 void LogPlatformOnlyRequestDisabled(const char* component, const char* reason) {
-  RTC_LOG(LS_WARNING)
-      << "Requested platform " << component << " processing, but " << reason
-      << "; "
-         "software fallback is disabled by platform mode.";
+  RTC_LOG(LS_WARNING) << "Requested platform " << component << " processing, but " << reason
+                      << ". Software fallback is disabled by platform mode.";
+}
+
+const char *PlatformEffectEnableFailureReason(PlatformEffectEnableResult result) {
+  switch (result) {
+    case PlatformEffectEnableResult::kNoAudioDeviceModule:
+      return "there is no audio device module";
+    case PlatformEffectEnableResult::kUnavailable:
+      return "platform processing is not available";
+    case PlatformEffectEnableResult::kEnableFailed:
+      return "the audio device module rejected the enable request";
+    case PlatformEffectEnableResult::kEnabled:
+      return "platform processing is enabled";
+  }
+  return "platform processing could not be enabled";
 }
 
 bool DisablePlatformEffect(AudioDeviceModule* adm,
@@ -52,6 +71,20 @@ bool EnablePlatformEffect(AudioDeviceModule* adm,
   return (adm->*enable)(true) == 0;
 }
 
+PlatformEffectEnableResult TryEnablePlatformEffect(AudioDeviceModule *adm, AvailabilityFn is_available,
+                                                   EnableFn enable) {
+  if (adm == nullptr) {
+    return PlatformEffectEnableResult::kNoAudioDeviceModule;
+  }
+  if (!(adm->*is_available)()) {
+    return PlatformEffectEnableResult::kUnavailable;
+  }
+  if ((adm->*enable)(true) != 0) {
+    return PlatformEffectEnableResult::kEnableFailed;
+  }
+  return PlatformEffectEnableResult::kEnabled;
+}
+
 bool ApplyIndependentPlatformEffectAndResolveSoftware(std::optional<bool> enabled,
                                                       std::optional<AudioProcessingMode> mode,
                                                       const char *component, AudioDeviceModule *adm,
@@ -69,11 +102,9 @@ bool ApplyIndependentPlatformEffectAndResolveSoftware(std::optional<bool> enable
     case AudioProcessingMode::kAutomatic:
       return !EnablePlatformEffect(adm, is_available, enable);
     case AudioProcessingMode::kPlatform: {
-      const bool platform_enabled =
-          EnablePlatformEffect(adm, is_available, enable);
-      if (!platform_enabled) {
-        LogPlatformOnlyRequestDisabled(
-            component, "platform processing could not be enabled");
+      const PlatformEffectEnableResult platform_enable_result = TryEnablePlatformEffect(adm, is_available, enable);
+      if (platform_enable_result != PlatformEffectEnableResult::kEnabled) {
+        LogPlatformOnlyRequestDisabled(component, PlatformEffectEnableFailureReason(platform_enable_result));
       }
       return false;
     }

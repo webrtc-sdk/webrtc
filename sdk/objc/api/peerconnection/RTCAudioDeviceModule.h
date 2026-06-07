@@ -85,14 +85,35 @@ typedef struct {
 typedef struct {
   RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopology) topology;
 
+  // Normalized per-component built-in processing state. On Apple AudioEngine,
+  // AEC and NS are coupled through Voice Processing I/O, so one shared platform
+  // path can affect both components.
   RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) echoCancellation;
   RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) noiseSuppression;
   RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) autoGainControl;
 
+  // Requested values are the ADM's desired Apple Voice Processing I/O state.
+  // They are stored by the ADM and can be known before input is configured.
+  //
+  // voiceProcessingEnabledRequested maps to AVAudioInputNode
+  // setVoiceProcessingEnabled. Turning it off removes the VPIO graph entirely.
+  //
+  // voiceProcessingBypassedRequested maps to voiceProcessingBypassed while VPIO
+  // is enabled. Bypassing VPIO disables Apple's coupled AEC/NS path without
+  // necessarily rebuilding the engine.
+  //
+  // voiceProcessingAGCEnabledRequested maps to
+  // isVoiceProcessingAGCEnabled. Apple AGC has a separate switch, but it only
+  // has an effect while VPIO is active.
   RTC_OBJC_TYPE(RTCOptionalBool) voiceProcessingEnabledRequested;
   RTC_OBJC_TYPE(RTCOptionalBool) voiceProcessingBypassedRequested;
   RTC_OBJC_TYPE(RTCOptionalBool) voiceProcessingAGCEnabledRequested;
 
+  // Active values are live readback from the platform input node when the ADM
+  // can query it. They can be Unknown before input is configured, after the
+  // input path is torn down, or on platforms where the value is not observable.
+  // Active can temporarily differ from requested while the engine is applying
+  // a state transition or if the OS rejects a requested state.
   RTC_OBJC_TYPE(RTCOptionalBool) voiceProcessingEnabledActive;
   RTC_OBJC_TYPE(RTCOptionalBool) voiceProcessingBypassedActive;
   RTC_OBJC_TYPE(RTCOptionalBool) voiceProcessingAGCEnabledActive;
