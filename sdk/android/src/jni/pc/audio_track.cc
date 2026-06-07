@@ -43,9 +43,11 @@ static jdouble JNI_AudioTrack_GetVolume(JNIEnv*, jlong j_p) {
 
 static jint JNI_AudioTrack_SetAudioProcessingOptions(JNIEnv *, jlong j_p, jboolean echo_cancellation,
                                                      jboolean noise_suppression, jboolean auto_gain_control,
-                                                     jboolean high_pass_filter, jint echo_cancellation_mode,
-                                                     jint noise_suppression_mode, jint auto_gain_control_mode,
-                                                     jint high_pass_filter_mode) {
+                                                     jboolean high_pass_filter,
+                                                     jboolean is_echo_cancellation_platform_available,
+                                                     jboolean is_noise_suppression_platform_available,
+                                                     jint echo_cancellation_mode, jint noise_suppression_mode,
+                                                     jint auto_gain_control_mode, jint high_pass_filter_mode) {
   AudioTrackInterface* track = reinterpret_cast<AudioTrackInterface*>(j_p);
   AudioOptions options;
   options.echo_cancellation = static_cast<bool>(echo_cancellation);
@@ -61,8 +63,10 @@ static jint JNI_AudioTrack_SetAudioProcessingOptions(JNIEnv *, jlong j_p, jboole
   options.highpass_filter_mode =
       AudioProcessingModeFromJava(high_pass_filter_mode);
   AudioProcessingOptionsValidationContext validation_context;
-  validation_context.is_echo_cancellation_platform_available = true;
-  validation_context.is_noise_suppression_platform_available = true;
+  validation_context.is_echo_cancellation_platform_available =
+      static_cast<bool>(is_echo_cancellation_platform_available);
+  validation_context.is_noise_suppression_platform_available =
+      static_cast<bool>(is_noise_suppression_platform_available);
   AudioProcessingOptionsResult validation = ValidateAudioProcessingOptions(options, validation_context);
   if (!validation.ok()) {
     return static_cast<jint>(validation.code);

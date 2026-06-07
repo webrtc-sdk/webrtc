@@ -13,6 +13,7 @@ package org.webrtc;
 import java.util.IdentityHashMap;
 import org.webrtc.audio.AudioProcessingOptions;
 import org.webrtc.audio.AudioProcessingOptionsResult;
+import org.webrtc.audio.JavaAudioDeviceModule;
 
 /** Java wrapper for a C++ AudioTrackInterface */
 public class AudioTrack extends MediaStreamTrack {
@@ -52,9 +53,14 @@ public class AudioTrack extends MediaStreamTrack {
     if (options == null) {
       throw new IllegalArgumentException("AudioProcessingOptions is not allowed to be null");
     }
+    boolean isEchoCancellationPlatformAvailable =
+        JavaAudioDeviceModule.isBuiltInAcousticEchoCancelerSupported();
+    boolean isNoiseSuppressionPlatformAvailable =
+        JavaAudioDeviceModule.isBuiltInNoiseSuppressorSupported();
     return AudioProcessingOptionsResult.fromNativeCode(nativeSetAudioProcessingOptions(
         getNativeAudioTrack(), options.echoCancellation,
         options.noiseSuppression, options.autoGainControl, options.highPassFilter,
+        isEchoCancellationPlatformAvailable, isNoiseSuppressionPlatformAvailable,
         options.echoCancellationMode.ordinal(), options.noiseSuppressionMode.ordinal(),
         options.autoGainControlMode.ordinal(), options.highPassFilterMode.ordinal()));
   }
@@ -108,6 +114,7 @@ public class AudioTrack extends MediaStreamTrack {
   private static native double nativeGetVolume(long track);
   private static native int nativeSetAudioProcessingOptions(long track, boolean echoCancellation,
       boolean noiseSuppression, boolean autoGainControl, boolean highPassFilter,
+      boolean isEchoCancellationPlatformAvailable, boolean isNoiseSuppressionPlatformAvailable,
       int echoCancellationMode, int noiseSuppressionMode, int autoGainControlMode,
       int highPassFilterMode);
   private static native void nativeAddSink(long track, long nativeSink);
