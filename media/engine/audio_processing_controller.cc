@@ -199,19 +199,6 @@ AudioProcessingOptionsValidationContext AudioProcessingValidationContextForAdm(A
   return context;
 }
 
-std::optional<bool> ResolveCoupledSoftwareAndWarnPlatformOnlyDisabled(
-    std::optional<bool> enabled, std::optional<AudioProcessingMode> mode, bool platform_enabled,
-    const char *component) {
-  std::optional<bool> software_enabled =
-      ResolveAudioProcessingSoftwareFromPlatformState(enabled, mode, platform_enabled);
-  if (AudioProcessingOptionIsPlatformOnly(enabled, mode) && !platform_enabled) {
-    LogPlatformOnlyRequestDisabled(component,
-                                   "the coupled platform processing path is "
-                                   "disabled");
-  }
-  return software_enabled;
-}
-
 bool ResolveHighPassFilter(std::optional<bool> enabled,
                            std::optional<AudioProcessingMode> mode) {
   // No supported platform HPF exists today. Validation rejects platform HPF
@@ -342,15 +329,17 @@ AudioProcessingApplyResult ApplyCoupledEchoNoiseProcessingOptions(
   }
 
   if (options_in.echo_cancellation.has_value()) {
-    software_options.echo_cancellation = ResolveCoupledSoftwareAndWarnPlatformOnlyDisabled(
-        options_in.echo_cancellation, options_in.echo_cancellation_mode, vpio_enabled,
-        "echo cancellation");
+    software_options.echo_cancellation =
+        ResolveAudioProcessingSoftwareFromPlatformState(
+            options_in.echo_cancellation, options_in.echo_cancellation_mode,
+            vpio_enabled);
   }
 
   if (options_in.noise_suppression.has_value()) {
-    software_options.noise_suppression = ResolveCoupledSoftwareAndWarnPlatformOnlyDisabled(
-        options_in.noise_suppression, options_in.noise_suppression_mode, vpio_enabled,
-        "noise suppression");
+    software_options.noise_suppression =
+        ResolveAudioProcessingSoftwareFromPlatformState(
+            options_in.noise_suppression, options_in.noise_suppression_mode,
+            vpio_enabled);
   }
 
   if (options_in.auto_gain_control.has_value()) {
@@ -384,9 +373,10 @@ AudioProcessingApplyResult ApplyCoupledEchoNoiseProcessingOptions(
           "auto gain control", "Apple AGC could not be enabled");
       return apply_result;
     }
-    software_options.auto_gain_control = ResolveCoupledSoftwareAndWarnPlatformOnlyDisabled(
-        options_in.auto_gain_control, options_in.auto_gain_control_mode, agc_platform_enabled,
-        "auto gain control");
+    software_options.auto_gain_control =
+        ResolveAudioProcessingSoftwareFromPlatformState(
+            options_in.auto_gain_control, options_in.auto_gain_control_mode,
+            agc_platform_enabled);
   }
 
   return apply_result;
