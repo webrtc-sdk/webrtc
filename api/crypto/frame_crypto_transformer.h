@@ -32,7 +32,7 @@
 namespace webrtc {
 
 const size_t DEFAULT_KEYRING_SIZE = 16;
-const size_t MAX_KEYRING_SIZE = 255;
+const size_t MAX_KEYRING_SIZE = 256;
 
 class ParticipantKeyHandler;
 
@@ -153,7 +153,11 @@ class ParticipantKeyHandler : public webrtc::RefCountInterface {
 
   virtual webrtc::scoped_refptr<KeySet> GetKeySet(int key_index) {
     webrtc::MutexLock lock(&mutex_);
-    return crypto_key_ring_[key_index != -1 ? key_index : current_key_index_];
+    int idx = key_index != -1 ? key_index : current_key_index_;
+    if (idx < 0 || static_cast<size_t>(idx) >= crypto_key_ring_.size()) {
+      return nullptr;
+    }
+    return crypto_key_ring_[idx];
   }
 
   virtual void SetKey(std::vector<uint8_t> password, int key_index) {
