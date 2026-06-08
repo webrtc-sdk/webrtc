@@ -221,6 +221,9 @@ VideoToolboxH264ProfileLevels QueryVideoToolboxH264ProfileLevelsForSize(int32_t 
                                                                 (__bridge CFDictionaryRef)encoderSpecification, nullptr,
                                                                 &supportedPropertiesRef);
   if (status != noErr || supportedPropertiesRef == nullptr) {
+    if (supportedPropertiesRef != nullptr) {
+      CFRelease(supportedPropertiesRef);
+    }
     return levels;
   }
 
