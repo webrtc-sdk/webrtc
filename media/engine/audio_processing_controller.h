@@ -38,15 +38,12 @@ struct AudioProcessingApplyResult {
   AudioOptions resolved_options;
 };
 
-AudioProcessingApplyResult ApplyAudioProcessingOptions(AudioProcessing* apm,
-                                                       AudioDeviceModule* adm,
-                                                       const AudioOptions& options);
+AudioProcessingApplyResult ApplyAudioProcessingOptions(AudioProcessing *apm, AudioDeviceModule *adm,
+                                                       const AudioOptions &options);
 
-AudioProcessingRuntimeState GetAudioProcessingRuntimeState(
-    AudioProcessing* apm,
-    AudioDeviceModule* adm,
-    const std::optional<AudioOptions>& requested_options,
-    const std::optional<AudioOptions>& resolved_options);
+AudioProcessingRuntimeState GetAudioProcessingRuntimeState(AudioProcessing *apm, AudioDeviceModule *adm,
+                                                           const std::optional<AudioOptions> &requested_options,
+                                                           const std::optional<AudioOptions> &resolved_options);
 
 }  // namespace webrtc
 

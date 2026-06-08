@@ -653,11 +653,9 @@ AudioProcessingOptionsResult WebRtcVoiceEngine::ApplyOptions(const AudioOptions 
     return validation;
   }
 
-  AudioProcessingApplyResult apply_result =
-      ApplyAudioProcessingOptions(apm(), adm(), options);
+  AudioProcessingApplyResult apply_result = ApplyAudioProcessingOptions(apm(), adm(), options);
   if (!apply_result.result.ok()) {
-    RTC_LOG(LS_WARNING) << "Failed to apply audio processing options: "
-                        << apply_result.result.message;
+    RTC_LOG(LS_WARNING) << "Failed to apply audio processing options: " << apply_result.result.message;
     return apply_result.result;
   }
   last_requested_audio_processing_options_ = options_in;
@@ -668,12 +666,10 @@ AudioProcessingOptionsResult WebRtcVoiceEngine::ApplyOptions(const AudioOptions 
   return AudioProcessingOptionsResult::Applied();
 }
 
-AudioProcessingRuntimeState
-WebRtcVoiceEngine::GetAudioProcessingRuntimeState() {
+AudioProcessingRuntimeState WebRtcVoiceEngine::GetAudioProcessingRuntimeState() {
   RTC_DCHECK_RUN_ON(&worker_thread_checker_);
-  return webrtc::GetAudioProcessingRuntimeState(
-      apm(), adm(), last_requested_audio_processing_options_,
-      last_resolved_audio_processing_options_);
+  return webrtc::GetAudioProcessingRuntimeState(apm(), adm(), last_requested_audio_processing_options_,
+                                                last_resolved_audio_processing_options_);
 }
 
 const std::vector<Codec>& WebRtcVoiceEngine::LegacySendCodecs() const {

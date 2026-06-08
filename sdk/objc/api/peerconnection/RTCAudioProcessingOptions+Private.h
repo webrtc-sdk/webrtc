@@ -35,8 +35,7 @@ inline AudioProcessingMode NativeAudioProcessingMode(RTC_OBJC_TYPE(RTCAudioProce
   }
 }
 
-inline AudioOptions NativeAudioProcessingOptions(RTC_OBJC_TYPE(RTCAudioProcessingOptions) *
-                                                 options) {
+inline AudioOptions NativeAudioProcessingOptions(RTC_OBJC_TYPE(RTCAudioProcessingOptions) * options) {
   AudioOptions native_options;
   native_options.echo_cancellation = options.echoCancellation;
   native_options.noise_suppression = options.noiseSuppression;

@@ -54,8 +54,7 @@ struct RTC_EXPORT AudioProcessingOptionsValidationContext {
   bool is_echo_noise_platform_path_active = false;
 };
 
-RTC_EXPORT AudioProcessingMode
-AudioProcessingModeOrAutomatic(std::optional<AudioProcessingMode> mode);
+RTC_EXPORT AudioProcessingMode AudioProcessingModeOrAutomatic(std::optional<AudioProcessingMode> mode);
 
 RTC_EXPORT bool AudioProcessingOptionWantsPlatform(std::optional<bool> enabled,
                                                    std::optional<AudioProcessingMode> mode);
@@ -66,8 +65,9 @@ RTC_EXPORT bool AudioProcessingOptionRequestsSoftware(std::optional<bool> enable
 RTC_EXPORT bool AudioProcessingOptionIsPlatformOnly(std::optional<bool> enabled,
                                                     std::optional<AudioProcessingMode> mode);
 
-RTC_EXPORT std::optional<bool> ResolveAudioProcessingSoftwareFromPlatformState(
-    std::optional<bool> enabled, std::optional<AudioProcessingMode> mode, bool platform_enabled);
+RTC_EXPORT std::optional<bool> ResolveAudioProcessingSoftwareFromPlatformState(std::optional<bool> enabled,
+                                                                               std::optional<AudioProcessingMode> mode,
+                                                                               bool platform_enabled);
 
 RTC_EXPORT AudioProcessingOptionsResult
 ValidateAudioProcessingOptions(const AudioOptions &options, const AudioProcessingOptionsValidationContext &context);
@@ -87,9 +87,8 @@ ValidateAudioProcessingOptions(const AudioOptions &options, const AudioProcessin
 // `is_echo_noise_platform_path_active` is queried only when both AEC and NS are
 // absent from `options` (the AGC-only case), so callers may supply an ADM probe
 // without paying for it on every update.
-RTC_EXPORT CoupledAudioProcessingPathResolution ResolveCoupledAudioProcessingPath(
-    const AudioOptions &options,
-    FunctionView<bool()> is_echo_noise_platform_path_active);
+RTC_EXPORT CoupledAudioProcessingPathResolution
+ResolveCoupledAudioProcessingPath(const AudioOptions &options, FunctionView<bool()> is_echo_noise_platform_path_active);
 
 }  // namespace webrtc
 

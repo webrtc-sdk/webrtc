@@ -91,8 +91,7 @@ void ConstraintToOptional(const MediaConstraints* constraints,
   }
 }
 
-bool AudioProcessingModeFromString(const std::string& value,
-                                   AudioProcessingMode* mode) {
+bool AudioProcessingModeFromString(const std::string &value, AudioProcessingMode *mode) {
   if (value == "auto" || value == "automatic") {
     *mode = AudioProcessingMode::kAutomatic;
     return true;
@@ -108,10 +107,8 @@ bool AudioProcessingModeFromString(const std::string& value,
   return false;
 }
 
-void ConstraintToOptionalAudioProcessingMode(
-    const MediaConstraints* constraints,
-    const std::string& key,
-    std::optional<AudioProcessingMode>* value_out) {
+void ConstraintToOptionalAudioProcessingMode(const MediaConstraints *constraints, const std::string &key,
+                                             std::optional<AudioProcessingMode> *value_out) {
   std::string string_value;
   if (!FindConstraint(constraints, key, &string_value, nullptr)) {
     return;
@@ -211,23 +208,19 @@ void CopyConstraintsIntoAudioOptions(const MediaConstraints* constraints,
   ConstraintToOptional<bool>(constraints,
                              MediaConstraints::kGoogEchoCancellation,
                              &options->echo_cancellation);
-  ConstraintToOptionalAudioProcessingMode(
-      constraints, MediaConstraints::kEchoCancellationMode,
-      &options->echo_cancellation_mode);
+  ConstraintToOptionalAudioProcessingMode(constraints, MediaConstraints::kEchoCancellationMode,
+                                          &options->echo_cancellation_mode);
   ConstraintToOptional<bool>(constraints, MediaConstraints::kAutoGainControl,
                              &options->auto_gain_control);
-  ConstraintToOptionalAudioProcessingMode(
-      constraints, MediaConstraints::kAutoGainControlMode,
-      &options->auto_gain_control_mode);
+  ConstraintToOptionalAudioProcessingMode(constraints, MediaConstraints::kAutoGainControlMode,
+                                          &options->auto_gain_control_mode);
   ConstraintToOptional<bool>(constraints, MediaConstraints::kNoiseSuppression,
                              &options->noise_suppression);
-  ConstraintToOptionalAudioProcessingMode(
-      constraints, MediaConstraints::kNoiseSuppressionMode,
-      &options->noise_suppression_mode);
+  ConstraintToOptionalAudioProcessingMode(constraints, MediaConstraints::kNoiseSuppressionMode,
+                                          &options->noise_suppression_mode);
   ConstraintToOptional<bool>(constraints, MediaConstraints::kHighpassFilter,
                              &options->highpass_filter);
-  ConstraintToOptionalAudioProcessingMode(constraints,
-                                          MediaConstraints::kHighpassFilterMode,
+  ConstraintToOptionalAudioProcessingMode(constraints, MediaConstraints::kHighpassFilterMode,
                                           &options->highpass_filter_mode);
   ConstraintToOptional<bool>(constraints, MediaConstraints::kAudioMirroring,
                              &options->stereo_swapping);

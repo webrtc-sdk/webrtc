@@ -42,21 +42,14 @@ struct RTC_EXPORT AudioProcessingOptionsResult {
   std::string message;
 
   bool ok() const {
-    return code == AudioProcessingOptionsResultCode::kApplied ||
-           code == AudioProcessingOptionsResultCode::kStored;
+    return code == AudioProcessingOptionsResultCode::kApplied || code == AudioProcessingOptionsResultCode::kStored;
   }
 
-  static AudioProcessingOptionsResult Applied() {
-    return {AudioProcessingOptionsResultCode::kApplied, ""};
-  }
+  static AudioProcessingOptionsResult Applied() { return {AudioProcessingOptionsResultCode::kApplied, ""}; }
 
-  static AudioProcessingOptionsResult Stored() {
-    return {AudioProcessingOptionsResultCode::kStored, ""};
-  }
+  static AudioProcessingOptionsResult Stored() { return {AudioProcessingOptionsResultCode::kStored, ""}; }
 
-  static AudioProcessingOptionsResult Rejected(
-      AudioProcessingOptionsResultCode code,
-      std::string message) {
+  static AudioProcessingOptionsResult Rejected(AudioProcessingOptionsResultCode code, std::string message) {
     return {code, std::move(message)};
   }
 };

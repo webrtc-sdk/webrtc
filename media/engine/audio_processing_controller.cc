@@ -36,7 +36,7 @@ enum class PlatformEffectEnableResult {
   kEnableFailed,
 };
 
-std::string PlatformOnlyRequestDisabledMessage(const char* component, const char* reason) {
+std::string PlatformOnlyRequestDisabledMessage(const char *component, const char *reason) {
   std::string message = "Requested platform ";
   message += component;
   message += " processing, but ";
@@ -45,15 +45,14 @@ std::string PlatformOnlyRequestDisabledMessage(const char* component, const char
   return message;
 }
 
-void LogPlatformOnlyRequestDisabled(const char* component, const char* reason) {
+void LogPlatformOnlyRequestDisabled(const char *component, const char *reason) {
   RTC_LOG(LS_WARNING) << PlatformOnlyRequestDisabledMessage(component, reason);
 }
 
-AudioProcessingOptionsResult PlatformOnlyApplyFailed(const char* component, const char* reason) {
+AudioProcessingOptionsResult PlatformOnlyApplyFailed(const char *component, const char *reason) {
   std::string message = PlatformOnlyRequestDisabledMessage(component, reason);
   RTC_LOG(LS_WARNING) << message;
-  return AudioProcessingOptionsResult::Rejected(
-      AudioProcessingOptionsResultCode::kApplyFailed, std::move(message));
+  return AudioProcessingOptionsResult::Rejected(AudioProcessingOptionsResultCode::kApplyFailed, std::move(message));
 }
 
 const char *PlatformEffectEnableFailureReason(PlatformEffectEnableResult result) {
@@ -70,18 +69,14 @@ const char *PlatformEffectEnableFailureReason(PlatformEffectEnableResult result)
   return "platform processing could not be enabled";
 }
 
-bool DisablePlatformEffect(AudioDeviceModule* adm,
-                           AvailabilityFn is_available,
-                           EnableFn enable) {
+bool DisablePlatformEffect(AudioDeviceModule *adm, AvailabilityFn is_available, EnableFn enable) {
   if (adm == nullptr || !(adm->*is_available)()) {
     return false;
   }
   return (adm->*enable)(false) == 0;
 }
 
-bool EnablePlatformEffect(AudioDeviceModule* adm,
-                          AvailabilityFn is_available,
-                          EnableFn enable) {
+bool EnablePlatformEffect(AudioDeviceModule *adm, AvailabilityFn is_available, EnableFn enable) {
   if (adm == nullptr || !(adm->*is_available)()) {
     return false;
   }
@@ -110,8 +105,7 @@ struct ComponentApplyResult {
 ComponentApplyResult ApplyIndependentPlatformEffectAndResolveSoftware(std::optional<bool> enabled,
                                                                       std::optional<AudioProcessingMode> mode,
                                                                       const char *component, AudioDeviceModule *adm,
-                                                                      AvailabilityFn is_available,
-                                                                      EnableFn enable) {
+                                                                      AvailabilityFn is_available, EnableFn enable) {
   if (!enabled.has_value()) {
     return {AudioProcessingOptionsResult::Applied(), std::nullopt};
   }
@@ -122,14 +116,11 @@ ComponentApplyResult ApplyIndependentPlatformEffectAndResolveSoftware(std::optio
 
   switch (AudioProcessingModeOrAutomatic(mode)) {
     case AudioProcessingMode::kAutomatic:
-      return {AudioProcessingOptionsResult::Applied(),
-              !EnablePlatformEffect(adm, is_available, enable)};
+      return {AudioProcessingOptionsResult::Applied(), !EnablePlatformEffect(adm, is_available, enable)};
     case AudioProcessingMode::kPlatform: {
       const PlatformEffectEnableResult platform_enable_result = TryEnablePlatformEffect(adm, is_available, enable);
       if (platform_enable_result != PlatformEffectEnableResult::kEnabled) {
-        return {PlatformOnlyApplyFailed(component,
-                                        PlatformEffectEnableFailureReason(platform_enable_result)),
-                false};
+        return {PlatformOnlyApplyFailed(component, PlatformEffectEnableFailureReason(platform_enable_result)), false};
       }
       return {AudioProcessingOptionsResult::Applied(), false};
     }
@@ -140,12 +131,11 @@ ComponentApplyResult ApplyIndependentPlatformEffectAndResolveSoftware(std::optio
   return {AudioProcessingOptionsResult::Applied(), false};
 }
 
-bool PlatformEffectIsAvailable(AudioDeviceModule* adm,
-                               AvailabilityFn is_available) {
+bool PlatformEffectIsAvailable(AudioDeviceModule *adm, AvailabilityFn is_available) {
   return adm != nullptr && (adm->*is_available)();
 }
 
-bool SetPlatformEffect(AudioDeviceModule* adm, EnableFn enable, bool enabled) {
+bool SetPlatformEffect(AudioDeviceModule *adm, EnableFn enable, bool enabled) {
   return adm != nullptr && (adm->*enable)(enabled) == 0;
 }
 
@@ -160,8 +150,7 @@ bool CoupledEchoNoisePlatformPathIsActive(AudioDeviceModule *adm) {
   }
 
   return (state.is_echo_cancellation_available || state.is_noise_suppression_available) &&
-         (state.is_echo_cancellation_requested.value_or(false) ||
-          state.is_noise_suppression_requested.value_or(false));
+         (state.is_echo_cancellation_requested.value_or(false) || state.is_noise_suppression_requested.value_or(false));
 }
 
 bool BuiltInVoiceProcessingPathIsAvailable(AudioDeviceModule *adm) {
@@ -199,8 +188,7 @@ AudioProcessingOptionsValidationContext AudioProcessingValidationContextForAdm(A
   return context;
 }
 
-bool ResolveHighPassFilter(std::optional<bool> enabled,
-                           std::optional<AudioProcessingMode> mode) {
+bool ResolveHighPassFilter(std::optional<bool> enabled, std::optional<AudioProcessingMode> mode) {
   // No supported platform HPF exists today. Validation rejects platform HPF
   // before normal engine application. Keep this strict as a fallback for direct
   // test calls that bypass validation.
@@ -208,8 +196,7 @@ bool ResolveHighPassFilter(std::optional<bool> enabled,
     return false;
   }
   if (AudioProcessingOptionIsPlatformOnly(enabled, mode)) {
-    LogPlatformOnlyRequestDisabled("high-pass filter",
-                                   "no platform high-pass filter is available");
+    LogPlatformOnlyRequestDisabled("high-pass filter", "no platform high-pass filter is available");
   }
   return AudioProcessingModeOrAutomatic(mode) != AudioProcessingMode::kPlatform;
 }
@@ -255,9 +242,8 @@ AudioProcessingComponentRuntimeState BuildComponentRuntimeState(
   return state;
 }
 
-AudioProcessingApplyResult ApplyCoupledEchoNoiseProcessingOptions(
-    AudioDeviceModule* adm,
-    const AudioOptions& options_in) {
+AudioProcessingApplyResult ApplyCoupledEchoNoiseProcessingOptions(AudioDeviceModule *adm,
+                                                                  const AudioOptions &options_in) {
   // Apple Voice Processing I/O exposes AEC and NS through one shared path.
   // Bypassing that path at runtime can leave CoreAudio processing through a
   // VPIO-shaped route while WebRTC APM is also active. For coupled topologies,
@@ -274,23 +260,21 @@ AudioProcessingApplyResult ApplyCoupledEchoNoiseProcessingOptions(
   // routing.
   AudioProcessingApplyResult apply_result;
   apply_result.resolved_options = options_in;
-  AudioOptions& software_options = apply_result.resolved_options;
+  AudioOptions &software_options = apply_result.resolved_options;
 
-  CoupledAudioProcessingPathResolution path_resolution = ResolveCoupledAudioProcessingPath(
-      options_in, [adm] { return CoupledEchoNoisePlatformPathIsActive(adm); });
+  CoupledAudioProcessingPathResolution path_resolution =
+      ResolveCoupledAudioProcessingPath(options_in, [adm] { return CoupledEchoNoisePlatformPathIsActive(adm); });
   bool vpio_enabled = false;
 
   if (path_resolution.has_echo_or_noise_option) {
     const bool path_available = BuiltInVoiceProcessingPathIsAvailable(adm);
-    const bool should_enable_vpio =
-        path_available && path_resolution.should_use_echo_noise_platform_path;
+    const bool should_enable_vpio = path_available && path_resolution.should_use_echo_noise_platform_path;
 
     if (should_enable_vpio) {
       const bool path_enabled = SetBuiltInVoiceProcessingPath(adm, true);
-      const bool effects_available =
-          path_enabled &&
-          PlatformEffectIsAvailable(adm, &AudioDeviceModule::BuiltInAECIsAvailable) &&
-          PlatformEffectIsAvailable(adm, &AudioDeviceModule::BuiltInNSIsAvailable);
+      const bool effects_available = path_enabled &&
+                                     PlatformEffectIsAvailable(adm, &AudioDeviceModule::BuiltInAECIsAvailable) &&
+                                     PlatformEffectIsAvailable(adm, &AudioDeviceModule::BuiltInNSIsAvailable);
       if (effects_available) {
         const bool aec_updated = SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInAEC, true);
         const bool ns_updated = SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInNS, true);
@@ -314,40 +298,33 @@ AudioProcessingApplyResult ApplyCoupledEchoNoiseProcessingOptions(
   }
 
   if (!vpio_enabled) {
-    if (AudioProcessingOptionIsPlatformOnly(options_in.echo_cancellation,
-                                            options_in.echo_cancellation_mode)) {
-      apply_result.result = PlatformOnlyApplyFailed(
-          "echo cancellation", "the coupled platform processing path could not be enabled");
+    if (AudioProcessingOptionIsPlatformOnly(options_in.echo_cancellation, options_in.echo_cancellation_mode)) {
+      apply_result.result =
+          PlatformOnlyApplyFailed("echo cancellation", "the coupled platform processing path could not be enabled");
       return apply_result;
     }
-    if (AudioProcessingOptionIsPlatformOnly(options_in.noise_suppression,
-                                            options_in.noise_suppression_mode)) {
-      apply_result.result = PlatformOnlyApplyFailed(
-          "noise suppression", "the coupled platform processing path could not be enabled");
+    if (AudioProcessingOptionIsPlatformOnly(options_in.noise_suppression, options_in.noise_suppression_mode)) {
+      apply_result.result =
+          PlatformOnlyApplyFailed("noise suppression", "the coupled platform processing path could not be enabled");
       return apply_result;
     }
   }
 
   if (options_in.echo_cancellation.has_value()) {
-    software_options.echo_cancellation =
-        ResolveAudioProcessingSoftwareFromPlatformState(
-            options_in.echo_cancellation, options_in.echo_cancellation_mode,
-            vpio_enabled);
+    software_options.echo_cancellation = ResolveAudioProcessingSoftwareFromPlatformState(
+        options_in.echo_cancellation, options_in.echo_cancellation_mode, vpio_enabled);
   }
 
   if (options_in.noise_suppression.has_value()) {
-    software_options.noise_suppression =
-        ResolveAudioProcessingSoftwareFromPlatformState(
-            options_in.noise_suppression, options_in.noise_suppression_mode,
-            vpio_enabled);
+    software_options.noise_suppression = ResolveAudioProcessingSoftwareFromPlatformState(
+        options_in.noise_suppression, options_in.noise_suppression_mode, vpio_enabled);
   }
 
   if (options_in.auto_gain_control.has_value()) {
     // Apple AGC has its own switch, but it only has effect while the shared
     // AEC/NS VPIO path is active. AGC alone never enables VPIO, so `auto`
     // falls back to software when AEC/NS did not enable the shared path.
-    const bool agc_switch_available =
-        PlatformEffectIsAvailable(adm, &AudioDeviceModule::BuiltInAGCIsAvailable);
+    const bool agc_switch_available = PlatformEffectIsAvailable(adm, &AudioDeviceModule::BuiltInAGCIsAvailable);
     const bool should_enable_agc_platform =
         vpio_enabled && agc_switch_available && path_resolution.auto_gain_control_wants_platform;
     // Track the effective platform state, not just the requested state. Apple
@@ -366,17 +343,13 @@ AudioProcessingApplyResult ApplyCoupledEchoNoiseProcessingOptions(
         SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInAGC, false);
       }
     }
-    if (AudioProcessingOptionIsPlatformOnly(options_in.auto_gain_control,
-                                            options_in.auto_gain_control_mode) &&
+    if (AudioProcessingOptionIsPlatformOnly(options_in.auto_gain_control, options_in.auto_gain_control_mode) &&
         !agc_platform_enabled) {
-      apply_result.result = PlatformOnlyApplyFailed(
-          "auto gain control", "Apple AGC could not be enabled");
+      apply_result.result = PlatformOnlyApplyFailed("auto gain control", "Apple AGC could not be enabled");
       return apply_result;
     }
-    software_options.auto_gain_control =
-        ResolveAudioProcessingSoftwareFromPlatformState(
-            options_in.auto_gain_control, options_in.auto_gain_control_mode,
-            agc_platform_enabled);
+    software_options.auto_gain_control = ResolveAudioProcessingSoftwareFromPlatformState(
+        options_in.auto_gain_control, options_in.auto_gain_control_mode, agc_platform_enabled);
   }
 
   return apply_result;
@@ -396,71 +369,62 @@ AudioProcessingOptionsResult ValidateAudioProcessingOptionsForApply(AudioDeviceM
   return ValidateAudioProcessingOptions(options, AudioProcessingValidationContextForAdm(adm));
 }
 
-AudioProcessingApplyResult ApplyAudioProcessingOptions(AudioProcessing* apm,
-                                                       AudioDeviceModule* adm,
-                                                       const AudioOptions& options_in) {
+AudioProcessingApplyResult ApplyAudioProcessingOptions(AudioProcessing *apm, AudioDeviceModule *adm,
+                                                       const AudioOptions &options_in) {
   AudioProcessingApplyResult apply_result;
   apply_result.resolved_options = options_in;
 
   if (adm != nullptr &&
       adm->GetBuiltInAudioProcessingTopology() ==
-          AudioDeviceModule::BuiltInAudioProcessingTopology::
-              kEchoCancellationAndNoiseSuppressionCoupled) {
+          AudioDeviceModule::BuiltInAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled) {
     apply_result = ApplyCoupledEchoNoiseProcessingOptions(adm, options_in);
     if (!apply_result.result.ok()) {
       return apply_result;
     }
   } else {
-    AudioOptions& software_options = apply_result.resolved_options;
-    auto apply_independent_component =
-        [&](std::optional<bool>& software_enabled, std::optional<bool> enabled,
-            std::optional<AudioProcessingMode> mode, const char* component,
-            AvailabilityFn is_available, EnableFn enable) {
-          if (!enabled.has_value()) {
-            return true;
-          }
+    AudioOptions &software_options = apply_result.resolved_options;
+    auto apply_independent_component = [&](std::optional<bool> &software_enabled, std::optional<bool> enabled,
+                                           std::optional<AudioProcessingMode> mode, const char *component,
+                                           AvailabilityFn is_available, EnableFn enable) {
+      if (!enabled.has_value()) {
+        return true;
+      }
 
-          ComponentApplyResult component_result =
-              ApplyIndependentPlatformEffectAndResolveSoftware(
-                  enabled, mode, component, adm, is_available, enable);
-          if (!component_result.result.ok()) {
-            apply_result.result = std::move(component_result.result);
-            return false;
-          }
-          software_enabled = component_result.software_enabled;
-          return true;
-        };
+      ComponentApplyResult component_result =
+          ApplyIndependentPlatformEffectAndResolveSoftware(enabled, mode, component, adm, is_available, enable);
+      if (!component_result.result.ok()) {
+        apply_result.result = std::move(component_result.result);
+        return false;
+      }
+      software_enabled = component_result.software_enabled;
+      return true;
+    };
 
-    if (!apply_independent_component(
-            software_options.echo_cancellation, options_in.echo_cancellation,
-            options_in.echo_cancellation_mode, "echo cancellation",
-            &AudioDeviceModule::BuiltInAECIsAvailable, &AudioDeviceModule::EnableBuiltInAEC)) {
+    if (!apply_independent_component(software_options.echo_cancellation, options_in.echo_cancellation,
+                                     options_in.echo_cancellation_mode, "echo cancellation",
+                                     &AudioDeviceModule::BuiltInAECIsAvailable, &AudioDeviceModule::EnableBuiltInAEC)) {
       return apply_result;
     }
-    if (!apply_independent_component(
-            software_options.auto_gain_control, options_in.auto_gain_control,
-            options_in.auto_gain_control_mode, "auto gain control",
-            &AudioDeviceModule::BuiltInAGCIsAvailable, &AudioDeviceModule::EnableBuiltInAGC)) {
+    if (!apply_independent_component(software_options.auto_gain_control, options_in.auto_gain_control,
+                                     options_in.auto_gain_control_mode, "auto gain control",
+                                     &AudioDeviceModule::BuiltInAGCIsAvailable, &AudioDeviceModule::EnableBuiltInAGC)) {
       return apply_result;
     }
-    if (!apply_independent_component(
-            software_options.noise_suppression, options_in.noise_suppression,
-            options_in.noise_suppression_mode, "noise suppression",
-            &AudioDeviceModule::BuiltInNSIsAvailable, &AudioDeviceModule::EnableBuiltInNS)) {
+    if (!apply_independent_component(software_options.noise_suppression, options_in.noise_suppression,
+                                     options_in.noise_suppression_mode, "noise suppression",
+                                     &AudioDeviceModule::BuiltInNSIsAvailable, &AudioDeviceModule::EnableBuiltInNS)) {
       return apply_result;
     }
   }
 
-  AudioOptions& software_options = apply_result.resolved_options;
+  AudioOptions &software_options = apply_result.resolved_options;
   if (options_in.highpass_filter.has_value()) {
-    if (AudioProcessingOptionIsPlatformOnly(options_in.highpass_filter,
-                                            options_in.highpass_filter_mode)) {
-      apply_result.result = PlatformOnlyApplyFailed(
-          "high-pass filter", "no platform high-pass filter is available");
+    if (AudioProcessingOptionIsPlatformOnly(options_in.highpass_filter, options_in.highpass_filter_mode)) {
+      apply_result.result = PlatformOnlyApplyFailed("high-pass filter", "no platform high-pass filter is available");
       return apply_result;
     }
-    software_options.highpass_filter = ResolveHighPassFilter(
-        options_in.highpass_filter, options_in.highpass_filter_mode);
+    software_options.highpass_filter =
+        ResolveHighPassFilter(options_in.highpass_filter, options_in.highpass_filter_mode);
   }
 
   if (apm == nullptr) {
@@ -477,11 +441,9 @@ AudioProcessingApplyResult ApplyAudioProcessingOptions(AudioProcessing* apm,
     const bool enabled = *software_options.auto_gain_control;
     apm_config.gain_controller1.enabled = enabled;
 #if defined(WEBRTC_IOS) || defined(WEBRTC_MAC) || defined(WEBRTC_ANDROID)
-    apm_config.gain_controller1.mode =
-        AudioProcessing::Config::GainController1::kFixedDigital;
+    apm_config.gain_controller1.mode = AudioProcessing::Config::GainController1::kFixedDigital;
 #else
-    apm_config.gain_controller1.mode =
-        AudioProcessing::Config::GainController1::kAdaptiveAnalog;
+    apm_config.gain_controller1.mode = AudioProcessing::Config::GainController1::kAdaptiveAnalog;
 #endif
   }
 
@@ -492,19 +454,16 @@ AudioProcessingApplyResult ApplyAudioProcessingOptions(AudioProcessing* apm,
   if (software_options.noise_suppression.has_value()) {
     const bool enabled = *software_options.noise_suppression;
     apm_config.noise_suppression.enabled = enabled;
-    apm_config.noise_suppression.level =
-        AudioProcessing::Config::NoiseSuppression::Level::kHigh;
+    apm_config.noise_suppression.level = AudioProcessing::Config::NoiseSuppression::Level::kHigh;
   }
 
   apm->ApplyConfig(apm_config);
   return apply_result;
 }
 
-AudioProcessingRuntimeState GetAudioProcessingRuntimeState(
-    AudioProcessing* apm,
-    AudioDeviceModule* adm,
-    const std::optional<AudioOptions>& requested_options,
-    const std::optional<AudioOptions>& resolved_options) {
+AudioProcessingRuntimeState GetAudioProcessingRuntimeState(AudioProcessing *apm, AudioDeviceModule *adm,
+                                                           const std::optional<AudioOptions> &requested_options,
+                                                           const std::optional<AudioOptions> &resolved_options) {
   AudioDeviceModule::BuiltInAudioProcessingState built_in;
   if (adm != nullptr) {
     built_in = adm->GetBuiltInAudioProcessingState();
@@ -519,8 +478,7 @@ AudioProcessingRuntimeState GetAudioProcessingRuntimeState(
     software_noise_suppression = apm_config->noise_suppression.enabled;
     // Diagnostics report the effective APM state, not only values written by
     // this controller. GC2 may be enabled by other WebRTC configuration paths.
-    software_auto_gain_control = apm_config->gain_controller1.enabled ||
-                                 apm_config->gain_controller2.enabled;
+    software_auto_gain_control = apm_config->gain_controller1.enabled || apm_config->gain_controller2.enabled;
     software_high_pass_filter = apm_config->high_pass_filter.enabled;
   }
 
@@ -533,24 +491,21 @@ AudioProcessingRuntimeState GetAudioProcessingRuntimeState(
   state.built_in = built_in;
   const AudioOptions requested = requested_options.value_or(AudioOptions());
   const AudioOptions resolved = resolved_options.value_or(AudioOptions());
-  state.echo_cancellation =
-      BuildComponentRuntimeState(requested.echo_cancellation, requested.echo_cancellation_mode,
-                                 resolved.echo_cancellation, software_echo_cancellation,
-                                 built_in.is_echo_cancellation_available,
-                                 built_in.is_echo_cancellation_requested, built_in.is_echo_cancellation_active);
-  state.noise_suppression =
-      BuildComponentRuntimeState(requested.noise_suppression, requested.noise_suppression_mode,
-                                 resolved.noise_suppression, software_noise_suppression,
-                                 built_in.is_noise_suppression_available,
-                                 built_in.is_noise_suppression_requested, built_in.is_noise_suppression_active);
-  state.auto_gain_control =
-      BuildComponentRuntimeState(requested.auto_gain_control, requested.auto_gain_control_mode,
-                                 resolved.auto_gain_control, software_auto_gain_control,
-                                 built_in.is_auto_gain_control_available,
-                                 built_in.is_auto_gain_control_requested, built_in.is_auto_gain_control_active);
-  state.high_pass_filter = BuildComponentRuntimeState(
-      requested.highpass_filter, requested.highpass_filter_mode, resolved.highpass_filter,
-      software_high_pass_filter, false, std::nullopt, std::nullopt);
+  state.echo_cancellation = BuildComponentRuntimeState(
+      requested.echo_cancellation, requested.echo_cancellation_mode, resolved.echo_cancellation,
+      software_echo_cancellation, built_in.is_echo_cancellation_available, built_in.is_echo_cancellation_requested,
+      built_in.is_echo_cancellation_active);
+  state.noise_suppression = BuildComponentRuntimeState(
+      requested.noise_suppression, requested.noise_suppression_mode, resolved.noise_suppression,
+      software_noise_suppression, built_in.is_noise_suppression_available, built_in.is_noise_suppression_requested,
+      built_in.is_noise_suppression_active);
+  state.auto_gain_control = BuildComponentRuntimeState(
+      requested.auto_gain_control, requested.auto_gain_control_mode, resolved.auto_gain_control,
+      software_auto_gain_control, built_in.is_auto_gain_control_available, built_in.is_auto_gain_control_requested,
+      built_in.is_auto_gain_control_active);
+  state.high_pass_filter =
+      BuildComponentRuntimeState(requested.highpass_filter, requested.highpass_filter_mode, resolved.highpass_filter,
+                                 software_high_pass_filter, false, std::nullopt, std::nullopt);
   return state;
 }
 

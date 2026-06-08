@@ -125,17 +125,11 @@
 }
 
 + (instancetype)communicationOptions {
-  return [[self alloc] initWithEchoCancellation:YES
-                              noiseSuppression:YES
-                               autoGainControl:YES
-                                highPassFilter:YES];
+  return [[self alloc] initWithEchoCancellation:YES noiseSuppression:YES autoGainControl:YES highPassFilter:YES];
 }
 
 + (instancetype)rawOptions {
-  return [[self alloc] initWithEchoCancellation:NO
-                              noiseSuppression:NO
-                               autoGainControl:NO
-                                highPassFilter:NO];
+  return [[self alloc] initWithEchoCancellation:NO noiseSuppression:NO autoGainControl:NO highPassFilter:NO];
 }
 
 @end

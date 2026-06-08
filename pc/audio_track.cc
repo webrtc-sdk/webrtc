@@ -60,8 +60,7 @@ AudioProcessingOptionsResult AudioTrack::SetAudioProcessingOptions(const AudioOp
     return AudioProcessingOptionsResult::Rejected(AudioProcessingOptionsResultCode::kRejectedRemoteTrack,
                                                   "Audio processing options can only be set on local audio tracks");
   }
-  RTC_LOG(LS_INFO) << "AudioTrack::SetAudioProcessingOptions: "
-                   << options.ToString();
+  RTC_LOG(LS_INFO) << "AudioTrack::SetAudioProcessingOptions: " << options.ToString();
 
   AudioOptions processing_options;
   processing_options.echo_cancellation = options.echo_cancellation;

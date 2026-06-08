@@ -211,8 +211,7 @@ class AudioDeviceModule : public RefCountInterface {
   virtual bool BuiltInNSIsAvailable() const = 0;
 
   // Describes whether the ADM can switch built-in components independently.
-  virtual BuiltInAudioProcessingTopology GetBuiltInAudioProcessingTopology()
-      const {
+  virtual BuiltInAudioProcessingTopology GetBuiltInAudioProcessingTopology() const {
     return BuiltInAudioProcessingTopology::kIndependent;
   }
 

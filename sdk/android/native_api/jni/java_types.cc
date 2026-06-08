@@ -246,9 +246,7 @@ ScopedJavaLocalRef<jstring> NativeToJavaString(
   return str ? NativeToJavaString(jni, *str) : nullptr;
 }
 
-ScopedJavaLocalRef<jbyteArray> NativeToJavaByteArray(
-    JNIEnv* env,
-    ArrayView<const int8_t> container) {
+ScopedJavaLocalRef<jbyteArray> NativeToJavaByteArray(JNIEnv *env, ArrayView<const int8_t> container) {
   jni_zero::ScopedJavaLocalRef<jbyteArray> jarray =
       jni_zero::ScopedJavaLocalRef<jbyteArray>::Adopt(
           env, env->NewByteArray(container.size()));
@@ -259,9 +257,7 @@ ScopedJavaLocalRef<jbyteArray> NativeToJavaByteArray(
   return jarray;
 }
 
-ScopedJavaLocalRef<jintArray> NativeToJavaIntArray(
-    JNIEnv* env,
-    ArrayView<const int32_t> container) {
+ScopedJavaLocalRef<jintArray> NativeToJavaIntArray(JNIEnv *env, ArrayView<const int32_t> container) {
   jni_zero::ScopedJavaLocalRef<jintArray> jarray =
       jni_zero::ScopedJavaLocalRef<jintArray>::Adopt(
           env, env->NewIntArray(container.size()));

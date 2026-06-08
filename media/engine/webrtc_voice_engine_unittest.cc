@@ -109,27 +109,20 @@ using ::webrtc::scoped_refptr;
 
 constexpr uint32_t kMaxUnsignaledRecvStreams = 4;
 
-class CoupledAudioProcessingMockAudioDeviceModule
-    : public webrtc::test::MockAudioDeviceModule {
+class CoupledAudioProcessingMockAudioDeviceModule : public webrtc::test::MockAudioDeviceModule {
  public:
-  AudioDeviceModule::BuiltInAudioProcessingTopology
-  GetBuiltInAudioProcessingTopology() const override {
-    return AudioDeviceModule::BuiltInAudioProcessingTopology::
-        kEchoCancellationAndNoiseSuppressionCoupled;
+  AudioDeviceModule::BuiltInAudioProcessingTopology GetBuiltInAudioProcessingTopology() const override {
+    return AudioDeviceModule::BuiltInAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled;
   }
 
-  AudioDeviceModule::BuiltInAudioProcessingState GetBuiltInAudioProcessingState() const override {
-    return state;
-  }
+  AudioDeviceModule::BuiltInAudioProcessingState GetBuiltInAudioProcessingState() const override { return state; }
 
   AudioDeviceModule::BuiltInAudioProcessingState state;
 };
 
 class RuntimeStateMockAudioDeviceModule : public webrtc::test::MockAudioDeviceModule {
  public:
-  AudioDeviceModule::BuiltInAudioProcessingState GetBuiltInAudioProcessingState() const override {
-    return state;
-  }
+  AudioDeviceModule::BuiltInAudioProcessingState GetBuiltInAudioProcessingState() const override { return state; }
 
   AudioDeviceModule::BuiltInAudioProcessingState state;
 };
@@ -256,30 +249,26 @@ std::vector<webrtc::Codec> ReceiveCodecsWithId(
   return AddIdToCodecs(pt_mapper, std::move(codecs));
 }
 
-webrtc::AudioProcessing::Config ApplyAudioProcessingOptionsForTest(
-    const webrtc::AudioOptions& options,
-    webrtc::AudioDeviceModule* adm) {
+webrtc::AudioProcessing::Config ApplyAudioProcessingOptionsForTest(const webrtc::AudioOptions &options,
+                                                                   webrtc::AudioDeviceModule *adm) {
   webrtc::scoped_refptr<StrictMock<webrtc::test::MockAudioProcessing>> apm =
       webrtc::make_ref_counted<StrictMock<webrtc::test::MockAudioProcessing>>();
   webrtc::AudioProcessing::Config apm_config;
   EXPECT_CALL(*apm, GetConfig()).WillOnce(ReturnPointee(&apm_config));
   EXPECT_CALL(*apm, ApplyConfig(_)).WillOnce(SaveArg<0>(&apm_config));
-  webrtc::AudioProcessingApplyResult result =
-      webrtc::ApplyAudioProcessingOptions(apm.get(), adm, options);
+  webrtc::AudioProcessingApplyResult result = webrtc::ApplyAudioProcessingOptions(apm.get(), adm, options);
   EXPECT_TRUE(result.result.ok()) << result.result.message;
   return apm_config;
 }
 
-webrtc::AudioProcessingOptionsResult ApplyAudioProcessingOptionsResultForTest(
-    const webrtc::AudioOptions& options,
-    webrtc::AudioDeviceModule* adm) {
+webrtc::AudioProcessingOptionsResult ApplyAudioProcessingOptionsResultForTest(const webrtc::AudioOptions &options,
+                                                                              webrtc::AudioDeviceModule *adm) {
   return webrtc::ApplyAudioProcessingOptions(nullptr, adm, options).result;
 }
 
 webrtc::AudioProcessingRuntimeState GetAudioProcessingRuntimeStateForTest(
-    const webrtc::AudioOptions& options,
-    webrtc::AudioDeviceModule* adm,
-    const webrtc::AudioProcessing::Config& apm_config,
+    const webrtc::AudioOptions &options, webrtc::AudioDeviceModule *adm,
+    const webrtc::AudioProcessing::Config &apm_config,
     std::optional<webrtc::AudioOptions> resolved_options = std::nullopt) {
   webrtc::scoped_refptr<StrictMock<webrtc::test::MockAudioProcessing>> apm =
       webrtc::make_ref_counted<StrictMock<webrtc::test::MockAudioProcessing>>();
@@ -287,8 +276,7 @@ webrtc::AudioProcessingRuntimeState GetAudioProcessingRuntimeStateForTest(
   if (!resolved_options.has_value()) {
     resolved_options = options;
   }
-  return webrtc::GetAudioProcessingRuntimeState(apm.get(), adm, options,
-                                                resolved_options);
+  return webrtc::GetAudioProcessingRuntimeState(apm.get(), adm, options, resolved_options);
 }
 
 // Tests that our stub library "works".
@@ -474,8 +462,7 @@ TEST(AudioProcessingControllerValidationTest, RejectsPlatformHighPassFilter) {
 }
 
 TEST(AudioProcessingControllerTest, AutomaticUsesPlatformWhenAvailable) {
-  webrtc::scoped_refptr<webrtc::test::MockAudioDeviceModule> adm =
-      webrtc::test::MockAudioDeviceModule::CreateStrict();
+  webrtc::scoped_refptr<webrtc::test::MockAudioDeviceModule> adm = webrtc::test::MockAudioDeviceModule::CreateStrict();
   webrtc::AudioOptions options;
   options.echo_cancellation = true;
   options.echo_cancellation_mode = webrtc::AudioProcessingMode::kAutomatic;
@@ -483,30 +470,24 @@ TEST(AudioProcessingControllerTest, AutomaticUsesPlatformWhenAvailable) {
   EXPECT_CALL(*adm, BuiltInAECIsAvailable()).WillOnce(Return(true));
   EXPECT_CALL(*adm, EnableBuiltInAEC(true)).WillOnce(Return(0));
 
-  webrtc::AudioProcessing::Config apm_config =
-      ApplyAudioProcessingOptionsForTest(options, adm.get());
+  webrtc::AudioProcessing::Config apm_config = ApplyAudioProcessingOptionsForTest(options, adm.get());
   EXPECT_FALSE(apm_config.echo_canceller.enabled);
 }
 
-TEST(AudioProcessingControllerTest,
-     AutomaticFallsBackToSoftwareWhenUnavailable) {
-  webrtc::scoped_refptr<webrtc::test::MockAudioDeviceModule> adm =
-      webrtc::test::MockAudioDeviceModule::CreateStrict();
+TEST(AudioProcessingControllerTest, AutomaticFallsBackToSoftwareWhenUnavailable) {
+  webrtc::scoped_refptr<webrtc::test::MockAudioDeviceModule> adm = webrtc::test::MockAudioDeviceModule::CreateStrict();
   webrtc::AudioOptions options;
   options.echo_cancellation = true;
   options.echo_cancellation_mode = webrtc::AudioProcessingMode::kAutomatic;
 
   EXPECT_CALL(*adm, BuiltInAECIsAvailable()).WillOnce(Return(false));
 
-  webrtc::AudioProcessing::Config apm_config =
-      ApplyAudioProcessingOptionsForTest(options, adm.get());
+  webrtc::AudioProcessing::Config apm_config = ApplyAudioProcessingOptionsForTest(options, adm.get());
   EXPECT_TRUE(apm_config.echo_canceller.enabled);
 }
 
-TEST(AudioProcessingControllerTest,
-     AutomaticFallsBackToSoftwareWhenPlatformEnableFails) {
-  webrtc::scoped_refptr<webrtc::test::MockAudioDeviceModule> adm =
-      webrtc::test::MockAudioDeviceModule::CreateStrict();
+TEST(AudioProcessingControllerTest, AutomaticFallsBackToSoftwareWhenPlatformEnableFails) {
+  webrtc::scoped_refptr<webrtc::test::MockAudioDeviceModule> adm = webrtc::test::MockAudioDeviceModule::CreateStrict();
   webrtc::AudioOptions options;
   options.echo_cancellation = true;
   options.echo_cancellation_mode = webrtc::AudioProcessingMode::kAutomatic;
@@ -514,14 +495,12 @@ TEST(AudioProcessingControllerTest,
   EXPECT_CALL(*adm, BuiltInAECIsAvailable()).WillOnce(Return(true));
   EXPECT_CALL(*adm, EnableBuiltInAEC(true)).WillOnce(Return(-1));
 
-  webrtc::AudioProcessing::Config apm_config =
-      ApplyAudioProcessingOptionsForTest(options, adm.get());
+  webrtc::AudioProcessing::Config apm_config = ApplyAudioProcessingOptionsForTest(options, adm.get());
   EXPECT_TRUE(apm_config.echo_canceller.enabled);
 }
 
 TEST(AudioProcessingControllerTest, PlatformReturnsApplyFailedWhenEnableFails) {
-  webrtc::scoped_refptr<webrtc::test::MockAudioDeviceModule> adm =
-      webrtc::test::MockAudioDeviceModule::CreateStrict();
+  webrtc::scoped_refptr<webrtc::test::MockAudioDeviceModule> adm = webrtc::test::MockAudioDeviceModule::CreateStrict();
   webrtc::AudioOptions options;
   options.echo_cancellation = true;
   options.echo_cancellation_mode = webrtc::AudioProcessingMode::kPlatform;
@@ -529,15 +508,12 @@ TEST(AudioProcessingControllerTest, PlatformReturnsApplyFailedWhenEnableFails) {
   EXPECT_CALL(*adm, BuiltInAECIsAvailable()).WillOnce(Return(true));
   EXPECT_CALL(*adm, EnableBuiltInAEC(true)).WillOnce(Return(-1));
 
-  webrtc::AudioProcessingOptionsResult result =
-      ApplyAudioProcessingOptionsResultForTest(options, adm.get());
-  EXPECT_EQ(webrtc::AudioProcessingOptionsResultCode::kApplyFailed,
-            result.code);
+  webrtc::AudioProcessingOptionsResult result = ApplyAudioProcessingOptionsResultForTest(options, adm.get());
+  EXPECT_EQ(webrtc::AudioProcessingOptionsResultCode::kApplyFailed, result.code);
 }
 
 TEST(AudioProcessingControllerTest, SoftwareDisablesPlatformAndEnablesApm) {
-  webrtc::scoped_refptr<webrtc::test::MockAudioDeviceModule> adm =
-      webrtc::test::MockAudioDeviceModule::CreateStrict();
+  webrtc::scoped_refptr<webrtc::test::MockAudioDeviceModule> adm = webrtc::test::MockAudioDeviceModule::CreateStrict();
   webrtc::AudioOptions options;
   options.auto_gain_control = true;
   options.auto_gain_control_mode = webrtc::AudioProcessingMode::kSoftware;
@@ -545,14 +521,12 @@ TEST(AudioProcessingControllerTest, SoftwareDisablesPlatformAndEnablesApm) {
   EXPECT_CALL(*adm, BuiltInAGCIsAvailable()).WillOnce(Return(true));
   EXPECT_CALL(*adm, EnableBuiltInAGC(false)).WillOnce(Return(0));
 
-  webrtc::AudioProcessing::Config apm_config =
-      ApplyAudioProcessingOptionsForTest(options, adm.get());
+  webrtc::AudioProcessing::Config apm_config = ApplyAudioProcessingOptionsForTest(options, adm.get());
   EXPECT_TRUE(apm_config.gain_controller1.enabled);
 }
 
 TEST(AudioProcessingControllerTest, DisabledTurnsOffPlatformAndSoftware) {
-  webrtc::scoped_refptr<webrtc::test::MockAudioDeviceModule> adm =
-      webrtc::test::MockAudioDeviceModule::CreateStrict();
+  webrtc::scoped_refptr<webrtc::test::MockAudioDeviceModule> adm = webrtc::test::MockAudioDeviceModule::CreateStrict();
   webrtc::AudioOptions options;
   options.noise_suppression = false;
   options.noise_suppression_mode = webrtc::AudioProcessingMode::kPlatform;
@@ -560,8 +534,7 @@ TEST(AudioProcessingControllerTest, DisabledTurnsOffPlatformAndSoftware) {
   EXPECT_CALL(*adm, BuiltInNSIsAvailable()).WillOnce(Return(true));
   EXPECT_CALL(*adm, EnableBuiltInNS(false)).WillOnce(Return(0));
 
-  webrtc::AudioProcessing::Config apm_config =
-      ApplyAudioProcessingOptionsForTest(options, adm.get());
+  webrtc::AudioProcessing::Config apm_config = ApplyAudioProcessingOptionsForTest(options, adm.get());
   EXPECT_FALSE(apm_config.noise_suppression.enabled);
 }
 
@@ -570,17 +543,15 @@ TEST(AudioProcessingControllerTest, HighPassFilterPlatformReturnsApplyFailed) {
   options.highpass_filter = true;
   options.highpass_filter_mode = webrtc::AudioProcessingMode::kPlatform;
 
-  webrtc::AudioProcessingOptionsResult result =
-      ApplyAudioProcessingOptionsResultForTest(options, nullptr);
-  EXPECT_EQ(webrtc::AudioProcessingOptionsResultCode::kApplyFailed,
-            result.code);
+  webrtc::AudioProcessingOptionsResult result = ApplyAudioProcessingOptionsResultForTest(options, nullptr);
+  EXPECT_EQ(webrtc::AudioProcessingOptionsResultCode::kApplyFailed, result.code);
 }
 
 TEST(AudioProcessingControllerTest, RuntimeStateCombinesRequestedSoftwareAndPlatformState) {
   webrtc::scoped_refptr<RuntimeStateMockAudioDeviceModule> adm =
       webrtc::make_ref_counted<RuntimeStateMockAudioDeviceModule>();
-  adm->state.topology = webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology::
-      kEchoCancellationAndNoiseSuppressionCoupled;
+  adm->state.topology =
+      webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled;
   adm->state.is_echo_cancellation_available = true;
   adm->state.is_echo_cancellation_requested = true;
   adm->state.is_echo_cancellation_active = false;
@@ -608,11 +579,9 @@ TEST(AudioProcessingControllerTest, RuntimeStateCombinesRequestedSoftwareAndPlat
   apm_config.gain_controller2.enabled = false;
   apm_config.high_pass_filter.enabled = true;
 
-  webrtc::AudioProcessingRuntimeState state =
-      GetAudioProcessingRuntimeStateForTest(options, adm.get(), apm_config);
+  webrtc::AudioProcessingRuntimeState state = GetAudioProcessingRuntimeStateForTest(options, adm.get(), apm_config);
 
-  EXPECT_EQ(webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology::
-                kEchoCancellationAndNoiseSuppressionCoupled,
+  EXPECT_EQ(webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled,
             state.topology);
   ASSERT_TRUE(state.echo_cancellation.is_requested_enabled.has_value());
   EXPECT_TRUE(*state.echo_cancellation.is_requested_enabled);
@@ -623,14 +592,12 @@ TEST(AudioProcessingControllerTest, RuntimeStateCombinesRequestedSoftwareAndPlat
   EXPECT_FALSE(state.echo_cancellation.is_platform_active.value_or(true));
   EXPECT_EQ(webrtc::AudioProcessingImplementation::kSoftware, state.echo_cancellation.effective);
 
-  EXPECT_EQ(webrtc::AudioProcessingImplementation::kSoftwareAndPlatform,
-            state.noise_suppression.effective);
+  EXPECT_EQ(webrtc::AudioProcessingImplementation::kSoftwareAndPlatform, state.noise_suppression.effective);
   EXPECT_EQ(webrtc::AudioProcessingImplementation::kDisabled, state.auto_gain_control.effective);
   EXPECT_EQ(webrtc::AudioProcessingImplementation::kSoftware, state.high_pass_filter.effective);
 }
 
-TEST(AudioProcessingControllerTest,
-     RuntimeStateDoesNotTreatUnavailableRequestedPlatformAsEffective) {
+TEST(AudioProcessingControllerTest, RuntimeStateDoesNotTreatUnavailableRequestedPlatformAsEffective) {
   webrtc::scoped_refptr<RuntimeStateMockAudioDeviceModule> adm =
       webrtc::make_ref_counted<RuntimeStateMockAudioDeviceModule>();
   adm->state.is_echo_cancellation_available = false;
@@ -643,24 +610,20 @@ TEST(AudioProcessingControllerTest,
   webrtc::AudioProcessing::Config apm_config;
   apm_config.echo_canceller.enabled = false;
 
-  webrtc::AudioProcessingRuntimeState state =
-      GetAudioProcessingRuntimeStateForTest(options, adm.get(), apm_config);
+  webrtc::AudioProcessingRuntimeState state = GetAudioProcessingRuntimeStateForTest(options, adm.get(), apm_config);
 
   EXPECT_FALSE(state.echo_cancellation.is_platform_available);
   EXPECT_TRUE(state.echo_cancellation.is_platform_requested.value_or(false));
-  EXPECT_EQ(webrtc::AudioProcessingImplementation::kDisabled,
-            state.echo_cancellation.effective);
+  EXPECT_EQ(webrtc::AudioProcessingImplementation::kDisabled, state.echo_cancellation.effective);
 }
 
-TEST(AudioProcessingControllerTest,
-     RuntimeStateReportsDiagnosticSnapshotAvailability) {
+TEST(AudioProcessingControllerTest, RuntimeStateReportsDiagnosticSnapshotAvailability) {
   webrtc::scoped_refptr<RuntimeStateMockAudioDeviceModule> adm =
       webrtc::make_ref_counted<RuntimeStateMockAudioDeviceModule>();
 
   webrtc::AudioOptions requested_options;
   requested_options.echo_cancellation = true;
-  requested_options.echo_cancellation_mode =
-      webrtc::AudioProcessingMode::kAutomatic;
+  requested_options.echo_cancellation_mode = webrtc::AudioProcessingMode::kAutomatic;
 
   webrtc::AudioOptions resolved_options = requested_options;
   resolved_options.echo_cancellation = true;
@@ -669,25 +632,20 @@ TEST(AudioProcessingControllerTest,
   apm_config.echo_canceller.enabled = true;
 
   webrtc::AudioProcessingRuntimeState state =
-      GetAudioProcessingRuntimeStateForTest(requested_options, adm.get(),
-                                            apm_config, resolved_options);
+      GetAudioProcessingRuntimeStateForTest(requested_options, adm.get(), apm_config, resolved_options);
 
   EXPECT_TRUE(state.has_audio_processing_module);
   EXPECT_TRUE(state.has_audio_processing_config);
   EXPECT_TRUE(state.has_requested_audio_processing_options);
   EXPECT_TRUE(state.has_resolved_audio_processing_options);
   EXPECT_TRUE(state.echo_cancellation.is_requested_enabled.value_or(false));
-  EXPECT_EQ(webrtc::AudioProcessingMode::kAutomatic,
-            state.echo_cancellation.requested_mode.value());
-  EXPECT_TRUE(
-      state.echo_cancellation.is_resolved_software_enabled.value_or(false));
+  EXPECT_EQ(webrtc::AudioProcessingMode::kAutomatic, state.echo_cancellation.requested_mode.value());
+  EXPECT_TRUE(state.echo_cancellation.is_resolved_software_enabled.value_or(false));
   EXPECT_TRUE(state.echo_cancellation.is_software_enabled.value_or(false));
-  EXPECT_EQ(webrtc::AudioProcessingImplementation::kSoftware,
-            state.echo_cancellation.effective);
+  EXPECT_EQ(webrtc::AudioProcessingImplementation::kSoftware, state.echo_cancellation.effective);
 }
 
-TEST(AudioProcessingControllerTest,
-     RuntimeStateReportsMissingOptionSnapshotsExplicitly) {
+TEST(AudioProcessingControllerTest, RuntimeStateReportsMissingOptionSnapshotsExplicitly) {
   webrtc::scoped_refptr<RuntimeStateMockAudioDeviceModule> adm =
       webrtc::make_ref_counted<RuntimeStateMockAudioDeviceModule>();
   webrtc::scoped_refptr<StrictMock<webrtc::test::MockAudioProcessing>> apm =
@@ -696,8 +654,7 @@ TEST(AudioProcessingControllerTest,
   EXPECT_CALL(*apm, GetConfig()).WillOnce(Return(apm_config));
 
   webrtc::AudioProcessingRuntimeState state =
-      webrtc::GetAudioProcessingRuntimeState(apm.get(), adm.get(), std::nullopt,
-                                             std::nullopt);
+      webrtc::GetAudioProcessingRuntimeState(apm.get(), adm.get(), std::nullopt, std::nullopt);
 
   EXPECT_TRUE(state.has_audio_processing_module);
   EXPECT_TRUE(state.has_audio_processing_config);
@@ -705,16 +662,13 @@ TEST(AudioProcessingControllerTest,
   EXPECT_FALSE(state.has_resolved_audio_processing_options);
   EXPECT_FALSE(state.echo_cancellation.is_requested_enabled.has_value());
   EXPECT_FALSE(state.echo_cancellation.requested_mode.has_value());
-  EXPECT_FALSE(
-      state.echo_cancellation.is_resolved_software_enabled.has_value());
+  EXPECT_FALSE(state.echo_cancellation.is_resolved_software_enabled.has_value());
   EXPECT_TRUE(state.echo_cancellation.is_software_enabled.has_value());
 }
 
-TEST(AudioProcessingControllerTest,
-     CoupledAllAutomaticUsesPlatformProcessing) {
-  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>
-      adm = webrtc::make_ref_counted<
-          StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
+TEST(AudioProcessingControllerTest, CoupledAllAutomaticUsesPlatformProcessing) {
+  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>> adm =
+      webrtc::make_ref_counted<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
   webrtc::AudioOptions options;
   options.echo_cancellation = true;
   options.echo_cancellation_mode = webrtc::AudioProcessingMode::kAutomatic;
@@ -732,18 +686,15 @@ TEST(AudioProcessingControllerTest,
   EXPECT_CALL(*adm, BuiltInAGCIsAvailable()).WillOnce(Return(true));
   EXPECT_CALL(*adm, EnableBuiltInAGC(true)).WillOnce(Return(0));
 
-  webrtc::AudioProcessing::Config apm_config =
-      ApplyAudioProcessingOptionsForTest(options, adm.get());
+  webrtc::AudioProcessing::Config apm_config = ApplyAudioProcessingOptionsForTest(options, adm.get());
   EXPECT_FALSE(apm_config.echo_canceller.enabled);
   EXPECT_FALSE(apm_config.noise_suppression.enabled);
   EXPECT_FALSE(apm_config.gain_controller1.enabled);
 }
 
-TEST(AudioProcessingControllerTest,
-     CoupledAutomaticFallsBackWhenPlatformEnableFails) {
-  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>
-      adm = webrtc::make_ref_counted<
-          StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
+TEST(AudioProcessingControllerTest, CoupledAutomaticFallsBackWhenPlatformEnableFails) {
+  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>> adm =
+      webrtc::make_ref_counted<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
   webrtc::AudioOptions options;
   options.echo_cancellation = true;
   options.echo_cancellation_mode = webrtc::AudioProcessingMode::kAutomatic;
@@ -764,18 +715,15 @@ TEST(AudioProcessingControllerTest,
   EXPECT_CALL(*adm, BuiltInAGCIsAvailable()).WillOnce(Return(true));
   EXPECT_CALL(*adm, EnableBuiltInAGC(false)).WillOnce(Return(0));
 
-  webrtc::AudioProcessing::Config apm_config =
-      ApplyAudioProcessingOptionsForTest(options, adm.get());
+  webrtc::AudioProcessing::Config apm_config = ApplyAudioProcessingOptionsForTest(options, adm.get());
   EXPECT_TRUE(apm_config.echo_canceller.enabled);
   EXPECT_TRUE(apm_config.noise_suppression.enabled);
   EXPECT_TRUE(apm_config.gain_controller1.enabled);
 }
 
-TEST(AudioProcessingControllerTest,
-     CoupledPlatformReturnsApplyFailedWhenPlatformEnableFails) {
-  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>
-      adm = webrtc::make_ref_counted<
-          StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
+TEST(AudioProcessingControllerTest, CoupledPlatformReturnsApplyFailedWhenPlatformEnableFails) {
+  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>> adm =
+      webrtc::make_ref_counted<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
   webrtc::AudioOptions options;
   options.echo_cancellation = true;
   options.echo_cancellation_mode = webrtc::AudioProcessingMode::kPlatform;
@@ -792,16 +740,13 @@ TEST(AudioProcessingControllerTest,
   EXPECT_CALL(*adm, EnableBuiltInNS(false)).WillOnce(Return(0));
   EXPECT_CALL(*adm, EnableBuiltInVoiceProcessingPath(false)).WillOnce(Return(0));
 
-  webrtc::AudioProcessingOptionsResult result =
-      ApplyAudioProcessingOptionsResultForTest(options, adm.get());
-  EXPECT_EQ(webrtc::AudioProcessingOptionsResultCode::kApplyFailed,
-            result.code);
+  webrtc::AudioProcessingOptionsResult result = ApplyAudioProcessingOptionsResultForTest(options, adm.get());
+  EXPECT_EQ(webrtc::AudioProcessingOptionsResultCode::kApplyFailed, result.code);
 }
 
 TEST(AudioProcessingControllerTest, CoupledAutomaticFallsBackWhenPathEnableFails) {
-  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>
-      adm = webrtc::make_ref_counted<
-          StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
+  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>> adm =
+      webrtc::make_ref_counted<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
   webrtc::AudioOptions options;
   options.echo_cancellation = true;
   options.echo_cancellation_mode = webrtc::AudioProcessingMode::kAutomatic;
@@ -815,8 +760,7 @@ TEST(AudioProcessingControllerTest, CoupledAutomaticFallsBackWhenPathEnableFails
   EXPECT_CALL(*adm, BuiltInAGCIsAvailable()).WillOnce(Return(true));
   EXPECT_CALL(*adm, EnableBuiltInAGC(false)).WillOnce(Return(0));
 
-  webrtc::AudioProcessing::Config apm_config =
-      ApplyAudioProcessingOptionsForTest(options, adm.get());
+  webrtc::AudioProcessing::Config apm_config = ApplyAudioProcessingOptionsForTest(options, adm.get());
   EXPECT_TRUE(apm_config.echo_canceller.enabled);
   EXPECT_TRUE(apm_config.noise_suppression.enabled);
   EXPECT_TRUE(apm_config.gain_controller1.enabled);
@@ -843,8 +787,7 @@ TEST(AudioProcessingControllerTest, CoupledAutomaticFallsBackWhenAgcEnableFails)
   EXPECT_CALL(*adm, EnableBuiltInAGC(true)).WillOnce(Return(-1));
   EXPECT_CALL(*adm, EnableBuiltInAGC(false)).WillOnce(Return(0));
 
-  webrtc::AudioProcessing::Config apm_config =
-      ApplyAudioProcessingOptionsForTest(options, adm.get());
+  webrtc::AudioProcessing::Config apm_config = ApplyAudioProcessingOptionsForTest(options, adm.get());
   EXPECT_FALSE(apm_config.echo_canceller.enabled);
   EXPECT_FALSE(apm_config.noise_suppression.enabled);
   EXPECT_TRUE(apm_config.gain_controller1.enabled);
@@ -862,17 +805,14 @@ TEST(AudioProcessingControllerTest, CoupledNoiseSoftwareForcesAutomaticEchoToSof
   EXPECT_CALL(*adm, BuiltInVoiceProcessingPathIsAvailable()).WillOnce(Return(true));
   EXPECT_CALL(*adm, EnableBuiltInVoiceProcessingPath(false)).WillOnce(Return(0));
 
-  webrtc::AudioProcessing::Config apm_config =
-      ApplyAudioProcessingOptionsForTest(options, adm.get());
+  webrtc::AudioProcessing::Config apm_config = ApplyAudioProcessingOptionsForTest(options, adm.get());
   EXPECT_TRUE(apm_config.echo_canceller.enabled);
   EXPECT_TRUE(apm_config.noise_suppression.enabled);
 }
 
-TEST(AudioProcessingControllerTest,
-     CoupledEchoNoiseSoftwareEchoDisablesPathAndFallsBackAutoProcessing) {
-  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>
-      adm = webrtc::make_ref_counted<
-          StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
+TEST(AudioProcessingControllerTest, CoupledEchoNoiseSoftwareEchoDisablesPathAndFallsBackAutoProcessing) {
+  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>> adm =
+      webrtc::make_ref_counted<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
   webrtc::AudioOptions options;
   options.echo_cancellation = true;
   options.echo_cancellation_mode = webrtc::AudioProcessingMode::kSoftware;
@@ -886,17 +826,15 @@ TEST(AudioProcessingControllerTest,
   EXPECT_CALL(*adm, BuiltInAGCIsAvailable()).WillOnce(Return(true));
   EXPECT_CALL(*adm, EnableBuiltInAGC(false)).WillOnce(Return(0));
 
-  webrtc::AudioProcessing::Config apm_config =
-      ApplyAudioProcessingOptionsForTest(options, adm.get());
+  webrtc::AudioProcessing::Config apm_config = ApplyAudioProcessingOptionsForTest(options, adm.get());
   EXPECT_TRUE(apm_config.echo_canceller.enabled);
   EXPECT_TRUE(apm_config.noise_suppression.enabled);
   EXPECT_TRUE(apm_config.gain_controller1.enabled);
 }
 
 TEST(AudioProcessingControllerTest, CoupledEchoNoiseSoftwareAgcKeepsPathForPlatformEchoNoise) {
-  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>
-      adm = webrtc::make_ref_counted<
-          StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
+  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>> adm =
+      webrtc::make_ref_counted<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
   webrtc::AudioOptions options;
   options.echo_cancellation = true;
   options.echo_cancellation_mode = webrtc::AudioProcessingMode::kPlatform;
@@ -914,18 +852,15 @@ TEST(AudioProcessingControllerTest, CoupledEchoNoiseSoftwareAgcKeepsPathForPlatf
   EXPECT_CALL(*adm, BuiltInAGCIsAvailable()).WillOnce(Return(true));
   EXPECT_CALL(*adm, EnableBuiltInAGC(false)).WillOnce(Return(0));
 
-  webrtc::AudioProcessing::Config apm_config =
-      ApplyAudioProcessingOptionsForTest(options, adm.get());
+  webrtc::AudioProcessing::Config apm_config = ApplyAudioProcessingOptionsForTest(options, adm.get());
   EXPECT_FALSE(apm_config.echo_canceller.enabled);
   EXPECT_FALSE(apm_config.noise_suppression.enabled);
   EXPECT_TRUE(apm_config.gain_controller1.enabled);
 }
 
-TEST(AudioProcessingControllerTest,
-     CoupledEchoNoisePlatformRequestIsDisabledWhenEchoForcesSoftware) {
-  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>
-      adm = webrtc::make_ref_counted<
-          StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
+TEST(AudioProcessingControllerTest, CoupledEchoNoisePlatformRequestIsDisabledWhenEchoForcesSoftware) {
+  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>> adm =
+      webrtc::make_ref_counted<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
   webrtc::AudioOptions options;
   options.echo_cancellation = true;
   options.echo_cancellation_mode = webrtc::AudioProcessingMode::kSoftware;
@@ -937,32 +872,26 @@ TEST(AudioProcessingControllerTest,
   EXPECT_CALL(*adm, BuiltInVoiceProcessingPathIsAvailable()).WillOnce(Return(true));
   EXPECT_CALL(*adm, EnableBuiltInVoiceProcessingPath(false)).WillOnce(Return(0));
 
-  webrtc::AudioProcessingOptionsResult result =
-      ApplyAudioProcessingOptionsResultForTest(options, adm.get());
-  EXPECT_EQ(webrtc::AudioProcessingOptionsResultCode::kApplyFailed,
-            result.code);
+  webrtc::AudioProcessingOptionsResult result = ApplyAudioProcessingOptionsResultForTest(options, adm.get());
+  EXPECT_EQ(webrtc::AudioProcessingOptionsResultCode::kApplyFailed, result.code);
 }
 
 TEST(AudioProcessingControllerTest, CoupledEchoPlatformFailsWhenPathUnavailable) {
-  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>
-      adm = webrtc::make_ref_counted<
-          StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
+  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>> adm =
+      webrtc::make_ref_counted<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
   webrtc::AudioOptions options;
   options.echo_cancellation = true;
   options.echo_cancellation_mode = webrtc::AudioProcessingMode::kPlatform;
 
   EXPECT_CALL(*adm, BuiltInVoiceProcessingPathIsAvailable()).WillOnce(Return(false));
 
-  webrtc::AudioProcessingOptionsResult result =
-      ApplyAudioProcessingOptionsResultForTest(options, adm.get());
-  EXPECT_EQ(webrtc::AudioProcessingOptionsResultCode::kApplyFailed,
-            result.code);
+  webrtc::AudioProcessingOptionsResult result = ApplyAudioProcessingOptionsResultForTest(options, adm.get());
+  EXPECT_EQ(webrtc::AudioProcessingOptionsResultCode::kApplyFailed, result.code);
 }
 
 TEST(AudioProcessingControllerTest, CoupledAgcPlatformOnlyFailsWithoutPath) {
-  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>
-      adm = webrtc::make_ref_counted<
-          StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
+  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>> adm =
+      webrtc::make_ref_counted<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
   webrtc::AudioOptions options;
   options.auto_gain_control = true;
   options.auto_gain_control_mode = webrtc::AudioProcessingMode::kPlatform;
@@ -970,16 +899,13 @@ TEST(AudioProcessingControllerTest, CoupledAgcPlatformOnlyFailsWithoutPath) {
   EXPECT_CALL(*adm, BuiltInAGCIsAvailable()).WillOnce(Return(true));
   EXPECT_CALL(*adm, EnableBuiltInAGC(false)).WillOnce(Return(0));
 
-  webrtc::AudioProcessingOptionsResult result =
-      ApplyAudioProcessingOptionsResultForTest(options, adm.get());
-  EXPECT_EQ(webrtc::AudioProcessingOptionsResultCode::kApplyFailed,
-            result.code);
+  webrtc::AudioProcessingOptionsResult result = ApplyAudioProcessingOptionsResultForTest(options, adm.get());
+  EXPECT_EQ(webrtc::AudioProcessingOptionsResultCode::kApplyFailed, result.code);
 }
 
 TEST(AudioProcessingControllerTest, CoupledEchoPlatformWithNoiseUnsetEnablesSharedPath) {
-  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>
-      adm = webrtc::make_ref_counted<
-          StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
+  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>> adm =
+      webrtc::make_ref_counted<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
   webrtc::AudioOptions options;
   options.echo_cancellation = true;
   options.echo_cancellation_mode = webrtc::AudioProcessingMode::kPlatform;
@@ -991,8 +917,7 @@ TEST(AudioProcessingControllerTest, CoupledEchoPlatformWithNoiseUnsetEnablesShar
   EXPECT_CALL(*adm, EnableBuiltInAEC(true)).WillOnce(Return(0));
   EXPECT_CALL(*adm, EnableBuiltInNS(true)).WillOnce(Return(0));
 
-  webrtc::AudioProcessing::Config apm_config =
-      ApplyAudioProcessingOptionsForTest(options, adm.get());
+  webrtc::AudioProcessing::Config apm_config = ApplyAudioProcessingOptionsForTest(options, adm.get());
   EXPECT_FALSE(apm_config.echo_canceller.enabled);
   EXPECT_FALSE(apm_config.noise_suppression.enabled);
 }
@@ -1009,10 +934,8 @@ TEST(AudioProcessingControllerTest, CoupledEchoPlatformWithNoiseDisabledFails) {
   EXPECT_CALL(*adm, BuiltInVoiceProcessingPathIsAvailable()).WillOnce(Return(true));
   EXPECT_CALL(*adm, EnableBuiltInVoiceProcessingPath(false)).WillOnce(Return(0));
 
-  webrtc::AudioProcessingOptionsResult result =
-      ApplyAudioProcessingOptionsResultForTest(options, adm.get());
-  EXPECT_EQ(webrtc::AudioProcessingOptionsResultCode::kApplyFailed,
-            result.code);
+  webrtc::AudioProcessingOptionsResult result = ApplyAudioProcessingOptionsResultForTest(options, adm.get());
+  EXPECT_EQ(webrtc::AudioProcessingOptionsResultCode::kApplyFailed, result.code);
 }
 
 TEST(AudioProcessingControllerTest, CoupledNoisePlatformWithEchoDisabledFails) {
@@ -1027,16 +950,13 @@ TEST(AudioProcessingControllerTest, CoupledNoisePlatformWithEchoDisabledFails) {
   EXPECT_CALL(*adm, BuiltInVoiceProcessingPathIsAvailable()).WillOnce(Return(true));
   EXPECT_CALL(*adm, EnableBuiltInVoiceProcessingPath(false)).WillOnce(Return(0));
 
-  webrtc::AudioProcessingOptionsResult result =
-      ApplyAudioProcessingOptionsResultForTest(options, adm.get());
-  EXPECT_EQ(webrtc::AudioProcessingOptionsResultCode::kApplyFailed,
-            result.code);
+  webrtc::AudioProcessingOptionsResult result = ApplyAudioProcessingOptionsResultForTest(options, adm.get());
+  EXPECT_EQ(webrtc::AudioProcessingOptionsResultCode::kApplyFailed, result.code);
 }
 
 TEST(AudioProcessingControllerTest, CoupledAgcOnlyDoesNotEnablePath) {
-  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>
-      adm = webrtc::make_ref_counted<
-          StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
+  webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>> adm =
+      webrtc::make_ref_counted<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
   webrtc::AudioOptions options;
   options.auto_gain_control = true;
   options.auto_gain_control_mode = webrtc::AudioProcessingMode::kAutomatic;
@@ -1044,8 +964,7 @@ TEST(AudioProcessingControllerTest, CoupledAgcOnlyDoesNotEnablePath) {
   EXPECT_CALL(*adm, BuiltInAGCIsAvailable()).WillOnce(Return(true));
   EXPECT_CALL(*adm, EnableBuiltInAGC(false)).WillOnce(Return(0));
 
-  webrtc::AudioProcessing::Config apm_config =
-      ApplyAudioProcessingOptionsForTest(options, adm.get());
+  webrtc::AudioProcessing::Config apm_config = ApplyAudioProcessingOptionsForTest(options, adm.get());
   EXPECT_TRUE(apm_config.gain_controller1.enabled);
 }
 
@@ -1066,8 +985,7 @@ TEST(AudioProcessingControllerTest, CoupledAgcOnlyAutomaticUsesActiveSharedPath)
   EXPECT_CALL(*adm, BuiltInAGCIsAvailable()).WillOnce(Return(true));
   EXPECT_CALL(*adm, EnableBuiltInAGC(true)).WillOnce(Return(0));
 
-  webrtc::AudioProcessing::Config apm_config =
-      ApplyAudioProcessingOptionsForTest(options, adm.get());
+  webrtc::AudioProcessing::Config apm_config = ApplyAudioProcessingOptionsForTest(options, adm.get());
   EXPECT_FALSE(apm_config.gain_controller1.enabled);
 }
 

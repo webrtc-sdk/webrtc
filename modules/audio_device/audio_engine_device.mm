@@ -91,8 +91,8 @@ AudioProcessingOptionsValidationContext AudioProcessingValidationContextForEngin
   return context;
 }
 
-AudioEngineDevice::EngineState ApplyAudioProcessingOptionsToEngineState(
-    AudioEngineDevice::EngineState state, const AudioOptions &options) {
+AudioEngineDevice::EngineState ApplyAudioProcessingOptionsToEngineState(AudioEngineDevice::EngineState state,
+                                                                        const AudioOptions &options) {
   AudioProcessingOptionsValidationContext validation_context = AudioProcessingValidationContextForEngineState(state);
   AudioProcessingOptionsResult validation = ValidateAudioProcessingOptions(options, validation_context);
   if (!validation.ok()) {
@@ -104,16 +104,15 @@ AudioEngineDevice::EngineState ApplyAudioProcessingOptionsToEngineState(
     return state;
   }
 
-  CoupledAudioProcessingPathResolution resolution = ResolveCoupledAudioProcessingPath(
-      options, [&state] { return EngineStateEchoNoisePlatformPathIsActive(state); });
+  CoupledAudioProcessingPathResolution resolution =
+      ResolveCoupledAudioProcessingPath(options, [&state] { return EngineStateEchoNoisePlatformPathIsActive(state); });
 
   // Only seed the platform path when the options resolve to it AND the device can
   // provide it. If the path is unavailable (e.g. simulator), keep it off and let
   // WebRTC APM handle automatic fallback later. Mirrors the runtime apply gate
   // (path_available && should_use_echo_noise_platform_path).
   const bool should_seed_platform_path =
-      validation_context.is_echo_noise_platform_path_available &&
-      resolution.should_use_echo_noise_platform_path;
+      validation_context.is_echo_noise_platform_path_available && resolution.should_use_echo_noise_platform_path;
 
   if (resolution.has_echo_or_noise_option) {
     // Seed Apple VPIO before the first engine start. The sender applies the full
@@ -128,8 +127,7 @@ AudioEngineDevice::EngineState ApplyAudioProcessingOptionsToEngineState(
   }
 
   if (options.auto_gain_control.has_value()) {
-    state.voice_processing_agc_enabled =
-        should_seed_platform_path && resolution.auto_gain_control_wants_platform;
+    state.voice_processing_agc_enabled = should_seed_platform_path && resolution.auto_gain_control_wants_platform;
   }
   return state;
 }
@@ -1101,10 +1099,8 @@ bool AudioEngineDevice::BuiltInNSIsAvailable() const {
   return BuiltInVoiceProcessingPathIsAvailable();
 }
 
-AudioDeviceModule::BuiltInAudioProcessingTopology
-AudioEngineDevice::GetBuiltInAudioProcessingTopology() const {
-  return BuiltInAudioProcessingTopology::
-      kEchoCancellationAndNoiseSuppressionCoupled;
+AudioDeviceModule::BuiltInAudioProcessingTopology AudioEngineDevice::GetBuiltInAudioProcessingTopology() const {
+  return BuiltInAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled;
 }
 
 bool AudioEngineDevice::BuiltInVoiceProcessingPathIsAvailable() const {
@@ -1124,8 +1120,7 @@ int32_t AudioEngineDevice::EnableBuiltInVoiceProcessingPath(bool enable) {
 #endif
 }
 
-AudioDeviceModule::BuiltInAudioProcessingState AudioEngineDevice::GetBuiltInAudioProcessingState()
-    const {
+AudioDeviceModule::BuiltInAudioProcessingState AudioEngineDevice::GetBuiltInAudioProcessingState() const {
   BuiltInAudioProcessingState state;
   state.topology = GetBuiltInAudioProcessingTopology();
 #if TARGET_OS_SIMULATOR
@@ -1533,8 +1528,7 @@ int32_t AudioEngineDevice::DuckingLevel(AudioDuckingLevel* level) {
   return 0;
 }
 
-int32_t AudioEngineDevice::SetInitRecordingPersistentMode(bool enable,
-                                                          const AudioOptions *options) {
+int32_t AudioEngineDevice::SetInitRecordingPersistentMode(bool enable, const AudioOptions *options) {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "SetInitRecordingPersistentMode: " << enable;
 
@@ -2042,29 +2036,18 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     return "?";
   };
 
-  auto log_engine_state = [&](const char* label, const EngineState& s) {
+  auto log_engine_state = [&](const char *label, const EngineState &s) {
     LOGI() << label << ": "
-           << "in=" << s.input_enabled << "/" << s.input_running
-           << " out=" << s.output_enabled << "/" << s.output_running
-           << " persistent=" << s.input_enabled_persistent_mode
-           << " muted=" << s.input_muted
-           << " vp=" << s.voice_processing_enabled
-           << " vpBypass=" << s.voice_processing_bypassed
-           << " agc=" << s.voice_processing_agc_enabled
-           << " builtinAec=" << s.built_in_aec_enabled
-           << " builtinNs=" << s.built_in_ns_enabled
-           << " mute_mode=" << mute_mode_str(s.mute_mode)
-           << " render=" << render_mode_str(s.render_mode)
-           << " interrupted=" << s.is_interrupted
-           << " in_avail=" << s.input_available
-           << " out_avail=" << s.output_available
-           << " inDev=" << s.input_device_id
-           << " outDev=" << s.output_device_id
-           << " defInUpd=" << s.default_input_device_update_count
-           << " defOutUpd=" << s.default_output_device_update_count
-           << " | IsInEnabled=" << s.IsInputEnabled()
-           << " IsOutEnabled=" << s.IsOutputEnabled()
-           << " IsInRunning=" << s.IsInputRunning()
+           << "in=" << s.input_enabled << "/" << s.input_running << " out=" << s.output_enabled << "/"
+           << s.output_running << " persistent=" << s.input_enabled_persistent_mode << " muted=" << s.input_muted
+           << " vp=" << s.voice_processing_enabled << " vpBypass=" << s.voice_processing_bypassed
+           << " agc=" << s.voice_processing_agc_enabled << " builtinAec=" << s.built_in_aec_enabled
+           << " builtinNs=" << s.built_in_ns_enabled << " mute_mode=" << mute_mode_str(s.mute_mode)
+           << " render=" << render_mode_str(s.render_mode) << " interrupted=" << s.is_interrupted
+           << " in_avail=" << s.input_available << " out_avail=" << s.output_available << " inDev=" << s.input_device_id
+           << " outDev=" << s.output_device_id << " defInUpd=" << s.default_input_device_update_count
+           << " defOutUpd=" << s.default_output_device_update_count << " | IsInEnabled=" << s.IsInputEnabled()
+           << " IsOutEnabled=" << s.IsOutputEnabled() << " IsInRunning=" << s.IsInputRunning()
            << " IsOutRunning=" << s.IsOutputRunning();
   };
 
@@ -2283,8 +2266,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     NSString* category = [AVAudioSession sharedInstance].category;
     bool isCategoryValid = IsAudioSessionCategoryValid(category, state.next.IsInputEnabled(),
                                                        state.next.IsOutputEnabled());
-    LOGI() << "AudioEngine pre-enable check, audio session category: "
-           << (isCategoryValid ? "true" : "false");
+    LOGI() << "AudioEngine pre-enable check, audio session category: " << (isCategoryValid ? "true" : "false");
     if (!isCategoryValid) {
       return rollback(kAudioEngineErrorAudioSessionInvalidCategory);
     }
@@ -2300,8 +2282,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     LOGI() << "setVoiceProcessingEnabled (input): "
            << (state.next.voice_processing_enabled ? "YES" : "NO") << " (Ignored on Simulator)";
 #else
-    LOGI() << "setVoiceProcessingEnabled (input): "
-           << (state.next.voice_processing_enabled ? "YES" : "NO");
+    LOGI() << "setVoiceProcessingEnabled (input): " << (state.next.voice_processing_enabled ? "YES" : "NO");
     NSError* error = nil;
     BOOL set_vp_result = NO;
     @try {

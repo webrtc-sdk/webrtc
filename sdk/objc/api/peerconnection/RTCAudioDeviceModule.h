@@ -234,8 +234,7 @@ RTC_OBJC_EXPORT
     BOOL recordingAlwaysPreparedMode;
 - (NSInteger)setRecordingAlwaysPreparedMode:(BOOL)enabled;
 - (NSInteger)setRecordingAlwaysPreparedMode:(BOOL)enabled
-                     audioProcessingOptions:
-                         (nullable RTC_OBJC_TYPE(RTCAudioProcessingOptions) *)options
+                     audioProcessingOptions:(nullable RTC_OBJC_TYPE(RTCAudioProcessingOptions) *)options
     NS_SWIFT_NAME(setRecordingAlwaysPreparedMode(_:audioProcessingOptions:));
 
 @property(nonatomic, weak, nullable) id<RTC_OBJC_TYPE(RTCAudioDeviceModuleDelegate)> observer;
@@ -271,8 +270,7 @@ RTC_OBJC_EXPORT
 /// Diagnostic snapshot of platform audio processing state. Requested values are
 /// the last state requested from the ADM. Active values are live OS readback
 /// when the ADM can query the effect.
-@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState)
-    builtInAudioProcessingState;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState) builtInAudioProcessingState;
 
 @end
 

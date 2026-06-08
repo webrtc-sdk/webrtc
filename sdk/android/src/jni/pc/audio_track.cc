@@ -34,7 +34,7 @@ AudioProcessingMode AudioProcessingModeFromJava(int mode) {
   }
 }
 
-std::string NativeAudioProcessingResult(const AudioProcessingOptionsResult& result) {
+std::string NativeAudioProcessingResult(const AudioProcessingOptionsResult &result) {
   return std::to_string(static_cast<int>(result.code)) + "\n" + result.message;
 }
 
@@ -49,25 +49,20 @@ static jdouble JNI_AudioTrack_GetVolume(JNIEnv*, jlong j_p) {
 }
 
 static ScopedJavaLocalRef<jstring> JNI_AudioTrack_SetAudioProcessingOptions(
-    JNIEnv *jni, jlong j_p, jboolean echo_cancellation, jboolean noise_suppression,
-    jboolean auto_gain_control, jboolean high_pass_filter,
-    jboolean is_echo_cancellation_platform_available,
-    jboolean is_noise_suppression_platform_available, jint echo_cancellation_mode,
-    jint noise_suppression_mode, jint auto_gain_control_mode, jint high_pass_filter_mode) {
-  AudioTrackInterface* track = reinterpret_cast<AudioTrackInterface*>(j_p);
+    JNIEnv *jni, jlong j_p, jboolean echo_cancellation, jboolean noise_suppression, jboolean auto_gain_control,
+    jboolean high_pass_filter, jboolean is_echo_cancellation_platform_available,
+    jboolean is_noise_suppression_platform_available, jint echo_cancellation_mode, jint noise_suppression_mode,
+    jint auto_gain_control_mode, jint high_pass_filter_mode) {
+  AudioTrackInterface *track = reinterpret_cast<AudioTrackInterface *>(j_p);
   AudioOptions options;
   options.echo_cancellation = static_cast<bool>(echo_cancellation);
   options.noise_suppression = static_cast<bool>(noise_suppression);
   options.auto_gain_control = static_cast<bool>(auto_gain_control);
   options.highpass_filter = static_cast<bool>(high_pass_filter);
-  options.echo_cancellation_mode =
-      AudioProcessingModeFromJava(echo_cancellation_mode);
-  options.noise_suppression_mode =
-      AudioProcessingModeFromJava(noise_suppression_mode);
-  options.auto_gain_control_mode =
-      AudioProcessingModeFromJava(auto_gain_control_mode);
-  options.highpass_filter_mode =
-      AudioProcessingModeFromJava(high_pass_filter_mode);
+  options.echo_cancellation_mode = AudioProcessingModeFromJava(echo_cancellation_mode);
+  options.noise_suppression_mode = AudioProcessingModeFromJava(noise_suppression_mode);
+  options.auto_gain_control_mode = AudioProcessingModeFromJava(auto_gain_control_mode);
+  options.highpass_filter_mode = AudioProcessingModeFromJava(high_pass_filter_mode);
   AudioProcessingOptionsValidationContext validation_context;
   validation_context.is_echo_cancellation_platform_available =
       static_cast<bool>(is_echo_cancellation_platform_available);

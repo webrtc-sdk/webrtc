@@ -168,14 +168,12 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
       return input_enabled == rhs.input_enabled && input_running == rhs.input_running &&
              output_enabled == rhs.output_enabled && output_running == rhs.output_running &&
              input_available == rhs.input_available && output_available == rhs.output_available &&
-             input_enabled_persistent_mode == rhs.input_enabled_persistent_mode &&
-             input_muted == rhs.input_muted && is_interrupted == rhs.is_interrupted &&
-             render_mode == rhs.render_mode && mute_mode == rhs.mute_mode &&
+             input_enabled_persistent_mode == rhs.input_enabled_persistent_mode && input_muted == rhs.input_muted &&
+             is_interrupted == rhs.is_interrupted && render_mode == rhs.render_mode && mute_mode == rhs.mute_mode &&
              voice_processing_enabled == rhs.voice_processing_enabled &&
              voice_processing_bypassed == rhs.voice_processing_bypassed &&
              voice_processing_agc_enabled == rhs.voice_processing_agc_enabled &&
-             built_in_aec_enabled == rhs.built_in_aec_enabled &&
-             built_in_ns_enabled == rhs.built_in_ns_enabled &&
+             built_in_aec_enabled == rhs.built_in_aec_enabled && built_in_ns_enabled == rhs.built_in_ns_enabled &&
              advanced_ducking == rhs.advanced_ducking && ducking_level == rhs.ducking_level &&
              output_device_id == rhs.output_device_id && input_device_id == rhs.input_device_id &&
              default_output_device_update_count == rhs.default_output_device_update_count &&
@@ -338,8 +336,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   bool BuiltInAECIsAvailable() const override;
   bool BuiltInAGCIsAvailable() const override;
   bool BuiltInNSIsAvailable() const override;
-  BuiltInAudioProcessingTopology GetBuiltInAudioProcessingTopology()
-      const override;
+  BuiltInAudioProcessingTopology GetBuiltInAudioProcessingTopology() const override;
   bool BuiltInVoiceProcessingPathIsAvailable() const override;
   int32_t EnableBuiltInVoiceProcessingPath(bool enable) override;
   BuiltInAudioProcessingState GetBuiltInAudioProcessingState() const override;

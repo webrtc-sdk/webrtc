@@ -34,13 +34,11 @@ inline RTC_OBJC_TYPE(RTCOptionalBool) OptionalBoolToObjC(std::optional<bool> val
   return value.value() ? RTC_OBJC_TYPE(RTCOptionalBoolYes) : RTC_OBJC_TYPE(RTCOptionalBoolNo);
 }
 
-inline RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopology) BuiltInAudioProcessingTopologyToObjC(
-    AudioDeviceModule::BuiltInAudioProcessingTopology topology) {
+inline RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopology)
+    BuiltInAudioProcessingTopologyToObjC(AudioDeviceModule::BuiltInAudioProcessingTopology topology) {
   switch (topology) {
-    case AudioDeviceModule::BuiltInAudioProcessingTopology::
-        kEchoCancellationAndNoiseSuppressionCoupled:
-      return RTC_OBJC_TYPE(
-          RTCBuiltInAudioProcessingTopologyEchoCancellationAndNoiseSuppressionCoupled);
+    case AudioDeviceModule::BuiltInAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled:
+      return RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopologyEchoCancellationAndNoiseSuppressionCoupled);
     case AudioDeviceModule::BuiltInAudioProcessingTopology::kIndependent:
       return RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopologyIndependent);
   }
@@ -57,8 +55,8 @@ inline RTC_OBJC_TYPE(RTCAudioProcessingMode) AudioProcessingModeToObjC(AudioProc
   }
 }
 
-inline RTC_OBJC_TYPE(RTCAudioProcessingImplementation) AudioProcessingImplementationToObjC(
-    AudioProcessingImplementation implementation) {
+inline RTC_OBJC_TYPE(RTCAudioProcessingImplementation)
+    AudioProcessingImplementationToObjC(AudioProcessingImplementation implementation) {
   switch (implementation) {
     case AudioProcessingImplementation::kDisabled:
       return RTC_OBJC_TYPE(RTCAudioProcessingImplementationDisabled);
@@ -107,9 +105,8 @@ inline RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState)
   RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState) result;
   result.requestedEnabled = OptionalBoolToObjC(state.is_requested_enabled);
   result.hasRequestedMode = state.requested_mode.has_value();
-  result.requestedMode = state.requested_mode.has_value() ?
-      AudioProcessingModeToObjC(*state.requested_mode) :
-      RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic);
+  result.requestedMode = state.requested_mode.has_value() ? AudioProcessingModeToObjC(*state.requested_mode)
+                                                          : RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic);
   result.resolvedSoftwareEnabled = OptionalBoolToObjC(state.is_resolved_software_enabled);
   result.softwareEnabled = OptionalBoolToObjC(state.is_software_enabled);
   result.isPlatformAvailable = state.is_platform_available;
@@ -119,8 +116,8 @@ inline RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState)
   return result;
 }
 
-inline RTC_OBJC_TYPE(RTCAudioProcessingRuntimeState) AudioProcessingRuntimeStateToObjC(
-    const AudioProcessingRuntimeState &state) {
+inline RTC_OBJC_TYPE(RTCAudioProcessingRuntimeState)
+    AudioProcessingRuntimeStateToObjC(const AudioProcessingRuntimeState &state) {
   RTC_OBJC_TYPE(RTCAudioProcessingRuntimeState) result;
   result.topology = BuiltInAudioProcessingTopologyToObjC(state.topology);
   result.hasAudioProcessingModule = state.has_audio_processing_module;

@@ -50,12 +50,10 @@ TEST(JavaTypesTest, TestNativeToJavaToNativeIntArray) {
 }
 
 TEST(JavaTypesTest, TestNativeToJavaIntArrayAcceptsTemporaryVector) {
-  JNIEnv* env = AttachCurrentThreadIfNeeded();
+  JNIEnv *env = AttachCurrentThreadIfNeeded();
 
-  ScopedJavaLocalRef<jintArray> array =
-      NativeToJavaIntArray(env, std::vector<int32_t>{1, 20, 300});
-  EXPECT_EQ((std::vector<int32_t>{1, 20, 300}),
-            JavaToNativeIntArray(env, array));
+  ScopedJavaLocalRef<jintArray> array = NativeToJavaIntArray(env, std::vector<int32_t>{1, 20, 300});
+  EXPECT_EQ((std::vector<int32_t>{1, 20, 300}), JavaToNativeIntArray(env, array));
 }
 
 TEST(JavaTypesTest, TestNativeToJavaToNativeByteArray) {
@@ -68,12 +66,10 @@ TEST(JavaTypesTest, TestNativeToJavaToNativeByteArray) {
 }
 
 TEST(JavaTypesTest, TestNativeToJavaByteArrayAcceptsTemporaryVector) {
-  JNIEnv* env = AttachCurrentThreadIfNeeded();
+  JNIEnv *env = AttachCurrentThreadIfNeeded();
 
-  ScopedJavaLocalRef<jbyteArray> array =
-      NativeToJavaByteArray(env, std::vector<int8_t>{1, 20, 30});
-  EXPECT_EQ((std::vector<int8_t>{1, 20, 30}),
-            JavaToNativeByteArray(env, array));
+  ScopedJavaLocalRef<jbyteArray> array = NativeToJavaByteArray(env, std::vector<int8_t>{1, 20, 30});
+  EXPECT_EQ((std::vector<int8_t>{1, 20, 30}), JavaToNativeByteArray(env, array));
 }
 
 TEST(JavaTypesTest, TestNativeToJavaToNativeIntArrayLeakTest) {

@@ -579,8 +579,7 @@ void PeerConnectionDelegateAdapter::OnRemoveTrack(
 }
 
 - (RTC_OBJC_TYPE(RTCAudioProcessingRuntimeState))audioProcessingRuntimeState {
-  return webrtc::objc::AudioProcessingRuntimeStateToObjC(
-      self.nativePeerConnection->GetAudioProcessingRuntimeState());
+  return webrtc::objc::AudioProcessingRuntimeStateToObjC(self.nativePeerConnection->GetAudioProcessingRuntimeState());
 }
 
 - (BOOL)setConfiguration:(RTC_OBJC_TYPE(RTCConfiguration) *)configuration {

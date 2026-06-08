@@ -243,12 +243,8 @@ ScopedJavaLocalRef<jobjectArray> NativeToJavaObjectArray(
   return j_container;
 }
 
-ScopedJavaLocalRef<jbyteArray> NativeToJavaByteArray(
-    JNIEnv* env,
-    ArrayView<const int8_t> container);
-ScopedJavaLocalRef<jintArray> NativeToJavaIntArray(
-    JNIEnv* env,
-    ArrayView<const int32_t> container);
+ScopedJavaLocalRef<jbyteArray> NativeToJavaByteArray(JNIEnv *env, ArrayView<const int8_t> container);
+ScopedJavaLocalRef<jintArray> NativeToJavaIntArray(JNIEnv *env, ArrayView<const int32_t> container);
 
 std::vector<int8_t> JavaToNativeByteArray(
     JNIEnv* env,

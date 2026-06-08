@@ -28,7 +28,7 @@ void ToStringIfSet(SimpleStringBuilder* result,
   }
 }
 
-const char* AudioProcessingModeToString(AudioProcessingMode mode) {
+const char *AudioProcessingModeToString(AudioProcessingMode mode) {
   switch (mode) {
     case AudioProcessingMode::kAutomatic:
       return "auto";
@@ -40,10 +40,8 @@ const char* AudioProcessingModeToString(AudioProcessingMode mode) {
   return "auto";
 }
 
-void AudioProcessingModeToStringIfSet(
-    SimpleStringBuilder* result,
-    const char* key,
-    const std::optional<AudioProcessingMode>& val) {
+void AudioProcessingModeToStringIfSet(SimpleStringBuilder *result, const char *key,
+                                      const std::optional<AudioProcessingMode> &val) {
   if (val) {
     (*result) << key << ": " << AudioProcessingModeToString(*val) << ", ";
   }
@@ -86,23 +84,16 @@ void AudioOptions::SetAll(const AudioOptions& change) {
 }
 
 bool AudioOptions::operator==(const AudioOptions& o) const {
-  return echo_cancellation == o.echo_cancellation &&
-         echo_cancellation_mode == o.echo_cancellation_mode &&
+  return echo_cancellation == o.echo_cancellation && echo_cancellation_mode == o.echo_cancellation_mode &&
 #if defined(WEBRTC_IOS)
          ios_force_software_aec_HACK == o.ios_force_software_aec_HACK &&
 #endif
-         auto_gain_control == o.auto_gain_control &&
-         auto_gain_control_mode == o.auto_gain_control_mode &&
-         noise_suppression == o.noise_suppression &&
-         noise_suppression_mode == o.noise_suppression_mode &&
-         highpass_filter == o.highpass_filter &&
-         highpass_filter_mode == o.highpass_filter_mode &&
-         stereo_swapping == o.stereo_swapping &&
-         audio_jitter_buffer_max_packets == o.audio_jitter_buffer_max_packets &&
-         audio_jitter_buffer_fast_accelerate ==
-             o.audio_jitter_buffer_fast_accelerate &&
-         audio_jitter_buffer_min_delay_ms ==
-             o.audio_jitter_buffer_min_delay_ms &&
+         auto_gain_control == o.auto_gain_control && auto_gain_control_mode == o.auto_gain_control_mode &&
+         noise_suppression == o.noise_suppression && noise_suppression_mode == o.noise_suppression_mode &&
+         highpass_filter == o.highpass_filter && highpass_filter_mode == o.highpass_filter_mode &&
+         stereo_swapping == o.stereo_swapping && audio_jitter_buffer_max_packets == o.audio_jitter_buffer_max_packets &&
+         audio_jitter_buffer_fast_accelerate == o.audio_jitter_buffer_fast_accelerate &&
+         audio_jitter_buffer_min_delay_ms == o.audio_jitter_buffer_min_delay_ms &&
          audio_network_adaptor == o.audio_network_adaptor &&
          audio_network_adaptor_config == o.audio_network_adaptor_config &&
          init_recording_on_send == o.init_recording_on_send;

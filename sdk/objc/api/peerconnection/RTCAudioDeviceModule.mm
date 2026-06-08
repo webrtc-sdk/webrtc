@@ -345,8 +345,7 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   return [self initAndStartRecordingWithAudioProcessingOptions:nil];
 }
 
-- (NSInteger)initAndStartRecordingWithAudioProcessingOptions:
-    (RTC_OBJC_TYPE(RTCAudioProcessingOptions) *)options {
+- (NSInteger)initAndStartRecordingWithAudioProcessingOptions:(RTC_OBJC_TYPE(RTCAudioProcessingOptions) *)options {
   return _workerThread->BlockingCall([self, options] {
     webrtc::AudioEngineDevice *engine_device =
         AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
@@ -466,8 +465,7 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 
 - (RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState))builtInAudioProcessingState {
   return _workerThread->BlockingCall([self] {
-    webrtc::AudioDeviceModule::BuiltInAudioProcessingState native_state =
-        _native->GetBuiltInAudioProcessingState();
+    webrtc::AudioDeviceModule::BuiltInAudioProcessingState native_state = _native->GetBuiltInAudioProcessingState();
     return webrtc::objc::BuiltInAudioProcessingStateToObjC(native_state);
   });
 }

@@ -80,14 +80,10 @@ RTC_OBJC_EXPORT
 @property(nonatomic, readonly) BOOL noiseSuppression;
 @property(nonatomic, readonly) BOOL autoGainControl;
 @property(nonatomic, readonly) BOOL highPassFilter;
-@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioProcessingMode)
-    echoCancellationMode;
-@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioProcessingMode)
-    noiseSuppressionMode;
-@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioProcessingMode)
-    autoGainControlMode;
-@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioProcessingMode)
-    highPassFilterMode;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioProcessingMode) echoCancellationMode;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioProcessingMode) noiseSuppressionMode;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioProcessingMode) autoGainControlMode;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioProcessingMode) highPassFilterMode;
 
 - (instancetype)initWithEchoCancellation:(BOOL)echoCancellation
                         noiseSuppression:(BOOL)noiseSuppression

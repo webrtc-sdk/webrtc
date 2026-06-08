@@ -595,17 +595,14 @@ TEST_F(RtpSenderReceiverTest, LocalAudioTrackProcessingOptionsReapplied) {
   EXPECT_TRUE(audio_track_->SetAudioProcessingOptions(updated_options).ok());
 
   EXPECT_EQ(false, source->options().echo_cancellation);
-  EXPECT_EQ(AudioProcessingMode::kSoftware,
-            source->options().echo_cancellation_mode);
+  EXPECT_EQ(AudioProcessingMode::kSoftware, source->options().echo_cancellation_mode);
   EXPECT_EQ(false, voice_media_send_channel()->options().echo_cancellation);
-  EXPECT_EQ(AudioProcessingMode::kSoftware,
-            voice_media_send_channel()->options().echo_cancellation_mode);
+  EXPECT_EQ(AudioProcessingMode::kSoftware, voice_media_send_channel()->options().echo_cancellation_mode);
 
   DestroyAudioRtpSender();
 }
 
-TEST_F(RtpSenderReceiverTest,
-       DisabledLocalAudioTrackProcessingOptionsAppliedOnEnable) {
+TEST_F(RtpSenderReceiverTest, DisabledLocalAudioTrackProcessingOptionsAppliedOnEnable) {
   AudioOptions options;
   options.echo_cancellation = true;
   auto source = LocalAudioSource::Create(&options);
@@ -620,15 +617,13 @@ TEST_F(RtpSenderReceiverTest,
   EXPECT_TRUE(audio_track_->SetAudioProcessingOptions(updated_options).ok());
 
   EXPECT_EQ(false, source->options().echo_cancellation);
-  EXPECT_EQ(AudioProcessingMode::kSoftware,
-            source->options().echo_cancellation_mode);
+  EXPECT_EQ(AudioProcessingMode::kSoftware, source->options().echo_cancellation_mode);
   EXPECT_EQ(true, voice_media_send_channel()->options().echo_cancellation);
 
   audio_track_->set_enabled(true);
   EXPECT_FALSE(voice_media_send_channel()->IsStreamMuted(kAudioSsrc));
   EXPECT_EQ(false, voice_media_send_channel()->options().echo_cancellation);
-  EXPECT_EQ(AudioProcessingMode::kSoftware,
-            voice_media_send_channel()->options().echo_cancellation_mode);
+  EXPECT_EQ(AudioProcessingMode::kSoftware, voice_media_send_channel()->options().echo_cancellation_mode);
 
   DestroyAudioRtpSender();
 }
