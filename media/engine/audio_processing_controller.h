@@ -31,10 +31,13 @@ AudioProcessingOptionsResult ValidateAudioProcessingOptionsForApply(AudioDeviceM
                                                                     const AudioOptions &options);
 
 struct AudioProcessingApplyResult {
-  // Apply outcome for ADM platform effects and APM software config.
+  // Non-fatal apply outcome for ADM platform effects and APM software config.
+  // Public setters validate unsupported requests before send state is mutated.
+  // Apply-time platform failures resolve the affected component to disabled and
+  // report a warning so sender updates can continue.
   AudioProcessingOptionsResult result = AudioProcessingOptionsResult::Applied();
   // AudioOptions after platform/software resolution. These are the values written
-  // to WebRTC APM when result is successful.
+  // to WebRTC APM.
   AudioOptions resolved_options;
 };
 

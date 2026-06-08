@@ -818,7 +818,7 @@ void AudioRtpSender::SetSend() {
                                                sink_adapter_.get());
   });
   if (!success) {
-    RTC_LOG(LS_ERROR) << "SetAudioSend: ssrc is incorrect: " << ssrc_;
+    RTC_LOG(LS_ERROR) << "SetAudioSend failed for ssrc " << ssrc_ << " while applying source, mute, or send options";
     return;
   }
   if (track_enabled) {

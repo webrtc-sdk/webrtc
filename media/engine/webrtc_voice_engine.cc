@@ -627,9 +627,8 @@ AudioProcessingOptionsResult WebRtcVoiceEngine::ApplyOptions(const AudioOptions 
   }
 #endif
 
-  // Audio processing validation gates only APM and ADM processing changes.
-  // Keep unrelated voice engine settings independent from a rejected processing
-  // request.
+  // Runtime audio processing is applied best-effort below. Keep unrelated voice
+  // engine settings independent from platform processing resolution.
   if (options.stereo_swapping) {
     audio_state()->SetStereoChannelSwapping(*options.stereo_swapping);
   }
@@ -647,16 +646,9 @@ AudioProcessingOptionsResult WebRtcVoiceEngine::ApplyOptions(const AudioOptions 
         *options.audio_jitter_buffer_min_delay_ms;
   }
 
-  AudioProcessingOptionsResult validation = ValidateAudioProcessingOptionsForApply(adm(), options);
-  if (!validation.ok()) {
-    RTC_LOG(LS_WARNING) << "Rejected audio processing options: " << validation.message;
-    return validation;
-  }
-
   AudioProcessingApplyResult apply_result = ApplyAudioProcessingOptions(apm(), adm(), options);
   if (!apply_result.result.ok()) {
-    RTC_LOG(LS_WARNING) << "Failed to apply audio processing options: " << apply_result.result.message;
-    return apply_result.result;
+    RTC_LOG(LS_WARNING) << "Audio processing options were not fully applied: " << apply_result.result.message;
   }
   last_requested_audio_processing_options_ = options_in;
   options = apply_result.resolved_options;
