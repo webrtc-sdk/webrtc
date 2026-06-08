@@ -795,6 +795,9 @@ const char *H264ProfileName(const std::optional<webrtc::H264ProfileLevelId> &id)
     } else {
       RTC_LOG(LS_INFO) << "Compression session created with hw accl disabled";
     }
+    if (hwaccl_enabled) {
+      CFRelease(hwaccl_enabled);
+    }
   }
   [self configureCompressionSession];
 
@@ -995,4 +998,3 @@ const char *H264ProfileName(const std::optional<webrtc::H264ProfileLevelId> &id)
 }
 
 @end
-
