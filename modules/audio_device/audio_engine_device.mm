@@ -75,7 +75,9 @@ bool EngineStateEchoNoisePlatformPathIsActive(const AudioEngineDevice::EngineSta
 // knob), so keep bypass coupled to the AEC/NS component requests to stay in a
 // realizable OS state. AGC has a separate switch that only takes effect while
 // this shared path is on.
-void RecomputeVoiceProcessingBypassFromComponents(AudioEngineDevice::EngineState &state) {
+// [[maybe_unused]]: the only callers (EnableBuiltInAEC/NS) compile out on the
+// simulator, where the built-in path is unavailable.
+[[maybe_unused]] void RecomputeVoiceProcessingBypassFromComponents(AudioEngineDevice::EngineState &state) {
   const bool use_vpio = state.built_in_aec_enabled || state.built_in_ns_enabled;
   state.voice_processing_bypassed = !use_vpio;
 }
