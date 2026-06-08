@@ -241,4 +241,36 @@ TEST(KeyProvider, KeyDerivationAlgorithm) {
   EXPECT_NE(encrypted_data.value()->iv, encrypted_data2.value()->iv);
 }
 
+TEST(KeyProvider, KeyRingSizeMaxAcceptsIndex255) {
+  auto key_options = KeyProviderOptions();
+  key_options.shared_key = true;
+  key_options.key_ring_size = static_cast<int>(MAX_KEYRING_SIZE);
+  auto key_provider =
+      webrtc::make_ref_counted<DefaultKeyProviderImpl>(key_options);
+
+  const std::vector<uint8_t> key{0xAA, 0xBB, 0xCC, 0xDD};
+  EXPECT_TRUE(key_provider->SetSharedKey(255, key));
+  EXPECT_EQ(key_provider->ExportSharedKey(255), key);
+}
+
+TEST(KeyProvider, GetKeySetReturnsNullptrForOutOfRange) {
+  auto key_options = KeyProviderOptions();
+  key_options.shared_key = true;
+  auto key_provider =
+      webrtc::make_ref_counted<DefaultKeyProviderImpl>(key_options);
+  ASSERT_TRUE(key_provider->SetSharedKey(0, std::vector<uint8_t>{0x00}));
+
+  auto key_handler = key_provider->GetSharedKey("participant_1");
+  ASSERT_NE(key_handler, nullptr);
+
+  // -1 is the "use current_key_index_" sentinel — still resolves.
+  EXPECT_NE(key_handler->GetKeySet(-1), nullptr);
+  // DEFAULT_KEYRING_SIZE (16) → indices >= 16 are out of range.
+  EXPECT_EQ(key_handler->GetKeySet(static_cast<int>(DEFAULT_KEYRING_SIZE)),
+            nullptr);
+  EXPECT_EQ(key_handler->GetKeySet(1000), nullptr);
+  // Negative indices other than the -1 sentinel are out of range.
+  EXPECT_EQ(key_handler->GetKeySet(-2), nullptr);
+}
+
 }  // namespace webrtc
