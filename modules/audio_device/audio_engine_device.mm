@@ -71,17 +71,36 @@ bool EngineStateEchoNoisePlatformPathIsActive(const AudioEngineDevice::EngineSta
          (state.built_in_aec_enabled || state.built_in_ns_enabled);
 }
 
+AudioEngineDevice::EngineState SetVoiceProcessingPathEnabled(AudioEngineDevice::EngineState state, bool enabled) {
+  state.voice_processing_enabled = enabled;
+  if (enabled) {
+    // Creating a fresh VPIO path should start unbypassed. Component intent is
+    // still owned by EnableBuiltInAEC, EnableBuiltInNS, and EnableBuiltInAGC.
+    state.voice_processing_bypassed = false;
+  } else {
+    // Disabling voice processing removes Apple's built-in processing path
+    // entirely. Clear component requests so diagnostics do not report stale
+    // Apple AEC, NS, or AGC state while the path is absent.
+    state.voice_processing_bypassed = true;
+    state.voice_processing_agc_enabled = false;
+    state.built_in_aec_enabled = false;
+    state.built_in_ns_enabled = false;
+  }
+  return state;
+}
+
 AudioProcessingOptionsValidationContext AudioProcessingValidationContextForEngineState(
     const AudioEngineDevice::EngineState &state) {
   AudioProcessingOptionsValidationContext context;
   context.topology = AudioDeviceModule::BuiltInAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled;
-  // Availability is a device capability (Apple VPIO is unavailable on the
-  // simulator), independent of whether voice processing is currently enabled.
-  // Mirrors AudioEngineDevice::BuiltInVoiceProcessingPathIsAvailable().
+  // Availability includes the app-level policy. If the app has disallowed Apple
+  // VPIO, automatic mode must fall back to WebRTC software processing and
+  // platform mode must be rejected. Mirrors
+  // AudioEngineDevice::BuiltInVoiceProcessingPathIsAvailable().
 #if TARGET_OS_SIMULATOR
   const bool path_available = false;
 #else
-  const bool path_available = true;
+  const bool path_available = state.platform_voice_processing_allowed;
 #endif
   context.is_echo_noise_platform_path_available = path_available;
   context.is_echo_cancellation_platform_available = path_available;
@@ -117,13 +136,10 @@ AudioEngineDevice::EngineState ApplyAudioProcessingOptionsToEngineState(AudioEng
   if (resolution.has_echo_or_noise_option) {
     // Seed Apple VPIO before the first engine start. The sender applies the full
     // APM config later, but waiting until then starts capture with ADM defaults
-    // and can immediately recreate the engine. Per the path-ownership rule (see
-    // SetVoiceProcessingEnabled), an automatic/platform AEC/NS request seeds the
-    // VPIO path on even if it was previously disabled.
-    state.voice_processing_enabled = should_seed_platform_path;
-    state.voice_processing_bypassed = !should_seed_platform_path;
-    state.built_in_aec_enabled = should_seed_platform_path;
-    state.built_in_ns_enabled = should_seed_platform_path;
+    // and can immediately recreate the engine. An automatic/platform AEC/NS
+    // request seeds the VPIO path on even if it was previously disabled, unless
+    // the app-level platform voice-processing policy has disallowed it.
+    state = SetVoiceProcessingPathEnabled(state, should_seed_platform_path);
   }
 
   if (options.auto_gain_control.has_value()) {
@@ -1076,11 +1092,10 @@ int32_t AudioEngineDevice::RegisterAudioCallback(AudioTransport* audioCallback) 
 // BuiltInVoiceProcessingPathIsAvailable before these checks when it needs to
 // recreate the path from a software or disabled state.
 bool AudioEngineDevice::BuiltInAECIsAvailable() const {
-  // Echo cancellation is a device capability provided by the VPIO path, not a
-  // function of whether VPIO is currently on -- an automatic/platform request
-  // re-creates the path. Mirrors GetBuiltInAudioProcessingState() and matches
-  // the Android ADM, where availability means device support. Current on/off
-  // state is exposed separately via is_echo_cancellation_active.
+  // Echo cancellation is available only when the app allows Apple's platform
+  // voice processing. Within that policy, availability is not a function of
+  // whether VPIO is currently on: an automatic/platform request can re-create
+  // the path. Current on/off state is exposed separately via active fields.
   return BuiltInVoiceProcessingPathIsAvailable();
 }
 
@@ -1089,7 +1104,7 @@ bool AudioEngineDevice::BuiltInAGCIsAvailable() const {
   return false;
 #else
   RTC_DCHECK_RUN_ON(thread_);
-  return engine_state_.voice_processing_enabled;
+  return engine_state_.platform_voice_processing_allowed && engine_state_.voice_processing_enabled;
 #endif
 }
 
@@ -1108,7 +1123,7 @@ bool AudioEngineDevice::BuiltInVoiceProcessingPathIsAvailable() const {
   return false;
 #else
   RTC_DCHECK_RUN_ON(thread_);
-  return true;
+  return engine_state_.platform_voice_processing_allowed;
 #endif
 }
 
@@ -1116,7 +1131,12 @@ int32_t AudioEngineDevice::EnableBuiltInVoiceProcessingPath(bool enable) {
 #if TARGET_OS_SIMULATOR
   return -1;
 #else
-  return SetVoiceProcessingEnabled(enable);
+  RTC_DCHECK_RUN_ON(thread_);
+  if (enable && !engine_state_.platform_voice_processing_allowed) {
+    return -1;
+  }
+  return ModifyEngineState(
+      [enable](EngineState state) -> EngineState { return SetVoiceProcessingPathEnabled(state, enable); });
 #endif
 }
 
@@ -1128,16 +1148,16 @@ AudioDeviceModule::BuiltInAudioProcessingState AudioEngineDevice::GetBuiltInAudi
 #else
   RTC_DCHECK_RUN_ON(thread_);
 
-  // AEC and NS availability is a device capability: a platform request recreates
-  // the shared VPIO path even when it is currently off (see
-  // SetVoiceProcessingEnabled), so report capability rather than the current
-  // on/off state. AGC differs -- Apple AGC can only be toggled while VPIO is
-  // active and AGC alone never creates the path, so its availability tracks the
-  // current VP state, matching ValidateAudioProcessingOptions.
+  // AEC and NS availability is bounded by app policy: when platform voice
+  // processing is disallowed, automatic falls back to software and platform
+  // requests are rejected. If allowed, availability is independent of whether
+  // VPIO is currently on. AGC differs because Apple AGC only has an effect while
+  // VPIO is active and AGC alone never creates the path.
   const bool path_available = BuiltInVoiceProcessingPathIsAvailable();
   state.is_echo_cancellation_available = path_available;
   state.is_noise_suppression_available = path_available;
-  state.is_auto_gain_control_available = engine_state_.voice_processing_enabled;
+  state.is_auto_gain_control_available =
+      engine_state_.platform_voice_processing_allowed && engine_state_.voice_processing_enabled;
 
   state.is_echo_cancellation_requested = engine_state_.built_in_aec_enabled;
   state.is_noise_suppression_requested = engine_state_.built_in_ns_enabled;
@@ -1298,31 +1318,18 @@ int32_t AudioEngineDevice::VoiceProcessingBypassed(bool* enabled) {
   return 0;
 }
 
-// Voice-processing path ownership: the per-component audio-processing options
-// (echo cancellation / noise suppression, via AudioProcessingMode) own the
-// requested VPIO state. An `automatic` or `platform` AEC/NS request re-creates the
-// VPIO path here, including from a previously disabled state, while a
-// `software` request (or disabling both) tears it down. There is intentionally
-// no separate "hard off" switch: callers that must guarantee no Apple VPIO
-// should request `software` mode, which never re-enables the path.
-int32_t AudioEngineDevice::SetVoiceProcessingEnabled(bool enable) {
+// Platform voice-processing policy: this is an app-level permission for Apple
+// VPIO. Runtime AudioProcessingOptions still own the current VPIO state. When
+// this policy is false, automatic mode falls back to WebRTC software processing
+// and platform mode is rejected as unavailable.
+int32_t AudioEngineDevice::SetPlatformVoiceProcessingAllowed(bool allowed) {
   RTC_DCHECK_RUN_ON(thread_);
-  LOGI() << "SetVoiceProcessingEnabled: " << enable;
+  LOGI() << "SetPlatformVoiceProcessingAllowed: " << allowed;
 
-  int32_t result = ModifyEngineState([enable](EngineState state) -> EngineState {
-    state.voice_processing_enabled = enable;
-    if (enable) {
-      // Creating a fresh VPIO path should start unbypassed. Component intent is
-      // still owned by EnableBuiltInAEC, EnableBuiltInNS, and EnableBuiltInAGC.
-      state.voice_processing_bypassed = false;
-    } else {
-      // Disabling voice processing removes Apple's built-in processing path
-      // entirely. Clear component requests so diagnostics do not report stale
-      // Apple AEC, NS, or AGC state while the path is absent.
-      state.voice_processing_bypassed = true;
-      state.voice_processing_agc_enabled = false;
-      state.built_in_aec_enabled = false;
-      state.built_in_ns_enabled = false;
+  int32_t result = ModifyEngineState([allowed](EngineState state) -> EngineState {
+    state.platform_voice_processing_allowed = allowed;
+    if (!allowed) {
+      state = SetVoiceProcessingPathEnabled(state, false);
     }
     return state;
   });
@@ -1330,17 +1337,27 @@ int32_t AudioEngineDevice::SetVoiceProcessingEnabled(bool enable) {
   return result;
 }
 
-int32_t AudioEngineDevice::VoiceProcessingEnabled(bool* enabled) {
-  LOGI() << "VoiceProcessingEnabled";
+int32_t AudioEngineDevice::PlatformVoiceProcessingAllowed(bool *allowed) {
+  LOGI() << "PlatformVoiceProcessingAllowed";
   RTC_DCHECK_RUN_ON(thread_);
 
-  if (enabled == nullptr) {
+  if (allowed == nullptr) {
     return -1;
   }
 
-  *enabled = engine_state_.voice_processing_enabled;
+  *allowed = engine_state_.platform_voice_processing_allowed;
 
   return 0;
+}
+
+int32_t AudioEngineDevice::SetVoiceProcessingEnabled(bool enable) {
+  LOGW() << "SetVoiceProcessingEnabled is deprecated; use SetPlatformVoiceProcessingAllowed";
+  return SetPlatformVoiceProcessingAllowed(enable);
+}
+
+int32_t AudioEngineDevice::VoiceProcessingEnabled(bool *enabled) {
+  LOGW() << "VoiceProcessingEnabled is deprecated; use PlatformVoiceProcessingAllowed";
+  return PlatformVoiceProcessingAllowed(enabled);
 }
 
 int32_t AudioEngineDevice::SetVoiceProcessingBypassed(bool enable) {
@@ -2040,12 +2057,13 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     LOGI() << label << ": "
            << "in=" << s.input_enabled << "/" << s.input_running << " out=" << s.output_enabled << "/"
            << s.output_running << " persistent=" << s.input_enabled_persistent_mode << " muted=" << s.input_muted
-           << " vp=" << s.voice_processing_enabled << " vpBypass=" << s.voice_processing_bypassed
-           << " agc=" << s.voice_processing_agc_enabled << " builtinAec=" << s.built_in_aec_enabled
-           << " builtinNs=" << s.built_in_ns_enabled << " mute_mode=" << mute_mode_str(s.mute_mode)
-           << " render=" << render_mode_str(s.render_mode) << " interrupted=" << s.is_interrupted
-           << " in_avail=" << s.input_available << " out_avail=" << s.output_available << " inDev=" << s.input_device_id
-           << " outDev=" << s.output_device_id << " defInUpd=" << s.default_input_device_update_count
+           << " platformVpAllowed=" << s.platform_voice_processing_allowed << " vp=" << s.voice_processing_enabled
+           << " vpBypass=" << s.voice_processing_bypassed << " agc=" << s.voice_processing_agc_enabled
+           << " builtinAec=" << s.built_in_aec_enabled << " builtinNs=" << s.built_in_ns_enabled
+           << " mute_mode=" << mute_mode_str(s.mute_mode) << " render=" << render_mode_str(s.render_mode)
+           << " interrupted=" << s.is_interrupted << " in_avail=" << s.input_available
+           << " out_avail=" << s.output_available << " inDev=" << s.input_device_id << " outDev=" << s.output_device_id
+           << " defInUpd=" << s.default_input_device_update_count
            << " defOutUpd=" << s.default_output_device_update_count << " | IsInEnabled=" << s.IsInputEnabled()
            << " IsOutEnabled=" << s.IsOutputEnabled() << " IsInRunning=" << s.IsInputRunning()
            << " IsOutRunning=" << s.IsOutputRunning();

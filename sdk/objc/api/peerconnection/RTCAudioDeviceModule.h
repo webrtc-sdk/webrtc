@@ -252,8 +252,16 @@ RTC_OBJC_EXPORT
 @property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioEngineMuteMode) muteMode;
 - (NSInteger)setMuteMode:(RTC_OBJC_TYPE(RTCAudioEngineMuteMode))mode;
 
-/// Indicates whether Voice-Processing I/O is enabled. Requires restarting the Audio Engine to
-/// toggle. Defaults to true.
+/// App-level policy for Apple's platform voice processing. Defaults to true.
+///
+/// When this is false, runtime audio-processing options treat Apple Voice
+/// Processing I/O as unavailable. Automatic mode falls back to WebRTC software
+/// processing and platform mode is rejected. Turning this off also tears down any
+/// currently requested VPIO path.
+@property(nonatomic, readonly, getter=isPlatformVoiceProcessingAllowed) BOOL platformVoiceProcessingAllowed;
+- (NSInteger)setPlatformVoiceProcessingAllowed:(BOOL)allowed;
+
+/// Compatibility alias for platformVoiceProcessingAllowed.
 @property(nonatomic, readonly, getter=isVoiceProcessingEnabled) BOOL voiceProcessingEnabled;
 - (NSInteger)setVoiceProcessingEnabled:(BOOL)enabled;
 

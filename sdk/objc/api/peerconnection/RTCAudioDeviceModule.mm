@@ -582,24 +582,31 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
       [module, mode] { return module->SetMuteMode(MuteModeToRTC(mode)); });
 }
 
-- (BOOL)isVoiceProcessingEnabled {
+- (BOOL)isPlatformVoiceProcessingAllowed {
   webrtc::AudioEngineDevice *module =
       AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return NO;
 
   return _workerThread->BlockingCall([module] {
     bool value = false;
-    return module->VoiceProcessingEnabled(&value) == 0 ? value : NO;
+    return module->PlatformVoiceProcessingAllowed(&value) == 0 ? value : NO;
   });
 }
 
-- (NSInteger)setVoiceProcessingEnabled:(BOOL)enabled {
+- (NSInteger)setPlatformVoiceProcessingAllowed:(BOOL)allowed {
   webrtc::AudioEngineDevice *module =
       AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return -1;
 
-  return _workerThread->BlockingCall(
-      [module, enabled] { return module->SetVoiceProcessingEnabled(enabled); });
+  return _workerThread->BlockingCall([module, allowed] { return module->SetPlatformVoiceProcessingAllowed(allowed); });
+}
+
+- (BOOL)isVoiceProcessingEnabled {
+  return self.isPlatformVoiceProcessingAllowed;
+}
+
+- (NSInteger)setVoiceProcessingEnabled:(BOOL)enabled {
+  return [self setPlatformVoiceProcessingAllowed:enabled];
 }
 
 - (BOOL)isVoiceProcessingBypassed {
