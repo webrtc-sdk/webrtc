@@ -434,6 +434,9 @@ void compressionOutputCallback(void* encoder, void* params, OSStatus status,
     } else {
       RTC_LOG(LS_INFO) << "Compression session created with hw accl disabled";
     }
+    if (hwaccl_enabled) {
+      CFRelease(hwaccl_enabled);
+    }
   }
   [self configureCompressionSession];
   return WEBRTC_VIDEO_CODEC_OK;
