@@ -63,9 +63,67 @@ typedef struct {
   BOOL isOutputAvailable;
 } RTC_OBJC_TYPE(RTCAudioEngineAvailability);
 
+// Values must match webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology.
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopology)) {
+  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopologyIndependent) = 0,
+  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopologyEchoCancellationAndNoiseSuppressionCoupled) = 1,
+};
+
+// Nullable boolean for diagnostic state. Unknown means the ADM or OS path did
+// not report the value.
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCOptionalBool)) {
+  RTC_OBJC_TYPE(RTCOptionalBoolUnknown) = 0,
+  RTC_OBJC_TYPE(RTCOptionalBoolNo) = 1,
+  RTC_OBJC_TYPE(RTCOptionalBoolYes) = 2,
+};
+
+typedef struct {
+  BOOL isAvailable;
+  RTC_OBJC_TYPE(RTCOptionalBool) requested;
+  RTC_OBJC_TYPE(RTCOptionalBool) active;
+} RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState);
+
+typedef struct {
+  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopology) topology;
+
+  // Normalized per-component built-in processing state. On Apple AudioEngine,
+  // AEC and NS are coupled through Voice Processing I/O, so one shared platform
+  // path can affect both components.
+  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) echoCancellation;
+  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) noiseSuppression;
+  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) autoGainControl;
+
+  // Requested values are the Apple Voice Processing I/O state stored by the ADM.
+  // They can be known before input is configured.
+  //
+  // voiceProcessingEnabledRequested maps to AVAudioInputNode
+  // setVoiceProcessingEnabled. Turning it off removes the VPIO graph entirely.
+  //
+  // voiceProcessingBypassedRequested maps to voiceProcessingBypassed while VPIO
+  // is enabled. Bypassing VPIO disables Apple's coupled AEC/NS path without
+  // necessarily rebuilding the engine.
+  //
+  // voiceProcessingAGCEnabledRequested maps to
+  // isVoiceProcessingAGCEnabled. Apple AGC has a separate switch, but it only
+  // has an effect while VPIO is active.
+  RTC_OBJC_TYPE(RTCOptionalBool) voiceProcessingEnabledRequested;
+  RTC_OBJC_TYPE(RTCOptionalBool) voiceProcessingBypassedRequested;
+  RTC_OBJC_TYPE(RTCOptionalBool) voiceProcessingAGCEnabledRequested;
+
+  // Active values are live readback from the platform input node when the ADM
+  // can query it. They can be Unknown before input is configured, after the
+  // input path is torn down, or on platforms where the value is not observable.
+  // Active can temporarily differ from requested while the engine is applying
+  // a state transition or if the OS rejects a requested state.
+  RTC_OBJC_TYPE(RTCOptionalBool) voiceProcessingEnabledActive;
+  RTC_OBJC_TYPE(RTCOptionalBool) voiceProcessingBypassedActive;
+  RTC_OBJC_TYPE(RTCOptionalBool) voiceProcessingAGCEnabledActive;
+} RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState);
+
 RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCAudioEngineInputMixerNodeKey);
 
 @class RTC_OBJC_TYPE(RTCAudioDeviceModule);
+@class RTC_OBJC_TYPE(RTCAudioProcessingOptions);
 
 RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
 (RTCAudioDeviceModuleDelegate)<NSObject>
@@ -154,6 +212,9 @@ RTC_OBJC_EXPORT
 - (NSInteger)initRecording;
 
 - (NSInteger)initAndStartRecording;
+- (NSInteger)initAndStartRecordingWithAudioProcessingOptions:
+    (nullable RTC_OBJC_TYPE(RTCAudioProcessingOptions) *)options
+    NS_SWIFT_NAME(initAndStartRecording(audioProcessingOptions:));
 
 - (NSInteger)setEngineAvailability:(RTC_OBJC_TYPE(RTCAudioEngineAvailability))availability;
 
@@ -172,6 +233,9 @@ RTC_OBJC_EXPORT
 @property(nonatomic, readonly, getter=isRecordingAlwaysPreparedMode)
     BOOL recordingAlwaysPreparedMode;
 - (NSInteger)setRecordingAlwaysPreparedMode:(BOOL)enabled;
+- (NSInteger)setRecordingAlwaysPreparedMode:(BOOL)enabled
+                     audioProcessingOptions:(nullable RTC_OBJC_TYPE(RTCAudioProcessingOptions) *)options
+    NS_SWIFT_NAME(setRecordingAlwaysPreparedMode(_:audioProcessingOptions:));
 
 @property(nonatomic, weak, nullable) id<RTC_OBJC_TYPE(RTCAudioDeviceModuleDelegate)> observer;
 
@@ -188,8 +252,19 @@ RTC_OBJC_EXPORT
 @property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioEngineMuteMode) muteMode;
 - (NSInteger)setMuteMode:(RTC_OBJC_TYPE(RTCAudioEngineMuteMode))mode;
 
-/// Indicates whether Voice-Processing I/O is enabled. Requires restarting the Audio Engine to
-/// toggle. Defaults to true.
+/// App-level policy for Apple's platform voice processing. Defaults to true.
+///
+/// When this is false, runtime audio-processing options treat Apple Voice
+/// Processing I/O as unavailable. Automatic mode falls back to WebRTC software
+/// processing and platform mode is rejected by APIs that validate against this
+/// ADM, including track requests created by factories that expose this ADM.
+/// Factory paths without an exposed ADM may still store a platform request. In
+/// that case the platform request resolves disabled at apply time. Turning this
+/// off also tears down any currently requested VPIO path.
+@property(nonatomic, readonly, getter=isPlatformVoiceProcessingAllowed) BOOL platformVoiceProcessingAllowed;
+- (NSInteger)setPlatformVoiceProcessingAllowed:(BOOL)allowed;
+
+/// Compatibility alias for platformVoiceProcessingAllowed.
 @property(nonatomic, readonly, getter=isVoiceProcessingEnabled) BOOL voiceProcessingEnabled;
 - (NSInteger)setVoiceProcessingEnabled:(BOOL)enabled;
 
@@ -202,6 +277,11 @@ RTC_OBJC_EXPORT
 @property(nonatomic, assign, getter=isVoiceProcessingAGCEnabled) BOOL voiceProcessingAGCEnabled;
 
 @property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioEngineAvailability) engineAvailability;
+
+/// Diagnostic snapshot of platform audio processing state. Requested values are
+/// the last state requested from the ADM. Active values are live OS readback
+/// when the ADM can query the effect.
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState) builtInAudioProcessingState;
 
 @end
 

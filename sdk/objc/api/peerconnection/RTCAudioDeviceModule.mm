@@ -18,6 +18,8 @@
 
 #import "RTCAudioDeviceModule+Private.h"
 #import "RTCAudioDeviceModule.h"
+#import "RTCAudioProcessingOptions+Private.h"
+#import "RTCAudioProcessingState+Private.h"
 #import "RTCIODevice+Private.h"
 #import "base/RTCLogging.h"
 
@@ -340,10 +342,18 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (NSInteger)initAndStartRecording {
-  return _workerThread->BlockingCall([self] {
+  return [self initAndStartRecordingWithAudioProcessingOptions:nil];
+}
+
+- (NSInteger)initAndStartRecordingWithAudioProcessingOptions:(RTC_OBJC_TYPE(RTCAudioProcessingOptions) *)options {
+  return _workerThread->BlockingCall([self, options] {
     webrtc::AudioEngineDevice *engine_device =
         AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
     if (engine_device != nullptr) {
+      if (options != nil) {
+        webrtc::AudioOptions native_options = webrtc::objc::NativeAudioProcessingOptions(options);
+        return engine_device->InitAndStartRecording(&native_options);
+      }
       return engine_device->InitAndStartRecording();
     } else {
       _native->InitRecording();
@@ -453,6 +463,13 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   });
 }
 
+- (RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState))builtInAudioProcessingState {
+  return _workerThread->BlockingCall([self] {
+    webrtc::AudioDeviceModule::BuiltInAudioProcessingState native_state = _native->GetBuiltInAudioProcessingState();
+    return webrtc::objc::BuiltInAudioProcessingStateToObjC(native_state);
+  });
+}
+
 - (BOOL)isRecordingAlwaysPreparedMode {
   webrtc::AudioEngineDevice *module =
       AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
@@ -465,12 +482,22 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
 }
 
 - (NSInteger)setRecordingAlwaysPreparedMode:(BOOL)enabled {
+  return [self setRecordingAlwaysPreparedMode:enabled audioProcessingOptions:nil];
+}
+
+- (NSInteger)setRecordingAlwaysPreparedMode:(BOOL)enabled
+                     audioProcessingOptions:(RTC_OBJC_TYPE(RTCAudioProcessingOptions) *)options {
   webrtc::AudioEngineDevice *module =
       AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return -1;
 
-  return _workerThread->BlockingCall(
-      [module, enabled] { return module->SetInitRecordingPersistentMode(enabled); });
+  return _workerThread->BlockingCall([module, enabled, options] {
+    if (options != nil) {
+      webrtc::AudioOptions native_options = webrtc::objc::NativeAudioProcessingOptions(options);
+      return module->SetInitRecordingPersistentMode(enabled, &native_options);
+    }
+    return module->SetInitRecordingPersistentMode(enabled);
+  });
 }
 
 - (BOOL)isManualRenderingMode {
@@ -555,24 +582,31 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
       [module, mode] { return module->SetMuteMode(MuteModeToRTC(mode)); });
 }
 
-- (BOOL)isVoiceProcessingEnabled {
+- (BOOL)isPlatformVoiceProcessingAllowed {
   webrtc::AudioEngineDevice *module =
       AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return NO;
 
   return _workerThread->BlockingCall([module] {
     bool value = false;
-    return module->VoiceProcessingEnabled(&value) == 0 ? value : NO;
+    return module->PlatformVoiceProcessingAllowed(&value) == 0 ? value : NO;
   });
 }
 
-- (NSInteger)setVoiceProcessingEnabled:(BOOL)enabled {
+- (NSInteger)setPlatformVoiceProcessingAllowed:(BOOL)allowed {
   webrtc::AudioEngineDevice *module =
       AudioEngineDeviceOrNull(_native.get(), _audioDeviceModuleType);
   if (module == nullptr) return -1;
 
-  return _workerThread->BlockingCall(
-      [module, enabled] { return module->SetVoiceProcessingEnabled(enabled); });
+  return _workerThread->BlockingCall([module, allowed] { return module->SetPlatformVoiceProcessingAllowed(allowed); });
+}
+
+- (BOOL)isVoiceProcessingEnabled {
+  return self.isPlatformVoiceProcessingAllowed;
+}
+
+- (NSInteger)setVoiceProcessingEnabled:(BOOL)enabled {
+  return [self setPlatformVoiceProcessingAllowed:enabled];
 }
 
 - (BOOL)isVoiceProcessingBypassed {

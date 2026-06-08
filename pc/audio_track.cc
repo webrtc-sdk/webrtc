@@ -18,6 +18,7 @@
 #include "api/media_stream_track.h"
 #include "api/scoped_refptr.h"
 #include "api/sequence_checker.h"
+#include "rtc_base/logging.h"
 
 namespace webrtc {
 
@@ -51,6 +52,31 @@ std::string AudioTrack::kind() const {
 AudioSourceInterface* AudioTrack::GetSource() const {
   // Callable from any thread.
   return audio_source_.get();
+}
+
+AudioProcessingOptionsResult AudioTrack::SetAudioProcessingOptions(const AudioOptions &options) {
+  RTC_DCHECK_RUN_ON(&signaling_thread_checker_);
+  if (!audio_source_ || audio_source_->remote()) {
+    return AudioProcessingOptionsResult::Rejected(AudioProcessingOptionsResultCode::kRejectedRemoteTrack,
+                                                  "Audio processing options can only be set on local audio tracks");
+  }
+  RTC_LOG(LS_INFO) << "AudioTrack::SetAudioProcessingOptions: " << options.ToString();
+
+  AudioOptions processing_options;
+  processing_options.echo_cancellation = options.echo_cancellation;
+  processing_options.echo_cancellation_mode = options.echo_cancellation_mode;
+  processing_options.noise_suppression = options.noise_suppression;
+  processing_options.noise_suppression_mode = options.noise_suppression_mode;
+  processing_options.auto_gain_control = options.auto_gain_control;
+  processing_options.auto_gain_control_mode = options.auto_gain_control_mode;
+  processing_options.highpass_filter = options.highpass_filter;
+  processing_options.highpass_filter_mode = options.highpass_filter_mode;
+
+  AudioOptions updated_options = audio_source_->options();
+  updated_options.SetAll(processing_options);
+  audio_source_->SetOptions(updated_options);
+  FireOnChanged();
+  return AudioProcessingOptionsResult::Stored();
 }
 
 void AudioTrack::AddSink(AudioTrackSinkInterface* sink) {

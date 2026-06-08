@@ -9,10 +9,11 @@
  */
 
 #import <AVFoundation/AVFoundation.h>
-#import <os/lock.h>
+#import <TargetConditionals.h>
 
 #import "RTCAudioTrack+Private.h"
 
+#import "RTCAudioProcessingOptions+Private.h"
 #import "RTCAudioRenderer.h"
 #import "RTCAudioSource+Private.h"
 #import "RTCMediaStreamTrack+Private.h"
@@ -20,7 +21,183 @@
 #import "api/RTCAudioRendererAdapter+Private.h"
 #import "helpers/NSString+StdString.h"
 
+#include "api/audio/audio_processing_options_resolver.h"
 #include "rtc_base/checks.h"
+
+// clang-format off
+@interface RTC_OBJC_TYPE(RTCAudioProcessingOptionsResult) ()
+
+- (instancetype)initWithCode:(RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCode))code
+                     message:(NSString *)message;
+
+@end
+// clang-format on
+
+@implementation RTC_OBJC_TYPE (RTCAudioProcessingOptionsResult)
+
+@synthesize success = _success;
+@synthesize code = _code;
+@synthesize message = _message;
+
+- (instancetype)initWithCode:(RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCode))code message:(NSString *)message {
+  self = [super init];
+  if (self) {
+    _code = code;
+    _message = [message copy];
+    _success = code == RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeApplied) ||
+               code == RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeStored);
+  }
+  return self;
+}
+
+@end
+
+@implementation RTC_OBJC_TYPE (RTCAudioProcessingComponentOptions)
+
+@synthesize enabled = _enabled;
+@synthesize mode = _mode;
+
+- (instancetype)initWithEnabled:(BOOL)enabled {
+  return [self initWithEnabled:enabled mode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)];
+}
+
+- (instancetype)initWithEnabled:(BOOL)enabled mode:(RTC_OBJC_TYPE(RTCAudioProcessingMode))mode {
+  self = [super init];
+  if (self) {
+    _enabled = enabled;
+    _mode = mode;
+  }
+  return self;
+}
+
+@end
+
+@implementation RTC_OBJC_TYPE (RTCAudioProcessingOptions)
+
+@synthesize echoCancellation = _echoCancellation;
+@synthesize noiseSuppression = _noiseSuppression;
+@synthesize autoGainControl = _autoGainControl;
+@synthesize highPassFilter = _highPassFilter;
+@synthesize echoCancellationMode = _echoCancellationMode;
+@synthesize noiseSuppressionMode = _noiseSuppressionMode;
+@synthesize autoGainControlMode = _autoGainControlMode;
+@synthesize highPassFilterMode = _highPassFilterMode;
+
+- (instancetype)initWithEchoCancellation:(BOOL)echoCancellation
+                        noiseSuppression:(BOOL)noiseSuppression
+                         autoGainControl:(BOOL)autoGainControl
+                          highPassFilter:(BOOL)highPassFilter {
+  return [self initWithEchoCancellationOptions:[[RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) alloc]
+                                                   initWithEnabled:echoCancellation
+                                                              mode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)]
+                       noiseSuppressionOptions:[[RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) alloc]
+                                                   initWithEnabled:noiseSuppression
+                                                              mode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)]
+                        autoGainControlOptions:[[RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) alloc]
+                                                   initWithEnabled:autoGainControl
+                                                              mode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)]
+                         highPassFilterOptions:[[RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) alloc]
+                                                   initWithEnabled:highPassFilter
+                                                              mode:RTC_OBJC_TYPE(RTCAudioProcessingModeAutomatic)]];
+}
+
+- (instancetype)
+    initWithEchoCancellationOptions:(RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)echoCancellationOptions
+            noiseSuppressionOptions:(RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)noiseSuppressionOptions
+             autoGainControlOptions:(RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)autoGainControlOptions
+              highPassFilterOptions:(RTC_OBJC_TYPE(RTCAudioProcessingComponentOptions) *)highPassFilterOptions {
+  NSParameterAssert(echoCancellationOptions);
+  NSParameterAssert(noiseSuppressionOptions);
+  NSParameterAssert(autoGainControlOptions);
+  NSParameterAssert(highPassFilterOptions);
+  self = [super init];
+  if (self) {
+    _echoCancellation = echoCancellationOptions.enabled;
+    _noiseSuppression = noiseSuppressionOptions.enabled;
+    _autoGainControl = autoGainControlOptions.enabled;
+    _highPassFilter = highPassFilterOptions.enabled;
+    _echoCancellationMode = echoCancellationOptions.mode;
+    _noiseSuppressionMode = noiseSuppressionOptions.mode;
+    _autoGainControlMode = autoGainControlOptions.mode;
+    _highPassFilterMode = highPassFilterOptions.mode;
+  }
+  return self;
+}
+
++ (instancetype)communicationOptions {
+  return [[self alloc] initWithEchoCancellation:YES noiseSuppression:YES autoGainControl:YES highPassFilter:YES];
+}
+
++ (instancetype)rawOptions {
+  return [[self alloc] initWithEchoCancellation:NO noiseSuppression:NO autoGainControl:NO highPassFilter:NO];
+}
+
+@end
+
+namespace {
+
+RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCode)
+ObjCResultCode(webrtc::AudioProcessingOptionsResultCode code) {
+  switch (code) {
+    case webrtc::AudioProcessingOptionsResultCode::kApplied:
+      return RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeApplied);
+    case webrtc::AudioProcessingOptionsResultCode::kStored:
+      return RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeStored);
+    case webrtc::AudioProcessingOptionsResultCode::kRejectedRemoteTrack:
+      return RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedRemoteTrack);
+    case webrtc::AudioProcessingOptionsResultCode::kRejectedInvalidCombination:
+      return RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedInvalidCombination);
+    case webrtc::AudioProcessingOptionsResultCode::kRejectedPlatformUnavailable:
+      return RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedPlatformUnavailable);
+    case webrtc::AudioProcessingOptionsResultCode::kApplyFailed:
+      return RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeApplyFailed);
+  }
+  return RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeApplyFailed);
+}
+
+RTC_OBJC_TYPE(RTCAudioProcessingOptionsResult) *
+    ResultWithCode(RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCode) code, NSString *message) {
+  return [[RTC_OBJC_TYPE(RTCAudioProcessingOptionsResult) alloc] initWithCode:code message:message];
+}
+
+RTC_OBJC_TYPE(RTCAudioProcessingOptionsResult) * ResultFromNative(const webrtc::AudioProcessingOptionsResult &result) {
+  NSString *message = result.message.empty() ? @"" : [NSString stringForStdString:result.message];
+  return ResultWithCode(ObjCResultCode(result.code), message);
+}
+
+webrtc::AudioProcessingOptionsValidationContext AppleAudioProcessingValidationContext() {
+  webrtc::AudioProcessingOptionsValidationContext context;
+  context.topology =
+      webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled;
+#if !TARGET_OS_SIMULATOR
+  context.is_echo_cancellation_platform_available = true;
+  context.is_noise_suppression_platform_available = true;
+  context.is_auto_gain_control_platform_available = true;
+  context.is_echo_noise_platform_path_available = true;
+#endif
+  return context;
+}
+
+webrtc::AudioProcessingOptionsResult ValidateAudioProcessingOptionsForFactory(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *
+                                                                                  factory,
+                                                                              const webrtc::AudioOptions &options) {
+  webrtc::scoped_refptr<webrtc::AudioDeviceModule> adm = factory.nativeAudioDeviceModule;
+  webrtc::Thread *workerThread = factory.workerThread;
+  if (adm == nullptr || workerThread == nullptr) {
+    return webrtc::ValidateAudioProcessingOptions(options, AppleAudioProcessingValidationContext());
+  }
+
+  auto validate = [adm, options] {
+    return webrtc::ValidateAudioProcessingOptions(
+        options, webrtc::AudioProcessingValidationContextForAudioDeviceModule(adm.get()));
+  };
+  if (workerThread->IsCurrent()) {
+    return validate();
+  }
+  return workerThread->BlockingCall(validate);
+}
+
+}  // namespace
 
 @implementation RTC_OBJC_TYPE (RTCAudioTrack) {
   webrtc::Thread *_signalingThread;
@@ -142,6 +319,27 @@
 
   // Clear the adapters array after all sinks have been removed.
   [_adapters removeAllObjects];
+}
+
+- (RTC_OBJC_TYPE(RTCAudioProcessingOptionsResult) *)setAudioProcessingOptions:
+    (RTC_OBJC_TYPE(RTCAudioProcessingOptions) *)options {
+  NSParameterAssert(options);
+  if (!options) {
+    return ResultWithCode(RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeApplyFailed),
+                          @"Audio processing options must not be nil");
+  }
+  if (!_signalingThread->IsCurrent()) {
+    return _signalingThread->BlockingCall([self, options] { return [self setAudioProcessingOptions:options]; });
+  }
+
+  webrtc::AudioOptions nativeOptions = webrtc::objc::NativeAudioProcessingOptions(options);
+  webrtc::AudioProcessingOptionsResult validation =
+      ValidateAudioProcessingOptionsForFactory(self.factory, nativeOptions);
+  if (!validation.ok()) {
+    return ResultFromNative(validation);
+  }
+
+  return ResultFromNative(self.nativeAudioTrack->SetAudioProcessingOptions(nativeOptions));
 }
 
 #pragma mark - Private

@@ -493,6 +493,8 @@ class FakePeerConnectionForStats : public FakePeerConnectionBase {
     return audio_device_stats_;
   }
 
+  AudioProcessingRuntimeState GetAudioProcessingRuntimeState() override { return {}; }
+
   bool GetLocalCertificate(
       const std::string& transport_name,
       scoped_refptr<RTCCertificate>* certificate) override {

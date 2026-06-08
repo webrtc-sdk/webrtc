@@ -56,6 +56,7 @@ public class PeerConnectionFactory {
   @Nullable private volatile ThreadInfo networkThread;
   @Nullable private volatile ThreadInfo workerThread;
   @Nullable private volatile ThreadInfo signalingThread;
+  @Nullable private AudioTrack.AudioProcessingPlatformPolicy audioProcessingPlatformPolicy;
 
   public static class InitializationOptions {
     final Context applicationContext;
@@ -284,11 +285,12 @@ public class PeerConnectionFactory {
           audioDeviceModule = JavaAudioDeviceModule.builder(ContextUtils.getApplicationContext())
                                   .createAudioDeviceModule();
         }
-        return nativeCreatePeerConnectionFactory(
+        AudioDeviceModule adm = audioDeviceModule;
+        PeerConnectionFactory factory = nativeCreatePeerConnectionFactory(
             ContextUtils.getApplicationContext(),
             options,
             env.ref(),
-            audioDeviceModule.getNative(env.ref()),
+            adm.getNative(env.ref()),
             audioEncoderFactoryFactory.createNativeAudioEncoderFactory(),
             audioDecoderFactoryFactory.createNativeAudioDecoderFactory(),
             videoEncoderFactory,
@@ -303,6 +305,12 @@ public class PeerConnectionFactory {
                 : networkStatePredictorFactoryFactory.createNativeNetworkStatePredictorFactory(),
             neteqFactoryFactory == null ? 0 : neteqFactoryFactory.createNativeNetEqFactory(),
             audioFrameProcessor == null ? 0 : audioFrameProcessor.getNativeAudioFrameProcessor());
+        if (adm instanceof JavaAudioDeviceModule) {
+          factory.audioProcessingPlatformPolicy =
+              AudioTrack.AudioProcessingPlatformPolicy.fromJavaAudioDeviceModule(
+                  (JavaAudioDeviceModule) adm);
+        }
+        return factory;
       }
     }
   }
@@ -487,7 +495,9 @@ public class PeerConnectionFactory {
 
   public AudioTrack createAudioTrack(String id, AudioSource source) {
     checkPeerConnectionFactoryExists();
-    return new AudioTrack(nativeCreateAudioTrack(nativeFactory, id, source.getNativeAudioSource()));
+    return new AudioTrack(
+        nativeCreateAudioTrack(nativeFactory, id, source.getNativeAudioSource()),
+        audioProcessingPlatformPolicy);
   }
 
   public RtpCapabilities getRtpReceiverCapabilities(MediaStreamTrack.MediaType mediaType) {
