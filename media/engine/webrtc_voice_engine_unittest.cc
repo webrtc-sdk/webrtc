@@ -25,6 +25,7 @@
 #include "absl/strings/match.h"
 #include "absl/strings/string_view.h"
 #include "api/audio/audio_processing.h"
+#include "api/audio/audio_processing_options_resolver.h"
 #include "api/audio/builtin_audio_processing_builder.h"
 #include "api/audio_codecs/audio_format.h"
 #include "api/audio_codecs/builtin_audio_decoder_factory.h"
@@ -63,6 +64,7 @@
 #include "media/base/media_constants.h"
 #include "media/base/media_engine.h"
 #include "media/base/stream_params.h"
+#include "media/engine/audio_processing_controller.h"
 #include "media/engine/fake_webrtc_call.h"
 #include "modules/audio_device/include/mock_audio_device.h"
 #include "modules/audio_mixer/audio_mixer_impl.h"
@@ -206,6 +208,31 @@ std::vector<Codec> ReceiveCodecsWithId(WebRtcVoiceEngine& engine) {
   PayloadTypePicker pt_mapper;
   std::vector<Codec> codecs = engine.LegacyRecvCodecs();
   return AddIdToCodecs(pt_mapper, std::move(codecs));
+}
+
+webrtc::AudioProcessing::Config ApplyAudioProcessingOptionsForTest(const webrtc::AudioOptions &options,
+                                                                   webrtc::AudioDeviceModule *adm) {
+  webrtc::scoped_refptr<StrictMock<webrtc::test::MockAudioProcessing>> apm =
+      webrtc::make_ref_counted<StrictMock<webrtc::test::MockAudioProcessing>>();
+  webrtc::AudioProcessing::Config apm_config;
+  EXPECT_CALL(*apm, GetConfig()).WillOnce(ReturnPointee(&apm_config));
+  EXPECT_CALL(*apm, ApplyConfig(_)).WillOnce(SaveArg<0>(&apm_config));
+  webrtc::AudioProcessingApplyResult result = webrtc::ApplyAudioProcessingOptions(apm.get(), adm, options);
+  EXPECT_TRUE(result.result.ok()) << result.result.message;
+  return apm_config;
+}
+
+webrtc::AudioProcessingRuntimeState GetAudioProcessingRuntimeStateForTest(
+    const webrtc::AudioOptions &options, webrtc::AudioDeviceModule *adm,
+    const webrtc::AudioProcessing::Config &apm_config,
+    std::optional<webrtc::AudioOptions> resolved_options = std::nullopt) {
+  webrtc::scoped_refptr<StrictMock<webrtc::test::MockAudioProcessing>> apm =
+      webrtc::make_ref_counted<StrictMock<webrtc::test::MockAudioProcessing>>();
+  EXPECT_CALL(*apm, GetConfig()).WillOnce(Return(apm_config));
+  if (!resolved_options.has_value()) {
+    resolved_options = options;
+  }
+  return webrtc::GetAudioProcessingRuntimeState(apm.get(), adm, options, resolved_options);
 }
 
 // Tests that our stub library "works".

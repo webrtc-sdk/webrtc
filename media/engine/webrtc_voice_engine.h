@@ -28,6 +28,9 @@
 #include "api/audio/audio_frame_processor.h"
 #include "api/audio/audio_mixer.h"
 #include "api/audio/audio_processing.h"
+#include "api/audio/audio_processing_options_result.h"
+#include "api/audio/audio_processing_runtime_state.h"
+#include "api/audio_codecs/audio_codec_pair_id.h"
 #include "api/audio_codecs/audio_decoder_factory.h"
 #include "api/audio_codecs/audio_encoder_factory.h"
 #include "api/audio_codecs/audio_format.h"
@@ -60,6 +63,8 @@
 #include "media/base/media_config.h"
 #include "media/base/media_engine.h"
 #include "media/base/stream_params.h"
+#include "media/engine/audio_processing_controller.h"
+#include "modules/rtp_rtcp/include/rtp_header_extension_map.h"
 #include "modules/rtp_rtcp/source/rtp_packet_received.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/network/sent_packet.h"
@@ -143,6 +148,14 @@ class WebRtcVoiceEngine final : public VoiceEngineInterface {
 
   bool NeedsAuxiliaryCodecsAdded() const override { return true; }
 
+  AudioProcessingRuntimeState GetAudioProcessingRuntimeState() override;
+
+ private:
+  // Every option that is "set" will be applied. Every option not "set" will be
+  // ignored. This allows us to selectively turn on and off different options
+  // easily at any time.
+  AudioProcessingOptionsResult ApplyOptions(const AudioOptions &options);
+
  private:
   const Environment env_;
   std::unique_ptr<TaskQueueBase, TaskQueueDeleter> low_priority_worker_queue_;
@@ -167,6 +180,16 @@ class WebRtcVoiceEngine final : public VoiceEngineInterface {
   const std::vector<Codec> legacy_send_codecs_;
   const std::vector<Codec> legacy_recv_codecs_;
   bool initialized_ RTC_GUARDED_BY(worker_thread_checker_) = false;
+  std::optional<AudioOptions> last_requested_audio_processing_options_ RTC_GUARDED_BY(worker_thread_checker_);
+  std::optional<AudioOptions> last_resolved_audio_processing_options_ RTC_GUARDED_BY(worker_thread_checker_);
+
+  // Jitter buffer settings for new streams.
+  size_t audio_jitter_buffer_max_packets_
+      RTC_GUARDED_BY(worker_thread_checker_) = 200;
+  bool audio_jitter_buffer_fast_accelerate_
+      RTC_GUARDED_BY(worker_thread_checker_) = false;
+  int audio_jitter_buffer_min_delay_ms_ RTC_GUARDED_BY(worker_thread_checker_) =
+      0;
 };
 
 class WebRtcVoiceSendChannel final : public MediaChannelUtil,

@@ -32,8 +32,10 @@
 #include <unistd.h>
 
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -97,6 +99,66 @@ PeerConnectionInterface* ExtractNativePC(
   return reinterpret_cast<OwnedPeerConnection*>(
              Java_PeerConnection_getNativeOwnedPeerConnection(jni, j_pc))
       ->pc();
+}
+
+int32_t OptionalBoolToJava(std::optional<bool> value) { return value.has_value() ? (*value ? 1 : 0) : -1; }
+
+int32_t OptionalAudioProcessingModeToJava(std::optional<AudioProcessingMode> mode) {
+  return mode.has_value() ? static_cast<int32_t>(*mode) : -1;
+}
+
+int32_t AudioProcessingImplementationToJava(AudioProcessingImplementation implementation) {
+  return static_cast<int32_t>(implementation);
+}
+
+int32_t BuiltInAudioProcessingTopologyToJava(AudioDeviceModule::BuiltInAudioProcessingTopology topology) {
+  return static_cast<int32_t>(topology);
+}
+
+void AppendAudioProcessingComponentRuntimeState(std::vector<int32_t> *values,
+                                                const AudioProcessingComponentRuntimeState &state) {
+  values->push_back(OptionalBoolToJava(state.is_requested_enabled));
+  values->push_back(OptionalAudioProcessingModeToJava(state.requested_mode));
+  values->push_back(OptionalBoolToJava(state.is_resolved_software_enabled));
+  values->push_back(OptionalBoolToJava(state.is_software_enabled));
+  values->push_back(state.is_platform_available ? 1 : 0);
+  values->push_back(OptionalBoolToJava(state.is_platform_requested));
+  values->push_back(OptionalBoolToJava(state.is_platform_active));
+  values->push_back(AudioProcessingImplementationToJava(state.effective));
+}
+
+void AppendBuiltInAudioProcessingComponentState(std::vector<int32_t> *values, bool available,
+                                                std::optional<bool> requested, std::optional<bool> active) {
+  values->push_back(available ? 1 : 0);
+  values->push_back(OptionalBoolToJava(requested));
+  values->push_back(OptionalBoolToJava(active));
+}
+
+void AppendBuiltInAudioProcessingState(std::vector<int32_t> *values,
+                                       const AudioDeviceModule::BuiltInAudioProcessingState &state) {
+  values->push_back(BuiltInAudioProcessingTopologyToJava(state.topology));
+  AppendBuiltInAudioProcessingComponentState(values, state.is_echo_cancellation_available,
+                                             state.is_echo_cancellation_requested, state.is_echo_cancellation_active);
+  AppendBuiltInAudioProcessingComponentState(values, state.is_noise_suppression_available,
+                                             state.is_noise_suppression_requested, state.is_noise_suppression_active);
+  AppendBuiltInAudioProcessingComponentState(values, state.is_auto_gain_control_available,
+                                             state.is_auto_gain_control_requested, state.is_auto_gain_control_active);
+}
+
+std::vector<int32_t> AudioProcessingRuntimeStateToJavaValues(const AudioProcessingRuntimeState &state) {
+  std::vector<int32_t> values;
+  values.reserve(47);
+  values.push_back(BuiltInAudioProcessingTopologyToJava(state.topology));
+  values.push_back(state.has_audio_processing_module ? 1 : 0);
+  values.push_back(state.has_audio_processing_config ? 1 : 0);
+  values.push_back(state.has_requested_audio_processing_options ? 1 : 0);
+  values.push_back(state.has_resolved_audio_processing_options ? 1 : 0);
+  AppendAudioProcessingComponentRuntimeState(&values, state.echo_cancellation);
+  AppendAudioProcessingComponentRuntimeState(&values, state.noise_suppression);
+  AppendAudioProcessingComponentRuntimeState(&values, state.auto_gain_control);
+  AppendAudioProcessingComponentRuntimeState(&values, state.high_pass_filter);
+  AppendBuiltInAudioProcessingState(&values, state.built_in);
+  return values;
 }
 
 PeerConnectionInterface::IceServers JavaToNativeIceServers(
@@ -546,6 +608,12 @@ static jlong JNI_PeerConnection_GetNativePeerConnection(
     JNIEnv* jni,
     const jni_zero::JavaRef<jobject>& j_pc) {
   return jlongFromPointer(ExtractNativePC(jni, j_pc));
+}
+
+static jni_zero::ScopedJavaLocalRef<jintArray> JNI_PeerConnection_GetAudioProcessingRuntimeState(
+    JNIEnv *jni, const jni_zero::JavaParamRef<jobject> &j_pc) {
+  return NativeToJavaIntArray(
+      jni, AudioProcessingRuntimeStateToJavaValues(ExtractNativePC(jni, j_pc)->GetAudioProcessingRuntimeState()));
 }
 
 static jni_zero::ScopedJavaLocalRef<jobject>

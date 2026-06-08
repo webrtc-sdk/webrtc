@@ -49,6 +49,7 @@ class AudioTrack : public MediaStreamTrack<AudioTrackInterface>,
 
   // AudioTrackInterface implementation.
   AudioSourceInterface* GetSource() const override;
+  AudioProcessingOptionsResult SetAudioProcessingOptions(const AudioOptions &options) override;
 
   void AddSink(AudioTrackSinkInterface* sink) override;
   void RemoveSink(AudioTrackSinkInterface* sink) override;

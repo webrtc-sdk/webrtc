@@ -19,6 +19,8 @@
 
 #include "absl/functional/any_invocable.h"
 #include "api/audio/audio_device.h"
+#include "api/audio/audio_processing_runtime_state.h"
+#include "api/audio_codecs/audio_codec_pair_id.h"
 #include "api/audio_codecs/audio_decoder_factory.h"
 #include "api/audio_codecs/audio_encoder_factory.h"
 #include "api/audio_options.h"
@@ -199,6 +201,8 @@ class VoiceEngineInterface : public RtpHeaderExtensionQueryInterface,
   // Returns true if the engine handles built-in codecs like DTMF and CN
   // automatically.
   virtual bool NeedsAuxiliaryCodecsAdded() const { return false; }
+
+  virtual AudioProcessingRuntimeState GetAudioProcessingRuntimeState() = 0;
 };
 
 class VideoEngineInterface : public RtpHeaderExtensionQueryInterface,

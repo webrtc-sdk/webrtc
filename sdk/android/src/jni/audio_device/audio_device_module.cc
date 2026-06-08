@@ -552,6 +552,22 @@ class AndroidAudioDeviceModule : public AudioDeviceModule {
     return isAvailable;
   }
 
+  BuiltInAudioProcessingState GetBuiltInAudioProcessingState() const override {
+    BuiltInAudioProcessingState state;
+    state.topology = GetBuiltInAudioProcessingTopology();
+    if (!initialized_) {
+      return state;
+    }
+    state.is_echo_cancellation_available = input_->IsAcousticEchoCancelerSupported();
+    state.is_noise_suppression_available = input_->IsNoiseSuppressorSupported();
+    state.is_auto_gain_control_available = false;
+    state.is_echo_cancellation_requested = input_->BuiltInAECIsRequested();
+    state.is_noise_suppression_requested = input_->BuiltInNSIsRequested();
+    state.is_echo_cancellation_active = input_->BuiltInAECIsEnabled();
+    state.is_noise_suppression_active = input_->BuiltInNSIsEnabled();
+    return state;
+  }
+
   // TODO(henrika): add implementation for OpenSL ES based audio as well.
   int32_t EnableBuiltInAEC(bool enable) override {
     RTC_DLOG(LS_INFO) << __FUNCTION__ << "(" << enable << ")";

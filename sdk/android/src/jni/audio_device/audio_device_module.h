@@ -56,6 +56,10 @@ class AudioInput {
   // Populates the audio input specific fields of the provided stats object.
   // Returns true if any statistics were updated.
   virtual bool GetStats(AudioDeviceModule::Stats* stats) const { return false; }
+  virtual std::optional<bool> BuiltInAECIsRequested() const { return std::nullopt; }
+  virtual std::optional<bool> BuiltInAECIsEnabled() const { return std::nullopt; }
+  virtual std::optional<bool> BuiltInNSIsRequested() const { return std::nullopt; }
+  virtual std::optional<bool> BuiltInNSIsEnabled() const { return std::nullopt; }
 };
 
 class AudioOutput {

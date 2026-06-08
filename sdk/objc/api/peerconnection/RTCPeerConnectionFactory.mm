@@ -93,6 +93,7 @@ static webrtc::Environment CreateDefaultEnvironment() {
 }
 
 @synthesize nativeFactory = _nativeFactory;
+@synthesize nativeAudioDeviceModule = _nativeAudioDeviceModule;
 @synthesize audioDeviceModule = _audioDeviceModule;
 
 - (instancetype)init {
@@ -220,6 +221,9 @@ static webrtc::Environment CreateDefaultEnvironment() {
         dependencies.env->field_trials().IsEnabled("WebRTC-Network-UseNWPathMonitor")) {
       dependencies.network_monitor_factory =
           webrtc::CreateNetworkMonitorFactory();
+    }
+    if (dependencies.adm != nullptr) {
+      _nativeAudioDeviceModule = dependencies.adm;
     }
 
     _env = dependencies.env;

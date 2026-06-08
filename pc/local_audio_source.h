@@ -31,6 +31,7 @@ class LocalAudioSource : public Notifier<AudioSourceInterface> {
   bool remote() const override { return false; }
 
   const AudioOptions options() const override { return options_; }
+  void SetOptions(const AudioOptions &options) override { options_ = options; }
 
   void AddSink(AudioTrackSinkInterface* sink) override {}
   void RemoveSink(AudioTrackSinkInterface* sink) override {}

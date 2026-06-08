@@ -357,6 +357,59 @@ class WebRtcAudioRecord {
     return effects.setNS(enable);
   }
 
+  void applyPlatformAudioProcessingOptions(@Nullable AudioProcessingOptions options) {
+    if (options == null) {
+      return;
+    }
+
+    // AudioRecord prewarm can create the audio session before the sender applies
+    // track options. Apply only Android platform AEC/NS here. WebRTC software
+    // APM processing is still resolved by the voice engine when sending.
+    effects.setAEC(shouldUsePlatformEffect(
+        options.echoCancellation, options.echoCancellationMode, isAcousticEchoCancelerSupported));
+    effects.setNS(shouldUsePlatformEffect(
+        options.noiseSuppression, options.noiseSuppressionMode, isNoiseSuppressorSupported));
+  }
+
+  private static boolean shouldUsePlatformEffect(
+      boolean enabled, AudioProcessingMode mode, boolean available) {
+    return enabled && available && mode != AudioProcessingMode.SOFTWARE;
+  }
+
+  @CalledByNative
+  boolean isBuiltInAECRequested() {
+    return effects.shouldEnableAEC();
+  }
+
+  @CalledByNative
+  boolean hasBuiltInAEC() {
+    return effects.hasAEC();
+  }
+
+  @CalledByNative
+  boolean isBuiltInAECEnabled() {
+    return effects.isAECEnabled();
+  }
+
+  @CalledByNative
+  boolean isBuiltInNSRequested() {
+    return effects.shouldEnableNS();
+  }
+
+  @CalledByNative
+  boolean hasBuiltInNS() {
+    return effects.hasNS();
+  }
+
+  @CalledByNative
+  boolean isBuiltInNSEnabled() {
+    return effects.isNSEnabled();
+  }
+
+  WebRtcAudioEffects.State getBuiltInAudioEffectsState() {
+    return effects.getState();
+  }
+
   public void setUseAudioRecord(boolean enable) {
     Logging.d(TAG, "setUseAudioRecord(" + enable + ")");
     this.useAudioRecord = enable;
