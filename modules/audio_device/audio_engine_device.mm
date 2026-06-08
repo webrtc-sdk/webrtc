@@ -71,6 +71,15 @@ bool EngineStateEchoNoisePlatformPathIsActive(const AudioEngineDevice::EngineSta
          (state.built_in_aec_enabled || state.built_in_ns_enabled);
 }
 
+// AEC and NS share AVAudioInputNode.voiceProcessingBypassed (one VPIO bypass
+// knob), so keep bypass coupled to the AEC/NS component requests to stay in a
+// realizable OS state. AGC has a separate switch that only takes effect while
+// this shared path is on.
+void RecomputeVoiceProcessingBypassFromComponents(AudioEngineDevice::EngineState &state) {
+  const bool use_vpio = state.built_in_aec_enabled || state.built_in_ns_enabled;
+  state.voice_processing_bypassed = !use_vpio;
+}
+
 AudioEngineDevice::EngineState SetVoiceProcessingPathEnabled(AudioEngineDevice::EngineState state, bool enabled) {
   state.voice_processing_enabled = enabled;
   if (enabled) {
@@ -1201,12 +1210,7 @@ int32_t AudioEngineDevice::EnableBuiltInAEC(bool enable) {
   }
   return ModifyEngineState([enable](EngineState state) -> EngineState {
     state.built_in_aec_enabled = enable;
-    // AEC and NS share AVAudioInputNode.voiceProcessingBypassed, so callers
-    // must update them as a coupled pair when they need a realizable OS state.
-    // AVAudioEngine exposes VPIO bypass as one knob for AEC and NS. AGC has a
-    // separate switch, but it only takes effect while this shared path is on.
-    const bool use_vpio = state.built_in_aec_enabled || state.built_in_ns_enabled;
-    state.voice_processing_bypassed = !use_vpio;
+    RecomputeVoiceProcessingBypassFromComponents(state);
     return state;
   });
 #endif
@@ -1237,12 +1241,7 @@ int32_t AudioEngineDevice::EnableBuiltInNS(bool enable) {
   }
   return ModifyEngineState([enable](EngineState state) -> EngineState {
     state.built_in_ns_enabled = enable;
-    // AEC and NS share AVAudioInputNode.voiceProcessingBypassed, so callers
-    // must update them as a coupled pair when they need a realizable OS state.
-    // AVAudioEngine exposes VPIO bypass as one knob for AEC and NS. AGC has a
-    // separate switch, but it only takes effect while this shared path is on.
-    const bool use_vpio = state.built_in_aec_enabled || state.built_in_ns_enabled;
-    state.voice_processing_bypassed = !use_vpio;
+    RecomputeVoiceProcessingBypassFromComponents(state);
     return state;
   });
 #endif

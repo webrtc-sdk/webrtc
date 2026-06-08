@@ -387,6 +387,8 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   int32_t SetPlatformVoiceProcessingAllowed(bool allowed);
   int32_t PlatformVoiceProcessingAllowed(bool *allowed);
 
+  // Deprecated: use SetPlatformVoiceProcessingAllowed / PlatformVoiceProcessingAllowed.
+  // Retained as compatibility aliases that forward to those and log a warning.
   int32_t SetVoiceProcessingEnabled(bool enable);
   int32_t VoiceProcessingEnabled(bool* enabled);
 
