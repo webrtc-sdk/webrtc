@@ -21,10 +21,13 @@ NS_ASSUME_NONNULL_BEGIN
  * Disabled components do not use platform or software processing regardless of
  * mode. Automatic uses platform processing when available and otherwise falls
  * back to WebRTC software processing. Platform uses only platform processing, so
- * unavailable or physically impossible platform requests are rejected. Software
- * disables the matching platform effect and uses WebRTC software processing.
- * Some ADMs expose coupled platform effects, such as Apple Voice Processing I/O
- * for AEC and NS. High-pass filter has no platform implementation today.
+ * unavailable or physically impossible platform requests are rejected when they
+ * can be validated before storage. If platform availability changes later, the
+ * request can be stored and then resolve disabled when the voice engine applies
+ * it. Software disables the matching platform effect and uses WebRTC software
+ * processing. Some ADMs expose coupled platform effects, such as Apple Voice
+ * Processing I/O for AEC and NS. High-pass filter has no platform implementation
+ * today.
  *
  * Values must match webrtc::AudioProcessingMode.
  */
@@ -121,11 +124,17 @@ RTC_OBJC_EXPORT
 /** Updates local source audio processing options without restarting capture.
  *
  * Returns Stored when the request was accepted and stored on the local source.
+ * This validates static platform constraints, such as Apple AEC/NS coupling and
+ * simulator support. It does not bind the track to a specific audio device
+ * module, so app-level ADM policy can still make a stored platform request
+ * resolve disabled later when the voice engine applies it.
+ *
  * If the track is already being sent, active senders observe the track update
  * and reapply the updated options through the voice engine. Rejections mean the
- * options were not stored. The effective audio processing module configuration
- * is shared by the voice engine/channel, so conflicting updates from multiple
- * local tracks are not isolated per track.
+ * options were not stored. Use PeerConnection.audioProcessingRuntimeState to
+ * inspect the effective software/platform state after application. The effective
+ * audio processing module configuration is shared by the voice engine/channel,
+ * so conflicting updates from multiple local tracks are not isolated per track.
  */
 - (RTC_OBJC_TYPE(RTCAudioProcessingOptionsResult) *)setAudioProcessingOptions:
     (RTC_OBJC_TYPE(RTCAudioProcessingOptions) *)options;
