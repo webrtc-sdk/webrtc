@@ -39,6 +39,15 @@ AudioProcessingOptionsResult RejectPlatformUnavailable(const char *message) {
 
 bool AudioProcessingOptionIsDisabled(std::optional<bool> enabled) { return enabled.has_value() && !*enabled; }
 
+bool CoupledEchoNoisePlatformPathIsActive(const AudioDeviceModule::BuiltInAudioProcessingState &state) {
+  if (state.is_echo_cancellation_active.has_value() || state.is_noise_suppression_active.has_value()) {
+    return state.is_echo_cancellation_active.value_or(false) || state.is_noise_suppression_active.value_or(false);
+  }
+
+  return (state.is_echo_cancellation_available || state.is_noise_suppression_available) &&
+         (state.is_echo_cancellation_requested.value_or(false) || state.is_noise_suppression_requested.value_or(false));
+}
+
 AudioProcessingOptionsResult ValidatePlatformOnlyComponent(std::optional<bool> enabled,
                                                            std::optional<AudioProcessingMode> mode, bool is_available,
                                                            const char *component) {
@@ -192,6 +201,32 @@ AudioProcessingOptionsResult ValidateAudioProcessingOptions(const AudioOptions &
   }
 
   return ValidateIndependentOptions(options, context);
+}
+
+AudioProcessingOptionsValidationContext AudioProcessingValidationContextForAudioDeviceModule(
+    const AudioDeviceModule *adm) {
+  AudioProcessingOptionsValidationContext context;
+  if (adm == nullptr) {
+    return context;
+  }
+
+  context.topology = adm->GetBuiltInAudioProcessingTopology();
+  if (context.topology ==
+      AudioDeviceModule::BuiltInAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled) {
+    const bool path_available = adm->BuiltInVoiceProcessingPathIsAvailable();
+    context.is_echo_noise_platform_path_available = path_available;
+    context.is_echo_noise_platform_path_active =
+        CoupledEchoNoisePlatformPathIsActive(adm->GetBuiltInAudioProcessingState());
+    context.is_echo_cancellation_platform_available = path_available;
+    context.is_noise_suppression_platform_available = path_available;
+    context.is_auto_gain_control_platform_available = path_available;
+    return context;
+  }
+
+  context.is_echo_cancellation_platform_available = adm->BuiltInAECIsAvailable();
+  context.is_noise_suppression_platform_available = adm->BuiltInNSIsAvailable();
+  context.is_auto_gain_control_platform_available = adm->BuiltInAGCIsAvailable();
+  return context;
 }
 
 }  // namespace webrtc

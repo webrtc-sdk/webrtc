@@ -129,17 +129,7 @@ bool SetPlatformEffect(AudioDeviceModule *adm, EnableFn enable, bool enabled) {
 }
 
 bool CoupledEchoNoisePlatformPathIsActive(AudioDeviceModule *adm) {
-  if (adm == nullptr) {
-    return false;
-  }
-
-  AudioDeviceModule::BuiltInAudioProcessingState state = adm->GetBuiltInAudioProcessingState();
-  if (state.is_echo_cancellation_active.has_value() || state.is_noise_suppression_active.has_value()) {
-    return state.is_echo_cancellation_active.value_or(false) || state.is_noise_suppression_active.value_or(false);
-  }
-
-  return (state.is_echo_cancellation_available || state.is_noise_suppression_available) &&
-         (state.is_echo_cancellation_requested.value_or(false) || state.is_noise_suppression_requested.value_or(false));
+  return AudioProcessingValidationContextForAudioDeviceModule(adm).is_echo_noise_platform_path_active;
 }
 
 bool BuiltInVoiceProcessingPathIsAvailable(AudioDeviceModule *adm) {
@@ -148,33 +138,6 @@ bool BuiltInVoiceProcessingPathIsAvailable(AudioDeviceModule *adm) {
 
 bool SetBuiltInVoiceProcessingPath(AudioDeviceModule *adm, bool enabled) {
   return adm != nullptr && adm->EnableBuiltInVoiceProcessingPath(enabled) == 0;
-}
-
-AudioProcessingOptionsValidationContext AudioProcessingValidationContextForAdm(AudioDeviceModule *adm) {
-  AudioProcessingOptionsValidationContext context;
-  if (adm == nullptr) {
-    return context;
-  }
-
-  context.topology = adm->GetBuiltInAudioProcessingTopology();
-  if (context.topology ==
-      AudioDeviceModule::BuiltInAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled) {
-    const bool path_available = BuiltInVoiceProcessingPathIsAvailable(adm);
-    context.is_echo_noise_platform_path_available = path_available;
-    context.is_echo_noise_platform_path_active = CoupledEchoNoisePlatformPathIsActive(adm);
-    context.is_echo_cancellation_platform_available = path_available;
-    context.is_noise_suppression_platform_available = path_available;
-    context.is_auto_gain_control_platform_available = path_available;
-    return context;
-  }
-
-  context.is_echo_cancellation_platform_available =
-      PlatformEffectIsAvailable(adm, &AudioDeviceModule::BuiltInAECIsAvailable);
-  context.is_noise_suppression_platform_available =
-      PlatformEffectIsAvailable(adm, &AudioDeviceModule::BuiltInNSIsAvailable);
-  context.is_auto_gain_control_platform_available =
-      PlatformEffectIsAvailable(adm, &AudioDeviceModule::BuiltInAGCIsAvailable);
-  return context;
 }
 
 bool ResolveHighPassFilter(std::optional<bool> enabled, std::optional<AudioProcessingMode> mode) {
@@ -350,7 +313,7 @@ std::optional<AudioProcessing::Config> GetApmConfig(AudioProcessing *apm) {
 
 AudioProcessingOptionsResult ValidateAudioProcessingOptionsForApply(AudioDeviceModule *adm,
                                                                     const AudioOptions &options) {
-  return ValidateAudioProcessingOptions(options, AudioProcessingValidationContextForAdm(adm));
+  return ValidateAudioProcessingOptions(options, AudioProcessingValidationContextForAudioDeviceModule(adm));
 }
 
 AudioProcessingApplyResult ApplyAudioProcessingOptions(AudioProcessing *apm, AudioDeviceModule *adm,

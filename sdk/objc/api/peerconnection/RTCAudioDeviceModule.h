@@ -256,11 +256,11 @@ RTC_OBJC_EXPORT
 ///
 /// When this is false, runtime audio-processing options treat Apple Voice
 /// Processing I/O as unavailable. Automatic mode falls back to WebRTC software
-/// processing and platform mode is rejected where the request is validated
-/// against this ADM. Track-level requests can be stored before they are applied
-/// to a specific ADM. In that case a platform request resolves disabled at
-/// apply time. Turning this off also tears down any currently requested VPIO
-/// path.
+/// processing and platform mode is rejected by APIs that validate against this
+/// ADM, including track requests created by factories that expose this ADM.
+/// Factory paths without an exposed ADM may still store a platform request. In
+/// that case the platform request resolves disabled at apply time. Turning this
+/// off also tears down any currently requested VPIO path.
 @property(nonatomic, readonly, getter=isPlatformVoiceProcessingAllowed) BOOL platformVoiceProcessingAllowed;
 - (NSInteger)setPlatformVoiceProcessingAllowed:(BOOL)allowed;
 

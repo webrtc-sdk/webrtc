@@ -72,6 +72,11 @@ RTC_EXPORT std::optional<bool> ResolveAudioProcessingSoftwareFromPlatformState(s
 RTC_EXPORT AudioProcessingOptionsResult
 ValidateAudioProcessingOptions(const AudioOptions &options, const AudioProcessingOptionsValidationContext &context);
 
+// Builds a validation context from the live ADM policy and capability state.
+// ADM methods must be called on the ADM's expected thread.
+RTC_EXPORT AudioProcessingOptionsValidationContext
+AudioProcessingValidationContextForAudioDeviceModule(const AudioDeviceModule *adm);
+
 // Resolves the shared platform path for ADMs where AEC and NS cannot be
 // controlled independently. This only computes intent. ADM and APM side effects
 // stay in the caller.

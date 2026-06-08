@@ -178,6 +178,25 @@ webrtc::AudioProcessingOptionsValidationContext AppleAudioProcessingValidationCo
   return context;
 }
 
+webrtc::AudioProcessingOptionsResult ValidateAudioProcessingOptionsForFactory(RTC_OBJC_TYPE(RTCPeerConnectionFactory) *
+                                                                                  factory,
+                                                                              const webrtc::AudioOptions &options) {
+  webrtc::scoped_refptr<webrtc::AudioDeviceModule> adm = factory.nativeAudioDeviceModule;
+  webrtc::Thread *workerThread = factory.workerThread;
+  if (adm == nullptr || workerThread == nullptr) {
+    return webrtc::ValidateAudioProcessingOptions(options, AppleAudioProcessingValidationContext());
+  }
+
+  auto validate = [adm, options] {
+    return webrtc::ValidateAudioProcessingOptions(
+        options, webrtc::AudioProcessingValidationContextForAudioDeviceModule(adm.get()));
+  };
+  if (workerThread->IsCurrent()) {
+    return validate();
+  }
+  return workerThread->BlockingCall(validate);
+}
+
 }  // namespace
 
 @implementation RTC_OBJC_TYPE (RTCAudioTrack) {
@@ -315,7 +334,7 @@ webrtc::AudioProcessingOptionsValidationContext AppleAudioProcessingValidationCo
 
   webrtc::AudioOptions nativeOptions = webrtc::objc::NativeAudioProcessingOptions(options);
   webrtc::AudioProcessingOptionsResult validation =
-      webrtc::ValidateAudioProcessingOptions(nativeOptions, AppleAudioProcessingValidationContext());
+      ValidateAudioProcessingOptionsForFactory(self.factory, nativeOptions);
   if (!validation.ok()) {
     return ResultFromNative(validation);
   }
