@@ -74,7 +74,7 @@ inline RTC_OBJC_TYPE(RTCAudioProcessingImplementation)
 inline RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState)
     BuiltInAudioProcessingComponentStateToObjC(bool is_available, std::optional<bool> is_requested,
                                                std::optional<bool> is_active) {
-  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) result;
+  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) result = {};
   result.isAvailable = is_available;
   result.requested = OptionalBoolToObjC(is_requested);
   result.active = OptionalBoolToObjC(is_active);
@@ -83,7 +83,7 @@ inline RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState)
 
 inline RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState)
     BuiltInAudioProcessingStateToObjC(const AudioDeviceModule::BuiltInAudioProcessingState &state) {
-  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState) result;
+  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState) result = {};
   result.topology = BuiltInAudioProcessingTopologyToObjC(state.topology);
   result.echoCancellation = BuiltInAudioProcessingComponentStateToObjC(
       state.is_echo_cancellation_available, state.is_echo_cancellation_requested, state.is_echo_cancellation_active);
@@ -102,7 +102,7 @@ inline RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState)
 
 inline RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState)
     AudioProcessingComponentRuntimeStateToObjC(const AudioProcessingComponentRuntimeState &state) {
-  RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState) result;
+  RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState) result = {};
   result.requestedEnabled = OptionalBoolToObjC(state.is_requested_enabled);
   result.hasRequestedMode = state.requested_mode.has_value();
   result.requestedMode = state.requested_mode.has_value() ? AudioProcessingModeToObjC(*state.requested_mode)
@@ -118,7 +118,7 @@ inline RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState)
 
 inline RTC_OBJC_TYPE(RTCAudioProcessingRuntimeState)
     AudioProcessingRuntimeStateToObjC(const AudioProcessingRuntimeState &state) {
-  RTC_OBJC_TYPE(RTCAudioProcessingRuntimeState) result;
+  RTC_OBJC_TYPE(RTCAudioProcessingRuntimeState) result = {};
   result.topology = BuiltInAudioProcessingTopologyToObjC(state.topology);
   result.hasAudioProcessingModule = state.has_audio_processing_module;
   result.hasAudioProcessingConfig = state.has_audio_processing_config;
