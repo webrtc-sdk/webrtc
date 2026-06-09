@@ -578,10 +578,6 @@ void PeerConnectionDelegateAdapter::OnRemoveTrack(
   return [[self class] iceGatheringStateForNativeState:self.nativePeerConnection->ice_gathering_state()];
 }
 
-- (RTC_OBJC_TYPE(RTCAudioProcessingRuntimeState))audioProcessingRuntimeState {
-  return webrtc::objc::AudioProcessingRuntimeStateToObjC(self.nativePeerConnection->GetAudioProcessingRuntimeState());
-}
-
 - (BOOL)setConfiguration:(RTC_OBJC_TYPE(RTCConfiguration) *)configuration {
   std::unique_ptr<webrtc::PeerConnectionInterface::RTCConfiguration> config(
       [configuration createNativeConfiguration]);

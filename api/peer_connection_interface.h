@@ -961,11 +961,6 @@ class RTC_EXPORT PeerConnectionInterface : public RefCountInterface {
   // Clear cached stats in the RTCStatsCollector.
   virtual void ClearStatsCache() {}
 
-  // Diagnostic snapshot of requested audio processing options, current WebRTC
-  // APM state, and platform ADM state. Empty fields mean the state is unknown
-  // or not supported by the active ADM.
-  virtual AudioProcessingRuntimeState GetAudioProcessingRuntimeState() { return {}; }
-
   // Create a data channel with the provided config, or default config if none
   // is provided. Note that an offer/answer negotiation is still necessary
   // before the data channel can be used.
@@ -1592,11 +1587,10 @@ class RTC_EXPORT PeerConnectionFactoryInterface : public RefCountInterface {
   virtual void StopAecDump() = 0;
 
   // Returns the runtime audio processing state of this factory's shared audio
-  // processing module. The APM is owned by the factory and shared across all
-  // peer connections it creates, so this mirrors
-  // PeerConnectionInterface::GetAudioProcessingRuntimeState() but is read
-  // directly from the owning factory. Returns a default-constructed state when
-  // the factory has not been configured for media.
+  // processing module: a diagnostic snapshot of requested options, current
+  // WebRTC APM state, and platform ADM state. The APM is owned by the factory
+  // and shared across every peer connection it creates. Returns a
+  // default-constructed state when the factory is not configured for media.
   virtual AudioProcessingRuntimeState GetAudioProcessingRuntimeState() {
     return {};
   }

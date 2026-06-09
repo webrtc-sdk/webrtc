@@ -1462,10 +1462,6 @@ public class PeerConnection {
     return nativeGetNativePeerConnection();
   }
 
-  public AudioProcessingRuntimeState getAudioProcessingRuntimeState() {
-    return AudioProcessingRuntimeState.fromNative(nativeGetAudioProcessingRuntimeState());
-  }
-
   @CalledByNative
   long getNativeOwnedPeerConnection() {
     return nativePeerConnection;
@@ -1476,7 +1472,6 @@ public class PeerConnection {
   }
 
   private native long nativeGetNativePeerConnection();
-  private native int[] nativeGetAudioProcessingRuntimeState();
   private native SessionDescription nativeGetLocalDescription();
   private native SessionDescription nativeGetRemoteDescription();
   private native RtcCertificatePem nativeGetCertificate();

@@ -602,12 +602,6 @@ static jlong JNI_PeerConnection_GetNativePeerConnection(
   return jlongFromPointer(ExtractNativePC(jni, j_pc));
 }
 
-static jni_zero::ScopedJavaLocalRef<jintArray> JNI_PeerConnection_GetAudioProcessingRuntimeState(
-    JNIEnv *jni, const jni_zero::JavaParamRef<jobject> &j_pc) {
-  return NativeToJavaIntArray(
-      jni, AudioProcessingRuntimeStateToJavaValues(ExtractNativePC(jni, j_pc)->GetAudioProcessingRuntimeState()));
-}
-
 static jni_zero::ScopedJavaLocalRef<jobject>
 JNI_PeerConnection_GetLocalDescription(
     JNIEnv* jni,

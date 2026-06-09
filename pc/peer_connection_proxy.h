@@ -164,7 +164,6 @@ PROXY_METHOD1(void,
               const BandwidthEstimationSettings&)
 PROXY_METHOD1(void, SetAudioPlayout, bool)
 PROXY_METHOD1(void, SetAudioRecording, bool)
-PROXY_METHOD0(AudioProcessingRuntimeState, GetAudioProcessingRuntimeState)
 // This method will be invoked on the network thread. See
 // PeerConnectionFactory::CreatePeerConnectionOrError for more details.
 PROXY_SECONDARY_METHOD1(scoped_refptr<DtlsTransportInterface>,

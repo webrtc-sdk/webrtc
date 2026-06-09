@@ -130,8 +130,9 @@ RTC_OBJC_EXPORT
  *
  * If the track is already being sent, active senders observe the track update
  * and reapply the updated options through the voice engine. Rejections mean the
- * options were not stored. Use PeerConnection.audioProcessingRuntimeState to
- * inspect the effective software/platform state after application. The effective
+ * options were not stored. Use the peer connection factory's
+ * audioProcessingRuntimeState to inspect the effective software/platform state
+ * after application. The effective
  * audio processing module configuration is shared by the voice engine/channel,
  * so conflicting updates from multiple local tracks are not isolated per track.
  */
