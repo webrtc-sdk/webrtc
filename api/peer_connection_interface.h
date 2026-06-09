@@ -1591,6 +1591,16 @@ class RTC_EXPORT PeerConnectionFactoryInterface : public RefCountInterface {
   // Stops logging the AEC dump.
   virtual void StopAecDump() = 0;
 
+  // Returns the runtime audio processing state of this factory's shared audio
+  // processing module. The APM is owned by the factory and shared across all
+  // peer connections it creates, so this mirrors
+  // PeerConnectionInterface::GetAudioProcessingRuntimeState() but is read
+  // directly from the owning factory. Returns a default-constructed state when
+  // the factory has not been configured for media.
+  virtual AudioProcessingRuntimeState GetAudioProcessingRuntimeState() {
+    return {};
+  }
+
  protected:
   // Dtor and ctor protected as objects shouldn't be created or deleted via
   // this interface.

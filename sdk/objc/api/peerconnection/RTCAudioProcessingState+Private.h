@@ -22,7 +22,7 @@
 #include "api/audio/audio_device.h"
 #include "api/audio/audio_processing_runtime_state.h"
 #import "sdk/objc/api/peerconnection/RTCAudioDeviceModule.h"
-#import "sdk/objc/api/peerconnection/RTCPeerConnection.h"
+#import "sdk/objc/api/peerconnection/RTCAudioProcessingRuntimeState.h"
 
 namespace webrtc {
 namespace objc {
