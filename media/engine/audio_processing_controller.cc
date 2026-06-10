@@ -132,12 +132,12 @@ bool CoupledEchoNoisePlatformPathIsActive(AudioDeviceModule *adm) {
   return AudioProcessingValidationContextForAudioDeviceModule(adm).is_echo_noise_platform_path_active;
 }
 
-bool BuiltInVoiceProcessingPathIsAvailable(AudioDeviceModule *adm) {
-  return adm != nullptr && adm->BuiltInVoiceProcessingPathIsAvailable();
+bool PlatformVoiceProcessingPathIsAvailable(AudioDeviceModule *adm) {
+  return adm != nullptr && adm->PlatformVoiceProcessingPathIsAvailable();
 }
 
-bool SetBuiltInVoiceProcessingPath(AudioDeviceModule *adm, bool enabled) {
-  return adm != nullptr && adm->EnableBuiltInVoiceProcessingPath(enabled) == 0;
+bool SetPlatformVoiceProcessingPath(AudioDeviceModule *adm, bool enabled) {
+  return adm != nullptr && adm->EnablePlatformVoiceProcessingPath(enabled) == 0;
 }
 
 bool ResolveHighPassFilter(std::optional<bool> enabled, std::optional<AudioProcessingMode> mode) {
@@ -219,11 +219,11 @@ AudioProcessingApplyResult ApplyCoupledEchoNoiseProcessingOptions(AudioDeviceMod
   bool vpio_enabled = false;
 
   if (path_resolution.has_echo_or_noise_option) {
-    const bool path_available = BuiltInVoiceProcessingPathIsAvailable(adm);
+    const bool path_available = PlatformVoiceProcessingPathIsAvailable(adm);
     const bool should_enable_vpio = path_available && path_resolution.should_use_echo_noise_platform_path;
 
     if (should_enable_vpio) {
-      const bool path_enabled = SetBuiltInVoiceProcessingPath(adm, true);
+      const bool path_enabled = SetPlatformVoiceProcessingPath(adm, true);
       const bool effects_available = path_enabled &&
                                      PlatformEffectIsAvailable(adm, &AudioDeviceModule::BuiltInAECIsAvailable) &&
                                      PlatformEffectIsAvailable(adm, &AudioDeviceModule::BuiltInNSIsAvailable);
@@ -239,11 +239,11 @@ AudioProcessingApplyResult ApplyCoupledEchoNoiseProcessingOptions(AudioDeviceMod
         if (path_enabled) {
           SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInAEC, false);
           SetPlatformEffect(adm, &AudioDeviceModule::EnableBuiltInNS, false);
-          SetBuiltInVoiceProcessingPath(adm, false);
+          SetPlatformVoiceProcessingPath(adm, false);
         }
       }
     } else if (path_available) {
-      SetBuiltInVoiceProcessingPath(adm, false);
+      SetPlatformVoiceProcessingPath(adm, false);
     }
   } else {
     vpio_enabled = path_resolution.should_use_echo_noise_platform_path;
@@ -322,8 +322,8 @@ AudioProcessingApplyResult ApplyAudioProcessingOptions(AudioProcessing *apm, Aud
   apply_result.resolved_options = options_in;
 
   if (adm != nullptr &&
-      adm->GetBuiltInAudioProcessingTopology() ==
-          AudioDeviceModule::BuiltInAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled) {
+      adm->GetPlatformAudioProcessingTopology() ==
+          AudioDeviceModule::PlatformAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled) {
     apply_result = ApplyCoupledEchoNoiseProcessingOptions(adm, options_in);
     if (!apply_result.result.ok()) {
       return apply_result;
@@ -395,9 +395,9 @@ AudioProcessingApplyResult ApplyAudioProcessingOptions(AudioProcessing *apm, Aud
 AudioProcessingRuntimeState GetAudioProcessingRuntimeState(AudioProcessing *apm, AudioDeviceModule *adm,
                                                            const std::optional<AudioOptions> &requested_options,
                                                            const std::optional<AudioOptions> &resolved_options) {
-  AudioDeviceModule::BuiltInAudioProcessingState built_in;
+  AudioDeviceModule::PlatformAudioProcessingState built_in;
   if (adm != nullptr) {
-    built_in = adm->GetBuiltInAudioProcessingState();
+    built_in = adm->GetPlatformAudioProcessingState();
   }
   std::optional<AudioProcessing::Config> apm_config = GetApmConfig(apm);
   std::optional<bool> software_echo_cancellation;

@@ -63,10 +63,10 @@ typedef struct {
   BOOL isOutputAvailable;
 } RTC_OBJC_TYPE(RTCAudioEngineAvailability);
 
-// Values must match webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology.
-typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopology)) {
-  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopologyIndependent) = 0,
-  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopologyEchoCancellationAndNoiseSuppressionCoupled) = 1,
+// Values must match webrtc::AudioDeviceModule::PlatformAudioProcessingTopology.
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCPlatformAudioProcessingTopology)) {
+  RTC_OBJC_TYPE(RTCPlatformAudioProcessingTopologyIndependent) = 0,
+  RTC_OBJC_TYPE(RTCPlatformAudioProcessingTopologyEchoCancellationAndNoiseSuppressionCoupled) = 1,
 };
 
 // Nullable boolean for diagnostic state. Unknown means the ADM or OS path did
@@ -81,17 +81,17 @@ typedef struct {
   BOOL isAvailable;
   RTC_OBJC_TYPE(RTCOptionalBool) requested;
   RTC_OBJC_TYPE(RTCOptionalBool) active;
-} RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState);
+} RTC_OBJC_TYPE(RTCPlatformAudioProcessingComponentState);
 
 typedef struct {
-  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopology) topology;
+  RTC_OBJC_TYPE(RTCPlatformAudioProcessingTopology) topology;
 
   // Normalized per-component built-in processing state. On Apple AudioEngine,
   // AEC and NS are coupled through Voice Processing I/O, so one shared platform
   // path can affect both components.
-  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) echoCancellation;
-  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) noiseSuppression;
-  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) autoGainControl;
+  RTC_OBJC_TYPE(RTCPlatformAudioProcessingComponentState) echoCancellation;
+  RTC_OBJC_TYPE(RTCPlatformAudioProcessingComponentState) noiseSuppression;
+  RTC_OBJC_TYPE(RTCPlatformAudioProcessingComponentState) autoGainControl;
 
   // Requested values are the Apple Voice Processing I/O state stored by the ADM.
   // They can be known before input is configured.
@@ -118,7 +118,7 @@ typedef struct {
   RTC_OBJC_TYPE(RTCOptionalBool) voiceProcessingEnabledActive;
   RTC_OBJC_TYPE(RTCOptionalBool) voiceProcessingBypassedActive;
   RTC_OBJC_TYPE(RTCOptionalBool) voiceProcessingAGCEnabledActive;
-} RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState);
+} RTC_OBJC_TYPE(RTCPlatformAudioProcessingState);
 
 RTC_EXTERN NSString *const RTC_CONSTANT_TYPE(RTCAudioEngineInputMixerNodeKey);
 
@@ -281,7 +281,7 @@ RTC_OBJC_EXPORT
 /// Diagnostic snapshot of platform audio processing state. Requested values are
 /// the last state requested from the ADM. Active values are live OS readback
 /// when the ADM can query the effect.
-@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState) builtInAudioProcessingState;
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCPlatformAudioProcessingState) platformAudioProcessingState;
 
 @end
 

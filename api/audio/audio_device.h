@@ -64,7 +64,7 @@ class AudioDeviceModule : public RefCountInterface {
 
   // Keep numeric values in sync with the Java and ObjC API enums because
   // diagnostics pass these values across language boundaries.
-  enum class BuiltInAudioProcessingTopology {
+  enum class PlatformAudioProcessingTopology {
     // Platform AEC, NS, and AGC can be controlled independently.
     kIndependent = 0,
     // Platform AEC and NS are exposed through one shared voice-processing
@@ -76,8 +76,8 @@ class AudioDeviceModule : public RefCountInterface {
     kEchoCancellationAndNoiseSuppressionCoupled = 1,
   };
 
-  struct BuiltInAudioProcessingState {
-    BuiltInAudioProcessingTopology topology = BuiltInAudioProcessingTopology::kIndependent;
+  struct PlatformAudioProcessingState {
+    PlatformAudioProcessingTopology topology = PlatformAudioProcessingTopology::kIndependent;
 
     // Capability for the ADM to turn each platform effect on.
     bool is_echo_cancellation_available = false;
@@ -211,23 +211,23 @@ class AudioDeviceModule : public RefCountInterface {
   virtual bool BuiltInNSIsAvailable() const = 0;
 
   // Describes whether the ADM can switch built-in components independently.
-  virtual BuiltInAudioProcessingTopology GetBuiltInAudioProcessingTopology() const {
-    return BuiltInAudioProcessingTopology::kIndependent;
+  virtual PlatformAudioProcessingTopology GetPlatformAudioProcessingTopology() const {
+    return PlatformAudioProcessingTopology::kIndependent;
   }
 
   // Coupled ADMs may need to create or remove a platform voice-processing path
   // before individual built-in effects can be toggled. Independent ADMs expose
   // component effects directly and do not use this hook.
-  virtual bool BuiltInVoiceProcessingPathIsAvailable() const { return false; }
-  virtual int32_t EnableBuiltInVoiceProcessingPath(bool) { return -1; }
+  virtual bool PlatformVoiceProcessingPathIsAvailable() const { return false; }
+  virtual int32_t EnablePlatformVoiceProcessingPath(bool) { return -1; }
 
   // Returns a diagnostic snapshot for platform audio processing. Requested fields
   // describe what the ADM was last asked to use. Active fields describe live OS
   // effect state when the ADM can read it back. Unsupported fields remain empty
   // because most platforms cannot read every component.
-  virtual BuiltInAudioProcessingState GetBuiltInAudioProcessingState() const {
-    BuiltInAudioProcessingState state;
-    state.topology = GetBuiltInAudioProcessingTopology();
+  virtual PlatformAudioProcessingState GetPlatformAudioProcessingState() const {
+    PlatformAudioProcessingState state;
+    state.topology = GetPlatformAudioProcessingTopology();
     state.is_echo_cancellation_available = BuiltInAECIsAvailable();
     state.is_noise_suppression_available = BuiltInNSIsAvailable();
     state.is_auto_gain_control_available = BuiltInAGCIsAvailable();

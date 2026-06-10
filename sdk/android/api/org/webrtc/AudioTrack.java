@@ -33,8 +33,8 @@ public class AudioTrack extends MediaStreamTrack {
 
     static AudioProcessingPlatformPolicy fromJavaAudioDeviceModule(
         JavaAudioDeviceModule audioDeviceModule) {
-      JavaAudioDeviceModule.BuiltInAudioProcessingState state =
-          audioDeviceModule.getBuiltInAudioProcessingState();
+      JavaAudioDeviceModule.PlatformAudioProcessingState state =
+          audioDeviceModule.getPlatformAudioProcessingState();
       return new AudioProcessingPlatformPolicy(
           state.echoCancellation.isAvailable, state.noiseSuppression.isAvailable);
     }

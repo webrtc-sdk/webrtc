@@ -32,7 +32,7 @@ public final class AudioProcessingRuntimeState {
   private static final int FIELD_COUNT =
       TOP_LEVEL_FIELD_COUNT + COMPONENT_FIELD_COUNT * 4 + 1 + BUILT_IN_COMPONENT_FIELD_COUNT * 3;
 
-  public final JavaAudioDeviceModule.BuiltInAudioProcessingTopology topology;
+  public final JavaAudioDeviceModule.PlatformAudioProcessingTopology topology;
   public final boolean hasAudioProcessingModule;
   public final boolean hasAudioProcessingConfig;
   public final boolean hasRequestedAudioProcessingOptions;
@@ -41,10 +41,10 @@ public final class AudioProcessingRuntimeState {
   public final AudioProcessingComponentRuntimeState noiseSuppression;
   public final AudioProcessingComponentRuntimeState autoGainControl;
   public final AudioProcessingComponentRuntimeState highPassFilter;
-  public final JavaAudioDeviceModule.BuiltInAudioProcessingState builtIn;
+  public final JavaAudioDeviceModule.PlatformAudioProcessingState builtIn;
 
   public AudioProcessingRuntimeState(
-      JavaAudioDeviceModule.BuiltInAudioProcessingTopology topology,
+      JavaAudioDeviceModule.PlatformAudioProcessingTopology topology,
       boolean hasAudioProcessingModule,
       boolean hasAudioProcessingConfig,
       boolean hasRequestedAudioProcessingOptions,
@@ -53,7 +53,7 @@ public final class AudioProcessingRuntimeState {
       AudioProcessingComponentRuntimeState noiseSuppression,
       AudioProcessingComponentRuntimeState autoGainControl,
       AudioProcessingComponentRuntimeState highPassFilter,
-      JavaAudioDeviceModule.BuiltInAudioProcessingState builtIn) {
+      JavaAudioDeviceModule.PlatformAudioProcessingState builtIn) {
     this.topology = topology;
     this.hasAudioProcessingModule = hasAudioProcessingModule;
     this.hasAudioProcessingConfig = hasAudioProcessingConfig;
@@ -78,7 +78,7 @@ public final class AudioProcessingRuntimeState {
           "Unexpected audio processing runtime state field count: " + values.length);
     }
     int offset = 0;
-    JavaAudioDeviceModule.BuiltInAudioProcessingTopology topology =
+    JavaAudioDeviceModule.PlatformAudioProcessingTopology topology =
         topologyFromNative(values[offset++]);
     boolean hasAudioProcessingModule = values[offset++] != 0;
     boolean hasAudioProcessingConfig = values[offset++] != 0;
@@ -92,7 +92,7 @@ public final class AudioProcessingRuntimeState {
     offset += COMPONENT_FIELD_COUNT;
     AudioProcessingComponentRuntimeState highPassFilter = componentFromNative(values, offset);
     offset += COMPONENT_FIELD_COUNT;
-    JavaAudioDeviceModule.BuiltInAudioProcessingState builtIn =
+    JavaAudioDeviceModule.PlatformAudioProcessingState builtIn =
         builtInStateFromNative(values, offset);
     return new AudioProcessingRuntimeState(
         topology, hasAudioProcessingModule, hasAudioProcessingConfig,
@@ -110,31 +110,31 @@ public final class AudioProcessingRuntimeState {
         audioProcessingImplementationFromNative(values[offset + 7]));
   }
 
-  private static JavaAudioDeviceModule.BuiltInAudioProcessingState builtInStateFromNative(
+  private static JavaAudioDeviceModule.PlatformAudioProcessingState builtInStateFromNative(
       int[] values, int offset) {
-    JavaAudioDeviceModule.BuiltInAudioProcessingTopology topology =
+    JavaAudioDeviceModule.PlatformAudioProcessingTopology topology =
         topologyFromNative(values[offset++]);
-    JavaAudioDeviceModule.BuiltInAudioProcessingComponentState echoCancellation =
+    JavaAudioDeviceModule.PlatformAudioProcessingComponentState echoCancellation =
         builtInComponentFromNative(values, offset);
     offset += BUILT_IN_COMPONENT_FIELD_COUNT;
-    JavaAudioDeviceModule.BuiltInAudioProcessingComponentState noiseSuppression =
+    JavaAudioDeviceModule.PlatformAudioProcessingComponentState noiseSuppression =
         builtInComponentFromNative(values, offset);
     offset += BUILT_IN_COMPONENT_FIELD_COUNT;
-    JavaAudioDeviceModule.BuiltInAudioProcessingComponentState autoGainControl =
+    JavaAudioDeviceModule.PlatformAudioProcessingComponentState autoGainControl =
         builtInComponentFromNative(values, offset);
-    return new JavaAudioDeviceModule.BuiltInAudioProcessingState(
+    return new JavaAudioDeviceModule.PlatformAudioProcessingState(
         topology, echoCancellation, noiseSuppression, autoGainControl);
   }
 
-  private static JavaAudioDeviceModule.BuiltInAudioProcessingComponentState
+  private static JavaAudioDeviceModule.PlatformAudioProcessingComponentState
   builtInComponentFromNative(int[] values, int offset) {
-    return new JavaAudioDeviceModule.BuiltInAudioProcessingComponentState(values[offset] != 0,
+    return new JavaAudioDeviceModule.PlatformAudioProcessingComponentState(values[offset] != 0,
         optionalBoolFromNative(values[offset + 1]), optionalBoolFromNative(values[offset + 2]));
   }
 
-  private static JavaAudioDeviceModule.BuiltInAudioProcessingTopology topologyFromNative(
+  private static JavaAudioDeviceModule.PlatformAudioProcessingTopology topologyFromNative(
       int value) {
-    return JavaAudioDeviceModule.BuiltInAudioProcessingTopology.values()[value];
+    return JavaAudioDeviceModule.PlatformAudioProcessingTopology.values()[value];
   }
 
   private static @Nullable AudioProcessingMode audioProcessingModeFromNative(int value) {

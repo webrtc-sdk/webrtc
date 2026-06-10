@@ -485,7 +485,7 @@ static int32_t AudioProcessingImplementationToJava(AudioProcessingImplementation
   return static_cast<int32_t>(implementation);
 }
 
-static int32_t BuiltInAudioProcessingTopologyToJava(AudioDeviceModule::BuiltInAudioProcessingTopology topology) {
+static int32_t PlatformAudioProcessingTopologyToJava(AudioDeviceModule::PlatformAudioProcessingTopology topology) {
   return static_cast<int32_t>(topology);
 }
 
@@ -501,7 +501,7 @@ static void AppendAudioProcessingComponentRuntimeState(std::vector<int32_t> *val
   values->push_back(AudioProcessingImplementationToJava(state.effective));
 }
 
-static void AppendBuiltInAudioProcessingComponentState(std::vector<int32_t> *values, bool available,
+static void AppendPlatformAudioProcessingComponentState(std::vector<int32_t> *values, bool available,
                                                        std::optional<bool> requested,
                                                        std::optional<bool> active) {
   values->push_back(available ? 1 : 0);
@@ -509,14 +509,14 @@ static void AppendBuiltInAudioProcessingComponentState(std::vector<int32_t> *val
   values->push_back(OptionalBoolToJava(active));
 }
 
-static void AppendBuiltInAudioProcessingState(std::vector<int32_t> *values,
-                                              const AudioDeviceModule::BuiltInAudioProcessingState &state) {
-  values->push_back(BuiltInAudioProcessingTopologyToJava(state.topology));
-  AppendBuiltInAudioProcessingComponentState(values, state.is_echo_cancellation_available,
+static void AppendPlatformAudioProcessingState(std::vector<int32_t> *values,
+                                              const AudioDeviceModule::PlatformAudioProcessingState &state) {
+  values->push_back(PlatformAudioProcessingTopologyToJava(state.topology));
+  AppendPlatformAudioProcessingComponentState(values, state.is_echo_cancellation_available,
                                              state.is_echo_cancellation_requested, state.is_echo_cancellation_active);
-  AppendBuiltInAudioProcessingComponentState(values, state.is_noise_suppression_available,
+  AppendPlatformAudioProcessingComponentState(values, state.is_noise_suppression_available,
                                              state.is_noise_suppression_requested, state.is_noise_suppression_active);
-  AppendBuiltInAudioProcessingComponentState(values, state.is_auto_gain_control_available,
+  AppendPlatformAudioProcessingComponentState(values, state.is_auto_gain_control_available,
                                              state.is_auto_gain_control_requested, state.is_auto_gain_control_active);
 }
 
@@ -524,7 +524,7 @@ static std::vector<int32_t> AudioProcessingRuntimeStateToJavaValues(
     const AudioProcessingRuntimeState &state) {
   std::vector<int32_t> values;
   values.reserve(47);
-  values.push_back(BuiltInAudioProcessingTopologyToJava(state.topology));
+  values.push_back(PlatformAudioProcessingTopologyToJava(state.topology));
   values.push_back(state.has_audio_processing_module ? 1 : 0);
   values.push_back(state.has_audio_processing_config ? 1 : 0);
   values.push_back(state.has_requested_audio_processing_options ? 1 : 0);
@@ -533,7 +533,7 @@ static std::vector<int32_t> AudioProcessingRuntimeStateToJavaValues(
   AppendAudioProcessingComponentRuntimeState(&values, state.noise_suppression);
   AppendAudioProcessingComponentRuntimeState(&values, state.auto_gain_control);
   AppendAudioProcessingComponentRuntimeState(&values, state.high_pass_filter);
-  AppendBuiltInAudioProcessingState(&values, state.built_in);
+  AppendPlatformAudioProcessingState(&values, state.built_in);
   return values;
 }
 

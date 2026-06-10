@@ -463,10 +463,10 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   });
 }
 
-- (RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState))builtInAudioProcessingState {
+- (RTC_OBJC_TYPE(RTCPlatformAudioProcessingState))platformAudioProcessingState {
   return _workerThread->BlockingCall([self] {
-    webrtc::AudioDeviceModule::BuiltInAudioProcessingState native_state = _native->GetBuiltInAudioProcessingState();
-    return webrtc::objc::BuiltInAudioProcessingStateToObjC(native_state);
+    webrtc::AudioDeviceModule::PlatformAudioProcessingState native_state = _native->GetPlatformAudioProcessingState();
+    return webrtc::objc::PlatformAudioProcessingStateToObjC(native_state);
   });
 }
 

@@ -34,13 +34,13 @@ inline RTC_OBJC_TYPE(RTCOptionalBool) OptionalBoolToObjC(std::optional<bool> val
   return value.value() ? RTC_OBJC_TYPE(RTCOptionalBoolYes) : RTC_OBJC_TYPE(RTCOptionalBoolNo);
 }
 
-inline RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopology)
-    BuiltInAudioProcessingTopologyToObjC(AudioDeviceModule::BuiltInAudioProcessingTopology topology) {
+inline RTC_OBJC_TYPE(RTCPlatformAudioProcessingTopology)
+    PlatformAudioProcessingTopologyToObjC(AudioDeviceModule::PlatformAudioProcessingTopology topology) {
   switch (topology) {
-    case AudioDeviceModule::BuiltInAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled:
-      return RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopologyEchoCancellationAndNoiseSuppressionCoupled);
-    case AudioDeviceModule::BuiltInAudioProcessingTopology::kIndependent:
-      return RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopologyIndependent);
+    case AudioDeviceModule::PlatformAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled:
+      return RTC_OBJC_TYPE(RTCPlatformAudioProcessingTopologyEchoCancellationAndNoiseSuppressionCoupled);
+    case AudioDeviceModule::PlatformAudioProcessingTopology::kIndependent:
+      return RTC_OBJC_TYPE(RTCPlatformAudioProcessingTopologyIndependent);
   }
 }
 
@@ -71,25 +71,25 @@ inline RTC_OBJC_TYPE(RTCAudioProcessingImplementation)
   }
 }
 
-inline RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState)
-    BuiltInAudioProcessingComponentStateToObjC(bool is_available, std::optional<bool> is_requested,
+inline RTC_OBJC_TYPE(RTCPlatformAudioProcessingComponentState)
+    PlatformAudioProcessingComponentStateToObjC(bool is_available, std::optional<bool> is_requested,
                                                std::optional<bool> is_active) {
-  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingComponentState) result = {};
+  RTC_OBJC_TYPE(RTCPlatformAudioProcessingComponentState) result = {};
   result.isAvailable = is_available;
   result.requested = OptionalBoolToObjC(is_requested);
   result.active = OptionalBoolToObjC(is_active);
   return result;
 }
 
-inline RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState)
-    BuiltInAudioProcessingStateToObjC(const AudioDeviceModule::BuiltInAudioProcessingState &state) {
-  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState) result = {};
-  result.topology = BuiltInAudioProcessingTopologyToObjC(state.topology);
-  result.echoCancellation = BuiltInAudioProcessingComponentStateToObjC(
+inline RTC_OBJC_TYPE(RTCPlatformAudioProcessingState)
+    PlatformAudioProcessingStateToObjC(const AudioDeviceModule::PlatformAudioProcessingState &state) {
+  RTC_OBJC_TYPE(RTCPlatformAudioProcessingState) result = {};
+  result.topology = PlatformAudioProcessingTopologyToObjC(state.topology);
+  result.echoCancellation = PlatformAudioProcessingComponentStateToObjC(
       state.is_echo_cancellation_available, state.is_echo_cancellation_requested, state.is_echo_cancellation_active);
-  result.noiseSuppression = BuiltInAudioProcessingComponentStateToObjC(
+  result.noiseSuppression = PlatformAudioProcessingComponentStateToObjC(
       state.is_noise_suppression_available, state.is_noise_suppression_requested, state.is_noise_suppression_active);
-  result.autoGainControl = BuiltInAudioProcessingComponentStateToObjC(
+  result.autoGainControl = PlatformAudioProcessingComponentStateToObjC(
       state.is_auto_gain_control_available, state.is_auto_gain_control_requested, state.is_auto_gain_control_active);
   result.voiceProcessingEnabledRequested = OptionalBoolToObjC(state.is_voice_processing_enabled_requested);
   result.voiceProcessingBypassedRequested = OptionalBoolToObjC(state.is_voice_processing_bypassed_requested);
@@ -119,7 +119,7 @@ inline RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState)
 inline RTC_OBJC_TYPE(RTCAudioProcessingRuntimeState)
     AudioProcessingRuntimeStateToObjC(const AudioProcessingRuntimeState &state) {
   RTC_OBJC_TYPE(RTCAudioProcessingRuntimeState) result = {};
-  result.topology = BuiltInAudioProcessingTopologyToObjC(state.topology);
+  result.topology = PlatformAudioProcessingTopologyToObjC(state.topology);
   result.hasAudioProcessingModule = state.has_audio_processing_module;
   result.hasAudioProcessingConfig = state.has_audio_processing_config;
   result.hasRequestedAudioProcessingOptions = state.has_requested_audio_processing_options;
@@ -128,7 +128,7 @@ inline RTC_OBJC_TYPE(RTCAudioProcessingRuntimeState)
   result.noiseSuppression = AudioProcessingComponentRuntimeStateToObjC(state.noise_suppression);
   result.autoGainControl = AudioProcessingComponentRuntimeStateToObjC(state.auto_gain_control);
   result.highPassFilter = AudioProcessingComponentRuntimeStateToObjC(state.high_pass_filter);
-  result.builtIn = BuiltInAudioProcessingStateToObjC(state.built_in);
+  result.builtIn = PlatformAudioProcessingStateToObjC(state.built_in);
   return result;
 }
 

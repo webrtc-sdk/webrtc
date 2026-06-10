@@ -103,11 +103,11 @@ AudioEngineDevice::EngineState SetVoiceProcessingPathEnabled(AudioEngineDevice::
 AudioProcessingOptionsValidationContext AudioProcessingValidationContextForEngineState(
     const AudioEngineDevice::EngineState &state) {
   AudioProcessingOptionsValidationContext context;
-  context.topology = AudioDeviceModule::BuiltInAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled;
+  context.topology = AudioDeviceModule::PlatformAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled;
   // Availability includes the app-level policy. If the app has disallowed Apple
   // VPIO, automatic mode must fall back to WebRTC software processing and
   // platform mode must be rejected. Mirrors
-  // AudioEngineDevice::BuiltInVoiceProcessingPathIsAvailable().
+  // AudioEngineDevice::PlatformVoiceProcessingPathIsAvailable().
 #if TARGET_OS_SIMULATOR
   const bool path_available = false;
 #else
@@ -1100,14 +1100,14 @@ int32_t AudioEngineDevice::RegisterAudioCallback(AudioTransport* audioCallback) 
 
 // These availability checks report whether a component can be used inside the
 // currently configured Voice Processing I/O path. The coupled controller uses
-// BuiltInVoiceProcessingPathIsAvailable before these checks when it needs to
+// PlatformVoiceProcessingPathIsAvailable before these checks when it needs to
 // recreate the path from a software or disabled state.
 bool AudioEngineDevice::BuiltInAECIsAvailable() const {
   // Echo cancellation is available only when the app allows Apple's platform
   // voice processing. Within that policy, availability is not a function of
   // whether VPIO is currently on: an automatic/platform request can re-create
   // the path. Current on/off state is exposed separately via active fields.
-  return BuiltInVoiceProcessingPathIsAvailable();
+  return PlatformVoiceProcessingPathIsAvailable();
 }
 
 bool AudioEngineDevice::BuiltInAGCIsAvailable() const {
@@ -1122,14 +1122,14 @@ bool AudioEngineDevice::BuiltInAGCIsAvailable() const {
 bool AudioEngineDevice::BuiltInNSIsAvailable() const {
   // Noise suppression is a device capability provided by the VPIO path; see
   // BuiltInAECIsAvailable.
-  return BuiltInVoiceProcessingPathIsAvailable();
+  return PlatformVoiceProcessingPathIsAvailable();
 }
 
-AudioDeviceModule::BuiltInAudioProcessingTopology AudioEngineDevice::GetBuiltInAudioProcessingTopology() const {
-  return BuiltInAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled;
+AudioDeviceModule::PlatformAudioProcessingTopology AudioEngineDevice::GetPlatformAudioProcessingTopology() const {
+  return PlatformAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled;
 }
 
-bool AudioEngineDevice::BuiltInVoiceProcessingPathIsAvailable() const {
+bool AudioEngineDevice::PlatformVoiceProcessingPathIsAvailable() const {
 #if TARGET_OS_SIMULATOR
   return false;
 #else
@@ -1138,7 +1138,7 @@ bool AudioEngineDevice::BuiltInVoiceProcessingPathIsAvailable() const {
 #endif
 }
 
-int32_t AudioEngineDevice::EnableBuiltInVoiceProcessingPath(bool enable) {
+int32_t AudioEngineDevice::EnablePlatformVoiceProcessingPath(bool enable) {
 #if TARGET_OS_SIMULATOR
   return -1;
 #else
@@ -1151,9 +1151,9 @@ int32_t AudioEngineDevice::EnableBuiltInVoiceProcessingPath(bool enable) {
 #endif
 }
 
-AudioDeviceModule::BuiltInAudioProcessingState AudioEngineDevice::GetBuiltInAudioProcessingState() const {
-  BuiltInAudioProcessingState state;
-  state.topology = GetBuiltInAudioProcessingTopology();
+AudioDeviceModule::PlatformAudioProcessingState AudioEngineDevice::GetPlatformAudioProcessingState() const {
+  PlatformAudioProcessingState state;
+  state.topology = GetPlatformAudioProcessingTopology();
 #if TARGET_OS_SIMULATOR
   return state;
 #else
@@ -1164,7 +1164,7 @@ AudioDeviceModule::BuiltInAudioProcessingState AudioEngineDevice::GetBuiltInAudi
   // requests are rejected. If allowed, availability is independent of whether
   // VPIO is currently on. AGC differs because Apple AGC only has an effect while
   // VPIO is active and AGC alone never creates the path.
-  const bool path_available = BuiltInVoiceProcessingPathIsAvailable();
+  const bool path_available = PlatformVoiceProcessingPathIsAvailable();
   state.is_echo_cancellation_available = path_available;
   state.is_noise_suppression_available = path_available;
   state.is_auto_gain_control_available =
@@ -1196,7 +1196,7 @@ AudioDeviceModule::BuiltInAudioProcessingState AudioEngineDevice::GetBuiltInAudi
     state.is_noise_suppression_active = shared_echo_noise_active;
     state.is_auto_gain_control_active = shared_echo_noise_active && agc_active;
   } @catch (NSException *exception) {
-    LOGW() << "GetBuiltInAudioProcessingState threw exception: " << exception.reason.UTF8String;
+    LOGW() << "GetPlatformAudioProcessingState threw exception: " << exception.reason.UTF8String;
   }
   return state;
 #endif

@@ -50,7 +50,7 @@ typedef struct {
 } RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState);
 
 typedef struct {
-  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopology) topology;
+  RTC_OBJC_TYPE(RTCPlatformAudioProcessingTopology) topology;
 
   BOOL hasAudioProcessingModule;
   BOOL hasAudioProcessingConfig;
@@ -62,7 +62,7 @@ typedef struct {
   RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState) autoGainControl;
   RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState) highPassFilter;
 
-  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState) builtIn;
+  RTC_OBJC_TYPE(RTCPlatformAudioProcessingState) builtIn;
 } RTC_OBJC_TYPE(RTCAudioProcessingRuntimeState);
 
 #endif  // SDK_OBJC_API_PEERCONNECTION_RTCAUDIOPROCESSINGRUNTIMESTATE_H_

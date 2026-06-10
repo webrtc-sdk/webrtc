@@ -56,8 +56,8 @@ struct AudioProcessingComponentRuntimeState {
 };
 
 struct AudioProcessingRuntimeState {
-  AudioDeviceModule::BuiltInAudioProcessingTopology topology =
-      AudioDeviceModule::BuiltInAudioProcessingTopology::kIndependent;
+  AudioDeviceModule::PlatformAudioProcessingTopology topology =
+      AudioDeviceModule::PlatformAudioProcessingTopology::kIndependent;
 
   bool has_audio_processing_module = false;
   bool has_audio_processing_config = false;
@@ -69,7 +69,7 @@ struct AudioProcessingRuntimeState {
   AudioProcessingComponentRuntimeState auto_gain_control;
   AudioProcessingComponentRuntimeState high_pass_filter;
 
-  AudioDeviceModule::BuiltInAudioProcessingState built_in;
+  AudioDeviceModule::PlatformAudioProcessingState built_in;
 };
 
 }  // namespace webrtc
