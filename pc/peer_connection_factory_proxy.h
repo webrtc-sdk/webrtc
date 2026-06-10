@@ -56,6 +56,8 @@ PROXY_METHOD2(scoped_refptr<AudioTrackInterface>,
               AudioSourceInterface*)
 PROXY_SECONDARY_METHOD2(bool, StartAecDump, FILE*, int64_t)
 PROXY_SECONDARY_METHOD0(void, StopAecDump)
+PROXY_SECONDARY_METHOD0(AudioProcessingRuntimeState,
+                        GetAudioProcessingRuntimeState)
 END_PROXY_MAP(PeerConnectionFactory)
 
 }  // namespace webrtc
