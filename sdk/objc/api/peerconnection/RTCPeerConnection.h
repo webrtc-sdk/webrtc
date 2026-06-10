@@ -10,8 +10,6 @@
 
 #import <Foundation/Foundation.h>
 
-#import "sdk/objc/api/peerconnection/RTCAudioDeviceModule.h"
-#import "sdk/objc/api/peerconnection/RTCAudioTrack.h"
 #import "sdk/objc/base/RTCMacros.h"
 
 @class RTC_OBJC_TYPE(RTCConfiguration);

@@ -10,7 +10,6 @@
 
 #import "RTCPeerConnection+Private.h"
 
-#import "RTCAudioProcessingState+Private.h"
 #import "RTCConfiguration+Private.h"
 #import "RTCDataChannel+Private.h"
 #import "RTCIceCandidate+Private.h"
