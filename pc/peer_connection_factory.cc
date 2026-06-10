@@ -222,9 +222,13 @@ PeerConnectionFactory::GetAudioProcessingRuntimeState() {
   // The audio processing module is owned by the shared media engine, so this
   // reflects the factory-scoped state. media_engine_w() is the worker-thread
   // (non-const) accessor; the const media_engine() below cannot reach the
-  // non-const GetAudioProcessingRuntimeState().
+  // non-const GetAudioProcessingRuntimeState(). The engine can be null even
+  // when configured for media (a custom MediaFactory may fail engine
+  // creation), so guard the dereference.
   if (context_->is_configured_for_media()) {
-    return context_->media_engine_w()->voice().GetAudioProcessingRuntimeState();
+    if (MediaEngineInterface* media_engine = context_->media_engine_w()) {
+      return media_engine->voice().GetAudioProcessingRuntimeState();
+    }
   }
   return {};
 }

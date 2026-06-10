@@ -19,9 +19,9 @@
 
 #import <Foundation/Foundation.h>
 
-#import "sdk/objc/api/peerconnection/RTCAudioDeviceModule.h"
-#import "sdk/objc/api/peerconnection/RTCAudioTrack.h"
-#import "sdk/objc/base/RTCMacros.h"
+#import "RTCAudioDeviceModule.h"
+#import "RTCAudioTrack.h"
+#import "RTCMacros.h"
 
 // Diagnostic snapshot of the requested vs. resolved audio processing state for
 // the shared audio processing module (owned by the peer connection factory).
