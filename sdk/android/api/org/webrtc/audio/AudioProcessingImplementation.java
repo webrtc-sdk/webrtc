@@ -29,7 +29,7 @@ public enum AudioProcessingImplementation {
   PLATFORM,
   SOFTWARE_AND_PLATFORM;
 
-  @CalledByNative("AudioProcessingImplementation")
+  @CalledByNative
   static AudioProcessingImplementation fromNativeIndex(int nativeIndex) {
     return values()[nativeIndex];
   }

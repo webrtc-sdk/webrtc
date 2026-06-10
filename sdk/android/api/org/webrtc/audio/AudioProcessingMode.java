@@ -32,7 +32,7 @@ public enum AudioProcessingMode {
   /** Disables the matching platform effect and uses WebRTC software processing. */
   SOFTWARE;
 
-  @CalledByNative("AudioProcessingMode")
+  @CalledByNative
   static AudioProcessingMode fromNativeIndex(int nativeIndex) {
     return values()[nativeIndex];
   }
