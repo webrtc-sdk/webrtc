@@ -15,18 +15,17 @@
 #include <unistd.h>
 
 #include <cstddef>
-#include <cstdint>
 #include <cstdio>
 #include <memory>
 #include <optional>
 #include <string>
 #include <utility>
-#include <vector>
 
 #include "absl/memory/memory.h"
 #include "api/audio/audio_device.h"
 #include "api/audio/audio_frame_processor.h"
 #include "api/audio/audio_processing.h"
+#include "api/audio/audio_processing_state.h"
 #include "api/audio/builtin_audio_processing_builder.h"
 #include "api/audio_codecs/audio_decoder_factory.h"
 #include "api/audio_codecs/audio_encoder_factory.h"
@@ -52,6 +51,11 @@
 #include "rtc_base/socket_factory.h"
 #include "rtc_base/ssl_identity.h"
 #include "rtc_base/thread.h"
+#include "sdk/android/generated_peerconnection_jni/AudioProcessingComponentOptions_jni.h"
+#include "sdk/android/generated_peerconnection_jni/AudioProcessingComponentState_jni.h"
+#include "sdk/android/generated_peerconnection_jni/AudioProcessingImplementation_jni.h"
+#include "sdk/android/generated_peerconnection_jni/AudioProcessingMode_jni.h"
+#include "sdk/android/generated_peerconnection_jni/AudioProcessingState_jni.h"
 #include "sdk/android/generated_peerconnection_jni/PeerConnectionFactory_jni.h"
 #include "sdk/android/native_api/jni/java_types.h"
 #include "sdk/android/native_api/jni/scoped_java_ref.h"
@@ -471,77 +475,33 @@ static void JNI_PeerConnectionFactory_StopAecDump(JNIEnv* jni,
   PeerConnectionFactoryFromJava(native_factory)->StopAecDump();
 }
 
-// Serializers flattening AudioProcessingRuntimeState into the int array
-// layout expected by org.webrtc.audio.AudioProcessingRuntimeState.fromNative.
-static int32_t OptionalBoolToJava(std::optional<bool> value) {
-  return value.has_value() ? (*value ? 1 : 0) : -1;
+// Builds org.webrtc.audio.AudioProcessingState (and its component states)
+// through the jni_zero-generated constructors. Tri-state diagnostics collapse
+// to false at this boundary; the lossless representation stays in C++.
+static jni_zero::ScopedJavaLocalRef<jobject> NativeToJavaAudioProcessingComponentState(
+    JNIEnv* jni, const AudioProcessingComponentState& state) {
+  jni_zero::ScopedJavaLocalRef<jobject> requested;
+  if (state.requested_enabled.has_value()) {
+    requested = Java_AudioProcessingComponentOptions_Constructor(
+        jni, *state.requested_enabled,
+        Java_AudioProcessingMode_fromNativeIndex(
+            jni, static_cast<jint>(state.requested_mode.value_or(AudioProcessingMode::kAutomatic))));
+  }
+  return Java_AudioProcessingComponentState_Constructor(
+      jni, requested, state.software_resolved.value_or(false), state.software_active.value_or(false),
+      state.platform_available, state.platform_resolved.value_or(false), state.platform_active.value_or(false),
+      Java_AudioProcessingImplementation_fromNativeIndex(jni, static_cast<jint>(state.effective)));
 }
 
-static int32_t OptionalAudioProcessingModeToJava(std::optional<AudioProcessingMode> mode) {
-  return mode.has_value() ? static_cast<int32_t>(*mode) : -1;
-}
-
-static int32_t AudioProcessingImplementationToJava(AudioProcessingImplementation implementation) {
-  return static_cast<int32_t>(implementation);
-}
-
-static int32_t PlatformAudioProcessingTopologyToJava(AudioDeviceModule::PlatformAudioProcessingTopology topology) {
-  return static_cast<int32_t>(topology);
-}
-
-static void AppendAudioProcessingComponentRuntimeState(std::vector<int32_t> *values,
-                                                       const AudioProcessingComponentRuntimeState &state) {
-  values->push_back(OptionalBoolToJava(state.is_requested_enabled));
-  values->push_back(OptionalAudioProcessingModeToJava(state.requested_mode));
-  values->push_back(OptionalBoolToJava(state.is_resolved_software_enabled));
-  values->push_back(OptionalBoolToJava(state.is_software_enabled));
-  values->push_back(state.is_platform_available ? 1 : 0);
-  values->push_back(OptionalBoolToJava(state.is_platform_requested));
-  values->push_back(OptionalBoolToJava(state.is_platform_active));
-  values->push_back(AudioProcessingImplementationToJava(state.effective));
-}
-
-static void AppendPlatformAudioProcessingComponentState(std::vector<int32_t> *values, bool available,
-                                                       std::optional<bool> requested,
-                                                       std::optional<bool> active) {
-  values->push_back(available ? 1 : 0);
-  values->push_back(OptionalBoolToJava(requested));
-  values->push_back(OptionalBoolToJava(active));
-}
-
-static void AppendPlatformAudioProcessingState(std::vector<int32_t> *values,
-                                              const AudioDeviceModule::PlatformAudioProcessingState &state) {
-  values->push_back(PlatformAudioProcessingTopologyToJava(state.topology));
-  AppendPlatformAudioProcessingComponentState(values, state.is_echo_cancellation_available,
-                                             state.is_echo_cancellation_requested, state.is_echo_cancellation_active);
-  AppendPlatformAudioProcessingComponentState(values, state.is_noise_suppression_available,
-                                             state.is_noise_suppression_requested, state.is_noise_suppression_active);
-  AppendPlatformAudioProcessingComponentState(values, state.is_auto_gain_control_available,
-                                             state.is_auto_gain_control_requested, state.is_auto_gain_control_active);
-}
-
-static std::vector<int32_t> AudioProcessingRuntimeStateToJavaValues(
-    const AudioProcessingRuntimeState &state) {
-  std::vector<int32_t> values;
-  values.reserve(47);
-  values.push_back(PlatformAudioProcessingTopologyToJava(state.topology));
-  values.push_back(state.has_audio_processing_module ? 1 : 0);
-  values.push_back(state.has_audio_processing_config ? 1 : 0);
-  values.push_back(state.has_requested_audio_processing_options ? 1 : 0);
-  values.push_back(state.has_resolved_audio_processing_options ? 1 : 0);
-  AppendAudioProcessingComponentRuntimeState(&values, state.echo_cancellation);
-  AppendAudioProcessingComponentRuntimeState(&values, state.noise_suppression);
-  AppendAudioProcessingComponentRuntimeState(&values, state.auto_gain_control);
-  AppendAudioProcessingComponentRuntimeState(&values, state.high_pass_filter);
-  AppendPlatformAudioProcessingState(&values, state.built_in);
-  return values;
-}
-
-static jni_zero::ScopedJavaLocalRef<jintArray>
-JNI_PeerConnectionFactory_GetAudioProcessingRuntimeState(JNIEnv* jni, jlong native_factory) {
-  return NativeToJavaIntArray(
-      jni, AudioProcessingRuntimeStateToJavaValues(
-               PeerConnectionFactoryFromJava(native_factory)->GetAudioProcessingRuntimeState()));
+static jni_zero::ScopedJavaLocalRef<jobject>
+JNI_PeerConnectionFactory_GetAudioProcessingState(JNIEnv* jni, jlong native_factory) {
+  const AudioProcessingState state = PeerConnectionFactoryFromJava(native_factory)->GetAudioProcessingState();
+  return Java_AudioProcessingState_Constructor(
+      jni, state.has_audio_processing_module,
+      NativeToJavaAudioProcessingComponentState(jni, state.echo_cancellation),
+      NativeToJavaAudioProcessingComponentState(jni, state.noise_suppression),
+      NativeToJavaAudioProcessingComponentState(jni, state.auto_gain_control),
+      NativeToJavaAudioProcessingComponentState(jni, state.high_pass_filter));
 }
 
 static jlong JNI_PeerConnectionFactory_CreatePeerConnection(

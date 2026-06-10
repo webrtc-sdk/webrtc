@@ -16,6 +16,8 @@
 
 package org.webrtc.audio;
 
+import org.webrtc.CalledByNative;
+
 /**
  * The implementation that is effectively in use for an audio processing
  * component. Order must match {@code webrtc::AudioProcessingImplementation}.
@@ -25,5 +27,10 @@ public enum AudioProcessingImplementation {
   DISABLED,
   SOFTWARE,
   PLATFORM,
-  SOFTWARE_AND_PLATFORM,
+  SOFTWARE_AND_PLATFORM;
+
+  @CalledByNative("AudioProcessingImplementation")
+  static AudioProcessingImplementation fromNativeIndex(int nativeIndex) {
+    return values()[nativeIndex];
+  }
 }

@@ -8,6 +8,8 @@
 
 package org.webrtc.audio;
 
+import org.webrtc.CalledByNative;
+
 /**
  * Selects the implementation for one enabled audio processing component.
  *
@@ -28,5 +30,10 @@ public enum AudioProcessingMode {
   PLATFORM,
 
   /** Disables the matching platform effect and uses WebRTC software processing. */
-  SOFTWARE
+  SOFTWARE;
+
+  @CalledByNative("AudioProcessingMode")
+  static AudioProcessingMode fromNativeIndex(int nativeIndex) {
+    return values()[nativeIndex];
+  }
 }

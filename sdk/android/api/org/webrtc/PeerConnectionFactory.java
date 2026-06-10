@@ -16,7 +16,7 @@ import androidx.annotation.Nullable;
 import java.util.List;
 import org.webrtc.Logging.Severity;
 import org.webrtc.audio.AudioDeviceModule;
-import org.webrtc.audio.AudioProcessingRuntimeState;
+import org.webrtc.audio.AudioProcessingState;
 import org.webrtc.audio.JavaAudioDeviceModule;
 import org.webrtc.RtpCapabilities;
 
@@ -527,15 +527,15 @@ public class PeerConnectionFactory {
   }
 
   /**
-   * Diagnostic snapshot of the shared audio processing module's runtime state.
-   * The module is owned by this factory and shared across every peer
-   * connection it creates, so this reflects the factory-scoped processing
-   * state.
+   * Diagnostic snapshot of the shared audio processing module's state: per
+   * component, what was requested, what the resolver decided per path, and
+   * what is actually running. The module is owned by this factory and shared
+   * across every peer connection it creates, so this reflects the
+   * factory-scoped processing state.
    */
-  public AudioProcessingRuntimeState getAudioProcessingRuntimeState() {
+  public AudioProcessingState getAudioProcessingState() {
     checkPeerConnectionFactoryExists();
-    return AudioProcessingRuntimeState.fromNative(
-        nativeGetAudioProcessingRuntimeState(nativeFactory));
+    return nativeGetAudioProcessingState(nativeFactory);
   }
 
   public void dispose() {
@@ -661,7 +661,7 @@ public class PeerConnectionFactory {
   private static native boolean nativeStartAecDump(
       long factory, int file_descriptor, int filesize_limit_bytes);
   private static native void nativeStopAecDump(long factory);
-  private static native int[] nativeGetAudioProcessingRuntimeState(long factory);
+  private static native AudioProcessingState nativeGetAudioProcessingState(long factory);
   private static native void nativeFreeFactory(long factory);
   private static native long nativeGetNativePeerConnectionFactory(long factory);
   private static native void nativeInjectLoggable(JNILogging jniLogging, int severity);
