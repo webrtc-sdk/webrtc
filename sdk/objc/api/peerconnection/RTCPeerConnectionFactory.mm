@@ -425,9 +425,8 @@ static webrtc::Environment CreateDefaultEnvironment() {
   return [[RTC_OBJC_TYPE(RTCRtpCapabilities) alloc] initWithNativeRtpCapabilities:rtpCapabilities];
 }
 
-- (RTC_OBJC_TYPE(RTCAudioProcessingRuntimeState))audioProcessingRuntimeState {
-  return webrtc::objc::AudioProcessingRuntimeStateToObjC(
-      _nativeFactory->GetAudioProcessingRuntimeState());
+- (RTC_OBJC_TYPE(RTCAudioProcessingState) *)audioProcessingState {
+  return webrtc::objc::AudioProcessingStateToObjC(_nativeFactory->GetAudioProcessingState());
 }
 
 - (RTC_OBJC_TYPE(RTCAudioSource) *)audioSourceWithConstraints:

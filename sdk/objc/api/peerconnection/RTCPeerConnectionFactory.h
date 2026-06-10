@@ -12,7 +12,7 @@
 
 #import "RTCMacros.h"
 #import "RTCAudioDeviceModule.h"
-#import "RTCAudioProcessingRuntimeState.h"
+#import "RTCAudioProcessingState.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -72,11 +72,12 @@ RTC_OBJC_EXPORT
 
 @property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioDeviceModule) *audioDeviceModule;
 
-/** Diagnostic snapshot of the shared audio processing module's runtime state.
- *  The APM is owned by this factory and shared across every peer connection it
- *  creates, so this reflects the factory-scoped processing state. */
-@property(nonatomic, readonly)
-    RTC_OBJC_TYPE(RTCAudioProcessingRuntimeState) audioProcessingRuntimeState;
+/** Diagnostic snapshot of the shared audio processing module's state: per
+ *  component, what was requested, what the resolver decided per path, and
+ *  what is actually running. The APM is owned by this factory and shared
+ *  across every peer connection it creates, so this reflects the
+ *  factory-scoped processing state. */
+@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioProcessingState) *audioProcessingState;
 
 /**
  * Valid kind values are kRTCMediaStreamTrackKindAudio and

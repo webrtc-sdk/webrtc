@@ -40,9 +40,15 @@ typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCode)) {
   RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeApplied) = 0,
   /** Options were accepted and stored. Active senders reapply them separately. */
   RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeStored) = 1,
+  /** The track is remote; processing options only apply to local tracks. */
   RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedRemoteTrack) = 2,
+  /** The per-component modes conflict, e.g. requesting platform for one of a
+   *  coupled AEC/NS pair while disabling or forcing software on the other. */
   RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedInvalidCombination) = 3,
+  /** Platform mode was requested for a component this device cannot provide,
+   *  or platform voice processing is disallowed by policy. */
   RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeRejectedPlatformUnavailable) = 4,
+  /** The request was valid but could not be applied. */
   RTC_OBJC_TYPE(RTCAudioProcessingOptionsResultCodeApplyFailed) = 5,
 };
 
@@ -129,12 +135,12 @@ RTC_OBJC_EXPORT
  * stored platform request resolve disabled when the voice engine applies it.
  *
  * If the track is already being sent, active senders observe the track update
- * and reapply the updated options through the voice engine. Rejections mean the
- * options were not stored. Use the peer connection factory's
- * audioProcessingRuntimeState to inspect the effective software/platform state
- * after application. The effective
- * audio processing module configuration is shared by the voice engine/channel,
- * so conflicting updates from multiple local tracks are not isolated per track.
+ * and reapply the updated options through the voice engine. Rejections mean
+ * the options were not stored. Use the peer connection factory's
+ * audioProcessingState to inspect the effective software/platform state after
+ * application. The audio processing module configuration is shared by the
+ * voice engine/channel, so conflicting updates from multiple local tracks are
+ * not isolated per track.
  */
 - (RTC_OBJC_TYPE(RTCAudioProcessingOptionsResult) *)setAudioProcessingOptions:
     (RTC_OBJC_TYPE(RTCAudioProcessingOptions) *)options;
