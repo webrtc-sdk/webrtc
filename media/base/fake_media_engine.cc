@@ -626,7 +626,7 @@ bool FakeVoiceEngine::StartAecDump(FileWrapper /* file */,
 std::optional<AudioDeviceModule::Stats> FakeVoiceEngine::GetAudioDeviceStats() {
   return std::nullopt;
 }
-AudioProcessingRuntimeState FakeVoiceEngine::GetAudioProcessingRuntimeState() { return {}; }
+AudioProcessingState FakeVoiceEngine::GetAudioProcessingState() { return {}; }
 void FakeVoiceEngine::StopAecDump() {}
 
 std::vector<RtpHeaderExtensionCapability>

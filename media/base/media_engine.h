@@ -18,7 +18,7 @@
 
 #include "api/array_view.h"
 #include "api/audio/audio_device.h"
-#include "api/audio/audio_processing_runtime_state.h"
+#include "api/audio/audio_processing_state.h"
 #include "api/audio_codecs/audio_codec_pair_id.h"
 #include "api/audio_codecs/audio_decoder_factory.h"
 #include "api/audio_codecs/audio_encoder_factory.h"
@@ -142,7 +142,7 @@ class VoiceEngineInterface : public RtpHeaderExtensionQueryInterface {
 
   virtual std::optional<AudioDeviceModule::Stats> GetAudioDeviceStats() = 0;
 
-  virtual AudioProcessingRuntimeState GetAudioProcessingRuntimeState() = 0;
+  virtual AudioProcessingState GetAudioProcessingState() = 0;
 };
 
 class VideoEngineInterface : public RtpHeaderExtensionQueryInterface {

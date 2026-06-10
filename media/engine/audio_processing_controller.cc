@@ -153,44 +153,44 @@ bool ResolveHighPassFilter(std::optional<bool> enabled, std::optional<AudioProce
   return AudioProcessingModeOrAutomatic(mode) != AudioProcessingMode::kPlatform;
 }
 
-AudioProcessingImplementation ResolveEffectiveImplementation(std::optional<bool> is_software_enabled,
-                                                             bool is_platform_available,
-                                                             std::optional<bool> is_platform_requested,
-                                                             std::optional<bool> is_platform_active) {
-  const bool software_active = is_software_enabled.value_or(false);
-  const bool platform_active =
-      is_platform_active.value_or(is_platform_available && is_platform_requested.value_or(false));
+AudioProcessingImplementation ResolveEffectiveImplementation(std::optional<bool> software_active,
+                                                             bool platform_available,
+                                                             std::optional<bool> platform_resolved,
+                                                             std::optional<bool> platform_active) {
+  const bool software_on = software_active.value_or(false);
+  const bool platform_on =
+      platform_active.value_or(platform_available && platform_resolved.value_or(false));
 
-  if (software_active && platform_active) {
+  if (software_on && platform_on) {
     return AudioProcessingImplementation::kSoftwareAndPlatform;
   }
-  if (software_active) {
+  if (software_on) {
     return AudioProcessingImplementation::kSoftware;
   }
-  if (platform_active) {
+  if (platform_on) {
     return AudioProcessingImplementation::kPlatform;
   }
-  if (is_software_enabled.has_value() || is_platform_requested.has_value() || is_platform_active.has_value() ||
-      is_platform_available) {
+  if (software_active.has_value() || platform_resolved.has_value() || platform_active.has_value() ||
+      platform_available) {
     return AudioProcessingImplementation::kDisabled;
   }
   return AudioProcessingImplementation::kUnknown;
 }
 
-AudioProcessingComponentRuntimeState BuildComponentRuntimeState(
-    std::optional<bool> is_requested_enabled, std::optional<AudioProcessingMode> requested_mode,
-    std::optional<bool> is_resolved_software_enabled, std::optional<bool> is_software_enabled,
-    bool is_platform_available, std::optional<bool> is_platform_requested, std::optional<bool> is_platform_active) {
-  AudioProcessingComponentRuntimeState state;
-  state.is_requested_enabled = is_requested_enabled;
+AudioProcessingComponentState BuildComponentState(
+    std::optional<bool> requested_enabled, std::optional<AudioProcessingMode> requested_mode,
+    std::optional<bool> software_resolved, std::optional<bool> software_active,
+    bool platform_available, std::optional<bool> platform_resolved, std::optional<bool> platform_active) {
+  AudioProcessingComponentState state;
+  state.requested_enabled = requested_enabled;
   state.requested_mode = requested_mode;
-  state.is_resolved_software_enabled = is_resolved_software_enabled;
-  state.is_software_enabled = is_software_enabled;
-  state.is_platform_available = is_platform_available;
-  state.is_platform_requested = is_platform_requested;
-  state.is_platform_active = is_platform_active;
-  state.effective = ResolveEffectiveImplementation(state.is_software_enabled, state.is_platform_available,
-                                                   state.is_platform_requested, state.is_platform_active);
+  state.software_resolved = software_resolved;
+  state.software_active = software_active;
+  state.platform_available = platform_available;
+  state.platform_resolved = platform_resolved;
+  state.platform_active = platform_active;
+  state.effective = ResolveEffectiveImplementation(state.software_active, state.platform_available,
+                                                   state.platform_resolved, state.platform_active);
   return state;
 }
 
@@ -392,12 +392,12 @@ AudioProcessingApplyResult ApplyAudioProcessingOptions(AudioProcessing *apm, Aud
   return apply_result;
 }
 
-AudioProcessingRuntimeState GetAudioProcessingRuntimeState(AudioProcessing *apm, AudioDeviceModule *adm,
-                                                           const std::optional<AudioOptions> &requested_options,
-                                                           const std::optional<AudioOptions> &resolved_options) {
-  AudioDeviceModule::PlatformAudioProcessingState built_in;
+AudioProcessingState GetAudioProcessingState(AudioProcessing *apm, AudioDeviceModule *adm,
+                                             const std::optional<AudioOptions> &requested_options,
+                                             const std::optional<AudioOptions> &resolved_options) {
+  AudioDeviceModule::PlatformAudioProcessingState platform_state;
   if (adm != nullptr) {
-    built_in = adm->GetPlatformAudioProcessingState();
+    platform_state = adm->GetPlatformAudioProcessingState();
   }
   std::optional<AudioProcessing::Config> apm_config = GetApmConfig(apm);
   std::optional<bool> software_echo_cancellation;
@@ -413,30 +413,25 @@ AudioProcessingRuntimeState GetAudioProcessingRuntimeState(AudioProcessing *apm,
     software_high_pass_filter = apm_config->high_pass_filter.enabled;
   }
 
-  AudioProcessingRuntimeState state;
+  AudioProcessingState state;
   state.has_audio_processing_module = apm != nullptr;
-  state.has_audio_processing_config = apm_config.has_value();
-  state.has_requested_audio_processing_options = requested_options.has_value();
-  state.has_resolved_audio_processing_options = resolved_options.has_value();
-  state.topology = built_in.topology;
-  state.built_in = built_in;
   const AudioOptions requested = requested_options.value_or(AudioOptions());
   const AudioOptions resolved = resolved_options.value_or(AudioOptions());
-  state.echo_cancellation = BuildComponentRuntimeState(
-      requested.echo_cancellation, requested.echo_cancellation_mode, resolved.echo_cancellation,
-      software_echo_cancellation, built_in.is_echo_cancellation_available, built_in.is_echo_cancellation_requested,
-      built_in.is_echo_cancellation_active);
-  state.noise_suppression = BuildComponentRuntimeState(
-      requested.noise_suppression, requested.noise_suppression_mode, resolved.noise_suppression,
-      software_noise_suppression, built_in.is_noise_suppression_available, built_in.is_noise_suppression_requested,
-      built_in.is_noise_suppression_active);
-  state.auto_gain_control = BuildComponentRuntimeState(
-      requested.auto_gain_control, requested.auto_gain_control_mode, resolved.auto_gain_control,
-      software_auto_gain_control, built_in.is_auto_gain_control_available, built_in.is_auto_gain_control_requested,
-      built_in.is_auto_gain_control_active);
+  state.echo_cancellation =
+      BuildComponentState(requested.echo_cancellation, requested.echo_cancellation_mode, resolved.echo_cancellation,
+                          software_echo_cancellation, platform_state.is_echo_cancellation_available,
+                          platform_state.is_echo_cancellation_requested, platform_state.is_echo_cancellation_active);
+  state.noise_suppression =
+      BuildComponentState(requested.noise_suppression, requested.noise_suppression_mode, resolved.noise_suppression,
+                          software_noise_suppression, platform_state.is_noise_suppression_available,
+                          platform_state.is_noise_suppression_requested, platform_state.is_noise_suppression_active);
+  state.auto_gain_control =
+      BuildComponentState(requested.auto_gain_control, requested.auto_gain_control_mode, resolved.auto_gain_control,
+                          software_auto_gain_control, platform_state.is_auto_gain_control_available,
+                          platform_state.is_auto_gain_control_requested, platform_state.is_auto_gain_control_active);
   state.high_pass_filter =
-      BuildComponentRuntimeState(requested.highpass_filter, requested.highpass_filter_mode, resolved.highpass_filter,
-                                 software_high_pass_filter, false, std::nullopt, std::nullopt);
+      BuildComponentState(requested.highpass_filter, requested.highpass_filter_mode, resolved.highpass_filter,
+                          software_high_pass_filter, false, std::nullopt, std::nullopt);
   return state;
 }
 

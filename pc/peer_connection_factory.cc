@@ -213,21 +213,21 @@ void PeerConnectionFactory::StopAecDump() {
   media_engine_ref_ = nullptr;
 }
 
-AudioProcessingRuntimeState
-PeerConnectionFactory::GetAudioProcessingRuntimeState() {
+AudioProcessingState
+PeerConnectionFactory::GetAudioProcessingState() {
   if (!worker_thread()->IsCurrent()) {
     return worker_thread()->BlockingCall(
-        [this] { return GetAudioProcessingRuntimeState(); });
+        [this] { return GetAudioProcessingState(); });
   }
   // The audio processing module is owned by the shared media engine, so this
   // reflects the factory-scoped state. media_engine_w() is the worker-thread
   // (non-const) accessor; the const media_engine() below cannot reach the
-  // non-const GetAudioProcessingRuntimeState(). The engine can be null even
+  // non-const GetAudioProcessingState(). The engine can be null even
   // when configured for media (a custom MediaFactory may fail engine
   // creation), so guard the dereference.
   if (context_->is_configured_for_media()) {
     if (MediaEngineInterface* media_engine = context_->media_engine_w()) {
-      return media_engine->voice().GetAudioProcessingRuntimeState();
+      return media_engine->voice().GetAudioProcessingState();
     }
   }
   return {};

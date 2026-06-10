@@ -84,7 +84,7 @@
 #include "api/audio/audio_device.h"
 #include "api/audio/audio_mixer.h"
 #include "api/audio/audio_processing.h"
-#include "api/audio/audio_processing_runtime_state.h"
+#include "api/audio/audio_processing_state.h"
 #include "api/audio_codecs/audio_decoder_factory.h"
 #include "api/audio_codecs/audio_encoder_factory.h"
 #include "api/audio_options.h"
@@ -1586,12 +1586,14 @@ class RTC_EXPORT PeerConnectionFactoryInterface : public RefCountInterface {
   // Stops logging the AEC dump.
   virtual void StopAecDump() = 0;
 
-  // Returns the runtime audio processing state of this factory's shared audio
-  // processing module: a diagnostic snapshot of requested options, current
-  // WebRTC APM state, and platform ADM state. The APM is owned by the factory
-  // and shared across every peer connection it creates. Returns a
+  // Returns the audio processing state of this factory's shared audio
+  // processing module: per component, what was requested, what the resolver
+  // decided per path, and what is actually running. The APM is owned by the
+  // factory and shared across every peer connection it creates. Returns a
   // default-constructed state when the factory is not configured for media.
-  virtual AudioProcessingRuntimeState GetAudioProcessingRuntimeState() {
+  // Device-level platform processing detail lives on the audio device
+  // module's platform audio processing state instead.
+  virtual AudioProcessingState GetAudioProcessingState() {
     return {};
   }
 
