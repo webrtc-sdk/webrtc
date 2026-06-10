@@ -1590,7 +1590,8 @@ class RTC_EXPORT PeerConnectionFactoryInterface : public RefCountInterface {
   // processing module: per component, what was requested, what the resolver
   // decided per path, and what is actually running. The APM is owned by the
   // factory and shared across every peer connection it creates. Returns a
-  // default-constructed state when the factory is not configured for media.
+  // default-constructed state when the factory has no media engine (not
+  // configured for media, or engine creation failed).
   // Device-level platform processing detail lives on the audio device
   // module's platform audio processing state instead.
   virtual AudioProcessingState GetAudioProcessingState() {
