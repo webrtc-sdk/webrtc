@@ -28,7 +28,7 @@
 #include "api/audio/audio_mixer.h"
 #include "api/audio/audio_processing.h"
 #include "api/audio/audio_processing_options_result.h"
-#include "api/audio/audio_processing_runtime_state.h"
+#include "api/audio/audio_processing_state.h"
 #include "api/audio_codecs/audio_codec_pair_id.h"
 #include "api/audio_codecs/audio_decoder_factory.h"
 #include "api/audio_codecs/audio_encoder_factory.h"
@@ -139,7 +139,7 @@ class WebRtcVoiceEngine final : public VoiceEngineInterface {
 
   std::optional<webrtc::AudioDeviceModule::Stats> GetAudioDeviceStats() override;
 
-  AudioProcessingRuntimeState GetAudioProcessingRuntimeState() override;
+  AudioProcessingState GetAudioProcessingState() override;
 
  private:
   // Every option that is "set" will be applied. Every option not "set" will be

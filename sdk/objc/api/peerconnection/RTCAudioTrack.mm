@@ -168,7 +168,7 @@ RTC_OBJC_TYPE(RTCAudioProcessingOptionsResult) * ResultFromNative(const webrtc::
 webrtc::AudioProcessingOptionsValidationContext AppleAudioProcessingValidationContext() {
   webrtc::AudioProcessingOptionsValidationContext context;
   context.topology =
-      webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled;
+      webrtc::AudioDeviceModule::PlatformAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled;
 #if !TARGET_OS_SIMULATOR
   context.is_echo_cancellation_platform_available = true;
   context.is_noise_suppression_platform_available = true;

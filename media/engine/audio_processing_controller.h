@@ -22,7 +22,7 @@
 #include "api/audio/audio_device.h"
 #include "api/audio/audio_processing.h"
 #include "api/audio/audio_processing_options_result.h"
-#include "api/audio/audio_processing_runtime_state.h"
+#include "api/audio/audio_processing_state.h"
 #include "api/audio_options.h"
 
 namespace webrtc {
@@ -44,7 +44,7 @@ struct AudioProcessingApplyResult {
 AudioProcessingApplyResult ApplyAudioProcessingOptions(AudioProcessing *apm, AudioDeviceModule *adm,
                                                        const AudioOptions &options);
 
-AudioProcessingRuntimeState GetAudioProcessingRuntimeState(AudioProcessing *apm, AudioDeviceModule *adm,
+AudioProcessingState GetAudioProcessingState(AudioProcessing *apm, AudioDeviceModule *adm,
                                                            const std::optional<AudioOptions> &requested_options,
                                                            const std::optional<AudioOptions> &resolved_options);
 

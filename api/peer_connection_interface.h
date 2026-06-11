@@ -84,7 +84,7 @@
 #include "api/audio/audio_device.h"
 #include "api/audio/audio_mixer.h"
 #include "api/audio/audio_processing.h"
-#include "api/audio/audio_processing_runtime_state.h"
+#include "api/audio/audio_processing_state.h"
 #include "api/audio_codecs/audio_decoder_factory.h"
 #include "api/audio_codecs/audio_encoder_factory.h"
 #include "api/audio_options.h"
@@ -961,11 +961,6 @@ class RTC_EXPORT PeerConnectionInterface : public RefCountInterface {
   // Clear cached stats in the RTCStatsCollector.
   virtual void ClearStatsCache() {}
 
-  // Diagnostic snapshot of requested audio processing options, current WebRTC
-  // APM state, and platform ADM state. Empty fields mean the state is unknown
-  // or not supported by the active ADM.
-  virtual AudioProcessingRuntimeState GetAudioProcessingRuntimeState() { return {}; }
-
   // Create a data channel with the provided config, or default config if none
   // is provided. Note that an offer/answer negotiation is still necessary
   // before the data channel can be used.
@@ -1590,6 +1585,18 @@ class RTC_EXPORT PeerConnectionFactoryInterface : public RefCountInterface {
 
   // Stops logging the AEC dump.
   virtual void StopAecDump() = 0;
+
+  // Returns the audio processing state of this factory's shared audio
+  // processing module: per component, what was requested, what the resolver
+  // decided per path, and what is actually running. The APM is owned by the
+  // factory and shared across every peer connection it creates. Returns a
+  // default-constructed state when the factory has no media engine (not
+  // configured for media, or engine creation failed).
+  // Device-level platform processing detail lives on the audio device
+  // module's platform audio processing state instead.
+  virtual AudioProcessingState GetAudioProcessingState() {
+    return {};
+  }
 
  protected:
   // Dtor and ctor protected as objects shouldn't be created or deleted via

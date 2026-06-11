@@ -319,8 +319,6 @@ class FakePeerConnectionBase : public PeerConnectionInternal {
     return std::nullopt;
   }
 
-  AudioProcessingRuntimeState GetAudioProcessingRuntimeState() override { return {}; }
-
   bool GetLocalCertificate(
       const std::string& transport_name,
       scoped_refptr<RTCCertificate>* certificate) override {

@@ -10,8 +10,6 @@
 
 #import <Foundation/Foundation.h>
 
-#import "sdk/objc/api/peerconnection/RTCAudioDeviceModule.h"
-#import "sdk/objc/api/peerconnection/RTCAudioTrack.h"
 #import "sdk/objc/base/RTCMacros.h"
 
 @class RTC_OBJC_TYPE(RTCConfiguration);
@@ -83,45 +81,6 @@ typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCStatsOutputLevel)) {
   RTC_OBJC_TYPE(RTCStatsOutputLevelStandard),
   RTC_OBJC_TYPE(RTCStatsOutputLevelDebug),
 };
-
-// Values must match webrtc::AudioProcessingImplementation.
-typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCAudioProcessingImplementation)) {
-  RTC_OBJC_TYPE(RTCAudioProcessingImplementationUnknown) = 0,
-  RTC_OBJC_TYPE(RTCAudioProcessingImplementationDisabled) = 1,
-  RTC_OBJC_TYPE(RTCAudioProcessingImplementationSoftware) = 2,
-  RTC_OBJC_TYPE(RTCAudioProcessingImplementationPlatform) = 3,
-  RTC_OBJC_TYPE(RTCAudioProcessingImplementationSoftwareAndPlatform) = 4,
-};
-
-typedef struct {
-  RTC_OBJC_TYPE(RTCOptionalBool) requestedEnabled;
-  BOOL hasRequestedMode;
-  RTC_OBJC_TYPE(RTCAudioProcessingMode) requestedMode;
-
-  RTC_OBJC_TYPE(RTCOptionalBool) resolvedSoftwareEnabled;
-  RTC_OBJC_TYPE(RTCOptionalBool) softwareEnabled;
-  BOOL isPlatformAvailable;
-  RTC_OBJC_TYPE(RTCOptionalBool) platformRequested;
-  RTC_OBJC_TYPE(RTCOptionalBool) platformActive;
-
-  RTC_OBJC_TYPE(RTCAudioProcessingImplementation) effective;
-} RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState);
-
-typedef struct {
-  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingTopology) topology;
-
-  BOOL hasAudioProcessingModule;
-  BOOL hasAudioProcessingConfig;
-  BOOL hasRequestedAudioProcessingOptions;
-  BOOL hasResolvedAudioProcessingOptions;
-
-  RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState) echoCancellation;
-  RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState) noiseSuppression;
-  RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState) autoGainControl;
-  RTC_OBJC_TYPE(RTCAudioProcessingComponentRuntimeState) highPassFilter;
-
-  RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState) builtIn;
-} RTC_OBJC_TYPE(RTCAudioProcessingRuntimeState);
 
 typedef void (^RTCCreateSessionDescriptionCompletionHandler)(
     RTC_OBJC_TYPE(RTCSessionDescription) *_Nullable sdp,
@@ -235,7 +194,6 @@ RTC_OBJC_EXPORT
 @property(nonatomic, readonly) RTC_OBJC_TYPE(RTCPeerConnectionState) connectionState;
 @property(nonatomic, readonly) RTC_OBJC_TYPE(RTCIceGatheringState) iceGatheringState;
 @property(nonatomic, readonly, copy) RTC_OBJC_TYPE(RTCConfiguration) * configuration;
-@property(nonatomic, readonly) RTC_OBJC_TYPE(RTCAudioProcessingRuntimeState) audioProcessingRuntimeState;
 
 /** Gets all RTCRtpSenders associated with this peer connection.
  *  Note: reading this property returns different instances of RTCRtpSender.
