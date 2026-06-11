@@ -2610,17 +2610,6 @@ std::optional<AudioDeviceModule::Stats> PeerConnection::GetAudioDeviceStats() {
   return std::nullopt;
 }
 
-AudioProcessingRuntimeState PeerConnection::GetAudioProcessingRuntimeState() {
-  if (!worker_thread()->IsCurrent()) {
-    return worker_thread()->BlockingCall([this] { return GetAudioProcessingRuntimeState(); });
-  }
-  RTC_DCHECK_RUN_ON(worker_thread());
-  if (context_->is_configured_for_media()) {
-    return media_engine()->voice().GetAudioProcessingRuntimeState();
-  }
-  return {};
-}
-
 std::optional<std::string> PeerConnection::SetupDataChannelTransport_n(
     absl::string_view mid) {
   sctp_mid_n_ = std::string(mid);

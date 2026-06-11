@@ -365,7 +365,6 @@ class MockPeerConnectionInternal : public PeerConnectionInternal {
               GetAudioDeviceStats,
               (),
               (override));
-  MOCK_METHOD(AudioProcessingRuntimeState, GetAudioProcessingRuntimeState, (), (override));
   MOCK_METHOD(bool,
               GetLocalCertificate,
               (const std::string&,

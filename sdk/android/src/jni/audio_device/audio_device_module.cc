@@ -552,9 +552,9 @@ class AndroidAudioDeviceModule : public AudioDeviceModule {
     return isAvailable;
   }
 
-  BuiltInAudioProcessingState GetBuiltInAudioProcessingState() const override {
-    BuiltInAudioProcessingState state;
-    state.topology = GetBuiltInAudioProcessingTopology();
+  PlatformAudioProcessingState GetPlatformAudioProcessingState() const override {
+    PlatformAudioProcessingState state;
+    state.topology = GetPlatformAudioProcessingTopology();
     if (!initialized_) {
       return state;
     }

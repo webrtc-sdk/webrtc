@@ -332,6 +332,9 @@ if (is_android) {
       "api/org/webrtc/PeerConnection.java",
       "api/org/webrtc/PeerConnectionDependencies.java",
       "api/org/webrtc/PeerConnectionFactory.java",
+      "api/org/webrtc/audio/AudioProcessingComponentState.java",
+      "api/org/webrtc/audio/AudioProcessingImplementation.java",
+      "api/org/webrtc/audio/AudioProcessingState.java",
       "api/org/webrtc/RTCStats.java",
       "api/org/webrtc/RTCStatsCollectorCallback.java",
       "api/org/webrtc/RTCStatsReport.java",
@@ -1624,6 +1627,11 @@ if (current_os == "linux" || is_android) {
       "api/org/webrtc/StatsObserver.java",
       "api/org/webrtc/StatsReport.java",
       "api/org/webrtc/TurnCustomizer.java",
+      "api/org/webrtc/audio/AudioProcessingComponentOptions.java",
+      "api/org/webrtc/audio/AudioProcessingComponentState.java",
+      "api/org/webrtc/audio/AudioProcessingImplementation.java",
+      "api/org/webrtc/audio/AudioProcessingMode.java",
+      "api/org/webrtc/audio/AudioProcessingState.java",
     ]
     namespace = "webrtc::jni"
   }

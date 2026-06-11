@@ -854,7 +854,7 @@ class FakeVoiceEngine : public VoiceEngineInterface {
   bool StartAecDump(FileWrapper file, int64_t max_size_bytes) override;
   void StopAecDump() override;
   std::optional<AudioDeviceModule::Stats> GetAudioDeviceStats() override;
-  AudioProcessingRuntimeState GetAudioProcessingRuntimeState() override;
+  AudioProcessingState GetAudioProcessingState() override;
   std::vector<RtpHeaderExtensionCapability> GetRtpHeaderExtensions(
       const FieldTrialsView* field_trials) const override;
   void SetRtpHeaderExtensions(

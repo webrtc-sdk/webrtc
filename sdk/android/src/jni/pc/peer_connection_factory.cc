@@ -25,6 +25,7 @@
 #include "api/audio/audio_device.h"
 #include "api/audio/audio_frame_processor.h"
 #include "api/audio/audio_processing.h"
+#include "api/audio/audio_processing_state.h"
 #include "api/audio/builtin_audio_processing_builder.h"
 #include "api/audio_codecs/audio_decoder_factory.h"
 #include "api/audio_codecs/audio_encoder_factory.h"
@@ -52,6 +53,11 @@
 #include "rtc_base/socket_factory.h"
 #include "rtc_base/ssl_identity.h"
 #include "rtc_base/thread.h"
+#include "sdk/android/generated_peerconnection_jni/AudioProcessingComponentOptions_jni.h"
+#include "sdk/android/generated_peerconnection_jni/AudioProcessingComponentState_jni.h"
+#include "sdk/android/generated_peerconnection_jni/AudioProcessingImplementation_jni.h"
+#include "sdk/android/generated_peerconnection_jni/AudioProcessingMode_jni.h"
+#include "sdk/android/generated_peerconnection_jni/AudioProcessingState_jni.h"
 #include "sdk/android/generated_peerconnection_jni/PeerConnectionFactory_jni.h"
 #include "sdk/android/native_api/jni/java_types.h"
 #include "sdk/android/native_api/jni/scoped_java_ref.h"
@@ -464,6 +470,35 @@ static jboolean JNI_PeerConnectionFactory_StartAecDump(
 static void JNI_PeerConnectionFactory_StopAecDump(JNIEnv* jni,
                                                   jlong native_factory) {
   PeerConnectionFactoryFromJava(native_factory)->StopAecDump();
+}
+
+// Builds org.webrtc.audio.AudioProcessingState (and its component states)
+// through the jni_zero-generated constructors. Tri-state diagnostics collapse
+// to false at this boundary; the lossless representation stays in C++.
+static jni_zero::ScopedJavaLocalRef<jobject> NativeToJavaAudioProcessingComponentState(
+    JNIEnv* jni, const AudioProcessingComponentState& state) {
+  jni_zero::ScopedJavaLocalRef<jobject> requested;
+  if (state.requested_enabled.has_value()) {
+    requested = Java_AudioProcessingComponentOptions_Constructor(
+        jni, *state.requested_enabled,
+        Java_AudioProcessingMode_fromNativeIndex(
+            jni, static_cast<jint>(state.requested_mode.value_or(AudioProcessingMode::kAutomatic))));
+  }
+  return Java_AudioProcessingComponentState_Constructor(
+      jni, requested, state.software_resolved.value_or(false), state.software_active.value_or(false),
+      state.platform_available, state.platform_resolved.value_or(false), state.platform_active.value_or(false),
+      Java_AudioProcessingImplementation_fromNativeIndex(jni, static_cast<jint>(state.effective)));
+}
+
+static jni_zero::ScopedJavaLocalRef<jobject>
+JNI_PeerConnectionFactory_GetAudioProcessingState(JNIEnv* jni, jlong native_factory) {
+  const AudioProcessingState state = PeerConnectionFactoryFromJava(native_factory)->GetAudioProcessingState();
+  return Java_AudioProcessingState_Constructor(
+      jni, state.has_audio_processing_module,
+      NativeToJavaAudioProcessingComponentState(jni, state.echo_cancellation),
+      NativeToJavaAudioProcessingComponentState(jni, state.noise_suppression),
+      NativeToJavaAudioProcessingComponentState(jni, state.auto_gain_control),
+      NativeToJavaAudioProcessingComponentState(jni, state.high_pass_filter));
 }
 
 static jlong JNI_PeerConnectionFactory_CreatePeerConnection(

@@ -39,7 +39,7 @@ AudioProcessingOptionsResult RejectPlatformUnavailable(const char *message) {
 
 bool AudioProcessingOptionIsDisabled(std::optional<bool> enabled) { return enabled.has_value() && !*enabled; }
 
-bool CoupledEchoNoisePlatformPathIsActive(const AudioDeviceModule::BuiltInAudioProcessingState &state) {
+bool CoupledEchoNoisePlatformPathIsActive(const AudioDeviceModule::PlatformAudioProcessingState &state) {
   if (state.is_echo_cancellation_active.has_value() || state.is_noise_suppression_active.has_value()) {
     return state.is_echo_cancellation_active.value_or(false) || state.is_noise_suppression_active.value_or(false);
   }
@@ -196,7 +196,7 @@ AudioProcessingOptionsResult ValidateAudioProcessingOptions(const AudioOptions &
   }
 
   if (context.topology ==
-      AudioDeviceModule::BuiltInAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled) {
+      AudioDeviceModule::PlatformAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled) {
     return ValidateCoupledEchoNoiseOptions(options, context);
   }
 
@@ -210,13 +210,13 @@ AudioProcessingOptionsValidationContext AudioProcessingValidationContextForAudio
     return context;
   }
 
-  context.topology = adm->GetBuiltInAudioProcessingTopology();
+  context.topology = adm->GetPlatformAudioProcessingTopology();
   if (context.topology ==
-      AudioDeviceModule::BuiltInAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled) {
-    const bool path_available = adm->BuiltInVoiceProcessingPathIsAvailable();
+      AudioDeviceModule::PlatformAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled) {
+    const bool path_available = adm->PlatformVoiceProcessingPathIsAvailable();
     context.is_echo_noise_platform_path_available = path_available;
     context.is_echo_noise_platform_path_active =
-        CoupledEchoNoisePlatformPathIsActive(adm->GetBuiltInAudioProcessingState());
+        CoupledEchoNoisePlatformPathIsActive(adm->GetPlatformAudioProcessingState());
     context.is_echo_cancellation_platform_available = path_available;
     context.is_noise_suppression_platform_available = path_available;
     context.is_auto_gain_control_platform_available = path_available;

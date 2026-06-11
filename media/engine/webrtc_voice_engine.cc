@@ -659,9 +659,9 @@ AudioProcessingOptionsResult WebRtcVoiceEngine::ApplyOptions(const AudioOptions 
   return AudioProcessingOptionsResult::Applied();
 }
 
-AudioProcessingRuntimeState WebRtcVoiceEngine::GetAudioProcessingRuntimeState() {
+AudioProcessingState WebRtcVoiceEngine::GetAudioProcessingState() {
   RTC_DCHECK_RUN_ON(&worker_thread_checker_);
-  return webrtc::GetAudioProcessingRuntimeState(apm(), adm(), last_requested_audio_processing_options_,
+  return webrtc::GetAudioProcessingState(apm(), adm(), last_requested_audio_processing_options_,
                                                 last_resolved_audio_processing_options_);
 }
 

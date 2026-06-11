@@ -191,8 +191,6 @@ class PeerConnectionInternal : public PeerConnectionInterface,
 
   virtual std::optional<AudioDeviceModule::Stats> GetAudioDeviceStats() = 0;
 
-  virtual AudioProcessingRuntimeState GetAudioProcessingRuntimeState() = 0;
-
   virtual bool GetLocalCertificate(
       const std::string& transport_name,
       scoped_refptr<RTCCertificate>* certificate) = 0;

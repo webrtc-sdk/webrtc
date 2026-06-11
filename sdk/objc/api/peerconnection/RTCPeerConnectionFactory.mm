@@ -25,6 +25,7 @@
 #import "RTCMediaStream+Private.h"
 #import "RTCPeerConnection+Private.h"
 #import "RTCVideoSource+Private.h"
+#import "RTCAudioProcessingState+Private.h"
 #import "RTCVideoTrack+Private.h"
 #import "RTCRtpReceiver+Private.h"
 #import "RTCRtpCapabilities+Private.h"
@@ -421,6 +422,10 @@ static webrtc::Environment CreateDefaultEnvironment() {
 
   webrtc::RtpCapabilities rtpCapabilities = _nativeFactory->GetRtpReceiverCapabilities(mediaType);
   return [[RTC_OBJC_TYPE(RTCRtpCapabilities) alloc] initWithNativeRtpCapabilities:rtpCapabilities];
+}
+
+- (RTC_OBJC_TYPE(RTCAudioProcessingState) *)audioProcessingState {
+  return webrtc::objc::AudioProcessingStateToObjC(_nativeFactory->GetAudioProcessingState());
 }
 
 - (RTC_OBJC_TYPE(RTCAudioSource) *)audioSourceWithConstraints:

@@ -310,7 +310,6 @@ class PeerConnection : public PeerConnectionInternal,
   Call::Stats GetCallStats() override;
 
   std::optional<AudioDeviceModule::Stats> GetAudioDeviceStats() override;
-  AudioProcessingRuntimeState GetAudioProcessingRuntimeState() override;
 
   bool GetLocalCertificate(const std::string& transport_name,
                            scoped_refptr<RTCCertificate>* certificate) override;

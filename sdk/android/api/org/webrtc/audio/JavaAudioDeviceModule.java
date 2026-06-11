@@ -396,18 +396,18 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
     return WebRtcAudioEffects.isNoiseSuppressorSupported();
   }
 
-  /** Order must match {@code webrtc::AudioDeviceModule::BuiltInAudioProcessingTopology}. */
-  public enum BuiltInAudioProcessingTopology {
+  /** Order must match {@code webrtc::AudioDeviceModule::PlatformAudioProcessingTopology}. */
+  public enum PlatformAudioProcessingTopology {
     INDEPENDENT,
     ECHO_CANCELLATION_AND_NOISE_SUPPRESSION_COUPLED,
   }
 
-  public static final class BuiltInAudioProcessingComponentState {
+  public static final class PlatformAudioProcessingComponentState {
     public final boolean isAvailable;
     public final @Nullable Boolean isRequested;
     public final @Nullable Boolean isActive;
 
-    public BuiltInAudioProcessingComponentState(
+    public PlatformAudioProcessingComponentState(
         boolean isAvailable, @Nullable Boolean isRequested, @Nullable Boolean isActive) {
       this.isAvailable = isAvailable;
       this.isRequested = isRequested;
@@ -415,16 +415,16 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
     }
   }
 
-  public static final class BuiltInAudioProcessingState {
-    public final BuiltInAudioProcessingTopology topology;
-    public final BuiltInAudioProcessingComponentState echoCancellation;
-    public final BuiltInAudioProcessingComponentState noiseSuppression;
-    public final BuiltInAudioProcessingComponentState autoGainControl;
+  public static final class PlatformAudioProcessingState {
+    public final PlatformAudioProcessingTopology topology;
+    public final PlatformAudioProcessingComponentState echoCancellation;
+    public final PlatformAudioProcessingComponentState noiseSuppression;
+    public final PlatformAudioProcessingComponentState autoGainControl;
 
-    public BuiltInAudioProcessingState(BuiltInAudioProcessingTopology topology,
-        BuiltInAudioProcessingComponentState echoCancellation,
-        BuiltInAudioProcessingComponentState noiseSuppression,
-        BuiltInAudioProcessingComponentState autoGainControl) {
+    public PlatformAudioProcessingState(PlatformAudioProcessingTopology topology,
+        PlatformAudioProcessingComponentState echoCancellation,
+        PlatformAudioProcessingComponentState noiseSuppression,
+        PlatformAudioProcessingComponentState autoGainControl) {
       this.topology = topology;
       this.echoCancellation = echoCancellation;
       this.noiseSuppression = noiseSuppression;
@@ -525,16 +525,16 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
     return audioInput.setNoiseSuppressorEnabled(enabled);
   }
 
-  public BuiltInAudioProcessingState getBuiltInAudioProcessingState() {
+  public PlatformAudioProcessingState getPlatformAudioProcessingState() {
     WebRtcAudioEffects.State effectState = audioInput.getBuiltInAudioEffectsState();
     boolean isAcousticEchoCancelerAvailable = audioInput.isAcousticEchoCancelerSupported();
     boolean isNoiseSuppressorAvailable = audioInput.isNoiseSuppressorSupported();
-    return new BuiltInAudioProcessingState(BuiltInAudioProcessingTopology.INDEPENDENT,
-        new BuiltInAudioProcessingComponentState(
+    return new PlatformAudioProcessingState(PlatformAudioProcessingTopology.INDEPENDENT,
+        new PlatformAudioProcessingComponentState(
             isAcousticEchoCancelerAvailable, effectState.isAecRequested, effectState.aecActive),
-        new BuiltInAudioProcessingComponentState(
+        new PlatformAudioProcessingComponentState(
             isNoiseSuppressorAvailable, effectState.isNsRequested, effectState.nsActive),
-        new BuiltInAudioProcessingComponentState(false, null, null));
+        new PlatformAudioProcessingComponentState(false, null, null));
   }
 
   /**

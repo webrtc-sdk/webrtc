@@ -463,10 +463,10 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   });
 }
 
-- (RTC_OBJC_TYPE(RTCBuiltInAudioProcessingState))builtInAudioProcessingState {
+- (RTC_OBJC_TYPE(RTCPlatformAudioProcessingState) *)platformAudioProcessingState {
   return _workerThread->BlockingCall([self] {
-    webrtc::AudioDeviceModule::BuiltInAudioProcessingState native_state = _native->GetBuiltInAudioProcessingState();
-    return webrtc::objc::BuiltInAudioProcessingStateToObjC(native_state);
+    webrtc::AudioDeviceModule::PlatformAudioProcessingState native_state = _native->GetPlatformAudioProcessingState();
+    return webrtc::objc::PlatformAudioProcessingStateToObjC(native_state);
   });
 }
 
@@ -599,14 +599,6 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   if (module == nullptr) return -1;
 
   return _workerThread->BlockingCall([module, allowed] { return module->SetPlatformVoiceProcessingAllowed(allowed); });
-}
-
-- (BOOL)isVoiceProcessingEnabled {
-  return self.isPlatformVoiceProcessingAllowed;
-}
-
-- (NSInteger)setVoiceProcessingEnabled:(BOOL)enabled {
-  return [self setPlatformVoiceProcessingAllowed:enabled];
 }
 
 - (BOOL)isVoiceProcessingBypassed {

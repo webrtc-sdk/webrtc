@@ -109,6 +109,10 @@ class ConnectionContext final : public RefCountedNonVirtual<ConnectionContext> {
     RTC_DCHECK_RUN_ON(worker_thread());
     return call_factory_.get();
   }
+  // Non-const access to the media engine for factory-scoped reads. Must be
+  // called on the worker thread. Usage that needs the media engine kept
+  // initialized should hold a MediaEngineReference instead.
+  MediaEngineInterface* media_engine_w();
   UniqueRandomIdGenerator* ssrc_generator() { return &ssrc_generator_; }
   // Note: There is lots of code that wants to know whether or not we
   // use RTX, but so far, no code has been found that sets it to false.
@@ -128,10 +132,6 @@ class ConnectionContext final : public RefCountedNonVirtual<ConnectionContext> {
   // Unregisters a media engine usage. Calls Terminate() to uninitialize the
   // media engine on the last reference. Must be called on the worker thread.
   void ReleaseMediaEngine();
-
-  // Non-const access requires using MediaEngineReference and calling methods
-  // on the worker thread.
-  MediaEngineInterface* media_engine_w();
 
   ConnectionContext(const Environment& env,
                     PeerConnectionFactoryDependencies* dependencies);

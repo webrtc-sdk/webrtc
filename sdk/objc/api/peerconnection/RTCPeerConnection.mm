@@ -10,7 +10,6 @@
 
 #import "RTCPeerConnection+Private.h"
 
-#import "RTCAudioProcessingState+Private.h"
 #import "RTCConfiguration+Private.h"
 #import "RTCDataChannel+Private.h"
 #import "RTCIceCandidate+Private.h"
@@ -581,10 +580,6 @@ void PeerConnectionDelegateAdapter::OnRemoveTrack(
 
 - (RTC_OBJC_TYPE(RTCIceGatheringState))iceGatheringState {
   return [[self class] iceGatheringStateForNativeState:self.nativePeerConnection->ice_gathering_state()];
-}
-
-- (RTC_OBJC_TYPE(RTCAudioProcessingRuntimeState))audioProcessingRuntimeState {
-  return webrtc::objc::AudioProcessingRuntimeStateToObjC(self.nativePeerConnection->GetAudioProcessingRuntimeState());
 }
 
 - (BOOL)setConfiguration:(RTC_OBJC_TYPE(RTCConfiguration) *)configuration {

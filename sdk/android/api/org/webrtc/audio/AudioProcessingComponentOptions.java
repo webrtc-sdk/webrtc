@@ -8,6 +8,8 @@
 
 package org.webrtc.audio;
 
+import org.webrtc.CalledByNative;
+
 /** Enabled flag and implementation mode for one audio processing component. */
 public final class AudioProcessingComponentOptions {
   public final boolean isEnabled;
@@ -17,6 +19,7 @@ public final class AudioProcessingComponentOptions {
     this(isEnabled, AudioProcessingMode.AUTOMATIC);
   }
 
+  @CalledByNative
   public AudioProcessingComponentOptions(boolean isEnabled, AudioProcessingMode mode) {
     this.isEnabled = isEnabled;
     this.mode = checkNotNull(mode, "mode");

@@ -42,8 +42,8 @@ struct RTC_EXPORT CoupledAudioProcessingPathResolution {
 };
 
 struct RTC_EXPORT AudioProcessingOptionsValidationContext {
-  AudioDeviceModule::BuiltInAudioProcessingTopology topology =
-      AudioDeviceModule::BuiltInAudioProcessingTopology::kIndependent;
+  AudioDeviceModule::PlatformAudioProcessingTopology topology =
+      AudioDeviceModule::PlatformAudioProcessingTopology::kIndependent;
 
   bool is_echo_cancellation_platform_available = false;
   bool is_noise_suppression_platform_available = false;
