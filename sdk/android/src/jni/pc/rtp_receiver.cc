@@ -12,6 +12,7 @@
 
 #include <jni.h>
 
+#include <cmath>
 #include <optional>
 
 #include "api/crypto/frame_decryptor_interface.h"
@@ -146,8 +147,14 @@ static void JNI_RtpReceiver_SetJitterBufferMinimumDelay(
     JNIEnv* jni,
     jlong j_rtp_receiver_pointer,
     jdouble delay_seconds) {
+  // A non-finite value reaches a fatal saturated_cast<int> in the native jitter
+  // buffer, so treat it as nullopt for callers that skip the Java validation.
+  std::optional<double> delay = std::nullopt;
+  if (std::isfinite(delay_seconds)) {
+    delay = delay_seconds;
+  }
   reinterpret_cast<RtpReceiverInterface*>(j_rtp_receiver_pointer)
-      ->SetJitterBufferMinimumDelay(std::optional<double>(delay_seconds));
+      ->SetJitterBufferMinimumDelay(delay);
 }
 
 static void JNI_RtpReceiver_ClearJitterBufferMinimumDelay(

@@ -88,20 +88,27 @@ public class RtpReceiver {
   }
 
   /**
-   * Sets the minimum jitter buffer delay (in seconds) for this receiver.
-   * The receiver keeps at least this much media buffered before playout,
-   * trading latency for smoothness on weak networks. Wraps the C++
+   * Sets the minimum jitter buffer delay in seconds for this receiver, or pass
+   * null to restore the default behaviour. The receiver keeps at least this
+   * much media buffered before playout, trading latency for smoothness on weak
+   * networks. Note the unit: the equivalent browser attribute,
+   * RTCRtpReceiver.jitterBufferTarget, is expressed in milliseconds, so a
+   * browser value of 500 corresponds to 0.5 here. Values are clamped to
+   * [0, 10] seconds internally. Wraps the C++
    * RtpReceiverInterface::SetJitterBufferMinimumDelay.
    */
-  public void setJitterBufferMinimumDelay(double delaySeconds) {
+  public void setJitterBufferMinimumDelay(@Nullable Double delaySeconds) {
     checkRtpReceiverExists();
+    if (delaySeconds == null) {
+      nativeClearJitterBufferMinimumDelay(nativeRtpReceiver);
+      return;
+    }
+    // A non-finite delay reaches a fatal saturated_cast<int> in the native
+    // jitter buffer when it is converted to milliseconds, so reject it here.
+    if (delaySeconds.isNaN() || delaySeconds.isInfinite()) {
+      throw new IllegalArgumentException("delaySeconds must be finite, was " + delaySeconds);
+    }
     nativeSetJitterBufferMinimumDelay(nativeRtpReceiver, delaySeconds);
-  }
-
-  /** Restores the default jitter buffer behaviour. */
-  public void clearJitterBufferMinimumDelay() {
-    checkRtpReceiverExists();
-    nativeClearJitterBufferMinimumDelay(nativeRtpReceiver);
   }
 
   private void checkRtpReceiverExists() {

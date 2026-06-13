@@ -17,6 +17,7 @@
 #import "base/RTCLogging.h"
 #import "helpers/NSString+StdString.h"
 
+#include <cmath>
 #include <optional>
 
 #include "api/media_stream_interface.h"
@@ -102,7 +103,9 @@ void RtpReceiverDelegateAdapter::OnFirstPacketReceivedAfterReceptiveChange(
 }
 
 - (void)setJitterBufferMinimumDelay:(nullable NSNumber *)delaySeconds {
-  if (delaySeconds == nil) {
+  // A non-finite value reaches a fatal saturated_cast<int> in the native
+  // jitter buffer, so treat nil or NaN/inf as a request to restore the default.
+  if (delaySeconds == nil || !std::isfinite(delaySeconds.doubleValue)) {
     _nativeRtpReceiver->SetJitterBufferMinimumDelay(std::nullopt);
   } else {
     _nativeRtpReceiver->SetJitterBufferMinimumDelay(
