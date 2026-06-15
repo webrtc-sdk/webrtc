@@ -1620,6 +1620,14 @@ void AudioEngineDevice::ReconfigureEngine() {
   }));
 }
 
+void AudioEngineDevice::EnsureFineAudioBuffer() {
+  RTC_DCHECK_RUN_ON(thread_);
+  if (fine_audio_buffer_ == nullptr) {
+    LOGE() << "fine_audio_buffer_ was null at buffer start; recreating";
+    fine_audio_buffer_.reset(new FineAudioBuffer(audio_device_buffer_.get()));
+  }
+}
+
 int32_t AudioEngineDevice::ModifyEngineState(
     std::function<EngineState(EngineState)> state_transform) {
   RTC_DCHECK_RUN_ON(thread_);
@@ -1915,6 +1923,7 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
     }
     LOGI() << "Starting playout buffer (Manual)...";
     audio_device_buffer_->StartPlayout();
+    EnsureFineAudioBuffer();
     fine_audio_buffer_->ResetPlayout();
 
     rollback_actions.push_back([this]() {
@@ -1934,6 +1943,7 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
     }
     LOGI() << "Starting record buffer (Manual)...";
     audio_device_buffer_->StartRecording();
+    EnsureFineAudioBuffer();
     fine_audio_buffer_->ResetRecord();
 
     rollback_actions.push_back([this]() {
@@ -2875,6 +2885,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     }
     LOGI() << "Starting Playout buffer...";
     audio_device_buffer_->StartPlayout();
+    EnsureFineAudioBuffer();
     fine_audio_buffer_->ResetPlayout();
 
     rollback_actions.push_back([this]() {
@@ -2896,6 +2907,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     }
     LOGI() << "Starting Record buffer...";
     audio_device_buffer_->StartRecording();
+    EnsureFineAudioBuffer();
     fine_audio_buffer_->ResetRecord();
 
     rollback_actions.push_back([this]() {
