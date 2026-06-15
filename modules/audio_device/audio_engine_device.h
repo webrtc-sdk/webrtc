@@ -486,6 +486,10 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   int32_t ApplyDeviceEngineState(EngineStateUpdate state);
   int32_t ApplyManualEngineState(EngineStateUpdate state);
 
+  // Recreates `fine_audio_buffer_` if null: the enable steps that create it and
+  // the buffer-start steps that use it have different conditions.
+  void EnsureFineAudioBuffer();
+
   // AudioEngine observer methods. May be called from any thread.
   void ReconfigureEngine();
 
