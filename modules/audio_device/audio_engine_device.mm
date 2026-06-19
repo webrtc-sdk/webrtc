@@ -2961,9 +2961,14 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
 #endif
 
           NSError* error = nil;
-          start_result = [engine_device_ startAndReturnError:&error];
-          if (!start_result && error != nil) {
-            error_string = error.localizedDescription;
+          if (state.DidEndInterruption()) {
+            start_result = false;
+            error_string = @"[#886] simulated: session not re-granted on interruption-end";
+          } else {
+            start_result = [engine_device_ startAndReturnError:&error];
+            if (!start_result && error != nil) {
+              error_string = error.localizedDescription;
+            }
           }
         } @catch (NSException* exception) {
           start_result = false;
@@ -2999,7 +3004,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
                              << engine_device_.running;
                       // Only re-configure if engine stopped.
                       if (!engine_device_.running) {
-                        ReconfigureEngine();
+                        LOGW() << "[#886] simulated: suppressing ReconfigureEngine self-heal";
                       }
                     }];
 
