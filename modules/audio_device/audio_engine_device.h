@@ -20,6 +20,7 @@
 #include <atomic>
 #include <memory>
 
+#include "api/audio_options.h"
 #include "api/environment/environment.h"
 #include "api/scoped_refptr.h"
 #include "api/sequence_checker.h"
@@ -146,9 +147,19 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
     RenderMode render_mode = RenderMode::Device;
     MuteMode mute_mode = MuteMode::VoiceProcessing;
 
+    // App-level policy for Apple's platform voice processing. When false, the
+    // runtime audio-processing resolver treats Apple VPIO as unavailable, so
+    // automatic mode falls back to WebRTC software processing and platform mode
+    // is rejected.
+    bool platform_voice_processing_allowed = true;
     bool voice_processing_enabled = true;
     bool voice_processing_bypassed = false;
     bool voice_processing_agc_enabled = true;
+    // Requested built-in AEC/NS state. AVAudioEngine exposes one VPIO bypass knob
+    // for AEC and NS. AGC has a separate switch, but only has an effect while
+    // VPIO is active.
+    bool built_in_aec_enabled = true;
+    bool built_in_ns_enabled = true;
     bool advanced_ducking = false;
     AudioDuckingLevel ducking_level = AudioDuckingLevelMin;
 
@@ -162,12 +173,13 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
       return input_enabled == rhs.input_enabled && input_running == rhs.input_running &&
              output_enabled == rhs.output_enabled && output_running == rhs.output_running &&
              input_available == rhs.input_available && output_available == rhs.output_available &&
-             input_enabled_persistent_mode == rhs.input_enabled_persistent_mode &&
-             input_muted == rhs.input_muted && is_interrupted == rhs.is_interrupted &&
-             render_mode == rhs.render_mode && mute_mode == rhs.mute_mode &&
+             input_enabled_persistent_mode == rhs.input_enabled_persistent_mode && input_muted == rhs.input_muted &&
+             is_interrupted == rhs.is_interrupted && render_mode == rhs.render_mode && mute_mode == rhs.mute_mode &&
+             platform_voice_processing_allowed == rhs.platform_voice_processing_allowed &&
              voice_processing_enabled == rhs.voice_processing_enabled &&
              voice_processing_bypassed == rhs.voice_processing_bypassed &&
              voice_processing_agc_enabled == rhs.voice_processing_agc_enabled &&
+             built_in_aec_enabled == rhs.built_in_aec_enabled && built_in_ns_enabled == rhs.built_in_ns_enabled &&
              advanced_ducking == rhs.advanced_ducking && ducking_level == rhs.ducking_level &&
              output_device_id == rhs.output_device_id && input_device_id == rhs.input_device_id &&
              default_output_device_update_count == rhs.default_output_device_update_count &&
@@ -330,6 +342,10 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   bool BuiltInAECIsAvailable() const override;
   bool BuiltInAGCIsAvailable() const override;
   bool BuiltInNSIsAvailable() const override;
+  PlatformAudioProcessingTopology GetPlatformAudioProcessingTopology() const override;
+  bool PlatformVoiceProcessingPathIsAvailable() const override;
+  int32_t EnablePlatformVoiceProcessingPath(bool enable) override;
+  PlatformAudioProcessingState GetPlatformAudioProcessingState() const override;
   int32_t EnableBuiltInAEC(bool enable) override;
   int32_t EnableBuiltInAGC(bool enable) override;
   int32_t EnableBuiltInNS(bool enable) override;
@@ -365,9 +381,14 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   int32_t SetDuckingLevel(AudioDuckingLevel level);
   int32_t DuckingLevel(AudioDuckingLevel* level);
 
-  int32_t SetInitRecordingPersistentMode(bool enable);
+  int32_t SetInitRecordingPersistentMode(bool enable, const AudioOptions *options = nullptr);
   int32_t InitRecordingPersistentMode(bool* enabled);
 
+  int32_t SetPlatformVoiceProcessingAllowed(bool allowed);
+  int32_t PlatformVoiceProcessingAllowed(bool *allowed);
+
+  // Deprecated: use SetPlatformVoiceProcessingAllowed / PlatformVoiceProcessingAllowed.
+  // Retained as compatibility aliases that forward to those and log a warning.
   int32_t SetVoiceProcessingEnabled(bool enable);
   int32_t VoiceProcessingEnabled(bool* enabled);
 
@@ -377,7 +398,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   int32_t SetVoiceProcessingAGCEnabled(bool enable);
   int32_t VoiceProcessingAGCEnabled(bool* enabled);
 
-  int32_t InitAndStartRecording();
+  int32_t InitAndStartRecording(const AudioOptions *options = nullptr);
 
   bool IsStopOnMuteModeEnabled() const override;
 
@@ -464,6 +485,10 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
   int32_t ApplyDeviceEngineState(EngineStateUpdate state);
   int32_t ApplyManualEngineState(EngineStateUpdate state);
+
+  // Recreates `fine_audio_buffer_` if null: the enable steps that create it and
+  // the buffer-start steps that use it have different conditions.
+  void EnsureFineAudioBuffer();
 
   // AudioEngine observer methods. May be called from any thread.
   void ReconfigureEngine();

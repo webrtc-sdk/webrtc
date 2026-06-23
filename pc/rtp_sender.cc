@@ -738,22 +738,28 @@ void AudioRtpSender::OnChanged() {
   RTC_DCHECK_RUN_ON(signaling_thread_);
   TRACE_EVENT0("webrtc", "AudioRtpSender::OnChanged");
   RTC_DCHECK(!stopped_);
-  if (cached_track_enabled_ != track_->enabled()) {
-    cached_track_enabled_ = track_->enabled();
-    if (can_send_track()) {
-      SetSend();
-    }
+  bool track_enabled = track_->enabled();
+  bool enabled_changed = cached_track_enabled_ != track_enabled;
+  bool options_changed = track_enabled && GetTrackSourceOptions() != cached_track_source_options_;
+  cached_track_enabled_ = track_enabled;
+
+  if (can_send_track() && (enabled_changed || options_changed)) {
+    RTC_LOG(LS_INFO) << "AudioRtpSender::OnChanged reapplying send state, "
+                     << "enabled_changed=" << enabled_changed << ", options_changed=" << options_changed;
+    SetSend();
   }
 }
 
 void AudioRtpSender::DetachTrack() {
   RTC_DCHECK(track_);
   audio_track()->RemoveSink(sink_adapter_.get());
+  cached_track_source_options_.reset();
 }
 
 void AudioRtpSender::AttachTrack() {
   RTC_DCHECK(track_);
   cached_track_enabled_ = track_->enabled();
+  cached_track_source_options_.reset();
   audio_track()->AddSink(sink_adapter_.get());
 }
 
@@ -791,26 +797,42 @@ void AudioRtpSender::SetSend() {
     return;
   }
   AudioOptions options;
+  const bool track_enabled = track_->enabled();
+  std::optional<AudioOptions> track_source_options;
 #if !defined(WEBRTC_CHROMIUM_BUILD) && !defined(WEBRTC_WEBKIT_BUILD)
   // TODO(tommi): Remove this hack when we move CreateAudioSource out of
   // PeerConnection.  This is a bit of a strange way to apply local audio
   // options since it is also applied to all streams/channels, local or remote.
-  if (track_->enabled() && audio_track()->GetSource() &&
-      !audio_track()->GetSource()->remote()) {
-    options = audio_track()->GetSource()->options();
+  if (track_enabled) {
+    track_source_options = GetTrackSourceOptions();
+  }
+  if (track_source_options) {
+    options = *track_source_options;
   }
 #endif
 
   // `track_->enabled()` hops to the signaling thread, so call it before we hop
   // to the worker thread or else it will deadlock.
-  bool track_enabled = track_->enabled();
   bool success = worker_thread_->BlockingCall([&] {
     return voice_media_channel()->SetAudioSend(ssrc_, track_enabled, &options,
                                                sink_adapter_.get());
   });
   if (!success) {
-    RTC_LOG(LS_ERROR) << "SetAudioSend: ssrc is incorrect: " << ssrc_;
+    RTC_LOG(LS_ERROR) << "SetAudioSend failed for ssrc " << ssrc_ << " while applying source, mute, or send options";
+    return;
   }
+  if (track_enabled) {
+    cached_track_source_options_ = track_source_options;
+  }
+}
+
+std::optional<AudioOptions> AudioRtpSender::GetTrackSourceOptions() const {
+#if !defined(WEBRTC_CHROMIUM_BUILD) && !defined(WEBRTC_WEBKIT_BUILD)
+  if (audio_track()->GetSource() && !audio_track()->GetSource()->remote()) {
+    return audio_track()->GetSource()->options();
+  }
+#endif
+  return std::nullopt;
 }
 
 void AudioRtpSender::ClearSend() {

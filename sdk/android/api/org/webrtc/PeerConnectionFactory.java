@@ -16,6 +16,7 @@ import androidx.annotation.Nullable;
 import java.util.List;
 import org.webrtc.Logging.Severity;
 import org.webrtc.audio.AudioDeviceModule;
+import org.webrtc.audio.AudioProcessingState;
 import org.webrtc.audio.JavaAudioDeviceModule;
 import org.webrtc.RtpCapabilities;
 
@@ -56,6 +57,7 @@ public class PeerConnectionFactory {
   @Nullable private volatile ThreadInfo networkThread;
   @Nullable private volatile ThreadInfo workerThread;
   @Nullable private volatile ThreadInfo signalingThread;
+  @Nullable private AudioTrack.AudioProcessingPlatformPolicy audioProcessingPlatformPolicy;
 
   public static class InitializationOptions {
     final Context applicationContext;
@@ -284,11 +286,12 @@ public class PeerConnectionFactory {
           audioDeviceModule = JavaAudioDeviceModule.builder(ContextUtils.getApplicationContext())
                                   .createAudioDeviceModule();
         }
-        return nativeCreatePeerConnectionFactory(
+        AudioDeviceModule adm = audioDeviceModule;
+        PeerConnectionFactory factory = nativeCreatePeerConnectionFactory(
             ContextUtils.getApplicationContext(),
             options,
             env.ref(),
-            audioDeviceModule.getNative(env.ref()),
+            adm.getNative(env.ref()),
             audioEncoderFactoryFactory.createNativeAudioEncoderFactory(),
             audioDecoderFactoryFactory.createNativeAudioDecoderFactory(),
             videoEncoderFactory,
@@ -303,6 +306,12 @@ public class PeerConnectionFactory {
                 : networkStatePredictorFactoryFactory.createNativeNetworkStatePredictorFactory(),
             neteqFactoryFactory == null ? 0 : neteqFactoryFactory.createNativeNetEqFactory(),
             audioFrameProcessor == null ? 0 : audioFrameProcessor.getNativeAudioFrameProcessor());
+        if (adm instanceof JavaAudioDeviceModule) {
+          factory.audioProcessingPlatformPolicy =
+              AudioTrack.AudioProcessingPlatformPolicy.fromJavaAudioDeviceModule(
+                  (JavaAudioDeviceModule) adm);
+        }
+        return factory;
       }
     }
   }
@@ -487,7 +496,9 @@ public class PeerConnectionFactory {
 
   public AudioTrack createAudioTrack(String id, AudioSource source) {
     checkPeerConnectionFactoryExists();
-    return new AudioTrack(nativeCreateAudioTrack(nativeFactory, id, source.getNativeAudioSource()));
+    return new AudioTrack(
+        nativeCreateAudioTrack(nativeFactory, id, source.getNativeAudioSource()),
+        audioProcessingPlatformPolicy);
   }
 
   public RtpCapabilities getRtpReceiverCapabilities(MediaStreamTrack.MediaType mediaType) {
@@ -513,6 +524,18 @@ public class PeerConnectionFactory {
   public void stopAecDump() {
     checkPeerConnectionFactoryExists();
     nativeStopAecDump(nativeFactory);
+  }
+
+  /**
+   * Diagnostic snapshot of the shared audio processing module's state: per
+   * component, what was requested, what the resolver decided per path, and
+   * what is actually running. The module is owned by this factory and shared
+   * across every peer connection it creates, so this reflects the
+   * factory-scoped processing state.
+   */
+  public AudioProcessingState getAudioProcessingState() {
+    checkPeerConnectionFactoryExists();
+    return nativeGetAudioProcessingState(nativeFactory);
   }
 
   public void dispose() {
@@ -638,6 +661,7 @@ public class PeerConnectionFactory {
   private static native boolean nativeStartAecDump(
       long factory, int file_descriptor, int filesize_limit_bytes);
   private static native void nativeStopAecDump(long factory);
+  private static native AudioProcessingState nativeGetAudioProcessingState(long factory);
   private static native void nativeFreeFactory(long factory);
   private static native long nativeGetNativePeerConnectionFactory(long factory);
   private static native void nativeInjectLoggable(JNILogging jniLogging, int severity);

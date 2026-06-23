@@ -32,8 +32,10 @@
 #include <unistd.h>
 
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>

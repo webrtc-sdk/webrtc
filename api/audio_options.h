@@ -18,6 +18,23 @@
 
 namespace webrtc {
 
+// Selects the implementation for one enabled audio processing component.
+// Disabled components do not use platform or software processing regardless of
+// mode. Automatic uses platform processing when available and otherwise falls
+// back to WebRTC software processing. Platform uses only platform processing, so
+// unavailable or physically impossible platform requests can be rejected.
+// Software disables the matching platform effect and uses WebRTC software
+// processing. Some ADMs expose coupled platform effects, such as Apple Voice
+// Processing I/O for AEC and NS. High-pass filter has no platform
+// implementation today.
+// Keep numeric values in sync with the Java and ObjC API enums because bridges
+// pass these values across language boundaries.
+enum class AudioProcessingMode {
+  kAutomatic = 0,
+  kPlatform = 1,
+  kSoftware = 2,
+};
+
 // Options that can be applied to a VoiceMediaChannel or a VoiceMediaEngine.
 // Used to be flags, but that makes it hard to selectively apply options.
 // We are moving all of the setting of options to structs like this,
@@ -35,6 +52,7 @@ struct RTC_EXPORT AudioOptions {
   // Audio processing that attempts to filter away the output signal from
   // later inbound pickup.
   std::optional<bool> echo_cancellation;
+  std::optional<AudioProcessingMode> echo_cancellation_mode;
 #if defined(WEBRTC_IOS)
   // Forces software echo cancellation on iOS. This is a temporary workaround
   // (until Apple fixes the bug) for a device with non-functioning AEC. May
@@ -44,10 +62,13 @@ struct RTC_EXPORT AudioOptions {
 #endif
   // Audio processing to adjust the sensitivity of the local mic dynamically.
   std::optional<bool> auto_gain_control;
+  std::optional<AudioProcessingMode> auto_gain_control_mode;
   // Audio processing to filter out background noise.
   std::optional<bool> noise_suppression;
+  std::optional<AudioProcessingMode> noise_suppression_mode;
   // Audio processing to remove background noise of lower frequencies.
   std::optional<bool> highpass_filter;
+  std::optional<AudioProcessingMode> highpass_filter_mode;
   // Audio processing to swap the left and right channels.
   std::optional<bool> stereo_swapping;
   // Audio receiver jitter buffer (NetEq) max capacity in number of packets.

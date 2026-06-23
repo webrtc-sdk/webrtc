@@ -85,6 +85,8 @@ class PeerConnectionFactory : public PeerConnectionFactoryInterface {
   bool StartAecDump(FILE* file, int64_t max_size_bytes) override;
   void StopAecDump() override;
 
+  AudioProcessingState GetAudioProcessingState() override;
+
   SctpTransportFactoryInterface* sctp_transport_factory() {
     return context_->sctp_transport_factory();
   }
