@@ -55,13 +55,13 @@ class AudioState : public webrtc::AudioState {
     return config_.audio_device_module.get();
   }
 
-  void AddReceivingStream(webrtc::AudioReceiveStreamInterface* stream);
-  void RemoveReceivingStream(webrtc::AudioReceiveStreamInterface* stream);
+  void AddReceivingStream(webrtc::AudioReceiveStreamInterface* stream) override;
+  void RemoveReceivingStream(webrtc::AudioReceiveStreamInterface* stream) override;
 
   void AddSendingStream(webrtc::AudioSendStream* stream,
                         int sample_rate_hz,
-                        size_t num_channels);
-  void RemoveSendingStream(webrtc::AudioSendStream* stream);
+                        size_t num_channels) override;
+  void RemoveSendingStream(webrtc::AudioSendStream* stream) override;
 
  private:
   void UpdateAudioTransportWithSendingStreams();
@@ -77,7 +77,7 @@ class AudioState : public webrtc::AudioState {
 
   // Transports mixed audio from the mixer to the audio device and
   // recorded audio to the sending streams.
-  AudioTransportImpl audio_transport_;
+  std::unique_ptr<AudioTransport> audio_transport_;
 
   // Null audio poller is used to continue polling the audio streams if audio
   // playout is disabled so that audio processing still happens and the audio

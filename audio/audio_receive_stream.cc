@@ -465,8 +465,8 @@ const std::string& AudioReceiveStreamImpl::sync_group() const {
   return config_.sync_group;
 }
 
-internal::AudioState* AudioReceiveStreamImpl::audio_state() const {
-  auto* audio_state = static_cast<internal::AudioState*>(audio_state_.get());
+webrtc::AudioState* AudioReceiveStreamImpl::audio_state() const {
+  auto* audio_state = static_cast<webrtc::AudioState*>(audio_state_.get());
   RTC_DCHECK(audio_state);
   return audio_state;
 }

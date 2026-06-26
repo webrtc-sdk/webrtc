@@ -37,9 +37,16 @@ namespace internal {
 
 AudioState::AudioState(const AudioState::Config& config)
     : config_(config),
-      audio_transport_(config_.audio_mixer.get(),
-                       config_.audio_processing.get(),
-                       config_.async_audio_processing_factory.get()) {
+      audio_transport_(
+          config_.audio_transport_factory
+              ? config_.audio_transport_factory->Create(
+                    config_.audio_mixer.get(),
+                    config_.audio_processing.get(),
+                    config_.async_audio_processing_factory.get())
+              : std::make_unique<AudioTransportImpl>(
+                    config_.audio_mixer.get(),
+                    config_.audio_processing.get(),
+                    config_.async_audio_processing_factory.get())) {
   RTC_DCHECK(config_.audio_mixer);
   RTC_DCHECK(config_.audio_device_module);
 }
@@ -56,7 +63,7 @@ AudioProcessing* AudioState::audio_processing() {
 }
 
 AudioTransport* AudioState::audio_transport() {
-  return &audio_transport_;
+  return audio_transport_.get();
 }
 
 void AudioState::SetPlayout(bool enabled) {
@@ -175,7 +182,7 @@ void AudioState::RemoveSendingStream(webrtc::AudioSendStream* stream) {
 
 void AudioState::SetStereoChannelSwapping(bool enable) {
   RTC_DCHECK(thread_checker_.IsCurrent());
-  audio_transport_.SetStereoChannelSwapping(enable);
+  audio_transport_->SetStereoChannelSwapping(enable);
 }
 
 void AudioState::UpdateAudioTransportWithSendingStreams() {
@@ -188,7 +195,7 @@ void AudioState::UpdateAudioTransportWithSendingStreams() {
     max_sample_rate_hz = std::max(max_sample_rate_hz, kv.second.sample_rate_hz);
     max_num_channels = std::max(max_num_channels, kv.second.num_channels);
   }
-  audio_transport_.UpdateAudioSenders(std::move(audio_senders),
+  audio_transport_->UpdateAudioSenders(std::move(audio_senders),
                                       max_sample_rate_hz, max_num_channels);
 }
 
@@ -197,7 +204,7 @@ void AudioState::UpdateNullAudioPollerState() {
   // disabled.
   if (!receiving_streams_.empty() && !playout_enabled_) {
     if (!null_audio_poller_.Running()) {
-      AudioTransport* audio_transport = &audio_transport_;
+      AudioTransport* audio_transport = audio_transport_.get();
       null_audio_poller_ = RepeatingTaskHandle::Start(
           TaskQueueBase::Current(), [audio_transport] {
             static constexpr size_t kNumChannels = 1;

@@ -15,11 +15,13 @@
 #include "api/audio/audio_processing.h"
 #include "api/ref_count.h"
 #include "api/scoped_refptr.h"
+#include "audio/audio_transport_impl.h"
 #include "modules/async_audio_processing/async_audio_processing.h"
 
 namespace webrtc {
 
-class AudioTransport;
+class AudioReceiveStreamInterface;
+class AudioSendStream;
 
 // AudioState holds the state which must be shared between multiple instances of
 // webrtc::Call for audio processing purposes.
@@ -40,6 +42,8 @@ class AudioState : public RefCountInterface {
     scoped_refptr<webrtc::AudioDeviceModule> audio_device_module;
 
     scoped_refptr<AsyncAudioProcessing::Factory> async_audio_processing_factory;
+
+    scoped_refptr<webrtc::AudioTransportFactory> audio_transport_factory;
   };
 
   virtual AudioProcessing* audio_processing() = 0;
@@ -57,6 +61,16 @@ class AudioState : public RefCountInterface {
   virtual void SetRecording(bool enabled) = 0;
 
   virtual void SetStereoChannelSwapping(bool enable) = 0;
+
+  virtual void AddReceivingStream(AudioReceiveStreamInterface* stream) = 0;
+
+  virtual void RemoveReceivingStream(AudioReceiveStreamInterface* stream) = 0;
+
+  virtual void AddSendingStream(AudioSendStream* stream,
+                        int sample_rate_hz,
+                        size_t num_channels) = 0;
+
+  virtual void RemoveSendingStream(AudioSendStream* stream) = 0;
 
   static scoped_refptr<AudioState> Create(const AudioState::Config& config);
 

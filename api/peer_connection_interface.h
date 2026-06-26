@@ -126,6 +126,7 @@
 #include "api/video/video_bitrate_allocator_factory.h"
 #include "api/video_codecs/video_decoder_factory.h"
 #include "api/video_codecs/video_encoder_factory.h"
+#include "audio/audio_transport_impl.h"
 #include "media/base/media_config.h"
 // TODO(bugs.webrtc.org/7447): We plan to provide a way to let applications
 // inject a PacketSocketFactory and/or NetworkManager, and not expose
@@ -1476,6 +1477,7 @@ struct RTC_EXPORT PeerConnectionFactoryDependencies final {
   scoped_refptr<AudioEncoderFactory> audio_encoder_factory;
   scoped_refptr<AudioDecoderFactory> audio_decoder_factory;
   scoped_refptr<AudioMixer> audio_mixer;
+  scoped_refptr<AudioTransportFactory> audio_transport_factory;
   std::unique_ptr<AudioProcessingBuilderInterface> audio_processing_builder;
   std::unique_ptr<AudioFrameProcessor> audio_frame_processor;
   std::unique_ptr<VideoEncoderFactory> video_encoder_factory;

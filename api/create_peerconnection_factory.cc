@@ -44,7 +44,8 @@ scoped_refptr<PeerConnectionFactoryInterface> CreatePeerConnectionFactory(
     scoped_refptr<AudioMixer> audio_mixer,
     scoped_refptr<AudioProcessing> audio_processing,
     std::unique_ptr<AudioFrameProcessor> audio_frame_processor,
-    std::unique_ptr<FieldTrialsView> field_trials) {
+    std::unique_ptr<FieldTrialsView> field_trials,
+    scoped_refptr<AudioTransportFactory> audio_transport_factory) {
   PeerConnectionFactoryDependencies dependencies;
   dependencies.network_thread = network_thread;
   dependencies.worker_thread = worker_thread;
@@ -68,6 +69,9 @@ scoped_refptr<PeerConnectionFactoryInterface> CreatePeerConnectionFactory(
     dependencies.audio_processing_builder =
         std::make_unique<BuiltinAudioProcessingBuilder>();
 #endif
+  }
+  if(audio_transport_factory != nullptr) {
+    dependencies.audio_transport_factory = std::move(audio_transport_factory);
   }
   dependencies.audio_mixer = std::move(audio_mixer);
   dependencies.video_encoder_factory = std::move(video_encoder_factory);

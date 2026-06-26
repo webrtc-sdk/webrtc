@@ -46,7 +46,8 @@ CreatePeerConnectionFactory(
     scoped_refptr<AudioMixer> audio_mixer,
     scoped_refptr<AudioProcessing> audio_processing,
     std::unique_ptr<AudioFrameProcessor> audio_frame_processor = nullptr,
-    std::unique_ptr<FieldTrialsView> field_trials = nullptr);
+    std::unique_ptr<FieldTrialsView> field_trials = nullptr,
+    scoped_refptr<AudioTransportFactory> audio_transport_factory = nullptr);
 
 }  // namespace webrtc
 

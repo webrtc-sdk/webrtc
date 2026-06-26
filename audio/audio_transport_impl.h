@@ -87,8 +87,8 @@ class AudioTransportImpl : public AudioTransport {
 
   void UpdateAudioSenders(std::vector<AudioSender*> senders,
                           int send_sample_rate_hz,
-                          size_t send_num_channels);
-  void SetStereoChannelSwapping(bool enable);
+                          size_t send_num_channels) override;
+  void SetStereoChannelSwapping(bool enable) override;
 
  private:
   void SendProcessedData(std::unique_ptr<AudioFrame> audio_frame);
@@ -115,6 +115,15 @@ class AudioTransportImpl : public AudioTransport {
   // Converts mixed audio to the audio device output rate.
   PushResampler<int16_t> render_resampler_;
 };
+
+class AudioTransportFactory : public RefCountInterface {
+ public:
+  virtual std::unique_ptr<AudioTransport> Create(
+      AudioMixer* mixer,
+      AudioProcessing* audio_processing,
+      AsyncAudioProcessing::Factory* async_audio_processing_factory) = 0;
+};
+
 }  // namespace webrtc
 
 #endif  // AUDIO_AUDIO_TRANSPORT_IMPL_H_

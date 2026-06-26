@@ -474,7 +474,8 @@ WebRtcVoiceEngine::WebRtcVoiceEngine(
     scoped_refptr<AudioDecoderFactory> decoder_factory,
     scoped_refptr<AudioMixer> audio_mixer,
     scoped_refptr<AudioProcessing> audio_processing,
-    std::unique_ptr<AudioFrameProcessor> audio_frame_processor)
+    std::unique_ptr<AudioFrameProcessor> audio_frame_processor,
+    scoped_refptr<AudioTransportFactory> audio_transport_factory)
     : env_(env),
       minimized_resampling_on_mobile_trial_enabled_(
           env_.field_trials().IsEnabled(
@@ -485,6 +486,7 @@ WebRtcVoiceEngine::WebRtcVoiceEngine(
       encoder_factory_(std::move(encoder_factory)),
       decoder_factory_(std::move(decoder_factory)),
       apm_(std::move(audio_processing)),
+      audio_transport_factory_(std::move(audio_transport_factory)),
       legacy_send_codecs_(
           LegacyCollectCodecs(encoder_factory_->GetSupportedEncoders(),
                               !payload_types_in_transport_trial_enabled_)),
@@ -503,6 +505,9 @@ WebRtcVoiceEngine::WebRtcVoiceEngine(
       config.audio_mixer = std::move(audio_mixer);
     } else {
       config.audio_mixer = AudioMixerImpl::Create();
+    }
+    if(audio_transport_factory_){
+      config.audio_transport_factory = audio_transport_factory_;
     }
     config.audio_processing = apm_;
     config.audio_device_module = adm_;

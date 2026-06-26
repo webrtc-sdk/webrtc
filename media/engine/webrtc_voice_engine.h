@@ -87,7 +87,8 @@ class WebRtcVoiceEngine final : public VoiceEngineInterface {
                     scoped_refptr<AudioDecoderFactory> decoder_factory,
                     scoped_refptr<AudioMixer> audio_mixer,
                     scoped_refptr<AudioProcessing> audio_processing,
-                    std::unique_ptr<AudioFrameProcessor> audio_frame_processor);
+                    std::unique_ptr<AudioFrameProcessor> audio_frame_processor,
+                    scoped_refptr<AudioTransportFactory> audio_transport_factory);
 
   WebRtcVoiceEngine() = delete;
   WebRtcVoiceEngine(const WebRtcVoiceEngine&) = delete;
@@ -167,6 +168,8 @@ class WebRtcVoiceEngine final : public VoiceEngineInterface {
   const scoped_refptr<AudioDecoderFactory> decoder_factory_;
   // The audio processing module.
   scoped_refptr<AudioProcessing> apm_ RTC_GUARDED_BY(worker_thread_checker_);
+  // The audio transport factory.
+  scoped_refptr<AudioTransportFactory> audio_transport_factory_;
   // The primary instance of WebRtc VoiceEngine.
   scoped_refptr<AudioState> audio_state_ RTC_GUARDED_BY(worker_thread_checker_);
   const std::vector<Codec> legacy_send_codecs_;

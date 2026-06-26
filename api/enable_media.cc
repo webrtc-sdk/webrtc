@@ -17,6 +17,7 @@
 #include "api/environment/environment.h"
 #include "api/peer_connection_interface.h"
 #include "api/scoped_refptr.h"
+#include "audio/audio_transport_impl.h"
 #include "call/call.h"
 #include "call/call_config.h"
 #include "media/base/media_engine.h"
@@ -49,7 +50,8 @@ class MediaFactoryImpl : public MediaFactory {
     auto audio_engine = std::make_unique<WebRtcVoiceEngine>(
         env, std::move(deps.adm), std::move(deps.audio_encoder_factory),
         std::move(deps.audio_decoder_factory), std::move(deps.audio_mixer),
-        std::move(audio_processing), std::move(deps.audio_frame_processor));
+        std::move(audio_processing), std::move(deps.audio_frame_processor),
+        std::move(deps.audio_transport_factory));
     auto video_engine = std::make_unique<WebRtcVideoEngine>(
         std::move(deps.video_encoder_factory),
         std::move(deps.video_decoder_factory), env.field_trials());
