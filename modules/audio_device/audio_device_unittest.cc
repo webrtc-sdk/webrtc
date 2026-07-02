@@ -589,7 +589,8 @@ class MAYBE_AudioDeviceTest
     // The value of `audio_layer_` is set at construction by GetParam() and two
     // different layers are tested on Windows only.
     if (audio_layer_ == AudioDeviceModule::kPlatformDefaultAudio) {
-      return AudioDeviceModuleImpl::Create(env_, audio_layer_);
+      return AudioDeviceModuleImpl::Create(env_, audio_layer_,
+                                           /*bypass_voice_processing=*/false);
     } else if (audio_layer_ == AudioDeviceModule::kWindowsCoreAudio2) {
 #ifdef WEBRTC_WIN
       // We must initialize the COM library on a thread before we calling any of

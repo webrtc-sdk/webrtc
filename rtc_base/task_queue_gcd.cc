@@ -32,9 +32,8 @@
 namespace webrtc {
 namespace {
 
-// TODO(crbug.com/470337728): make use of QoS instead of dispatch queue
-// priorities to enable greater fidelity mapping of AUDIO and VIDEO
-// priorities.
+char queue_specific_key;
+
 int TaskQueuePriorityToGCD(TaskQueueFactory::Priority priority) {
   switch (priority) {
     case TaskQueueFactory::Priority::kNormal:
@@ -92,6 +91,12 @@ TaskQueueGcd::TaskQueueGcd(absl::string_view queue_name, int gcd_priority)
       is_active_(true) {
   RTC_CHECK(queue_);
   dispatch_set_context(queue_, this);
+  // Tag the queue so Delete() can detect being called from code running on
+  // this queue. Unlike the TaskQueueBase thread-local, which is only set
+  // while RunTask() executes, dispatch_get_specific() detects any code
+  // running on the queue (or a queue targeting it).
+  dispatch_queue_set_specific(queue_, &queue_specific_key, this,
+                              /*destructor=*/nullptr);
   // Assign a finalizer that will delete the queue when the last reference
   // is released. This may run after the TaskQueue::Delete.
   dispatch_set_finalizer_f(queue_, &DeleteQueue);
@@ -116,6 +121,17 @@ void TaskQueueGcd::Delete() {
     dispatch_sync_f(queue_, this, &SetNotActive);
   }
 
+  if (dispatch_get_specific(&queue_specific_key) == this) {
+    // Called from code running on this queue (e.g. the last reference to an
+    // object owning this queue is dropped by an in-flight task). We are already
+    // serialized on the queue, so set is_active_ directly; dispatch_sync onto
+    // the current queue would deadlock.
+    SetNotActive(this);
+  } else {
+    // Use dispatch_sync to set the is_active_ to guarantee that there's not a
+    // race with checking it from a task.
+    dispatch_sync_f(queue_, this, &SetNotActive);
+  }
   dispatch_release(queue_);
 }
 

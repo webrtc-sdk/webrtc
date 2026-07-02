@@ -9,7 +9,10 @@
  */
 
 #include <cstdint>
+#include <utility>
 
+#include "api/task_queue/default_task_queue_factory.h"
+#include "api/task_queue/task_queue_base.h"
 #include "api/task_queue/task_queue_factory.h"
 #include "api/units/time_delta.h"
 #include "rtc_base/event.h"
@@ -72,5 +75,24 @@ TEST(TaskQueueTest, DISABLED_PostDelayedHighRes) {
   EXPECT_GE(end - start, 3u);
   EXPECT_NEAR(end - start, 3, 3u);
 }
+
+#if defined(WEBRTC_MAC) || defined(WEBRTC_IOS)
+// The GCD task queue supports deletion from a task running on it, which
+// happens when an in-flight task drops the last reference to an object that
+// owns the queue (e.g. RTPSenderVideoFrameTransformerDelegate during
+// teardown). Other backends join their worker thread in Delete() and cannot
+// support this.
+TEST(TaskQueueTest, DeleteQueueFromOwnTask) {
+  Event event;
+  auto queue = CreateDefaultTaskQueueFactory()->CreateTaskQueue(
+      "delete_from_own_task", TaskQueueFactory::Priority::NORMAL);
+  TaskQueueBase* raw = queue.get();
+  raw->PostTask([queue = std::move(queue), &event]() mutable {
+    queue = nullptr;
+    event.Set();
+  });
+  EXPECT_TRUE(event.Wait(TimeDelta::Seconds(10)));
+}
+#endif
 
 }  // namespace webrtc
