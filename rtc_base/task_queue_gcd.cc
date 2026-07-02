@@ -31,10 +31,6 @@
 namespace webrtc {
 namespace {
 
-// Key for dispatch_queue_set_specific(); the associated value identifies the
-// owning TaskQueueGcd. Unlike the TaskQueueBase thread-local, which is only
-// set while RunTask() executes, dispatch_get_specific() detects any code
-// running on the queue (or a queue targeting it).
 char queue_specific_key;
 
 int TaskQueuePriorityToGCD(TaskQueueFactory::Priority priority) {
@@ -89,6 +85,10 @@ TaskQueueGcd::TaskQueueGcd(absl::string_view queue_name, int gcd_priority)
       is_active_(true) {
   RTC_CHECK(queue_);
   dispatch_set_context(queue_, this);
+  // Tag the queue so Delete() can detect being called from code running on
+  // this queue. Unlike the TaskQueueBase thread-local, which is only set
+  // while RunTask() executes, dispatch_get_specific() detects any code
+  // running on the queue (or a queue targeting it).
   dispatch_queue_set_specific(queue_, &queue_specific_key, this,
                               /*destructor=*/nullptr);
   // Assign a finalizer that will delete the queue when the last reference
