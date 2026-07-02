@@ -91,7 +91,6 @@ TaskQueueGcd::TaskQueueGcd(absl::string_view queue_name, int gcd_priority)
 TaskQueueGcd::~TaskQueueGcd() = default;
 
 void TaskQueueGcd::Delete() {
-  RTC_DCHECK(!IsCurrent());
   // Implementation/behavioral note:
   // Dispatch queues are reference counted via calls to dispatch_retain and
   // dispatch_release. Pending blocks submitted to a queue also hold a
@@ -99,9 +98,17 @@ void TaskQueueGcd::Delete() {
   // queue have been released, the queue will be deallocated by the system.
   // This is why we check the is_active_ before running tasks.
 
-  // Use dispatch_sync to set the is_active_ to guarantee that there's not a
-  // race with checking it from a task.
-  dispatch_sync_f(queue_, this, &SetNotActive);
+  if (IsCurrent()) {
+    // Called from a task running on this queue (e.g. the last reference to an
+    // object owning this queue is dropped by an in-flight task). We are already
+    // serialized on the queue, so set is_active_ directly; dispatch_sync onto
+    // the current queue would deadlock.
+    SetNotActive(this);
+  } else {
+    // Use dispatch_sync to set the is_active_ to guarantee that there's not a
+    // race with checking it from a task.
+    dispatch_sync_f(queue_, this, &SetNotActive);
+  }
   dispatch_release(queue_);
 }
 
