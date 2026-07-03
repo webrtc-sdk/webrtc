@@ -447,7 +447,7 @@ std::optional<AudioObjectID> CreatePrivateAggregateDevice(
   CFDictionarySetValue(description, CFSTR(kAudioAggregateDeviceSubDeviceListKey),
                        sub_device_list);
   CFDictionarySetValue(description,
-                       CFSTR(kAudioAggregateDeviceMasterSubDeviceKey),
+                       CFSTR(kAudioAggregateDeviceMainSubDeviceKey),
                        output_uid_cf);
   CFDictionarySetValue(description, CFSTR(kAudioAggregateDeviceIsPrivateKey),
                        is_private_cf);
@@ -472,27 +472,15 @@ std::optional<AudioObjectID> CreatePrivateAggregateDevice(
     return std::nullopt;
   }
 
-  // The HAL composes the sub devices asynchronously after creation. Wait
-  // until both directions publish streams, otherwise an I/O unit configured
-  // with the aggregate reads zero channels for the side that is not yet
-  // attached.
-  constexpr int kMaxReadinessAttempts = 100;
-  constexpr int64_t kReadinessPollIntervalMs = 10;
-  bool ready = false;
-  for (int attempt = 0; attempt < kMaxReadinessAttempts; ++attempt) {
-    if (GetNumStreams(aggregate_device_id, true) > 0 &&
-        GetNumStreams(aggregate_device_id, false) > 0) {
-      ready = true;
-      break;
-    }
-    webrtc::Thread::SleepMs(kReadinessPollIntervalMs);
-  }
-  if (!ready) {
-    RTC_LOG(LS_ERROR) << "Aggregate device " << aggregate_device_id
-                      << " did not publish streams in time";
-    AudioHardwareDestroyAggregateDevice(aggregate_device_id);
-    return std::nullopt;
-  }
+  // The HAL may still be composing the sub devices at this point. Consumers
+  // must not rely on the aggregate's streams being visible yet, an I/O unit
+  // pointed at the aggregate renegotiates its formats asynchronously and that
+  // is where readiness has to be awaited. Logged here for error attribution.
+  RTC_LOG(LS_INFO) << "Created aggregate device " << aggregate_device_id
+                   << " (streams at creation: input="
+                   << GetNumStreams(aggregate_device_id, true)
+                   << ", output=" << GetNumStreams(aggregate_device_id, false)
+                   << ")";
 
   return aggregate_device_id;
 }
