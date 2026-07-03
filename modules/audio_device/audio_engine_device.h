@@ -510,6 +510,11 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   std::vector<AudioObjectID> output_device_ids_;
   std::vector<std::string> output_device_labels_;
   std::vector<std::string> input_device_labels_;
+
+  // Private aggregate device used when voice processing is disabled and the
+  // engine's shared I/O unit must address different input and output devices.
+  AudioObjectID engine_aggregate_device_id_ = kAudioObjectUnknown;
+  void DestroyAggregateDeviceIfNeeded();
 #endif
 
   bool IsMicrophonePermissionGranted();

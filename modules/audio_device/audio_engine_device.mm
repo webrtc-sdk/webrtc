@@ -2233,6 +2233,9 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     }
 
     engine_device_ = nil;
+#if TARGET_OS_OSX
+    DestroyAggregateDeviceIfNeeded();
+#endif
   }
 
   // --------------------------------------------------------------------------------------------
@@ -2367,6 +2370,111 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       }
     }
   }
+
+  // --------------------------------------------------------------------------------------------
+  // Step: Configure device for the shared I/O unit (macOS, voice processing disabled)
+  //
+  // Without voice processing the engine's input and output nodes share a single
+  // HAL I/O unit, so per-direction device selection is impossible: setting
+  // kAudioOutputUnitProperty_CurrentDevice re-routes both directions. When the
+  // requested input and output devices differ, a private aggregate device
+  // combining them is created and set instead. This must happen before the
+  // enable steps below: the HAL unit rejects device changes once the graph is
+  // wired, and the node formats read during enable must reflect the device.
+#if TARGET_OS_OSX
+  if (!state.next.voice_processing_enabled && state.next.IsAnyEnabled() &&
+      (!state.prev.IsAnyEnabled() || state.IsEngineRecreateRequired())) {
+    bool input_needed = state.next.IsInputEnabled();
+    bool output_needed = state.next.IsOutputEnabled();
+    AudioObjectID requested_input = state.next.input_device_id;
+    AudioObjectID requested_output = state.next.output_device_id;
+
+    // When both directions follow the system default there is nothing to do,
+    // the engine already tracks the default route.
+    if ((input_needed && requested_input != kAudioObjectUnknown) ||
+        (output_needed && requested_output != kAudioObjectUnknown)) {
+      AudioObjectID input_device = requested_input;
+      if (input_needed && input_device == kAudioObjectUnknown) {
+        input_device =
+            mac_audio_utils::GetDefaultInputDeviceID().value_or(kAudioObjectUnknown);
+      }
+      AudioObjectID output_device = requested_output;
+      if (output_needed && output_device == kAudioObjectUnknown) {
+        output_device =
+            mac_audio_utils::GetDefaultOutputDeviceID().value_or(kAudioObjectUnknown);
+      }
+
+      AudioObjectID target_device = kAudioObjectUnknown;
+      if (input_needed && output_needed && input_device != kAudioObjectUnknown &&
+          output_device != kAudioObjectUnknown && input_device != output_device) {
+        DestroyAggregateDeviceIfNeeded();
+        auto aggregate =
+            mac_audio_utils::CreatePrivateAggregateDevice(output_device, input_device);
+        if (!aggregate.has_value()) {
+          LOGE() << "Failed to create aggregate device, output=" << output_device
+                 << " input=" << input_device;
+          return rollback(kAudioEngineRecordingDeviceNotAvailableError);
+        }
+        engine_aggregate_device_id_ = *aggregate;
+        target_device = *aggregate;
+        LOGI() << "Created aggregate device " << target_device
+               << " (output=" << output_device << ", input=" << input_device << ")";
+        rollback_actions.push_back([this]() {
+          RTC_DCHECK_RUN_ON(thread_);
+          DestroyAggregateDeviceIfNeeded();
+        });
+      } else if (input_needed && input_device != kAudioObjectUnknown &&
+                 (!output_needed || input_device == output_device)) {
+        target_device = input_device;
+      } else if (output_needed && output_device != kAudioObjectUnknown &&
+                 !input_needed) {
+        target_device = output_device;
+      }
+
+      if (target_device != kAudioObjectUnknown) {
+        auto device_name = mac_audio_utils::GetDeviceName(target_device);
+        LOGI() << "Setting shared I/O unit device: "
+               << device_name.value_or("Unknown") << " (" << target_device << ")";
+        AudioUnit io_unit =
+            output_needed ? outputNode().audioUnit : inputNode().audioUnit;
+        OSStatus err = AudioUnitSetProperty(
+            io_unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global,
+            0, &target_device, sizeof(target_device));
+        if (err != noErr) {
+          LOGE() << "Failed to set shared I/O unit device: requested="
+                 << target_device << ", error: " << err;
+          return rollback(input_needed ? kAudioEngineRecordingDeviceNotAvailableError
+                                       : kAudioEnginePlayoutDeviceNotAvailableError);
+        }
+
+        // The unit renegotiates its formats from the new device asynchronously,
+        // aggregates in particular can take a moment. Wait until the node
+        // formats are usable so the enable steps below read valid channel
+        // counts.
+        constexpr int kMaxFormatAttempts = 100;
+        constexpr int64_t kFormatPollIntervalMs = 10;
+        bool format_ready = false;
+        for (int attempt = 0; attempt < kMaxFormatAttempts; ++attempt) {
+          bool output_ready =
+              !output_needed || [outputNode() outputFormatForBus:0].channelCount > 0;
+          bool input_ready =
+              !input_needed || [inputNode() outputFormatForBus:0].channelCount > 0;
+          if (output_ready && input_ready) {
+            format_ready = true;
+            break;
+          }
+          webrtc::Thread::SleepMs(kFormatPollIntervalMs);
+        }
+        if (!format_ready) {
+          LOGE() << "Shared I/O unit formats did not become ready for device "
+                 << target_device;
+          return rollback(input_needed ? kAudioEngineRecordingDeviceNotAvailableError
+                                       : kAudioEnginePlayoutDeviceNotAvailableError);
+        }
+      }
+    }
+  }
+#endif
 
   // --------------------------------------------------------------------------------------------
   // Step: Enable output
@@ -2824,10 +2932,14 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   }
 
   // --------------------------------------------------------------------------------------------
-  // Step: Configure device (macOS only)
+  // Step: Configure device (macOS, voice processing enabled)
   //
+  // With voice processing the input and output nodes use separate I/O units
+  // that accept per-direction device selection at this point. The non voice
+  // processing path configures its shared unit earlier, before the graph is
+  // wired (see "Configure device for the shared I/O unit" above).
 #if TARGET_OS_OSX
-  if (state.next.IsAnyEnabled() &&
+  if (state.next.voice_processing_enabled && state.next.IsAnyEnabled() &&
       (!state.prev.IsAnyEnabled() || state.IsEngineRecreateRequired())) {
     if (state.next.IsInputEnabled()) {
       uint32_t requested_input_device_id = state.next.input_device_id;
@@ -3060,6 +3172,9 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
 
     LOGI() << "Releasing AVAudioEngine...";
     engine_device_ = nil;
+#if TARGET_OS_OSX
+    DestroyAggregateDeviceIfNeeded();
+#endif
   }
 
   // --- Diagnostic: final state after apply ---
@@ -3144,6 +3259,16 @@ void AudioEngineDevice::StartRenderLoop() {
 // Private - Device access
 
 #if TARGET_OS_OSX
+
+void AudioEngineDevice::DestroyAggregateDeviceIfNeeded() {
+  RTC_DCHECK_RUN_ON(thread_);
+  if (engine_aggregate_device_id_ == kAudioObjectUnknown) {
+    return;
+  }
+  LOGI() << "Destroying aggregate device " << engine_aggregate_device_id_;
+  mac_audio_utils::DestroyAggregateDevice(engine_aggregate_device_id_);
+  engine_aggregate_device_id_ = kAudioObjectUnknown;
+}
 
 void AudioEngineDevice::UpdateAllDeviceIDs() {
   using namespace webrtc::mac_audio_utils;

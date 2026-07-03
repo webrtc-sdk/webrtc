@@ -17,7 +17,10 @@
 #include "audio_device_utils_mac.h"
 
 #include <IOKit/audio/IOAudioTypes.h>
+#include <unistd.h>
 
+#include <atomic>
+#include <string>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -379,6 +382,129 @@ bool IsOutputDevice(AudioObjectID device_id) {
 
   return num_valid_output_streams > 0 ||
          (num_unknown_output_streams > 0 && num_input_streams == 0);
+}
+
+std::optional<AudioObjectID> CreatePrivateAggregateDevice(
+    AudioObjectID output_device_id, AudioObjectID input_device_id) {
+  std::optional<std::string> output_uid = GetDeviceUniqueID(output_device_id);
+  std::optional<std::string> input_uid = GetDeviceUniqueID(input_device_id);
+  if (!output_uid.has_value() || !input_uid.has_value()) {
+    RTC_LOG(LS_ERROR) << "CreatePrivateAggregateDevice: missing device UID"
+                      << " (output=" << output_device_id
+                      << ", input=" << input_device_id << ")";
+    return std::nullopt;
+  }
+
+  // The aggregate UID must be unique. Multiple instances may exist briefly
+  // during engine recreation, so include a counter.
+  static std::atomic<uint64_t> counter{0};
+  const std::string aggregate_uid = "org.webrtc.audioengine.aggregate." +
+                                    std::to_string(getpid()) + "." +
+                                    std::to_string(counter.fetch_add(1));
+
+  CFStringRef aggregate_uid_cf = CFStringCreateWithCString(
+      kCFAllocatorDefault, aggregate_uid.c_str(), kNarrowStringEncoding);
+  CFStringRef output_uid_cf = CFStringCreateWithCString(
+      kCFAllocatorDefault, output_uid->c_str(), kNarrowStringEncoding);
+  CFStringRef input_uid_cf = CFStringCreateWithCString(
+      kCFAllocatorDefault, input_uid->c_str(), kNarrowStringEncoding);
+
+  CFMutableDictionaryRef output_sub_device = CFDictionaryCreateMutable(
+      kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks,
+      &kCFTypeDictionaryValueCallBacks);
+  CFDictionarySetValue(output_sub_device, CFSTR(kAudioSubDeviceUIDKey),
+                       output_uid_cf);
+
+  // The output device drives the clock, so the input sub device needs drift
+  // compensation.
+  int32_t drift_compensation = 1;
+  CFNumberRef drift_compensation_cf = CFNumberCreate(
+      kCFAllocatorDefault, kCFNumberSInt32Type, &drift_compensation);
+  CFMutableDictionaryRef input_sub_device = CFDictionaryCreateMutable(
+      kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks,
+      &kCFTypeDictionaryValueCallBacks);
+  CFDictionarySetValue(input_sub_device, CFSTR(kAudioSubDeviceUIDKey),
+                       input_uid_cf);
+  CFDictionarySetValue(input_sub_device,
+                       CFSTR(kAudioSubDeviceDriftCompensationKey),
+                       drift_compensation_cf);
+
+  const void* sub_devices[] = {output_sub_device, input_sub_device};
+  CFArrayRef sub_device_list =
+      CFArrayCreate(kCFAllocatorDefault, sub_devices, 2, &kCFTypeArrayCallBacks);
+
+  int32_t is_private = 1;
+  CFNumberRef is_private_cf =
+      CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &is_private);
+
+  CFMutableDictionaryRef description = CFDictionaryCreateMutable(
+      kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks,
+      &kCFTypeDictionaryValueCallBacks);
+  CFDictionarySetValue(description, CFSTR(kAudioAggregateDeviceUIDKey),
+                       aggregate_uid_cf);
+  CFDictionarySetValue(description, CFSTR(kAudioAggregateDeviceNameKey),
+                       CFSTR("WebRTC AudioEngine I/O"));
+  CFDictionarySetValue(description, CFSTR(kAudioAggregateDeviceSubDeviceListKey),
+                       sub_device_list);
+  CFDictionarySetValue(description,
+                       CFSTR(kAudioAggregateDeviceMasterSubDeviceKey),
+                       output_uid_cf);
+  CFDictionarySetValue(description, CFSTR(kAudioAggregateDeviceIsPrivateKey),
+                       is_private_cf);
+
+  AudioObjectID aggregate_device_id = kAudioObjectUnknown;
+  OSStatus status =
+      AudioHardwareCreateAggregateDevice(description, &aggregate_device_id);
+
+  CFRelease(description);
+  CFRelease(is_private_cf);
+  CFRelease(sub_device_list);
+  CFRelease(input_sub_device);
+  CFRelease(drift_compensation_cf);
+  CFRelease(output_sub_device);
+  CFRelease(input_uid_cf);
+  CFRelease(output_uid_cf);
+  CFRelease(aggregate_uid_cf);
+
+  if (status != noErr || aggregate_device_id == kAudioObjectUnknown) {
+    RTC_LOG(LS_ERROR) << "AudioHardwareCreateAggregateDevice failed: "
+                      << status;
+    return std::nullopt;
+  }
+
+  // The HAL composes the sub devices asynchronously after creation. Wait
+  // until both directions publish streams, otherwise an I/O unit configured
+  // with the aggregate reads zero channels for the side that is not yet
+  // attached.
+  constexpr int kMaxReadinessAttempts = 100;
+  constexpr int64_t kReadinessPollIntervalMs = 10;
+  bool ready = false;
+  for (int attempt = 0; attempt < kMaxReadinessAttempts; ++attempt) {
+    if (GetNumStreams(aggregate_device_id, true) > 0 &&
+        GetNumStreams(aggregate_device_id, false) > 0) {
+      ready = true;
+      break;
+    }
+    webrtc::Thread::SleepMs(kReadinessPollIntervalMs);
+  }
+  if (!ready) {
+    RTC_LOG(LS_ERROR) << "Aggregate device " << aggregate_device_id
+                      << " did not publish streams in time";
+    AudioHardwareDestroyAggregateDevice(aggregate_device_id);
+    return std::nullopt;
+  }
+
+  return aggregate_device_id;
+}
+
+bool DestroyAggregateDevice(AudioObjectID aggregate_device_id) {
+  OSStatus status = AudioHardwareDestroyAggregateDevice(aggregate_device_id);
+  if (status != noErr) {
+    RTC_LOG(LS_WARNING) << "AudioHardwareDestroyAggregateDevice failed: "
+                        << status;
+    return false;
+  }
+  return true;
 }
 
 }  // namespace mac_audio_utils
