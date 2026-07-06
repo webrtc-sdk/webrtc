@@ -1754,6 +1754,10 @@ void RTCStatsCollector::ProduceRTPStreamStats_n(
   Thread::ScopedDisallowBlockingCalls no_blocking_calls;
 
   for (const RtpTransceiverStatsInfo& stats : transceiver_stats_infos) {
+    if (stats.current_direction == RtpTransceiverDirection::kStopped) {
+      continue;
+    }
+
     if (stats.media_type == MediaType::AUDIO) {
       ProduceAudioRTPStreamStats_n(timestamp, stats, report);
     } else if (stats.media_type == MediaType::VIDEO) {
