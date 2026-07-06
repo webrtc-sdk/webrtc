@@ -964,6 +964,31 @@ TEST_F(RTCStatsCollectorTest, ToJsonProducesParseableJson) {
   EXPECT_EQ(report->size(), json_value.size());
 }
 
+TEST_F(RTCStatsCollectorTest, ProduceRTPStreamStatsWithStoppedTransceiver) {
+  const char kTransportName[] = "transport";
+  const char kMid[] = "VideoMid";
+
+  VideoMediaInfo video_media_info;
+  video_media_info.senders.emplace_back();
+  video_media_info.senders[0].add_ssrc(1);
+
+  pc_->AddVideoChannel(kMid, kTransportName, video_media_info);
+
+  // Get the transceiver and set it to stopped.
+  std::vector<scoped_refptr<RtpTransceiverProxyWithInternal<RtpTransceiver>>>
+      transceivers = pc_->GetTransceiversInternal();
+  ASSERT_FALSE(transceivers.empty());
+  scoped_refptr<RtpTransceiverProxyWithInternal<RtpTransceiver>> transceiver =
+      transceivers[0];
+  ASSERT_TRUE(transceiver);
+  transceiver->internal()->set_current_direction(
+      RtpTransceiverDirection::kStopped);
+
+  // This should not crash.
+  scoped_refptr<const RTCStatsReport> report = stats_->GetStatsReport();
+  EXPECT_TRUE(report);
+}
+
 TEST_F(RTCStatsCollectorTest, CollectRTCCertificateStatsSingle) {
   const char kTransportName[] = "transport";
 
