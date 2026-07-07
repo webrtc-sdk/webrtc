@@ -16,7 +16,7 @@ TEST(FrameCryptor, KeyProvider) {
   RTC_LOG(LS_INFO) << "DataPacketCrypt shared_key default: "
                    << key_options.shared_key;
   EXPECT_EQ(key_options.shared_key, false);
-  EXPECT_EQ(key_options.key_ring_size, DEFAULT_KEYRING_SIZE);
+  EXPECT_EQ(key_options.key_ring_size, static_cast<int>(DEFAULT_KEYRING_SIZE));
 
   key_options.ratchet_salt =
       std::vector<uint8_t>({0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07});
