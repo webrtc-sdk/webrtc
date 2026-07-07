@@ -1,10 +1,11 @@
 #include "api/crypto/frame_crypto_transformer.h"
 
+#include <chrono>
 #include <memory>
 #include <string>
+#include <thread>
 
 #include "rtc_base/logging.h"
-#include "system_wrappers/include/sleep.h"
 #include "test/gmock.h"
 #include "test/gtest.h"
 
@@ -194,13 +195,13 @@ TEST(DataPacketCryptor, IVGeneration) {
   auto data_packet_cryptor = webrtc::make_ref_counted<DataPacketCryptor>(
       FrameCryptorTransformer::Algorithm::kAesGcm, key_provider);
   EXPECT_NE(data_packet_cryptor, nullptr);
-  SleepMs(200);
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));
   auto encrypted_data = data_packet_cryptor->Encrypt(
       participant_id, 0,
       std::vector<uint8_t>(
           {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}));
   EXPECT_TRUE(encrypted_data.ok());
-  SleepMs(200);  // ensure different timestamp for IV generation
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));  // ensure different timestamp for IV generation
   auto encrypted_data2 = data_packet_cryptor->Encrypt(
       participant_id, 0,
       std::vector<uint8_t>(
@@ -225,13 +226,13 @@ TEST(KeyProvider, KeyDerivationAlgorithm) {
   auto data_packet_cryptor = webrtc::make_ref_counted<DataPacketCryptor>(
       FrameCryptorTransformer::Algorithm::kAesGcm, key_provider);
   EXPECT_NE(data_packet_cryptor, nullptr);
-  SleepMs(200);
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));
   auto encrypted_data = data_packet_cryptor->Encrypt(
       participant_id, 0,
       std::vector<uint8_t>(
           {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}));
   EXPECT_TRUE(encrypted_data.ok());
-  SleepMs(200);  // ensure different timestamp for IV generation
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));  // ensure different timestamp for IV generation
   auto encrypted_data2 = data_packet_cryptor->Encrypt(
       participant_id, 0,
       std::vector<uint8_t>(

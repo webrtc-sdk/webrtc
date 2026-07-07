@@ -57,8 +57,15 @@ if (rtc_include_internal_audio_device) {
       "create_audio_device_module.cc",
       "create_audio_device_module.h",
     ]
+    if (is_mac || is_ios) {
+      sources += [
+        "create_audio_engine_device_module.h",
+        "create_audio_engine_device_module.mm",
+      ]
+    }
     deps = [
       ":audio_device",
+      "..:make_ref_counted",
       "..:scoped_refptr",
       "../../modules/audio_device:audio_device_impl",
       "../environment",

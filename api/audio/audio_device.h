@@ -47,6 +47,9 @@ class AudioDeviceModule : public RefCountInterface {
     kAndroidAAudioAudio,
     kAndroidJavaInputAndAAudioOutputAudio,
     kDummyAudio,
+#if defined(WEBRTC_IOS) || defined(WEBRTC_MAC)
+    kAppleAudioEngine,
+#endif
   };
 
   enum WindowsDeviceType { kDefaultCommunicationDevice = -1, kDefaultDevice = -2 };
