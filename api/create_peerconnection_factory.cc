@@ -13,6 +13,7 @@
 #include <memory>
 #include <utility>
 
+#include "audio/audio_transport_impl.h"
 #include "api/audio/audio_device.h"
 #include "api/audio/audio_mixer.h"
 #include "api/audio/audio_processing.h"
@@ -23,6 +24,7 @@
 #include "api/enable_media.h"
 #include "api/environment/environment_factory.h"
 #include "api/field_trials_view.h"
+#include "api/make_ref_counted.h"
 #include "api/peer_connection_interface.h"
 #include "api/rtc_event_log/rtc_event_log_factory.h"
 #include "api/scoped_refptr.h"
@@ -72,6 +74,8 @@ scoped_refptr<PeerConnectionFactoryInterface> CreatePeerConnectionFactory(
   }
   if(audio_transport_factory != nullptr) {
     dependencies.audio_transport_factory = std::move(audio_transport_factory);
+  } else {
+    dependencies.audio_transport_factory = make_ref_counted<DefaultAudioTransportFactory>();
   }
   dependencies.audio_mixer = std::move(audio_mixer);
   dependencies.video_encoder_factory = std::move(video_encoder_factory);

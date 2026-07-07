@@ -124,6 +124,22 @@ class AudioTransportFactory : public RefCountInterface {
       AsyncAudioProcessing::Factory* async_audio_processing_factory) = 0;
 };
 
+class DefaultAudioTransportFactory : public AudioTransportFactory {
+public:
+  DefaultAudioTransportFactory() = default;
+  ~DefaultAudioTransportFactory() = default;
+
+  std::unique_ptr<AudioTransport> Create(
+      AudioMixer* mixer,
+      AudioProcessing* audio_processing,
+      AsyncAudioProcessing::Factory* async_audio_processing_factory) override {
+        return std::make_unique<AudioTransportImpl>(
+                    mixer,
+                    audio_processing,
+                    async_audio_processing_factory);
+      }
+};
+
 }  // namespace webrtc
 
 #endif  // AUDIO_AUDIO_TRANSPORT_IMPL_H_

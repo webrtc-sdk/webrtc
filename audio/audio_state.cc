@@ -38,12 +38,7 @@ namespace internal {
 AudioState::AudioState(const AudioState::Config& config)
     : config_(config),
       audio_transport_(
-          config_.audio_transport_factory
-              ? config_.audio_transport_factory->Create(
-                    config_.audio_mixer.get(),
-                    config_.audio_processing.get(),
-                    config_.async_audio_processing_factory.get())
-              : std::make_unique<AudioTransportImpl>(
+        config_.audio_transport_factory->Create(
                     config_.audio_mixer.get(),
                     config_.audio_processing.get(),
                     config_.async_audio_processing_factory.get())) {

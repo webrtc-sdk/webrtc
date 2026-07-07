@@ -248,6 +248,16 @@ class RTC_EXPORT AudioSourceInterface : public MediaSourceInterface {
     virtual ~AudioObserver() {}
   };
 
+  enum SourceType { kMicrophone, kCustom };
+
+  // Captures a frame of audio data from a custom audio source.
+  virtual void CaptureFrame(const void* audio_data, int bits_per_sample,
+                            int sample_rate, size_t number_of_channels,
+                            size_t number_of_frames) {}
+
+  // Returns the type of this audio source.
+  virtual SourceType GetSourceType() const { return kMicrophone; }
+
   // TODO(deadbeef): Makes all the interfaces pure virtual after they're
   // implemented in chromium.
 
