@@ -128,6 +128,11 @@ class WebRtcAudioRecord {
    */
   private class AudioRecordThread extends Thread {
     private volatile boolean keepAlive = true;
+    // Handoff slot for an AudioRecord whose stop path gave up waiting for
+    // this thread (see stopRecordingIfNeededImpl). Exactly one side wins the
+    // getAndSet and performs the release.
+    private final AtomicReference<AudioRecord> orphanedRecord = new AtomicReference<>();
+    private final AtomicBoolean cleanupDone = new AtomicBoolean(false);
 
     public AudioRecordThread(String name) {
       super(name);
@@ -255,14 +260,40 @@ class WebRtcAudioRecord {
       } catch (IllegalStateException e) {
         Logging.e(TAG, "AudioRecord.stop failed: " + e.getMessage());
       }
+      cleanupDone.set(true);
+      AudioRecord orphan = orphanedRecord.getAndSet(null);
+      if (orphan != null) {
+        // The stop path timed out joining this thread and transferred release
+        // responsibility here: releasing while this thread might still have
+        // been inside AudioRecord.read() would corrupt the platform client
+        // proxy state and abort the process.
+        Logging.w(TAG, "Releasing orphaned AudioRecord after delayed thread exit");
+        try {
+          orphan.stop();
+        } catch (IllegalStateException e) {
+          // Already stopped by the stop path.
+        }
+        orphan.release();
+      }
       doAudioRecordStateCallback(AUDIO_RECORD_STOP);
     }
 
-    // Stops the inner thread loop and also calls AudioRecord.stop().
-    // Does not block the calling thread.
+    // Stops the inner thread loop. Does not block the calling thread.
     public void stopThread() {
       Logging.d(TAG, "stopThread");
       keepAlive = false;
+    }
+
+    // Called by the stop path when its join timed out. Returns null when this
+    // thread will release the record on exit, or the record itself when this
+    // thread has already finished cleanup and the caller must release it.
+    // Exactly one side observes the record, in every interleaving.
+    public @Nullable AudioRecord transferRecordOwnership(AudioRecord record) {
+      orphanedRecord.set(record);
+      if (cleanupDone.get()) {
+        return orphanedRecord.getAndSet(null);
+      }
+      return null;
     }
   }
 
@@ -734,6 +765,19 @@ class WebRtcAudioRecord {
     if (!ThreadUtils.joinUninterruptibly(stoppingThread, AUDIO_RECORD_THREAD_JOIN_TIMEOUT_MS)) {
       Logging.e(TAG, "Join of AudioRecordJavaThread timed out");
       WebRtcAudioUtils.logAudioState(TAG, context, audioManager);
+      // The thread may still be inside AudioRecord.read(). Releasing the
+      // record here corrupts the platform AudioRecord client proxy and
+      // aborts the process (releaseBuffer: mUnreleased out of range), so
+      // hand release responsibility to the thread instead.
+      if (stoppingRecord != null) {
+        AudioRecord unclaimed = stoppingThread.transferRecordOwnership(stoppingRecord);
+        if (unclaimed != null) {
+          // The thread finished its cleanup during the handoff; no reader can
+          // be inside read() anymore, so releasing here is safe.
+          unclaimed.release();
+        }
+      }
+      return true;
     }
 
     if (stoppingRecord != null) {
