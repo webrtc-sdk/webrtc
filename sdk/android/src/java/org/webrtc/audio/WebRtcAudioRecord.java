@@ -128,6 +128,12 @@ class WebRtcAudioRecord {
    */
   private class AudioRecordThread extends Thread {
     private volatile boolean keepAlive = true;
+    // The AudioRecord this thread most recently read from. Written only by
+    // this thread while running, read by it again during exit cleanup. The
+    // shared WebRtcAudioRecord.this.audioRecord field may already point at a
+    // newer record by the time this thread exits, so exit cleanup must not
+    // touch the shared field.
+    private @Nullable AudioRecord activeRecord;
     // Handoff slot for an AudioRecord whose stop path gave up waiting for
     // this thread (see stopRecordingIfNeededImpl). Exactly one side wins the
     // getAndSet and performs the release.
@@ -142,8 +148,14 @@ class WebRtcAudioRecord {
     public void run() {
       Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
       Logging.d(TAG, "AudioRecordThread" + WebRtcAudioUtils.getThreadInfo());
-      if (audioRecord != null) {
-        assertTrue(audioRecord.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING);
+      // Snapshot and assert under the lock so a concurrent stop (which sets
+      // keepAlive=false, detaches the record, and stops it under the same
+      // lock) cannot interleave between the null check and the state read.
+      synchronized (audioRecordStateLock) {
+        AudioRecord startupRecord = WebRtcAudioRecord.this.audioRecord;
+        if (keepAlive && startupRecord != null) {
+          assertTrue(startupRecord.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING);
+        }
       }
 
       // Audio recording has started and the client is informed about it.
@@ -162,31 +174,67 @@ class WebRtcAudioRecord {
           audioRecord = WebRtcAudioRecord.this.audioRecord;
           shouldReportData = nativeCalledInitRecording.get();
         }
-        
-        if (audioRecord == null && useAudioRecord) {
-          boolean result = initAudioRecord();
+        // Re-check after the snapshot: a stop may have completed while this
+        // thread waited at the monitor, and a subsequent start may already
+        // have installed a NEW record into the shared field. The stop path
+        // publishes keepAlive=false before detaching, under the same lock, so
+        // a snapshot that can observe a successor record always observes
+        // keepAlive == false. Exit without touching the successor.
+        if (!keepAlive) {
+          break;
+        }
+
+        // Do not re-create the AudioRecord once stopThread() has been called
+        // (re-checked under the lock inside the branch): a dying thread that
+        // re-inits would leave behind a record that no stop path will ever
+        // release.
+        if (audioRecord == null && useAudioRecord && keepAlive) {
+          boolean result;
+          synchronized (audioRecordStateLock) {
+            // A stop may have completed while this thread was blocked on the
+            // monitor; the keepAlive read above is stale in that case.
+            result = keepAlive && initAudioRecord();
+          }
 
           if (!result) {
-            // Failed audio record init, don't try again.
-            useAudioRecord = false;
-          } else {
-            synchronized (audioRecordStateLock) {
-              audioRecord = WebRtcAudioRecord.this.audioRecord;
-            }
-
-            assertTrue(audioRecord != null);
-            try {
-              audioRecord.startRecording();
-            } catch (IllegalStateException e) {
-              reportWebRtcAudioRecordStartError(AudioRecordStartErrorCode.AUDIO_RECORD_START_EXCEPTION,
-                  "AudioRecord.startRecording failed: " + e.getMessage());
-              audioRecord = null;
+            if (keepAlive) {
+              // Failed audio record init, don't try again.
               useAudioRecord = false;
             }
-            if (useAudioRecord && audioRecord.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING) {
-              reportWebRtcAudioRecordStartError(AudioRecordStartErrorCode.AUDIO_RECORD_START_STATE_MISMATCH,
-                  "AudioRecord.startRecording failed - incorrect state: "
-                      + audioRecord.getRecordingState());
+          } else {
+            boolean startFailed = false;
+            boolean stateMismatch = false;
+            synchronized (audioRecordStateLock) {
+              // Re-snapshot, start, and verify in one critical section, gated
+              // on keepAlive: a stop that completed in between must not let a
+              // dying reader adopt (and later stop) a successor record, and a
+              // record stopped by shutdown is not a start failure.
+              audioRecord = keepAlive ? WebRtcAudioRecord.this.audioRecord : null;
+              if (audioRecord != null) {
+                try {
+                  audioRecord.startRecording();
+                } catch (IllegalStateException e) {
+                  startFailed = true;
+                  reportWebRtcAudioRecordStartError(AudioRecordStartErrorCode.AUDIO_RECORD_START_EXCEPTION,
+                      "AudioRecord.startRecording failed: " + e.getMessage());
+                }
+                if (!startFailed
+                    && audioRecord.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING) {
+                  stateMismatch = true;
+                  reportWebRtcAudioRecordStartError(AudioRecordStartErrorCode.AUDIO_RECORD_START_STATE_MISMATCH,
+                      "AudioRecord.startRecording failed - incorrect state: "
+                          + audioRecord.getRecordingState());
+                }
+              }
+            }
+            if (audioRecord == null) {
+              // A concurrent stop either detached the fresh record before this
+              // thread could start it or finished while this thread waited at
+              // the monitor; that stop owns the record's release. Exit via the
+              // loop condition.
+              continue;
+            }
+            if (startFailed || stateMismatch) {
               audioRecord = null;
               useAudioRecord = false;
             }
@@ -194,10 +242,19 @@ class WebRtcAudioRecord {
         }
 
         if (audioRecord != null && !useAudioRecord) {
+          synchronized (audioRecordStateLock) {
+            // Release through the shared path only while this record is still
+            // the shared one; a concurrent stop may have detached it already
+            // and taken over its release.
+            if (WebRtcAudioRecord.this.audioRecord == audioRecord) {
+              releaseAudioResources();
+            }
+          }
           audioRecord = null;
-          releaseAudioResources();
         }
         
+        activeRecord = audioRecord;
+
         int bytesRead = 0;
         if (audioRecord != null) {
           bytesRead = audioRecord.read(byteBuffer, byteBuffer.capacity());
@@ -216,6 +273,11 @@ class WebRtcAudioRecord {
               }
             }
           } else {
+            if (!keepAlive) {
+              // The stop path stopped this record to unblock the read; exit
+              // through the loop condition without reporting an error.
+              continue;
+            }
             String errorMessage = "AudioRecord.read failed: " + bytesRead;
             Logging.e(TAG, errorMessage);
             
@@ -253,9 +315,12 @@ class WebRtcAudioRecord {
         }
       }
 
+      // Stop only the record this thread was reading. The shared field may
+      // already point at a newer AudioRecord created by a subsequent start;
+      // stopping that one would corrupt the new reader's in-flight read.
       try {
-        if (audioRecord != null) {
-          audioRecord.stop();
+        if (activeRecord != null) {
+          activeRecord.stop();
         }
       } catch (IllegalStateException e) {
         Logging.e(TAG, "AudioRecord.stop failed: " + e.getMessage());
