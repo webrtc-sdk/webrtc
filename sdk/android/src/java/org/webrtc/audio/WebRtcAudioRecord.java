@@ -663,11 +663,11 @@ class WebRtcAudioRecord {
     Logging.d(TAG, "stopRecordingIfNeeded");
     synchronized(audioRecordStateLock) {
       clientCalledStartRecording.set(false);
-      if(audioThread != null) {
-        return stopRecordingIfNeededImpl();
+      if (audioThread == null) {
+        return true;
       }
     }
-    return true;
+    return stopRecordingIfNeededImpl();
   }
 
   @CalledByNative
@@ -676,19 +676,25 @@ class WebRtcAudioRecord {
     synchronized(audioRecordStateLock) {
       nativeCalledStartRecording.set(false);
       nativeCalledInitRecording.set(false);
-      return stopRecordingIfNeededImpl();
     }
+    return stopRecordingIfNeededImpl();
   }
 
   private boolean stopRecordingIfNeededImpl() {
+    final AudioRecordThread stoppingThread;
+    final @Nullable AudioRecord stoppingRecord;
     synchronized(audioRecordStateLock) {
       if(clientCalledStartRecording.get() || nativeCalledStartRecording.get()) {
         // Someone has still requested recording, ignore stop request.
         return true;
       }
 
+      if (audioThread == null) {
+        // Already stopped by a concurrent caller.
+        return true;
+      }
+
       Logging.d(TAG, "stopping recording");
-      assertTrue(audioThread != null);
       if (future != null) {
         if (!future.isDone()) {
           // Might be needed if the client calls startRecording(), stopRecording() back-to-back.
@@ -696,15 +702,44 @@ class WebRtcAudioRecord {
         }
         future = null;
       }
-      audioThread.stopThread();
-      if (!ThreadUtils.joinUninterruptibly(audioThread, AUDIO_RECORD_THREAD_JOIN_TIMEOUT_MS)) {
-        Logging.e(TAG, "Join of AudioRecordJavaThread timed out");
-        WebRtcAudioUtils.logAudioState(TAG, context, audioManager);
-      }
+      stoppingThread = audioThread;
       audioThread = null;
-      releaseAudioResources();
-      return true;
+      stoppingThread.stopThread();
+
+      // Detach the AudioRecord from the shared state before waiting for the
+      // thread, so a subsequent init/start builds fresh state instead of
+      // touching a record the stopping thread may still be reading.
+      stoppingRecord = audioRecord;
+      audioRecord = null;
+      effects.release();
+      audioSourceMatchesRecordingSessionRef.set(null);
+
+      // Stop the record before joining the thread. A blocking
+      // AudioRecord.read() only returns promptly once the record leaves the
+      // recording state, so without this the join below times out whenever
+      // the reader is stuck inside read().
+      if (stoppingRecord != null) {
+        try {
+          stoppingRecord.stop();
+        } catch (IllegalStateException e) {
+          Logging.e(TAG, "AudioRecord.stop failed: " + e.getMessage());
+        }
+      }
     }
+
+    // Join outside audioRecordStateLock. The audio thread acquires that lock
+    // at the top of every loop iteration, so joining while holding it turns
+    // any stop that races a loop boundary into a guaranteed join timeout:
+    // the thread waits for the lock while the join waits for the thread.
+    if (!ThreadUtils.joinUninterruptibly(stoppingThread, AUDIO_RECORD_THREAD_JOIN_TIMEOUT_MS)) {
+      Logging.e(TAG, "Join of AudioRecordJavaThread timed out");
+      WebRtcAudioUtils.logAudioState(TAG, context, audioManager);
+    }
+
+    if (stoppingRecord != null) {
+      stoppingRecord.release();
+    }
+    return true;
   }
 
   @TargetApi(Build.VERSION_CODES.M)
