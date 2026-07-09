@@ -2284,9 +2284,10 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     // At this point mic permissions / session should be configured for recording.
     if (state.DidEnableInput()) {
       LOGI() << "Checking microphone permission...";
-      // Attempt to acquire mic permissions at this point to return an erorr early.
-      bool isAuthorized = EnsureMicrophonePermissionSync();
-      LOGI() << "AudioEngine pre-enable check, device permission: "
+      // Passively check the current authorization status to fail early without blocking.
+      // Requesting permission is the SDK's responsibility (gated to the foreground).
+      bool isAuthorized = IsMicrophonePermissionAuthorized();
+      LOGI() << "AudioEngine pre-enable check, mic permission authorized: "
              << (isAuthorized ? "true" : "false");
       if (!isAuthorized) {
         return rollback(kAudioEngineErrorInsufficientDevicePermission);
@@ -3185,36 +3186,9 @@ void AudioEngineDevice::UpdateAllDeviceIDs() {
 // ----------------------------------------------------------------------------------------------------
 // Private - Microphone permission
 
-bool AudioEngineDevice::IsMicrophonePermissionGranted() {
+bool AudioEngineDevice::IsMicrophonePermissionAuthorized() {
   AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio];
   return status == AVAuthorizationStatusAuthorized;
-}
-
-bool AudioEngineDevice::EnsureMicrophonePermissionSync() {
-  AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio];
-
-  if (status == AVAuthorizationStatusAuthorized) {
-    return true;
-  }
-
-  if (status == AVAuthorizationStatusNotDetermined) {
-    // Request permission synchronously - this will block WebRTC's worker thread
-    // but this is acceptable since instantiating AVAudioInputNode would block anyway
-    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
-    __block BOOL granted = NO;
-
-    [AVCaptureDevice requestAccessForMediaType:AVMediaTypeAudio
-                             completionHandler:^(BOOL granted_inner) {
-                               granted = granted_inner;
-                               dispatch_semaphore_signal(semaphore);
-                             }];
-
-    dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
-    return granted;
-  }
-
-  // Status is denied or restricted
-  return false;
 }
 
 // ----------------------------------------------------------------------------------------------------
