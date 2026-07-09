@@ -55,6 +55,7 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
     private AudioAttributes audioAttributes;
     private boolean useLowLatency;
     private boolean enableVolumeLogger;
+    private boolean stopRecordingOnMute = true;
 
     private Builder(Context context) {
       this.context = context;
@@ -242,6 +243,17 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
     }
 
     /**
+     * Control whether recording is stopped while all audio tracks are muted. The default is
+     * enabled: muting releases the AudioRecord so the OS mic-in-use indicator turns off. When
+     * disabled, capture keeps running while muted and captured audio is replaced with silence,
+     * making unmute instant at the cost of the mic indicator staying on.
+     */
+    public Builder setStopRecordingOnMute(boolean stopRecordingOnMute) {
+      this.stopRecordingOnMute = stopRecordingOnMute;
+      return this;
+    }
+
+    /**
      * Construct an AudioDeviceModule based on the supplied arguments. The caller takes ownership
      * and is responsible for calling release().
      */
@@ -281,7 +293,8 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
           new WebRtcAudioTrack(context, audioManager, audioAttributes, audioTrackErrorCallback,
               audioTrackStateCallback, playbackSamplesReadyCallback, useLowLatency, enableVolumeLogger);
       return new JavaAudioDeviceModule(context, audioManager, audioInput, audioOutput,
-          inputSampleRate, outputSampleRate, useStereoInput, useStereoOutput);
+          inputSampleRate, outputSampleRate, useStereoInput, useStereoOutput,
+          stopRecordingOnMute);
     }
   }
 
@@ -440,13 +453,15 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
   private final int outputSampleRate;
   private final boolean useStereoInput;
   private final boolean useStereoOutput;
+  private final boolean stopRecordingOnMute;
 
   private final Object nativeLock = new Object();
   private long nativeAudioDeviceModule;
 
   private JavaAudioDeviceModule(Context context, AudioManager audioManager,
       WebRtcAudioRecord audioInput, WebRtcAudioTrack audioOutput, int inputSampleRate,
-      int outputSampleRate, boolean useStereoInput, boolean useStereoOutput) {
+      int outputSampleRate, boolean useStereoInput, boolean useStereoOutput,
+      boolean stopRecordingOnMute) {
     this.context = context;
     this.audioManager = audioManager;
     this.audioInput = audioInput;
@@ -455,6 +470,7 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
     this.outputSampleRate = outputSampleRate;
     this.useStereoInput = useStereoInput;
     this.useStereoOutput = useStereoOutput;
+    this.stopRecordingOnMute = stopRecordingOnMute;
   }
 
   @Override
@@ -463,7 +479,7 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
       if (nativeAudioDeviceModule == 0) {
         nativeAudioDeviceModule = nativeCreateAudioDeviceModule(context, audioManager, audioInput,
             audioOutput, webrtcEnvRef, inputSampleRate, outputSampleRate, useStereoInput,
-            useStereoOutput);
+            useStereoOutput, stopRecordingOnMute);
       }
       return nativeAudioDeviceModule;
     }
@@ -552,5 +568,5 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
   private static native long nativeCreateAudioDeviceModule(Context context,
       AudioManager audioManager, WebRtcAudioRecord audioInput, WebRtcAudioTrack audioOutput,
       long webrtcEnvRef, int inputSampleRate, int outputSampleRate, boolean useStereoInput,
-      boolean useStereoOutput);
+      boolean useStereoOutput, boolean stopRecordingOnMute);
 }

@@ -804,6 +804,7 @@ class WebRtcAudioRecord {
 
   // Sets all recorded samples to zero if `mute` is true, i.e., ensures that
   // the microphone is muted.
+  @CalledByNative
   public void setMicrophoneMute(boolean mute) {
     Logging.w(TAG, "setMicrophoneMute(" + mute + ")");
     microphoneMute = mute;

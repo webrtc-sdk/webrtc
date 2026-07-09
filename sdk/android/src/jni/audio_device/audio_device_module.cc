@@ -68,7 +68,8 @@ class AndroidAudioDeviceModule : public AudioDeviceModule {
                            bool is_stereo_record_supported,
                            uint16_t playout_delay_ms,
                            std::unique_ptr<AudioInput> audio_input,
-                           std::unique_ptr<AudioOutput> audio_output)
+                           std::unique_ptr<AudioOutput> audio_output,
+                           bool is_stop_on_mute_mode_enabled)
       : env_(env),
         audio_layer_(audio_layer),
         is_stereo_playout_supported_(is_stereo_playout_supported),
@@ -76,6 +77,7 @@ class AndroidAudioDeviceModule : public AudioDeviceModule {
         playout_delay_ms_(playout_delay_ms),
         input_(std::move(audio_input)),
         output_(std::move(audio_output)),
+        is_stop_on_mute_mode_enabled_(is_stop_on_mute_mode_enabled),
         initialized_(false) {
     RTC_CHECK(input_);
     RTC_CHECK(output_);
@@ -441,13 +443,18 @@ class AndroidAudioDeviceModule : public AudioDeviceModule {
   }
 
   int32_t SetMicrophoneMute(bool enable) override {
-    RTC_DLOG(LS_INFO) << __FUNCTION__ << "(" << enable << ")" << " - Not implemented";
-    return -1;
+    RTC_DLOG(LS_INFO) << __FUNCTION__ << "(" << enable << ")";
+    if (input_->SetMicrophoneMute(enable) != 0) {
+      return -1;
+    }
+    microphone_mute_ = enable;
+    return 0;
   }
 
   int32_t MicrophoneMute(bool* enabled) const override {
-    RTC_DLOG(LS_INFO) << __FUNCTION__ << " - Not implemented";
-    return -1;
+    RTC_DLOG(LS_INFO) << __FUNCTION__;
+    *enabled = microphone_mute_;
+    return 0;
   }
 
   int32_t StereoPlayoutIsAvailable(bool* available) const override {
@@ -607,6 +614,10 @@ class AndroidAudioDeviceModule : public AudioDeviceModule {
     return output_->GetStats();
   }
 
+  bool IsStopOnMuteModeEnabled() const override {
+    return is_stop_on_mute_mode_enabled_;
+  }
+
   int32_t AttachAudioBuffer() {
     RTC_DLOG(LS_INFO) << __FUNCTION__;
     output_->AttachAudioBuffer(audio_device_buffer_.get());
@@ -624,9 +635,11 @@ class AndroidAudioDeviceModule : public AudioDeviceModule {
   const uint16_t playout_delay_ms_;
   const std::unique_ptr<AudioInput> input_;
   const std::unique_ptr<AudioOutput> output_;
+  const bool is_stop_on_mute_mode_enabled_;
   std::unique_ptr<AudioDeviceBuffer> audio_device_buffer_;
 
   bool initialized_;
+  bool microphone_mute_ = false;
 };
 
 }  // namespace
@@ -682,11 +695,13 @@ scoped_refptr<AudioDeviceModule> CreateAudioDeviceModuleFromInputAndOutput(
     bool is_stereo_record_supported,
     uint16_t playout_delay_ms,
     std::unique_ptr<AudioInput> audio_input,
-    std::unique_ptr<AudioOutput> audio_output) {
+    std::unique_ptr<AudioOutput> audio_output,
+    bool is_stop_on_mute_mode_enabled) {
   RTC_DLOG(LS_INFO) << __FUNCTION__;
   return make_ref_counted<AndroidAudioDeviceModule>(
       env, audio_layer, is_stereo_playout_supported, is_stereo_record_supported,
-      playout_delay_ms, std::move(audio_input), std::move(audio_output));
+      playout_delay_ms, std::move(audio_input), std::move(audio_output),
+      is_stop_on_mute_mode_enabled);
 }
 
 }  // namespace jni
