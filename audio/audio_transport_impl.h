@@ -85,10 +85,14 @@ class AudioTransportImpl : public AudioTransport {
                       int64_t* elapsed_time_ms,
                       int64_t* ntp_time_ms) override;
 
-  void UpdateAudioSenders(std::vector<AudioSender*> senders,
-                          int send_sample_rate_hz,
+  void UpdateAudioSettings(int send_sample_rate_hz,
                           size_t send_num_channels) override;
+
   void SetStereoChannelSwapping(bool enable) override;
+
+  void AddAudioSender(AudioSender* sender) override;
+
+  void RemoveAudioSender(AudioSender* sender) override;
 
  private:
   void SendProcessedData(std::unique_ptr<AudioFrame> audio_frame);

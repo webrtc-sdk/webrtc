@@ -283,13 +283,24 @@ void AudioTransportImpl::PullRenderData(int bits_per_sample,
                                     number_of_frames, number_of_channels));
 }
 
-void AudioTransportImpl::UpdateAudioSenders(std::vector<AudioSender*> senders,
-                                            int send_sample_rate_hz,
+void AudioTransportImpl::UpdateAudioSettings(int send_sample_rate_hz,
                                             size_t send_num_channels) {
   MutexLock lock(&capture_lock_);
-  audio_senders_ = std::move(senders);
   send_sample_rate_hz_ = send_sample_rate_hz;
   send_num_channels_ = send_num_channels;
+}
+
+void AudioTransportImpl::AddAudioSender(AudioSender* sender)  {
+  MutexLock lock(&capture_lock_);
+  audio_senders_.push_back(sender);
+}
+
+void AudioTransportImpl::RemoveAudioSender(AudioSender* sender) {
+  MutexLock lock(&capture_lock_);
+  auto it = std::remove(audio_senders_.begin(), audio_senders_.end(), sender);
+  if (it != audio_senders_.end()) {
+    audio_senders_.erase(it, audio_senders_.end());
+  }
 }
 
 void AudioTransportImpl::SetStereoChannelSwapping(bool enable) {

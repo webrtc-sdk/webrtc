@@ -296,7 +296,7 @@ TEST(WebRtcVoiceEngineTestStubLibrary, StartupShutdown) {
       webrtc::WebRtcVoiceEngine engine(
           env, adm, webrtc::MockAudioEncoderFactory::CreateUnusedFactory(),
           webrtc::MockAudioDecoderFactory::CreateUnusedFactory(), nullptr, apm,
-          nullptr);
+          nullptr, nullptr);
       AutoInitTerminate init_term(engine);
     }
   }
@@ -1029,7 +1029,7 @@ class WebRtcVoiceEngineTestFake : public ::testing::TestWithParam<bool> {
     auto encoder_factory = webrtc::CreateBuiltinAudioEncoderFactory();
     auto decoder_factory = webrtc::CreateBuiltinAudioDecoderFactory();
     engine_ = std::make_unique<webrtc::WebRtcVoiceEngine>(
-        env_, adm_, encoder_factory, decoder_factory, nullptr, apm_, nullptr);
+        env_, adm_, encoder_factory, decoder_factory, nullptr, apm_, nullptr, nullptr);
     engine_->Init();
     send_parameters_.codecs.push_back(kPcmuCodec);
     recv_parameters_.codecs.push_back(kPcmuCodec);
@@ -4604,7 +4604,7 @@ TEST(WebRtcVoiceEngineTest, StartupShutdown) {
     webrtc::WebRtcVoiceEngine engine(
         env, adm, webrtc::MockAudioEncoderFactory::CreateUnusedFactory(),
         webrtc::MockAudioDecoderFactory::CreateUnusedFactory(), nullptr, apm,
-        nullptr);
+        nullptr, nullptr);
     AutoInitTerminate init_term(engine);
     std::unique_ptr<Call> call = Call::Create(CallConfig(env));
     std::unique_ptr<webrtc::VoiceMediaSendChannelInterface> send_channel =
@@ -4633,7 +4633,7 @@ TEST(WebRtcVoiceEngineTest, StartupShutdownWithExternalADM) {
       webrtc::WebRtcVoiceEngine engine(
           env, adm, webrtc::MockAudioEncoderFactory::CreateUnusedFactory(),
           webrtc::MockAudioDecoderFactory::CreateUnusedFactory(), nullptr, apm,
-          nullptr);
+          nullptr, nullptr);
       AutoInitTerminate init_term(engine);
       std::unique_ptr<Call> call = Call::Create(CallConfig(env));
       std::unique_ptr<webrtc::VoiceMediaSendChannelInterface> send_channel =
@@ -4666,7 +4666,7 @@ TEST(WebRtcVoiceEngineTest, HasCorrectPayloadTypeMapping) {
     webrtc::WebRtcVoiceEngine engine(
         env, adm, webrtc::MockAudioEncoderFactory::CreateUnusedFactory(),
         webrtc::MockAudioDecoderFactory::CreateUnusedFactory(), nullptr, apm,
-        nullptr);
+        nullptr, nullptr);
     AutoInitTerminate init_term(engine);
     for (const webrtc::Codec& codec : engine.LegacySendCodecs()) {
       auto is_codec = [&codec](const char* name, int clockrate = 0) {
@@ -4713,7 +4713,7 @@ TEST(WebRtcVoiceEngineTest, Has32Channels) {
     webrtc::WebRtcVoiceEngine engine(
         env, adm, webrtc::MockAudioEncoderFactory::CreateUnusedFactory(),
         webrtc::MockAudioDecoderFactory::CreateUnusedFactory(), nullptr, apm,
-        nullptr);
+        nullptr, nullptr);
     AutoInitTerminate init_term(engine);
     std::unique_ptr<Call> call = Call::Create(CallConfig(env));
 
@@ -4751,7 +4751,7 @@ TEST(WebRtcVoiceEngineTest, SetRecvCodecs) {
         use_null_apm ? nullptr : BuiltinAudioProcessingBuilder().Build(env);
     webrtc::WebRtcVoiceEngine engine(
         env, adm, webrtc::MockAudioEncoderFactory::CreateUnusedFactory(),
-        webrtc::CreateBuiltinAudioDecoderFactory(), nullptr, apm, nullptr);
+        webrtc::CreateBuiltinAudioDecoderFactory(), nullptr, apm, nullptr, nullptr);
     AutoInitTerminate init_term(engine);
     std::unique_ptr<Call> call = Call::Create(CallConfig(env));
     webrtc::WebRtcVoiceReceiveChannel channel(
@@ -4772,7 +4772,7 @@ TEST(WebRtcVoiceEngineTest, SetRtpSendParametersMaxBitrate) {
   FakeAudioSource source;
   webrtc::WebRtcVoiceEngine engine(
       env, adm, webrtc::CreateBuiltinAudioEncoderFactory(),
-      webrtc::CreateBuiltinAudioDecoderFactory(), nullptr, nullptr, nullptr);
+      webrtc::CreateBuiltinAudioDecoderFactory(), nullptr, nullptr, nullptr, nullptr);
   AutoInitTerminate init_term(engine);
   CallConfig call_config(env);
   {
@@ -4844,7 +4844,7 @@ TEST(WebRtcVoiceEngineTest, CollectRecvCodecs) {
         use_null_apm ? nullptr : BuiltinAudioProcessingBuilder().Build(env);
     webrtc::WebRtcVoiceEngine engine(env, adm, unused_encoder_factory,
                                      mock_decoder_factory, nullptr, apm,
-                                     nullptr);
+                                     nullptr, nullptr);
     AutoInitTerminate init_term(engine);
     auto codecs = engine.LegacyRecvCodecs();
     EXPECT_EQ(7u, codecs.size());
@@ -4933,7 +4933,7 @@ TEST(WebRtcVoiceEngineTest, CollectRecvCodecsWithLatePtAssignment) {
         use_null_apm ? nullptr : BuiltinAudioProcessingBuilder().Build(env);
     webrtc::WebRtcVoiceEngine engine(env, adm, unused_encoder_factory,
                                      mock_decoder_factory, nullptr, apm,
-                                     nullptr);
+                                     nullptr, nullptr);
     AutoInitTerminate init_term(engine);
     auto codecs = engine.LegacyRecvCodecs();
     EXPECT_EQ(7u, codecs.size());

@@ -182,16 +182,13 @@ void AudioState::SetStereoChannelSwapping(bool enable) {
 
 void AudioState::UpdateAudioTransportWithSendingStreams() {
   RTC_DCHECK(thread_checker_.IsCurrent());
-  std::vector<AudioSender*> audio_senders;
   int max_sample_rate_hz = 8000;
   size_t max_num_channels = 1;
   for (const auto& kv : sending_streams_) {
-    audio_senders.push_back(kv.first);
     max_sample_rate_hz = std::max(max_sample_rate_hz, kv.second.sample_rate_hz);
     max_num_channels = std::max(max_num_channels, kv.second.num_channels);
   }
-  audio_transport_->UpdateAudioSenders(std::move(audio_senders),
-                                      max_sample_rate_hz, max_num_channels);
+  audio_transport_->UpdateAudioSettings(max_sample_rate_hz, max_num_channels);
 }
 
 void AudioState::UpdateNullAudioPollerState() {

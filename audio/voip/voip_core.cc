@@ -262,8 +262,11 @@ bool VoipCore::UpdateAudioTransportWithSenders() {
     }
   }
 
-  audio_transport_->UpdateAudioSenders(audio_senders, max_sampling_rate,
-                                       max_num_channels);
+  audio_transport_->UpdateAudioSettings(max_sampling_rate, max_num_channels);
+
+  for(auto sender : audio_senders) {
+    audio_transport_->AddAudioSender(sender);
+  }
 
   // Depending on availability of senders, turn on or off ADM recording.
   if (!audio_senders.empty()) {
