@@ -2282,7 +2282,8 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     // At this point mic permissions / session should be configured for recording.
     if (state.DidEnableInput()) {
       LOGI() << "Checking microphone permission...";
-      // Attempt to acquire mic permissions at this point to return an erorr early.
+      // Passively check the current authorization status to fail early without blocking.
+      // Requesting permission is the SDK's responsibility (gated to the foreground).
       bool isAuthorized = IsMicrophonePermissionAuthorized();
       LOGI() << "AudioEngine pre-enable check, mic permission authorized: "
              << (isAuthorized ? "true" : "false");
