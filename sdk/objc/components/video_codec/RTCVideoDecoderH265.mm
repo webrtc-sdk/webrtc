@@ -33,16 +33,22 @@
 // Struct that we pass to the decoder per frame to decode. We receive it again
 // in the decoder callback.
 struct RTCH265FrameDecodeParams {
-  RTCH265FrameDecodeParams(int64_t ts, uint64_t reorderSize)
-      : timestamp(ts), reorderSize(reorderSize) {}
+  RTCH265FrameDecodeParams(int64_t ts, uint64_t reorderSize, bool bitstreamCarriesColorInfo)
+      : timestamp(ts),
+        reorderSize(reorderSize),
+        bitstreamCarriesColorInfo(bitstreamCarriesColorInfo) {}
   int64_t timestamp;
   uint64_t reorderSize{0};
+  // Captured on the decode thread at decode time. The VideoToolbox output
+  // callback runs on a separate thread and must not read decoder state:
+  // _videoFormat may be released and replaced by a new format while frames
+  // decoded against the previous one are still in flight.
+  bool bitstreamCarriesColorInfo{false};
 };
 
 @interface RTC_OBJC_TYPE (RTCVideoDecoderH265) ()
 - (void)setError:(OSStatus)error;
 - (void)processFrame:(RTC_OBJC_TYPE(RTCVideoFrame) *)decodedFrame reorderSize:(uint64_t)reorderSize;
-- (bool)bitstreamCarriesColorInfo;
 @end
 
 static void overrideColorSpaceAttachments(CVImageBufferRef imageBuffer) {
@@ -188,8 +194,10 @@ void h265DecompressionOutputCallback(void *decoderRef, void *params, OSStatus st
   // that carry VUI colour information (e.g. HDR10: PQ transfer + BT.2020
   // primaries) already have correct attachments propagated by VideoToolbox
   // from the format description; overriding them mistags the frames as
-  // BT.709/sRGB and HDR content renders washed out.
-  if (![decoder bitstreamCarriesColorInfo]) {
+  // BT.709/sRGB and HDR content renders washed out. Read from the per-frame
+  // params (captured at decode time) rather than the decoder, whose
+  // _videoFormat may already belong to a newer format.
+  if (!decodeParams->bitstreamCarriesColorInfo) {
     overrideColorSpaceAttachments(imageBuffer);
   }
 
@@ -320,14 +328,17 @@ CMSampleBufferRef H265BufferToCMSampleBuffer(const uint8_t *buffer, size_t buffe
   }
   RTC_DCHECK(sampleBuffer);
   VTDecodeFrameFlags decodeFlags = kVTDecodeFrame_EnableAsynchronousDecompression;
+  bool bitstreamCarriesColorInfo = [self bitstreamCarriesColorInfo];
   std::unique_ptr<RTCH265FrameDecodeParams> frameDecodeParams;
-  frameDecodeParams.reset(new RTCH265FrameDecodeParams(timeStamp, _reorderQueue.reorderSize()));
+  frameDecodeParams.reset(new RTCH265FrameDecodeParams(timeStamp, _reorderQueue.reorderSize(),
+                                                       bitstreamCarriesColorInfo));
   OSStatus status = VTDecompressionSessionDecodeFrame(
       _decompressionSession, sampleBuffer, decodeFlags, frameDecodeParams.release(), nullptr);
   // Re-initialize the decoder if we have an invalid session while the app is
   // active and retry the decode request.
   if (status == kVTInvalidSessionErr && [self resetDecompressionSession] == WEBRTC_VIDEO_CODEC_OK) {
-    frameDecodeParams.reset(new RTCH265FrameDecodeParams(timeStamp, _reorderQueue.reorderSize()));
+    frameDecodeParams.reset(new RTCH265FrameDecodeParams(timeStamp, _reorderQueue.reorderSize(),
+                                                         bitstreamCarriesColorInfo));
     status = VTDecompressionSessionDecodeFrame(_decompressionSession, sampleBuffer, decodeFlags,
                                                frameDecodeParams.release(), nullptr);
   }
