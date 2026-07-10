@@ -222,6 +222,16 @@ void h265DecompressionOutputCallback(void *decoderRef, void *params, OSStatus st
   webrtc::RTCVideoFrameReorderQueue _reorderQueue;
 }
 
+static BOOL gPreferHighBitDepthOutput = NO;
+
++ (BOOL)preferHighBitDepthOutput {
+  return gPreferHighBitDepthOutput;
+}
+
++ (void)setPreferHighBitDepthOutput:(BOOL)preferHighBitDepthOutput {
+  gPreferHighBitDepthOutput = preferHighBitDepthOutput;
+}
+
 - (instancetype)init {
   self = [super init];
   if (self) {
@@ -440,9 +450,12 @@ CMSampleBufferRef H265BufferToCMSampleBuffer(const uint8_t *buffer, size_t buffe
       kCVPixelBufferIOSurfacePropertiesKey, kCVPixelBufferPixelFormatTypeKey};
   CFDictionaryRef ioSurfaceValue = CreateCFTypeDictionary(nullptr, nullptr, 0);
   // Forcing NV12 would crush high bit depth output (e.g. HEVC Main10) to
-  // 8 bits. Request a 10-bit biplanar format for such streams; 8-bit streams
-  // keep NV12 so existing consumers are unaffected.
-  int64_t pixelFormatType = [self isHighBitDepthFormat]
+  // 8 bits. Request a 10-bit biplanar format for such streams, but only when
+  // the app has opted in via preferHighBitDepthOutput — downstream consumers
+  // that assume 8-bit NV12 (RTCMTLVideoView, RTCCVPixelBuffer's I420
+  // conversion) do not handle 10-bit output. 8-bit streams keep NV12 either
+  // way.
+  int64_t pixelFormatType = (gPreferHighBitDepthOutput && [self isHighBitDepthFormat])
       ? kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange
       : kCVPixelFormatType_420YpCbCr8BiPlanarFullRange;
   CFNumberRef pixelFormat = CFNumberCreate(nullptr, kCFNumberLongType, &pixelFormatType);
