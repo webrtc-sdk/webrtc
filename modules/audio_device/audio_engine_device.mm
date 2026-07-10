@@ -1844,6 +1844,20 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
       LOGE() << "Call to OnEngineWillEnable returned error: " << result;
       return rollback(result);
     }
+    rollback_actions.push_back([this, state]() {
+      RTC_DCHECK_RUN_ON(thread_);
+      // Compensate the observer if a later step of this enable operation fails.
+      // It may have configured and activated the audio session for the enable
+      // that will now never happen, and without this call it is never told the
+      // engine rolled back. Reuses OnEngineDidDisable with the previous state so
+      // existing observers release what they acquired without adopting a new
+      // callback. The result is ignored, the rollback itself cannot be aborted.
+      if (observer_ != nullptr) {
+        LOGW() << "Enable rolled back after OnEngineWillEnable, notifying observer (Manual)";
+        observer_->OnEngineDidDisable(engine_manual_input_, state.prev.IsOutputEnabled(),
+                                      state.prev.IsInputEnabled());
+      }
+    });
   }
 
   if (state.next.IsOutputEnabled() && !state.prev.IsOutputEnabled()) {
@@ -2272,6 +2286,20 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       LOGE() << "Call to OnEngineWillEnable returned error: " << result;
       return rollback(result);
     }
+    rollback_actions.push_back([this, state]() {
+      RTC_DCHECK_RUN_ON(thread_);
+      // Compensate the observer if a later step of this enable operation fails.
+      // It may have configured and activated the audio session for the enable
+      // that will now never happen, and without this call it is never told the
+      // engine rolled back. Reuses OnEngineDidDisable with the previous state so
+      // existing observers release what they acquired without adopting a new
+      // callback. The result is ignored, the rollback itself cannot be aborted.
+      if (observer_ != nullptr) {
+        LOGW() << "Enable rolled back after OnEngineWillEnable, notifying observer";
+        observer_->OnEngineDidDisable(engine_device_, state.prev.IsOutputEnabled(),
+                                      state.prev.IsInputEnabled());
+      }
+    });
   }
 
   // --------------------------------------------------------------------------------------------
