@@ -35,15 +35,109 @@
 #include "rtc_base/time_utils.h"
 
 #if defined(WEBRTC_IOS)
-#import "components/audio/RTCAudioSession+Private.h"
-#import "components/audio/RTCAudioSession.h"
 #import "components/audio/RTCAudioSessionConfiguration.h"
-#import "components/audio/RTCNativeAudioSessionDelegateAdapter.h"
 #endif
 
 #if TARGET_OS_OSX
 #import "./mac/audio_device_utils_mac.h"
 #endif
+
+#if defined(WEBRTC_IOS)
+// Observes AVAudioSession notifications directly and forwards the events the
+// engine consumes to the AudioSessionObserver interface. This intentionally
+// does not go through RTCAudioSession: subscribing to its delegate instantiated
+// the singleton in every app, forcing all audio-session regimes in the process
+// to keep its activation refcount truthful because it manages the session
+// autonomously from its own notification handlers. The engine only needs the
+// events. Session lifecycle and configuration stay owned by higher layers.
+@interface RTC_OBJC_TYPE (RTCAudioEngineSessionNotificationObserver) : NSObject
+- (instancetype)initWithObserver:(webrtc::AudioSessionObserver *)observer;
+- (void)invalidate;
+@end
+
+@implementation RTC_OBJC_TYPE (RTCAudioEngineSessionNotificationObserver) {
+  webrtc::AudioSessionObserver *_observer;
+}
+
+- (instancetype)initWithObserver:(webrtc::AudioSessionObserver *)observer {
+  RTC_DCHECK(observer);
+  self = [super init];
+  if (self) {
+    _observer = observer;
+    NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+    [center addObserver:self
+               selector:@selector(handleInterruptionNotification:)
+                   name:AVAudioSessionInterruptionNotification
+                 object:nil];
+    [center addObserver:self
+               selector:@selector(handleRouteChangeNotification:)
+                   name:AVAudioSessionRouteChangeNotification
+                 object:nil];
+  }
+  return self;
+}
+
+// Called by the owner before it goes away. Notifications are delivered on the
+// posting thread, and the forwarded observer methods are documented as callable
+// from any thread (they post to the device thread internally).
+- (void)invalidate {
+  [[NSNotificationCenter defaultCenter] removeObserver:self];
+  _observer = nullptr;
+}
+
+- (void)dealloc {
+  [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
+- (void)handleInterruptionNotification:(NSNotification *)notification {
+  webrtc::AudioSessionObserver *observer = _observer;
+  if (observer == nullptr) {
+    return;
+  }
+  NSNumber *typeNumber = notification.userInfo[AVAudioSessionInterruptionTypeKey];
+  AVAudioSessionInterruptionType type =
+      (AVAudioSessionInterruptionType)typeNumber.unsignedIntegerValue;
+  switch (type) {
+    case AVAudioSessionInterruptionTypeBegan:
+      observer->OnInterruptionBegin();
+      break;
+    case AVAudioSessionInterruptionTypeEnded: {
+      NSNumber *optionsNumber = notification.userInfo[AVAudioSessionInterruptionOptionKey];
+      AVAudioSessionInterruptionOptions options = optionsNumber.unsignedIntegerValue;
+      bool shouldResume = options & AVAudioSessionInterruptionOptionShouldResume;
+      observer->OnInterruptionEnd(shouldResume);
+      break;
+    }
+  }
+}
+
+- (void)handleRouteChangeNotification:(NSNotification *)notification {
+  webrtc::AudioSessionObserver *observer = _observer;
+  if (observer == nullptr) {
+    return;
+  }
+  NSNumber *reasonNumber = notification.userInfo[AVAudioSessionRouteChangeReasonKey];
+  AVAudioSessionRouteChangeReason reason =
+      (AVAudioSessionRouteChangeReason)reasonNumber.unsignedIntegerValue;
+  switch (reason) {
+    case AVAudioSessionRouteChangeReasonUnknown:
+    case AVAudioSessionRouteChangeReasonNewDeviceAvailable:
+    case AVAudioSessionRouteChangeReasonOldDeviceUnavailable:
+    case AVAudioSessionRouteChangeReasonCategoryChange:
+    case AVAudioSessionRouteChangeReasonOverride:
+    case AVAudioSessionRouteChangeReasonWakeFromSleep:
+    case AVAudioSessionRouteChangeReasonNoSuitableRouteForCategory:
+      // Same valid-reason filter the RTCAudioSession delegate adapter applied.
+      observer->OnValidRouteChange();
+      break;
+    case AVAudioSessionRouteChangeReasonRouteConfigurationChange:
+      // Port configuration only, not a device change.
+      break;
+  }
+}
+
+@end
+#endif  // defined(WEBRTC_IOS)
 
 namespace webrtc {
 
@@ -189,11 +283,12 @@ AudioEngineDevice::AudioEngineDevice(const Environment& env, bool voice_processi
   audio_device_buffer_.reset(new webrtc::AudioDeviceBuffer(env));
 
 #if defined(WEBRTC_IOS)
+  // Subscribe to audio session events straight from NSNotificationCenter. Going
+  // through RTCAudioSession's delegate would instantiate that singleton and its
+  // autonomous session management, which higher layers should not be forced to
+  // participate in.
   audio_session_observer_ =
-      [[RTC_OBJC_TYPE(RTCNativeAudioSessionDelegateAdapter) alloc] initWithObserver:this];
-  // Subscribe to audio session events.
-  RTC_OBJC_TYPE(RTCAudioSession)* session = [RTC_OBJC_TYPE(RTCAudioSession) sharedInstance];
-  [session addDelegate:audio_session_observer_];
+      [[RTC_OBJC_TYPE(RTCAudioEngineSessionNotificationObserver) alloc] initWithObserver:this];
 #endif
 
   mach_timebase_info_data_t tinfo;
@@ -228,8 +323,7 @@ AudioEngineDevice::~AudioEngineDevice() {
   Terminate();
 
 #if defined(WEBRTC_IOS)
-  RTC_OBJC_TYPE(RTCAudioSession)* session = [RTC_OBJC_TYPE(RTCAudioSession) sharedInstance];
-  [session removeDelegate:audio_session_observer_];
+  [audio_session_observer_ invalidate];
   audio_session_observer_ = nil;
 #endif
 }

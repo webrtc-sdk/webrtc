@@ -38,7 +38,7 @@
 #import <AVFAudio/AVFAudio.h>
 #import <AudioToolbox/AudioToolbox.h>
 
-RTC_FWD_DECL_OBJC_CLASS(RTC_OBJC_TYPE(RTCNativeAudioSessionDelegateAdapter));
+RTC_FWD_DECL_OBJC_CLASS(RTC_OBJC_TYPE(RTCAudioEngineSessionNotificationObserver));
 
 namespace webrtc {
 
@@ -542,8 +542,11 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   AudioDeviceObserver* observer_ RTC_GUARDED_BY(thread_) = nullptr;
 
 #if defined(WEBRTC_IOS)
-  // Audio interruption observer instance.
-  RTC_OBJC_TYPE(RTCNativeAudioSessionDelegateAdapter) * audio_session_observer_
+  // Audio session notification observer instance. Observes NSNotificationCenter
+  // directly rather than subscribing to RTCAudioSession, so creating this
+  // device does not instantiate that singleton or its autonomous session
+  // management.
+  RTC_OBJC_TYPE(RTCAudioEngineSessionNotificationObserver) * audio_session_observer_
       RTC_GUARDED_BY(thread_);
 #endif
 
