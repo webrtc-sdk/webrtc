@@ -678,6 +678,12 @@ void AudioEngineDevice::OnInterruptionBegin() {
 
   RTC_DCHECK(thread_);
   thread_->PostTask(SafeTask(safety_, [this] {
+    RTC_DCHECK_RUN_ON(thread_);
+    // Notify the observer before the engine reacts, so a higher layer that owns
+    // the audio session lifecycle sees the event first.
+    if (observer_ != nullptr) {
+      observer_->OnAudioSessionInterruptionBegan();
+    }
     int32_t result = this->ModifyEngineState([](EngineState state) -> EngineState {
       state.is_interrupted = true;
       return state;
@@ -692,7 +698,14 @@ void AudioEngineDevice::OnInterruptionEnd(bool should_resume) {
   LOGI() << "OnInterruptionEnd should_resume: " << should_resume;
 
   RTC_DCHECK(thread_);
-  thread_->PostTask(SafeTask(safety_, [this] {
+  thread_->PostTask(SafeTask(safety_, [this, should_resume] {
+    RTC_DCHECK_RUN_ON(thread_);
+    // Notify the observer before the engine restarts, so a higher layer that
+    // owns the audio session lifecycle can reactivate the session first. Apple
+    // guidance is to activate the session before restarting audio I/O.
+    if (observer_ != nullptr) {
+      observer_->OnAudioSessionInterruptionEnded(should_resume);
+    }
     int32_t result = this->ModifyEngineState([](EngineState state) -> EngineState {
       state.is_interrupted = false;
       return state;

@@ -314,6 +314,14 @@ class AudioDeviceObserver {
 
   virtual int32_t OnEngineWillRelease(AVAudioEngine* engine) { return 0; }
 
+  // Audio session interruption events (iOS). Fired on the device thread before
+  // the engine reacts to the event, so an observer that owns the audio session
+  // lifecycle can act first. In particular OnAudioSessionInterruptionEnded fires
+  // before the engine restarts, giving the owner a chance to reactivate the
+  // session. Implementations must not block.
+  virtual void OnAudioSessionInterruptionBegan() {}
+  virtual void OnAudioSessionInterruptionEnded(bool should_resume) {}
+
   // Override the input node configuration with a custom implementation.
   virtual int32_t OnEngineWillConnectInput(AVAudioEngine* engine, AVAudioNode* src,
                                            AVAudioNode* dst, AVAudioFormat* format,

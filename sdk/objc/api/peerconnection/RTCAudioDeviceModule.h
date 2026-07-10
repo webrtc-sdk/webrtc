@@ -187,6 +187,19 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
 - (void)audioDeviceModuleDidUpdateDevices:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
     NS_SWIFT_NAME(audioDeviceModuleDidUpdateDevices(_:));
 
+@optional
+
+// Audio session interruption events. Fired on the device thread before the
+// engine reacts to the event, in particular before the engine restarts on
+// interruption end, so a delegate that owns the audio session lifecycle can
+// reactivate the session first. Implementations must not block.
+- (void)audioDeviceModuleDidBeginInterruption:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+    NS_SWIFT_NAME(audioDeviceModuleDidBeginInterruption(_:));
+
+- (void)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+    didEndInterruptionWithShouldResume:(BOOL)shouldResume
+    NS_SWIFT_NAME(audioDeviceModule(_:didEndInterruptionWithShouldResume:));
+
 @end
 
 RTC_OBJC_EXPORT

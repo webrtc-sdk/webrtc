@@ -157,6 +157,24 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
                                 context:context];
   }
 
+  // Optional protocol methods, so guard with respondsToSelector to keep
+  // existing delegates working unchanged.
+  void OnAudioSessionInterruptionBegan() override {
+    id<RTC_OBJC_TYPE(RTCAudioDeviceModuleDelegate)> delegate = delegate_;
+    if (delegate == nil) return;
+    if ([delegate respondsToSelector:@selector(audioDeviceModuleDidBeginInterruption:)]) {
+      [delegate audioDeviceModuleDidBeginInterruption:adm_];
+    }
+  }
+
+  void OnAudioSessionInterruptionEnded(bool should_resume) override {
+    id<RTC_OBJC_TYPE(RTCAudioDeviceModuleDelegate)> delegate = delegate_;
+    if (delegate == nil) return;
+    if ([delegate respondsToSelector:@selector(audioDeviceModule:didEndInterruptionWithShouldResume:)]) {
+      [delegate audioDeviceModule:adm_ didEndInterruptionWithShouldResume:should_resume];
+    }
+  }
+
   __weak id<RTC_OBJC_TYPE(RTCAudioDeviceModuleDelegate)> delegate_;
 
  private:
