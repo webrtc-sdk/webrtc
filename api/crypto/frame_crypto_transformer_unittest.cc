@@ -124,7 +124,7 @@ TEST(DataPacketCryptor, DifferentKeyProvider) {
   RTC_LOG(LS_INFO) << "DataPacketCrypt shared_key default: "
                    << key_options.shared_key;
   EXPECT_EQ(key_options.shared_key, false);
-  EXPECT_EQ(key_options.key_ring_size, DEFAULT_KEYRING_SIZE);
+  EXPECT_EQ(key_options.key_ring_size, static_cast<int>(DEFAULT_KEYRING_SIZE));
   // support ratcheting
   key_options.ratchet_window_size = 4;
   key_options.ratchet_salt =
