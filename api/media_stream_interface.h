@@ -270,6 +270,11 @@ class RTC_EXPORT AudioSourceInterface : public MediaSourceInterface {
   // audio network adaptation on the source is the wrong layer of abstraction).
   virtual const AudioOptions options() const;
   virtual void SetOptions(const AudioOptions & /* options */) {}
+
+  // Returns true if this source delivers audio externally (via AddSink),
+  // bypassing the ADM/AudioState audio distribution path.
+  // When true, AudioSendStream should not register with AudioState.
+  virtual bool is_external_source() const { return false; }
 };
 
 // Interface of the audio processor used by the audio track to collect

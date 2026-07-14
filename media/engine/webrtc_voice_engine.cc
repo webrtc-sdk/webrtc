@@ -938,6 +938,19 @@ class WebRtcVoiceSendChannel::WebRtcAudioSendStream : public AudioSource::Sink {
   void SetSource(AudioSource* source) {
     RTC_DCHECK_RUN_ON(&worker_thread_checker_);
     RTC_DCHECK(source);
+    // If the source delivers audio externally (via its own AddSink path),
+    // mark the config so AudioState doesn't also push device audio into this
+    // stream. Evaluated before the early return below because on track
+    // replacement the adapter object stays the same while the underlying
+    // source type may change. The stream is stopped across the flip so that
+    // its AudioState registration is always added and removed under the same
+    // flag value, then restarted under the new one.
+    if (source->is_external_source() != config_.external_source) {
+      stream_->Stop();
+      config_.external_source = source->is_external_source();
+      ReconfigureAudioSendStream(nullptr);
+      UpdateSendState();
+    }
     if (source_) {
       RTC_DCHECK(source_ == source);
       return;

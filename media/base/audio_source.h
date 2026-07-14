@@ -49,6 +49,10 @@ class AudioSource {
   // to the source at a time.
   virtual void SetSink(Sink* sink) = 0;
 
+  // Returns true if this source delivers audio externally (bypassing ADM).
+  // When true, AudioSendStream should not register with AudioState.
+  virtual bool is_external_source() const { return false; }
+
  protected:
   virtual ~AudioSource() {}
 };

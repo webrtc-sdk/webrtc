@@ -333,10 +333,21 @@ class LocalAudioSinkAdapter : public AudioTrackSinkInterface,
   // webrtc::AudioSource implementation.
   void SetSink(AudioSource::Sink* sink) override;
 
+ public:
+  // Reports whether the local track's source delivers audio externally
+  // (bypassing the ADM). Forwarded from AudioSourceInterface so the voice
+  // engine can keep AudioState from also feeding device audio.
+  void set_is_external_source(bool is_external_source) {
+    is_external_source_ = is_external_source;
+  }
+  bool is_external_source() const override { return is_external_source_; }
+
+ private:
   AudioSource::Sink* sink_;
   // Critical section protecting `sink_`.
   Mutex lock_;
   int num_preferred_channels_ = -1;
+  bool is_external_source_ = false;
 };
 
 class AudioRtpSender : public DtmfProviderInterface, public RtpSenderBase {

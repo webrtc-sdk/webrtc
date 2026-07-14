@@ -178,6 +178,12 @@ class AudioSendStream : public AudioSender {
     // An optional frame transformer used by insertable streams to transform
     // encoded frames.
     scoped_refptr<webrtc::FrameTransformerInterface> frame_transformer;
+
+    // When true, this stream uses an external audio source (not ADM).
+    // AudioState will NOT send device-captured audio to this stream.
+    // Audio is delivered directly via the source's AddSink mechanism.
+    // This prevents mixing of device audio with externally-sourced audio.
+    bool external_source = false;
   };
 
   virtual ~AudioSendStream() = default;

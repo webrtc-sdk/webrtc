@@ -373,8 +373,13 @@ void AudioSendStream::Start() {
   }
   channel_send_->StartSend();
   sending_ = true;
-  audio_state()->AddSendingStream(this, encoder_sample_rate_hz_,
-                                  encoder_num_channels_);
+  // Only register with AudioState if not using an external source.
+  // External sources deliver audio directly via AddSink, so AudioState
+  // must not also push device-captured audio into this stream.
+  if (!config_.external_source) {
+    audio_state()->AddSendingStream(this, encoder_sample_rate_hz_,
+                                    encoder_num_channels_);
+  }
 }
 
 void AudioSendStream::Stop() {
@@ -386,7 +391,10 @@ void AudioSendStream::Stop() {
   RemoveBitrateObserver();
   channel_send_->StopSend();
   sending_ = false;
-  audio_state()->RemoveSendingStream(this);
+  // Only unregister if we registered (when not using an external source).
+  if (!config_.external_source) {
+    audio_state()->RemoveSendingStream(this);
+  }
 }
 
 void AudioSendStream::SendAudioData(std::unique_ptr<AudioFrame> audio_frame) {
@@ -577,7 +585,7 @@ void AudioSendStream::StoreEncoderProperties(int sample_rate_hz,
                                              size_t num_channels) {
   encoder_sample_rate_hz_ = sample_rate_hz;
   encoder_num_channels_ = num_channels;
-  if (sending_) {
+  if (sending_ && !config_.external_source) {
     // Update AudioState's information about the stream.
     audio_state()->AddSendingStream(this, sample_rate_hz, num_channels);
   }
