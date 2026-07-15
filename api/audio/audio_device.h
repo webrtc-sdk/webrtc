@@ -47,6 +47,9 @@ class AudioDeviceModule : public RefCountInterface {
     kAndroidAAudioAudio,
     kAndroidJavaInputAndAAudioOutputAudio,
     kDummyAudio,
+#if defined(WEBRTC_IOS) || defined(WEBRTC_MAC)
+    kAppleAudioEngine,
+#endif
   };
 
   enum WindowsDeviceType { kDefaultCommunicationDevice = -1, kDefaultDevice = -2 };
@@ -60,6 +63,50 @@ class AudioDeviceModule : public RefCountInterface {
   enum SpeechActivityEvent {
     kStarted = 0,
     kEnded,
+  };
+
+  // Keep numeric values in sync with the Java and ObjC API enums because
+  // diagnostics pass these values across language boundaries.
+  enum class PlatformAudioProcessingTopology {
+    // Platform AEC, NS, and AGC can be controlled independently.
+    kIndependent = 0,
+    // Platform AEC and NS are exposed through one shared voice-processing
+    // bypass switch. Platform AGC has a separate switch, but only has an
+    // effect while the shared AEC/NS voice-processing path is active. Enabling
+    // either AEC or NS may activate the shared platform path for both effects.
+    // AGC alone must not activate that shared path, so AGC falls back to
+    // software unless AEC or NS already made the shared path active.
+    kEchoCancellationAndNoiseSuppressionCoupled = 1,
+  };
+
+  struct PlatformAudioProcessingState {
+    PlatformAudioProcessingTopology topology = PlatformAudioProcessingTopology::kIndependent;
+
+    // Capability for the ADM to turn each platform effect on.
+    bool is_echo_cancellation_available = false;
+    bool is_noise_suppression_available = false;
+    bool is_auto_gain_control_available = false;
+
+    // Last component state requested through EnableBuiltInAEC, EnableBuiltInNS,
+    // or EnableBuiltInAGC when the ADM can store it.
+    std::optional<bool> is_echo_cancellation_requested;
+    std::optional<bool> is_noise_suppression_requested;
+    std::optional<bool> is_auto_gain_control_requested;
+
+    // Live OS effect state when the ADM can read it back. Empty means unknown,
+    // not false.
+    std::optional<bool> is_echo_cancellation_active;
+    std::optional<bool> is_noise_suppression_active;
+    std::optional<bool> is_auto_gain_control_active;
+
+    // Apple Voice Processing I/O state when the ADM exposes it.
+    std::optional<bool> is_voice_processing_enabled_requested;
+    std::optional<bool> is_voice_processing_bypassed_requested;
+    std::optional<bool> is_voice_processing_agc_enabled_requested;
+
+    std::optional<bool> is_voice_processing_enabled_active;
+    std::optional<bool> is_voice_processing_bypassed_active;
+    std::optional<bool> is_voice_processing_agc_enabled_active;
   };
 
   struct Stats {
@@ -159,12 +206,38 @@ class AudioDeviceModule : public RefCountInterface {
   // Playout delay
   virtual int32_t PlayoutDelay(uint16_t* delayMS) const = 0;
 
-  // Only supported on Android.
+  // Built-in processing hooks are implemented by ADMs that expose platform
+  // AEC, AGC, or NS. Unsupported ADMs report false and return -1 from enable
+  // calls. Availability means the effect can be enabled, not that it is active.
   virtual bool BuiltInAECIsAvailable() const = 0;
   virtual bool BuiltInAGCIsAvailable() const = 0;
   virtual bool BuiltInNSIsAvailable() const = 0;
 
-  // Enables the built-in audio effects. Only supported on Android.
+  // Describes whether the ADM can switch built-in components independently.
+  virtual PlatformAudioProcessingTopology GetPlatformAudioProcessingTopology() const {
+    return PlatformAudioProcessingTopology::kIndependent;
+  }
+
+  // Coupled ADMs may need to create or remove a platform voice-processing path
+  // before individual built-in effects can be toggled. Independent ADMs expose
+  // component effects directly and do not use this hook.
+  virtual bool PlatformVoiceProcessingPathIsAvailable() const { return false; }
+  virtual int32_t EnablePlatformVoiceProcessingPath(bool) { return -1; }
+
+  // Returns a diagnostic snapshot for platform audio processing. Requested fields
+  // describe what the ADM was last asked to use. Active fields describe live OS
+  // effect state when the ADM can read it back. Unsupported fields remain empty
+  // because most platforms cannot read every component.
+  virtual PlatformAudioProcessingState GetPlatformAudioProcessingState() const {
+    PlatformAudioProcessingState state;
+    state.topology = GetPlatformAudioProcessingTopology();
+    state.is_echo_cancellation_available = BuiltInAECIsAvailable();
+    state.is_noise_suppression_available = BuiltInNSIsAvailable();
+    state.is_auto_gain_control_available = BuiltInAGCIsAvailable();
+    return state;
+  }
+
+  // Enables or disables built-in audio effects when the ADM supports them.
   virtual int32_t EnableBuiltInAEC(bool enable) = 0;
   virtual int32_t EnableBuiltInAGC(bool enable) = 0;
   virtual int32_t EnableBuiltInNS(bool enable) = 0;

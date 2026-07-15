@@ -1,10 +1,11 @@
 #include "api/crypto/frame_crypto_transformer.h"
 
+#include <chrono>
 #include <memory>
 #include <string>
+#include <thread>
 
 #include "rtc_base/logging.h"
-#include "system_wrappers/include/sleep.h"
 #include "test/gmock.h"
 #include "test/gtest.h"
 
@@ -15,7 +16,7 @@ TEST(FrameCryptor, KeyProvider) {
   RTC_LOG(LS_INFO) << "DataPacketCrypt shared_key default: "
                    << key_options.shared_key;
   EXPECT_EQ(key_options.shared_key, false);
-  EXPECT_EQ(key_options.key_ring_size, DEFAULT_KEYRING_SIZE);
+  EXPECT_EQ(key_options.key_ring_size, static_cast<int>(DEFAULT_KEYRING_SIZE));
 
   key_options.ratchet_salt =
       std::vector<uint8_t>({0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07});
@@ -123,7 +124,7 @@ TEST(DataPacketCryptor, DifferentKeyProvider) {
   RTC_LOG(LS_INFO) << "DataPacketCrypt shared_key default: "
                    << key_options.shared_key;
   EXPECT_EQ(key_options.shared_key, false);
-  EXPECT_EQ(key_options.key_ring_size, DEFAULT_KEYRING_SIZE);
+  EXPECT_EQ(key_options.key_ring_size, static_cast<int>(DEFAULT_KEYRING_SIZE));
   // support ratcheting
   key_options.ratchet_window_size = 4;
   key_options.ratchet_salt =
@@ -194,13 +195,13 @@ TEST(DataPacketCryptor, IVGeneration) {
   auto data_packet_cryptor = webrtc::make_ref_counted<DataPacketCryptor>(
       FrameCryptorTransformer::Algorithm::kAesGcm, key_provider);
   EXPECT_NE(data_packet_cryptor, nullptr);
-  SleepMs(200);
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));
   auto encrypted_data = data_packet_cryptor->Encrypt(
       participant_id, 0,
       std::vector<uint8_t>(
           {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}));
   EXPECT_TRUE(encrypted_data.ok());
-  SleepMs(200);  // ensure different timestamp for IV generation
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));  // ensure different timestamp for IV generation
   auto encrypted_data2 = data_packet_cryptor->Encrypt(
       participant_id, 0,
       std::vector<uint8_t>(
@@ -225,13 +226,13 @@ TEST(KeyProvider, KeyDerivationAlgorithm) {
   auto data_packet_cryptor = webrtc::make_ref_counted<DataPacketCryptor>(
       FrameCryptorTransformer::Algorithm::kAesGcm, key_provider);
   EXPECT_NE(data_packet_cryptor, nullptr);
-  SleepMs(200);
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));
   auto encrypted_data = data_packet_cryptor->Encrypt(
       participant_id, 0,
       std::vector<uint8_t>(
           {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}));
   EXPECT_TRUE(encrypted_data.ok());
-  SleepMs(200);  // ensure different timestamp for IV generation
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));  // ensure different timestamp for IV generation
   auto encrypted_data2 = data_packet_cryptor->Encrypt(
       participant_id, 0,
       std::vector<uint8_t>(
@@ -239,6 +240,38 @@ TEST(KeyProvider, KeyDerivationAlgorithm) {
   EXPECT_TRUE(encrypted_data2.ok());
 
   EXPECT_NE(encrypted_data.value()->iv, encrypted_data2.value()->iv);
+}
+
+TEST(KeyProvider, KeyRingSizeMaxAcceptsIndex255) {
+  auto key_options = KeyProviderOptions();
+  key_options.shared_key = true;
+  key_options.key_ring_size = static_cast<int>(MAX_KEYRING_SIZE);
+  auto key_provider =
+      webrtc::make_ref_counted<DefaultKeyProviderImpl>(key_options);
+
+  const std::vector<uint8_t> key{0xAA, 0xBB, 0xCC, 0xDD};
+  EXPECT_TRUE(key_provider->SetSharedKey(255, key));
+  EXPECT_EQ(key_provider->ExportSharedKey(255), key);
+}
+
+TEST(KeyProvider, GetKeySetReturnsNullptrForOutOfRange) {
+  auto key_options = KeyProviderOptions();
+  key_options.shared_key = true;
+  auto key_provider =
+      webrtc::make_ref_counted<DefaultKeyProviderImpl>(key_options);
+  ASSERT_TRUE(key_provider->SetSharedKey(0, std::vector<uint8_t>{0x00}));
+
+  auto key_handler = key_provider->GetSharedKey("participant_1");
+  ASSERT_NE(key_handler, nullptr);
+
+  // -1 is the "use current_key_index_" sentinel — still resolves.
+  EXPECT_NE(key_handler->GetKeySet(-1), nullptr);
+  // DEFAULT_KEYRING_SIZE (16) → indices >= 16 are out of range.
+  EXPECT_EQ(key_handler->GetKeySet(static_cast<int>(DEFAULT_KEYRING_SIZE)),
+            nullptr);
+  EXPECT_EQ(key_handler->GetKeySet(1000), nullptr);
+  // Negative indices other than the -1 sentinel are out of range.
+  EXPECT_EQ(key_handler->GetKeySet(-2), nullptr);
 }
 
 }  // namespace webrtc

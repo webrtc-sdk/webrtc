@@ -25,6 +25,7 @@
 #import "RTCMediaStream+Private.h"
 #import "RTCPeerConnection+Private.h"
 #import "RTCVideoSource+Private.h"
+#import "RTCAudioProcessingState+Private.h"
 #import "RTCVideoTrack+Private.h"
 #import "RTCRtpReceiver+Private.h"
 #import "RTCRtpCapabilities+Private.h"
@@ -94,6 +95,7 @@ static webrtc::Environment CreateDefaultEnvironment() {
 }
 
 @synthesize nativeFactory = _nativeFactory;
+@synthesize nativeAudioDeviceModule = _nativeAudioDeviceModule;
 @synthesize audioDeviceModule = _audioDeviceModule;
 
 - (instancetype)init {
@@ -221,6 +223,9 @@ static webrtc::Environment CreateDefaultEnvironment() {
         dependencies.env->field_trials().IsEnabled("WebRTC-Network-UseNWPathMonitor")) {
       dependencies.network_monitor_factory =
           webrtc::CreateNetworkMonitorFactory();
+    }
+    if (dependencies.adm != nullptr) {
+      _nativeAudioDeviceModule = dependencies.adm;
     }
 
     _env = dependencies.env;
@@ -379,8 +384,10 @@ static webrtc::Environment CreateDefaultEnvironment() {
           });
     }
 
-    _audioDeviceModule = [[RTC_OBJC_TYPE(RTCAudioDeviceModule) alloc] initWithNativeModule: _nativeAudioDeviceModule
-                                                       workerThread: _workerThread.get()];
+    _audioDeviceModule =
+        [[RTC_OBJC_TYPE(RTCAudioDeviceModule) alloc] initWithNativeModule:_nativeAudioDeviceModule
+                                                             workerThread:_workerThread.get()
+                                                    audioDeviceModuleType:audioDeviceModuleType];
     dependencies.adm = _nativeAudioDeviceModule;
     dependencies.audio_encoder_factory = std::move(audioEncoderFactory);
     dependencies.audio_decoder_factory = std::move(audioDecoderFactory);
@@ -416,6 +423,10 @@ static webrtc::Environment CreateDefaultEnvironment() {
 
   webrtc::RtpCapabilities rtpCapabilities = _nativeFactory->GetRtpReceiverCapabilities(mediaType);
   return [[RTC_OBJC_TYPE(RTCRtpCapabilities) alloc] initWithNativeRtpCapabilities:rtpCapabilities];
+}
+
+- (RTC_OBJC_TYPE(RTCAudioProcessingState) *)audioProcessingState {
+  return webrtc::objc::AudioProcessingStateToObjC(_nativeFactory->GetAudioProcessingState());
 }
 
 - (RTC_OBJC_TYPE(RTCAudioSource) *)audioSourceWithConstraints:

@@ -52,6 +52,11 @@ class AudioInput {
 
   virtual int32_t EnableBuiltInAEC(bool enable) = 0;
   virtual int32_t EnableBuiltInNS(bool enable) = 0;
+
+  virtual std::optional<bool> BuiltInAECIsRequested() const { return std::nullopt; }
+  virtual std::optional<bool> BuiltInAECIsEnabled() const { return std::nullopt; }
+  virtual std::optional<bool> BuiltInNSIsRequested() const { return std::nullopt; }
+  virtual std::optional<bool> BuiltInNSIsEnabled() const { return std::nullopt; }
 };
 
 class AudioOutput {

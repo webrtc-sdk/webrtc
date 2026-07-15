@@ -808,6 +808,7 @@ if (is_ios || is_mac) {
         "../modules/video_coding:video_codec_interface",
         "../rtc_base:checks",
       ]
+      frameworks = [ "VideoToolbox.framework" ]
     }
 
     rtc_library("default_codec_factory_objc") {
@@ -1068,6 +1069,10 @@ if (is_ios || is_mac) {
         "objc/api/peerconnection/RTCAudioDeviceModule.h",
         "objc/api/peerconnection/RTCAudioDeviceModule+Private.h",
         "objc/api/peerconnection/RTCAudioDeviceModule.mm",
+        "objc/api/peerconnection/RTCAudioProcessingOptions+Private.h",
+        "objc/api/peerconnection/RTCAudioProcessingState.h",
+        "objc/api/peerconnection/RTCAudioProcessingState.mm",
+        "objc/api/peerconnection/RTCAudioProcessingState+Private.h",
         "objc/api/peerconnection/RTCIODevice.h",
         "objc/api/peerconnection/RTCIODevice.mm",
         "objc/api/peerconnection/RTCAudioSource+Private.h",
@@ -1253,6 +1258,7 @@ if (is_ios || is_mac) {
         "../api:set_remote_description_observer_interface",
         "../api/audio:audio_device",
         "../api/audio:audio_processing",
+        "../api/audio:audio_processing_options_resolver",
         "../api/audio:builtin_audio_processing_builder",
         "../api/audio_codecs:audio_codecs_api",
         "../api/audio_codecs:builtin_audio_decoder_factory",
@@ -1503,6 +1509,7 @@ if (is_ios || is_mac) {
           "objc/api/peerconnection/RTCIODevice.h",
           "objc/api/peerconnection/RTCAudioSource.h",
           "objc/api/peerconnection/RTCAudioTrack.h",
+          "objc/api/peerconnection/RTCAudioProcessingState.h",
           "objc/api/peerconnection/RTCConfiguration.h",
           "objc/api/peerconnection/RTCDataChannel.h",
           "objc/api/peerconnection/RTCDataChannelConfiguration.h",
@@ -1649,6 +1656,7 @@ if (is_ios || is_mac) {
           "objc/api/peerconnection/RTCIODevice.h",
           "objc/api/peerconnection/RTCAudioSource.h",
           "objc/api/peerconnection/RTCAudioTrack.h",
+          "objc/api/peerconnection/RTCAudioProcessingState.h",
           "objc/api/peerconnection/RTCCertificate.h",
           "objc/api/peerconnection/RTCConfiguration.h",
           "objc/api/peerconnection/RTCCryptoOptions.h",

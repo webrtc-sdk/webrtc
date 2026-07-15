@@ -15,6 +15,7 @@ import android.media.AudioAttributes;
 import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.os.Build;
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ScheduledExecutorService;
@@ -395,6 +396,42 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
     return WebRtcAudioEffects.isNoiseSuppressorSupported();
   }
 
+  /** Order must match {@code webrtc::AudioDeviceModule::PlatformAudioProcessingTopology}. */
+  public enum PlatformAudioProcessingTopology {
+    INDEPENDENT,
+    ECHO_CANCELLATION_AND_NOISE_SUPPRESSION_COUPLED,
+  }
+
+  public static final class PlatformAudioProcessingComponentState {
+    public final boolean isAvailable;
+    public final @Nullable Boolean isRequested;
+    public final @Nullable Boolean isActive;
+
+    public PlatformAudioProcessingComponentState(
+        boolean isAvailable, @Nullable Boolean isRequested, @Nullable Boolean isActive) {
+      this.isAvailable = isAvailable;
+      this.isRequested = isRequested;
+      this.isActive = isActive;
+    }
+  }
+
+  public static final class PlatformAudioProcessingState {
+    public final PlatformAudioProcessingTopology topology;
+    public final PlatformAudioProcessingComponentState echoCancellation;
+    public final PlatformAudioProcessingComponentState noiseSuppression;
+    public final PlatformAudioProcessingComponentState autoGainControl;
+
+    public PlatformAudioProcessingState(PlatformAudioProcessingTopology topology,
+        PlatformAudioProcessingComponentState echoCancellation,
+        PlatformAudioProcessingComponentState noiseSuppression,
+        PlatformAudioProcessingComponentState autoGainControl) {
+      this.topology = topology;
+      this.echoCancellation = echoCancellation;
+      this.noiseSuppression = noiseSuppression;
+      this.autoGainControl = autoGainControl;
+    }
+  }
+
   private final Context context;
   private final AudioManager audioManager;
   public final WebRtcAudioRecord audioInput;
@@ -458,12 +495,22 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
     audioInput.setUseAudioRecord(enable);
   }
 
-  public void prewarmRecording(){
+  public void prewarmRecording() {
+    prewarmRecording(null);
+  }
+
+  public void prewarmRecording(@Nullable AudioProcessingOptions options) {
+    audioInput.applyPlatformAudioProcessingOptions(options);
     audioInput.initRecordingIfNeeded();
     audioInput.prewarmRecordingIfNeeded();
   }
 
   public void requestStartRecording() {
+    requestStartRecording(null);
+  }
+
+  public void requestStartRecording(@Nullable AudioProcessingOptions options) {
+    audioInput.applyPlatformAudioProcessingOptions(options);
     audioInput.initRecordingIfNeeded();
     audioInput.startRecordingIfNeeded();
   }
@@ -476,6 +523,18 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
   public boolean setNoiseSuppressorEnabled(boolean enabled) {
     Logging.d(TAG, "setNoiseSuppressorEnabled: " + enabled);
     return audioInput.setNoiseSuppressorEnabled(enabled);
+  }
+
+  public PlatformAudioProcessingState getPlatformAudioProcessingState() {
+    WebRtcAudioEffects.State effectState = audioInput.getBuiltInAudioEffectsState();
+    boolean isAcousticEchoCancelerAvailable = audioInput.isAcousticEchoCancelerSupported();
+    boolean isNoiseSuppressorAvailable = audioInput.isNoiseSuppressorSupported();
+    return new PlatformAudioProcessingState(PlatformAudioProcessingTopology.INDEPENDENT,
+        new PlatformAudioProcessingComponentState(
+            isAcousticEchoCancelerAvailable, effectState.isAecRequested, effectState.aecActive),
+        new PlatformAudioProcessingComponentState(
+            isNoiseSuppressorAvailable, effectState.isNsRequested, effectState.nsActive),
+        new PlatformAudioProcessingComponentState(false, null, null));
   }
 
   /**

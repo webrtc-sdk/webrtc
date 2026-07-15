@@ -23,6 +23,7 @@
 #include <string>
 #include <vector>
 
+#include "api/audio/audio_processing_options_result.h"
 #include "api/audio/audio_processing_statistics.h"
 #include "api/audio_options.h"
 #include "api/ref_count.h"
@@ -268,6 +269,7 @@ class RTC_EXPORT AudioSourceInterface : public MediaSourceInterface {
   // (for some of the settings this approach is broken, e.g. setting
   // audio network adaptation on the source is the wrong layer of abstraction).
   virtual const AudioOptions options() const;
+  virtual void SetOptions(const AudioOptions & /* options */) {}
 };
 
 // Interface of the audio processor used by the audio track to collect
@@ -308,6 +310,16 @@ class RTC_EXPORT AudioTrackInterface : public MediaStreamTrackInterface {
     AudioSourceInterface* source = GetSource();
     return source ? source->GetVolume() : 1.0;
   }
+
+  // Updates echo cancellation, noise suppression, automatic gain control, and
+  // high-pass filter options on the underlying local source. Returns kStored
+  // when the request was accepted and stored. Implementations may notify track
+  // observers so active senders can reapply the updated options without
+  // replacing the track. Rejections mean the options were not stored. The
+  // effective audio processing module configuration is shared by the voice
+  // engine/channel, so conflicting updates from multiple local tracks are not
+  // isolated per track.
+  virtual AudioProcessingOptionsResult SetAudioProcessingOptions(const AudioOptions &options);
 
   // Add/Remove a sink that will receive the audio data from the track.
   virtual void AddSink(AudioTrackSinkInterface* sink) = 0;

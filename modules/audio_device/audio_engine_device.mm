@@ -21,8 +21,10 @@
 
 #include <mach/mach_time.h>
 #include <cmath>
+#include <optional>
 
 #include "api/array_view.h"
+#include "api/audio/audio_processing_options_resolver.h"
 #include "api/task_queue/default_task_queue_factory.h"
 #include "api/task_queue/pending_task_safety_flag.h"
 #include "modules/audio_device/fine_audio_buffer.h"
@@ -58,6 +60,106 @@ const useconds_t kStartEngineRetryDelayMs = 100;
 
 const size_t kMaximumFramesPerBuffer = 3072;
 const size_t kAudioSampleSize = 2;  // Signed 16-bit integer
+
+namespace {
+
+// Whether the coupled Apple VPIO path is currently active for `state`. Shared by
+// the validation context and the platform-path resolver below so the two cannot
+// drift.
+bool EngineStateEchoNoisePlatformPathIsActive(const AudioEngineDevice::EngineState &state) {
+  return state.voice_processing_enabled && !state.voice_processing_bypassed &&
+         (state.built_in_aec_enabled || state.built_in_ns_enabled);
+}
+
+// AEC and NS share AVAudioInputNode.voiceProcessingBypassed (one VPIO bypass
+// knob), so keep bypass coupled to the AEC/NS component requests to stay in a
+// realizable OS state. AGC has a separate switch that only takes effect while
+// this shared path is on.
+// [[maybe_unused]]: the only callers (EnableBuiltInAEC/NS) compile out on the
+// simulator, where the built-in path is unavailable.
+[[maybe_unused]] void RecomputeVoiceProcessingBypassFromComponents(AudioEngineDevice::EngineState &state) {
+  const bool use_vpio = state.built_in_aec_enabled || state.built_in_ns_enabled;
+  state.voice_processing_bypassed = !use_vpio;
+}
+
+AudioEngineDevice::EngineState SetVoiceProcessingPathEnabled(AudioEngineDevice::EngineState state, bool enabled) {
+  state.voice_processing_enabled = enabled;
+  if (enabled) {
+    // Creating a fresh VPIO path should start unbypassed. Component intent is
+    // still owned by EnableBuiltInAEC, EnableBuiltInNS, and EnableBuiltInAGC.
+    state.voice_processing_bypassed = false;
+  } else {
+    // Disabling voice processing removes Apple's built-in processing path
+    // entirely. Clear component requests so diagnostics do not report stale
+    // Apple AEC, NS, or AGC state while the path is absent.
+    state.voice_processing_bypassed = true;
+    state.voice_processing_agc_enabled = false;
+    state.built_in_aec_enabled = false;
+    state.built_in_ns_enabled = false;
+  }
+  return state;
+}
+
+AudioProcessingOptionsValidationContext AudioProcessingValidationContextForEngineState(
+    const AudioEngineDevice::EngineState &state) {
+  AudioProcessingOptionsValidationContext context;
+  context.topology = AudioDeviceModule::PlatformAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled;
+  // Availability includes the app-level policy. If the app has disallowed Apple
+  // VPIO, automatic mode must fall back to WebRTC software processing and
+  // platform mode must be rejected. Mirrors
+  // AudioEngineDevice::PlatformVoiceProcessingPathIsAvailable().
+#if TARGET_OS_SIMULATOR
+  const bool path_available = false;
+#else
+  const bool path_available = state.platform_voice_processing_allowed;
+#endif
+  context.is_echo_noise_platform_path_available = path_available;
+  context.is_echo_cancellation_platform_available = path_available;
+  context.is_noise_suppression_platform_available = path_available;
+  context.is_auto_gain_control_platform_available = path_available;
+  context.is_echo_noise_platform_path_active = EngineStateEchoNoisePlatformPathIsActive(state);
+  return context;
+}
+
+AudioEngineDevice::EngineState ApplyAudioProcessingOptionsToEngineState(AudioEngineDevice::EngineState state,
+                                                                        const AudioOptions &options) {
+  AudioProcessingOptionsValidationContext validation_context = AudioProcessingValidationContextForEngineState(state);
+  AudioProcessingOptionsResult validation = ValidateAudioProcessingOptions(options, validation_context);
+  if (!validation.ok()) {
+    // The seed path only prepares Apple VPIO state before capture starts. The
+    // track or voice-engine path owns API-level rejection. If invalid options
+    // reach ADM directly, leave the requested ADM state unchanged and let
+    // recording continue.
+    LOGW() << "Skipping audio processing seed: " << validation.message;
+    return state;
+  }
+
+  CoupledAudioProcessingPathResolution resolution =
+      ResolveCoupledAudioProcessingPath(options, [&state] { return EngineStateEchoNoisePlatformPathIsActive(state); });
+
+  // Only seed the platform path when the options resolve to it AND the device can
+  // provide it. If the path is unavailable (e.g. simulator), keep it off and let
+  // WebRTC APM handle automatic fallback later. Mirrors the runtime apply gate
+  // (path_available && should_use_echo_noise_platform_path).
+  const bool should_seed_platform_path =
+      validation_context.is_echo_noise_platform_path_available && resolution.should_use_echo_noise_platform_path;
+
+  if (resolution.has_echo_or_noise_option) {
+    // Seed Apple VPIO before the first engine start. The sender applies the full
+    // APM config later, but waiting until then starts capture with ADM defaults
+    // and can immediately recreate the engine. An automatic/platform AEC/NS
+    // request seeds the VPIO path on even if it was previously disabled, unless
+    // the app-level platform voice-processing policy has disallowed it.
+    state = SetVoiceProcessingPathEnabled(state, should_seed_platform_path);
+  }
+
+  if (options.auto_gain_control.has_value()) {
+    state.voice_processing_agc_enabled = should_seed_platform_path && resolution.auto_gain_control_wants_platform;
+  }
+  return state;
+}
+
+}  // namespace
 
 // Maps AudioDuckingLevel to AVAudioVoiceProcessingOtherAudioDuckingLevel.
 // Uses explicit mapping to avoid assuming integer values match between enums.
@@ -106,6 +208,9 @@ AudioEngineDevice::AudioEngineDevice(const Environment& env, bool voice_processi
 
   // Initial engine state
   engine_state_.voice_processing_bypassed = voice_processing_bypassed;
+  engine_state_.built_in_aec_enabled = !voice_processing_bypassed;
+  engine_state_.built_in_ns_enabled = !voice_processing_bypassed;
+  engine_state_.voice_processing_agc_enabled = !voice_processing_bypassed;
 }
 
 bool AudioEngineDevice::IsStopOnMuteModeEnabled() const {
@@ -266,7 +371,7 @@ int32_t AudioEngineDevice::Init() {
   // main thread to issue notifications.
   AudioObjectPropertyAddress propertyAddress = {kAudioHardwarePropertyRunLoop,
                                                 kAudioObjectPropertyScopeGlobal,
-                                                kAudioObjectPropertyElementMaster};
+                                                kAudioObjectPropertyElementMain};
 
   CFRunLoopRef runLoop = NULL;
   UInt32 size = sizeof(CFRunLoopRef);
@@ -323,9 +428,9 @@ int32_t AudioEngineDevice::Terminate() {
 #if TARGET_OS_OSX
   // Remove listeners for global scope.
   AudioObjectPropertyAddress propertyAddress = {
-      kAudioHardwarePropertyDevices,     // selector
-      kAudioObjectPropertyScopeGlobal,   // scope
-      kAudioObjectPropertyElementMaster  // element
+      kAudioHardwarePropertyDevices,    // selector
+      kAudioObjectPropertyScopeGlobal,  // scope
+      kAudioObjectPropertyElementMain   // element
   };
 
   OSStatus err = noErr;
@@ -983,7 +1088,9 @@ int32_t AudioEngineDevice::RegisterAudioCallback(AudioTransport* audioCallback) 
   LOGI() << "RegisterAudioCallback";
   RTC_DCHECK_RUN_ON(thread_);
   RTC_DCHECK(audio_device_buffer_ != nullptr);
-  RTC_DCHECK(audioCallback != nullptr);
+  // audioCallback is nullptr when deregistering (e.g. WebRtcVoiceEngine::Terminate).
+  // AudioDeviceBuffer::RegisterAudioCallback accepts nullptr, so don't DCHECK it
+  // (doing so crashes debug builds on teardown).
 
   return audio_device_buffer_->RegisterAudioCallback(audioCallback);
 }
@@ -991,27 +1098,107 @@ int32_t AudioEngineDevice::RegisterAudioCallback(AudioTransport* audioCallback) 
 // ----------------------------------------------------------------------------------------------------
 // Misc
 
+// These availability checks report whether a component can be used inside the
+// currently configured Voice Processing I/O path. The coupled controller uses
+// PlatformVoiceProcessingPathIsAvailable before these checks when it needs to
+// recreate the path from a software or disabled state.
 bool AudioEngineDevice::BuiltInAECIsAvailable() const {
-#if TARGET_OS_SIMULATOR
-  return false;
-#else
-  return true;
-#endif
+  // Echo cancellation is available only when the app allows Apple's platform
+  // voice processing. Within that policy, availability is not a function of
+  // whether VPIO is currently on: an automatic/platform request can re-create
+  // the path. Current on/off state is exposed separately via active fields.
+  return PlatformVoiceProcessingPathIsAvailable();
 }
 
 bool AudioEngineDevice::BuiltInAGCIsAvailable() const {
 #if TARGET_OS_SIMULATOR
   return false;
 #else
-  return true;
+  RTC_DCHECK_RUN_ON(thread_);
+  return engine_state_.platform_voice_processing_allowed && engine_state_.voice_processing_enabled;
 #endif
 }
 
 bool AudioEngineDevice::BuiltInNSIsAvailable() const {
+  // Noise suppression is a device capability provided by the VPIO path; see
+  // BuiltInAECIsAvailable.
+  return PlatformVoiceProcessingPathIsAvailable();
+}
+
+AudioDeviceModule::PlatformAudioProcessingTopology AudioEngineDevice::GetPlatformAudioProcessingTopology() const {
+  return PlatformAudioProcessingTopology::kEchoCancellationAndNoiseSuppressionCoupled;
+}
+
+bool AudioEngineDevice::PlatformVoiceProcessingPathIsAvailable() const {
 #if TARGET_OS_SIMULATOR
   return false;
 #else
-  return true;
+  RTC_DCHECK_RUN_ON(thread_);
+  return engine_state_.platform_voice_processing_allowed;
+#endif
+}
+
+int32_t AudioEngineDevice::EnablePlatformVoiceProcessingPath(bool enable) {
+#if TARGET_OS_SIMULATOR
+  return -1;
+#else
+  RTC_DCHECK_RUN_ON(thread_);
+  if (enable && !engine_state_.platform_voice_processing_allowed) {
+    return -1;
+  }
+  return ModifyEngineState(
+      [enable](EngineState state) -> EngineState { return SetVoiceProcessingPathEnabled(state, enable); });
+#endif
+}
+
+AudioDeviceModule::PlatformAudioProcessingState AudioEngineDevice::GetPlatformAudioProcessingState() const {
+  PlatformAudioProcessingState state;
+  state.topology = GetPlatformAudioProcessingTopology();
+#if TARGET_OS_SIMULATOR
+  return state;
+#else
+  RTC_DCHECK_RUN_ON(thread_);
+
+  // AEC and NS availability is bounded by app policy: when platform voice
+  // processing is disallowed, automatic falls back to software and platform
+  // requests are rejected. If allowed, availability is independent of whether
+  // VPIO is currently on. AGC differs because Apple AGC only has an effect while
+  // VPIO is active and AGC alone never creates the path.
+  const bool path_available = PlatformVoiceProcessingPathIsAvailable();
+  state.is_echo_cancellation_available = path_available;
+  state.is_noise_suppression_available = path_available;
+  state.is_auto_gain_control_available =
+      engine_state_.platform_voice_processing_allowed && engine_state_.voice_processing_enabled;
+
+  state.is_echo_cancellation_requested = engine_state_.built_in_aec_enabled;
+  state.is_noise_suppression_requested = engine_state_.built_in_ns_enabled;
+  state.is_auto_gain_control_requested = engine_state_.voice_processing_agc_enabled;
+
+  state.is_voice_processing_enabled_requested = engine_state_.voice_processing_enabled;
+  state.is_voice_processing_bypassed_requested = engine_state_.voice_processing_bypassed;
+  state.is_voice_processing_agc_enabled_requested = engine_state_.voice_processing_agc_enabled;
+
+  if (engine_device_ == nil) {
+    return state;
+  }
+
+  AVAudioInputNode *input_node = engine_device_.inputNode;
+  @try {
+    const bool vp_active = input_node.isVoiceProcessingEnabled;
+    const bool bypassed_active = vp_active ? input_node.voiceProcessingBypassed : true;
+    const bool agc_active = vp_active ? input_node.voiceProcessingAGCEnabled : false;
+    const bool shared_echo_noise_active = vp_active && !bypassed_active;
+
+    state.is_voice_processing_enabled_active = vp_active;
+    state.is_voice_processing_bypassed_active = bypassed_active;
+    state.is_voice_processing_agc_enabled_active = agc_active;
+    state.is_echo_cancellation_active = shared_echo_noise_active;
+    state.is_noise_suppression_active = shared_echo_noise_active;
+    state.is_auto_gain_control_active = shared_echo_noise_active && agc_active;
+  } @catch (NSException *exception) {
+    LOGW() << "GetPlatformAudioProcessingState threw exception: " << exception.reason.UTF8String;
+  }
+  return state;
 #endif
 }
 
@@ -1019,8 +1206,15 @@ int32_t AudioEngineDevice::EnableBuiltInAEC(bool enable) {
 #if TARGET_OS_SIMULATOR
   return -1;
 #else
-  // Succeed on enable, fail on disable so software APM stays on as fallback.
-  return enable ? 0 : -1;
+  RTC_DCHECK_RUN_ON(thread_);
+  if (!engine_state_.voice_processing_enabled) {
+    return -1;
+  }
+  return ModifyEngineState([enable](EngineState state) -> EngineState {
+    state.built_in_aec_enabled = enable;
+    RecomputeVoiceProcessingBypassFromComponents(state);
+    return state;
+  });
 #endif
 }
 
@@ -1028,7 +1222,14 @@ int32_t AudioEngineDevice::EnableBuiltInAGC(bool enable) {
 #if TARGET_OS_SIMULATOR
   return -1;
 #else
-  return enable ? 0 : -1;
+  RTC_DCHECK_RUN_ON(thread_);
+  if (!engine_state_.voice_processing_enabled) {
+    return -1;
+  }
+  return ModifyEngineState([enable](EngineState state) -> EngineState {
+    state.voice_processing_agc_enabled = enable;
+    return state;
+  });
 #endif
 }
 
@@ -1036,7 +1237,15 @@ int32_t AudioEngineDevice::EnableBuiltInNS(bool enable) {
 #if TARGET_OS_SIMULATOR
   return -1;
 #else
-  return enable ? 0 : -1;
+  RTC_DCHECK_RUN_ON(thread_);
+  if (!engine_state_.voice_processing_enabled) {
+    return -1;
+  }
+  return ModifyEngineState([enable](EngineState state) -> EngineState {
+    state.built_in_ns_enabled = enable;
+    RecomputeVoiceProcessingBypassFromComponents(state);
+    return state;
+  });
 #endif
 }
 
@@ -1110,29 +1319,46 @@ int32_t AudioEngineDevice::VoiceProcessingBypassed(bool* enabled) {
   return 0;
 }
 
-int32_t AudioEngineDevice::SetVoiceProcessingEnabled(bool enable) {
+// Platform voice-processing policy: this is an app-level permission for Apple
+// VPIO. Runtime AudioProcessingOptions still own the current VPIO state. When
+// this policy is false, automatic mode falls back to WebRTC software processing
+// and platform mode is rejected as unavailable.
+int32_t AudioEngineDevice::SetPlatformVoiceProcessingAllowed(bool allowed) {
   RTC_DCHECK_RUN_ON(thread_);
-  LOGI() << "SetVoiceProcessingEnabled: " << enable;
+  LOGI() << "SetPlatformVoiceProcessingAllowed: " << allowed;
 
-  int32_t result = ModifyEngineState([enable](EngineState state) -> EngineState {
-    state.voice_processing_enabled = enable;
+  int32_t result = ModifyEngineState([allowed](EngineState state) -> EngineState {
+    state.platform_voice_processing_allowed = allowed;
+    if (!allowed) {
+      state = SetVoiceProcessingPathEnabled(state, false);
+    }
     return state;
   });
 
   return result;
 }
 
-int32_t AudioEngineDevice::VoiceProcessingEnabled(bool* enabled) {
-  LOGI() << "VoiceProcessingEnabled";
+int32_t AudioEngineDevice::PlatformVoiceProcessingAllowed(bool *allowed) {
+  LOGI() << "PlatformVoiceProcessingAllowed";
   RTC_DCHECK_RUN_ON(thread_);
 
-  if (enabled == nullptr) {
+  if (allowed == nullptr) {
     return -1;
   }
 
-  *enabled = engine_state_.voice_processing_enabled;
+  *allowed = engine_state_.platform_voice_processing_allowed;
 
   return 0;
+}
+
+int32_t AudioEngineDevice::SetVoiceProcessingEnabled(bool enable) {
+  LOGW() << "SetVoiceProcessingEnabled is deprecated; use SetPlatformVoiceProcessingAllowed";
+  return SetPlatformVoiceProcessingAllowed(enable);
+}
+
+int32_t AudioEngineDevice::VoiceProcessingEnabled(bool *enabled) {
+  LOGW() << "VoiceProcessingEnabled is deprecated; use PlatformVoiceProcessingAllowed";
+  return PlatformVoiceProcessingAllowed(enabled);
 }
 
 int32_t AudioEngineDevice::SetVoiceProcessingBypassed(bool enable) {
@@ -1141,6 +1367,9 @@ int32_t AudioEngineDevice::SetVoiceProcessingBypassed(bool enable) {
 
   int32_t result = ModifyEngineState([enable](EngineState state) -> EngineState {
     state.voice_processing_bypassed = enable;
+    state.built_in_aec_enabled = !enable;
+    state.built_in_ns_enabled = !enable;
+    state.voice_processing_agc_enabled = !enable;
     return state;
   });
 
@@ -1249,11 +1478,14 @@ int32_t AudioEngineDevice::SetMuteMode(MuteMode mode) {
   return result;
 }
 
-int32_t AudioEngineDevice::InitAndStartRecording() {
+int32_t AudioEngineDevice::InitAndStartRecording(const AudioOptions *options) {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "InitAndStartRecording";
 
-  int32_t result = ModifyEngineState([](EngineState state) -> EngineState {
+  int32_t result = ModifyEngineState([options](EngineState state) -> EngineState {
+    if (options != nullptr) {
+      state = ApplyAudioProcessingOptionsToEngineState(state, *options);
+    }
     state.input_enabled = true;
     state.input_running = true;
     state.input_muted = false;  // Always unmute
@@ -1314,11 +1546,14 @@ int32_t AudioEngineDevice::DuckingLevel(AudioDuckingLevel* level) {
   return 0;
 }
 
-int32_t AudioEngineDevice::SetInitRecordingPersistentMode(bool enable) {
+int32_t AudioEngineDevice::SetInitRecordingPersistentMode(bool enable, const AudioOptions *options) {
   RTC_DCHECK_RUN_ON(thread_);
   LOGI() << "SetInitRecordingPersistentMode: " << enable;
 
-  int32_t result = ModifyEngineState([enable](EngineState state) -> EngineState {
+  int32_t result = ModifyEngineState([enable, options](EngineState state) -> EngineState {
+    if (enable && options != nullptr) {
+      state = ApplyAudioProcessingOptionsToEngineState(state, *options);
+    }
     state.input_enabled_persistent_mode = enable;
     return state;
   });
@@ -1383,6 +1618,14 @@ void AudioEngineDevice::ReconfigureEngine() {
       // We're in a bad state now, could consider more recovery options here
     }
   }));
+}
+
+void AudioEngineDevice::EnsureFineAudioBuffer() {
+  RTC_DCHECK_RUN_ON(thread_);
+  if (fine_audio_buffer_ == nullptr) {
+    LOGE() << "fine_audio_buffer_ was null at buffer start; recreating";
+    fine_audio_buffer_.reset(new FineAudioBuffer(audio_device_buffer_.get()));
+  }
 }
 
 int32_t AudioEngineDevice::ModifyEngineState(
@@ -1680,6 +1923,7 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
     }
     LOGI() << "Starting playout buffer (Manual)...";
     audio_device_buffer_->StartPlayout();
+    EnsureFineAudioBuffer();
     fine_audio_buffer_->ResetPlayout();
 
     rollback_actions.push_back([this]() {
@@ -1699,6 +1943,7 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
     }
     LOGI() << "Starting record buffer (Manual)...";
     audio_device_buffer_->StartRecording();
+    EnsureFineAudioBuffer();
     fine_audio_buffer_->ResetRecord();
 
     rollback_actions.push_back([this]() {
@@ -1819,27 +2064,19 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     return "?";
   };
 
-  auto log_engine_state = [&](const char* label, const EngineState& s) {
+  auto log_engine_state = [&](const char *label, const EngineState &s) {
     LOGI() << label << ": "
-           << "in=" << s.input_enabled << "/" << s.input_running
-           << " out=" << s.output_enabled << "/" << s.output_running
-           << " persistent=" << s.input_enabled_persistent_mode
-           << " muted=" << s.input_muted
-           << " vp=" << s.voice_processing_enabled
-           << " vpBypass=" << s.voice_processing_bypassed
-           << " agc=" << s.voice_processing_agc_enabled
-           << " mute_mode=" << mute_mode_str(s.mute_mode)
-           << " render=" << render_mode_str(s.render_mode)
-           << " interrupted=" << s.is_interrupted
-           << " in_avail=" << s.input_available
-           << " out_avail=" << s.output_available
-           << " inDev=" << s.input_device_id
-           << " outDev=" << s.output_device_id
+           << "in=" << s.input_enabled << "/" << s.input_running << " out=" << s.output_enabled << "/"
+           << s.output_running << " persistent=" << s.input_enabled_persistent_mode << " muted=" << s.input_muted
+           << " platformVpAllowed=" << s.platform_voice_processing_allowed << " vp=" << s.voice_processing_enabled
+           << " vpBypass=" << s.voice_processing_bypassed << " agc=" << s.voice_processing_agc_enabled
+           << " builtinAec=" << s.built_in_aec_enabled << " builtinNs=" << s.built_in_ns_enabled
+           << " mute_mode=" << mute_mode_str(s.mute_mode) << " render=" << render_mode_str(s.render_mode)
+           << " interrupted=" << s.is_interrupted << " in_avail=" << s.input_available
+           << " out_avail=" << s.output_available << " inDev=" << s.input_device_id << " outDev=" << s.output_device_id
            << " defInUpd=" << s.default_input_device_update_count
-           << " defOutUpd=" << s.default_output_device_update_count
-           << " | IsInEnabled=" << s.IsInputEnabled()
-           << " IsOutEnabled=" << s.IsOutputEnabled()
-           << " IsInRunning=" << s.IsInputRunning()
+           << " defOutUpd=" << s.default_output_device_update_count << " | IsInEnabled=" << s.IsInputEnabled()
+           << " IsOutEnabled=" << s.IsOutputEnabled() << " IsInRunning=" << s.IsInputRunning()
            << " IsOutRunning=" << s.IsOutputRunning();
   };
 
@@ -2045,9 +2282,10 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     // At this point mic permissions / session should be configured for recording.
     if (state.DidEnableInput()) {
       LOGI() << "Checking microphone permission...";
-      // Attempt to acquire mic permissions at this point to return an erorr early.
-      bool isAuthorized = EnsureMicrophonePermissionSync();
-      LOGI() << "AudioEngine pre-enable check, device permission: "
+      // Passively check the current authorization status to fail early without blocking.
+      // Requesting permission is the SDK's responsibility (gated to the foreground).
+      bool isAuthorized = IsMicrophonePermissionAuthorized();
+      LOGI() << "AudioEngine pre-enable check, mic permission authorized: "
              << (isAuthorized ? "true" : "false");
       if (!isAuthorized) {
         return rollback(kAudioEngineErrorInsufficientDevicePermission);
@@ -2058,8 +2296,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     NSString* category = [AVAudioSession sharedInstance].category;
     bool isCategoryValid = IsAudioSessionCategoryValid(category, state.next.IsInputEnabled(),
                                                        state.next.IsOutputEnabled());
-    LOGI() << "AudioEngine pre-enable check, audio session category: " << isCategoryValid ? "true"
-                                                                                          : "false";
+    LOGI() << "AudioEngine pre-enable check, audio session category: " << (isCategoryValid ? "true" : "false");
     if (!isCategoryValid) {
       return rollback(kAudioEngineErrorAudioSessionInvalidCategory);
     }
@@ -2075,8 +2312,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     LOGI() << "setVoiceProcessingEnabled (input): "
            << (state.next.voice_processing_enabled ? "YES" : "NO") << " (Ignored on Simulator)";
 #else
-    LOGI() << "setVoiceProcessingEnabled (input): " << state.next.voice_processing_enabled ? "YES"
-                                                                                           : "NO";
+    LOGI() << "setVoiceProcessingEnabled (input): " << (state.next.voice_processing_enabled ? "YES" : "NO");
     NSError* error = nil;
     BOOL set_vp_result = NO;
     @try {
@@ -2650,6 +2886,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     }
     LOGI() << "Starting Playout buffer...";
     audio_device_buffer_->StartPlayout();
+    EnsureFineAudioBuffer();
     fine_audio_buffer_->ResetPlayout();
 
     rollback_actions.push_back([this]() {
@@ -2671,6 +2908,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     }
     LOGI() << "Starting Record buffer...";
     audio_device_buffer_->StartRecording();
+    EnsureFineAudioBuffer();
     fine_audio_buffer_->ResetRecord();
 
     rollback_actions.push_back([this]() {
@@ -2946,36 +3184,9 @@ void AudioEngineDevice::UpdateAllDeviceIDs() {
 // ----------------------------------------------------------------------------------------------------
 // Private - Microphone permission
 
-bool AudioEngineDevice::IsMicrophonePermissionGranted() {
+bool AudioEngineDevice::IsMicrophonePermissionAuthorized() {
   AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio];
   return status == AVAuthorizationStatusAuthorized;
-}
-
-bool AudioEngineDevice::EnsureMicrophonePermissionSync() {
-  AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio];
-
-  if (status == AVAuthorizationStatusAuthorized) {
-    return true;
-  }
-
-  if (status == AVAuthorizationStatusNotDetermined) {
-    // Request permission synchronously - this will block WebRTC's worker thread
-    // but this is acceptable since instantiating AVAudioInputNode would block anyway
-    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
-    __block BOOL granted = NO;
-
-    [AVCaptureDevice requestAccessForMediaType:AVMediaTypeAudio
-                             completionHandler:^(BOOL granted_inner) {
-                               granted = granted_inner;
-                               dispatch_semaphore_signal(semaphore);
-                             }];
-
-    dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
-    return granted;
-  }
-
-  // Status is denied or restricted
-  return false;
 }
 
 // ----------------------------------------------------------------------------------------------------

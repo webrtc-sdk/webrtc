@@ -27,6 +27,7 @@
 #import "helpers/NSString+StdString.h"
 
 #include <memory>
+#include <optional>
 
 #include "api/jsep.h"
 #include "api/rtc_event_log_output_file.h"

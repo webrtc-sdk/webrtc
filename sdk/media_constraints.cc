@@ -90,6 +90,34 @@ void ConstraintToOptional(const MediaConstraints* constraints,
     *value_out = value;
   }
 }
+
+bool AudioProcessingModeFromString(const std::string &value, AudioProcessingMode *mode) {
+  if (value == "auto" || value == "automatic") {
+    *mode = AudioProcessingMode::kAutomatic;
+    return true;
+  }
+  if (value == "platform") {
+    *mode = AudioProcessingMode::kPlatform;
+    return true;
+  }
+  if (value == "software") {
+    *mode = AudioProcessingMode::kSoftware;
+    return true;
+  }
+  return false;
+}
+
+void ConstraintToOptionalAudioProcessingMode(const MediaConstraints *constraints, const std::string &key,
+                                             std::optional<AudioProcessingMode> *value_out) {
+  std::string string_value;
+  if (!FindConstraint(constraints, key, &string_value, nullptr)) {
+    return;
+  }
+  AudioProcessingMode value;
+  if (AudioProcessingModeFromString(string_value, &value)) {
+    *value_out = value;
+  }
+}
 }  // namespace
 
 const char MediaConstraints::kValueTrue[] = "true";
@@ -99,9 +127,13 @@ const char MediaConstraints::kValueFalse[] = "false";
 
 // Audio constraints.
 const char MediaConstraints::kGoogEchoCancellation[] = "googEchoCancellation";
+const char MediaConstraints::kEchoCancellationMode[] = "echoCancellationMode";
 const char MediaConstraints::kAutoGainControl[] = "googAutoGainControl";
 const char MediaConstraints::kNoiseSuppression[] = "googNoiseSuppression";
 const char MediaConstraints::kHighpassFilter[] = "googHighpassFilter";
+const char MediaConstraints::kAutoGainControlMode[] = "autoGainControlMode";
+const char MediaConstraints::kNoiseSuppressionMode[] = "noiseSuppressionMode";
+const char MediaConstraints::kHighpassFilterMode[] = "highPassFilterMode";
 const char MediaConstraints::kAudioMirroring[] = "googAudioMirroring";
 const char MediaConstraints::kAudioNetworkAdaptorConfig[] =
     "googAudioNetworkAdaptorConfig";
@@ -176,12 +208,20 @@ void CopyConstraintsIntoAudioOptions(const MediaConstraints* constraints,
   ConstraintToOptional<bool>(constraints,
                              MediaConstraints::kGoogEchoCancellation,
                              &options->echo_cancellation);
+  ConstraintToOptionalAudioProcessingMode(constraints, MediaConstraints::kEchoCancellationMode,
+                                          &options->echo_cancellation_mode);
   ConstraintToOptional<bool>(constraints, MediaConstraints::kAutoGainControl,
                              &options->auto_gain_control);
+  ConstraintToOptionalAudioProcessingMode(constraints, MediaConstraints::kAutoGainControlMode,
+                                          &options->auto_gain_control_mode);
   ConstraintToOptional<bool>(constraints, MediaConstraints::kNoiseSuppression,
                              &options->noise_suppression);
+  ConstraintToOptionalAudioProcessingMode(constraints, MediaConstraints::kNoiseSuppressionMode,
+                                          &options->noise_suppression_mode);
   ConstraintToOptional<bool>(constraints, MediaConstraints::kHighpassFilter,
                              &options->highpass_filter);
+  ConstraintToOptionalAudioProcessingMode(constraints, MediaConstraints::kHighpassFilterMode,
+                                          &options->highpass_filter_mode);
   ConstraintToOptional<bool>(constraints, MediaConstraints::kAudioMirroring,
                              &options->stereo_swapping);
   ConstraintToOptional<std::string>(

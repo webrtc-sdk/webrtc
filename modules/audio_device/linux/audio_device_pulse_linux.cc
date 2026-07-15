@@ -10,6 +10,8 @@
 
 #include "modules/audio_device/linux/audio_device_pulse_linux.h"
 
+#include <sys/time.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -44,6 +46,13 @@ WebRTCPulseSymbolTable* GetPulseSymbolTable() {
               GetPulseSymbolTable(), sym)
 
 namespace webrtc {
+
+namespace {
+
+constexpr int kPulseStreamReadyTimeoutSec = 9;
+constexpr int kPulseStartTimeoutSec = kPulseStreamReadyTimeoutSec + 3;
+
+}  // namespace
 
 AudioDeviceLinuxPulse::AudioDeviceLinuxPulse()
     : _ptrAudioBuffer(nullptr),
@@ -151,6 +160,13 @@ AudioDeviceGeneric::InitStatus AudioDeviceLinuxPulse::Init() {
   RTC_DCHECK(thread_checker_.IsCurrent());
   if (_initialized) {
     return InitStatus::OK;
+  }
+
+  {
+    MutexLock lock(&mutex_);
+    quit_ = false;
+    _startRec = false;
+    _startPlay = false;
   }
 
   // Initialize PulseAudio
@@ -1063,16 +1079,20 @@ int32_t AudioDeviceLinuxPulse::StartRecording() {
     return -1;
   }
 
-  if (_recording) {
-    return 0;
-  }
+  _recStartEvent.Reset();
+  {
+    MutexLock lock(&mutex_);
+    if (_recording) {
+      return 0;
+    }
 
-  // Set state to ensure that the recording starts from the audio thread.
-  _startRec = true;
+    // Set state to ensure that the recording starts from the audio thread.
+    _startRec = true;
+  }
 
   // The audio thread will signal when recording has started.
   _timeEventRec.Set();
-  if (!_recStartEvent.Wait(TimeDelta::Seconds(10))) {
+  if (!_recStartEvent.Wait(TimeDelta::Seconds(kPulseStartTimeoutSec))) {
     {
       MutexLock lock(&mutex_);
       _startRec = false;
@@ -1082,15 +1102,17 @@ int32_t AudioDeviceLinuxPulse::StartRecording() {
     return -1;
   }
 
+  bool recording = false;
   {
     MutexLock lock(&mutex_);
-    if (_recording) {
-      // The recording state is set by the audio thread after recording
-      // has started.
-    } else {
-      RTC_LOG(LS_ERROR) << "failed to activate recording";
-      return -1;
+    recording = _recording;
+    if (!recording) {
+      RTC_LOG(LS_ERROR) << "recording thread failed to activate recording";
     }
+  }
+  if (!recording) {
+    StopRecording();
+    return -1;
   }
 
   return 0;
@@ -1114,6 +1136,7 @@ int32_t AudioDeviceLinuxPulse::StopRecording() {
   RTC_LOG(LS_VERBOSE) << "stopping recording";
 
   // Stop Recording
+  int32_t ret_val = 0;
   PaLock();
 
   DisableReadCallback();
@@ -1122,16 +1145,18 @@ int32_t AudioDeviceLinuxPulse::StopRecording() {
   // Unset this here so that we don't get a TERMINATED callback
   LATE(pa_stream_set_state_callback)(_recStream, nullptr, nullptr);
 
-  if (LATE(pa_stream_get_state)(_recStream) != PA_STREAM_UNCONNECTED) {
+  const pa_stream_state_t stream_state = LATE(pa_stream_get_state)(_recStream);
+  if (stream_state != PA_STREAM_UNCONNECTED &&
+      stream_state != PA_STREAM_FAILED &&
+      stream_state != PA_STREAM_TERMINATED) {
     // Disconnect the stream
     if (LATE(pa_stream_disconnect)(_recStream) != PA_OK) {
       RTC_LOG(LS_ERROR) << "failed to disconnect rec stream, err="
                         << LATE(pa_context_errno)(_paContext);
-      PaUnLock();
-      return -1;
+      ret_val = -1;
+    } else {
+      RTC_LOG(LS_VERBOSE) << "disconnected recording";
     }
-
-    RTC_LOG(LS_VERBOSE) << "disconnected recording";
   }
 
   LATE(pa_stream_unref)(_recStream);
@@ -1147,7 +1172,7 @@ int32_t AudioDeviceLinuxPulse::StopRecording() {
     _recBuffer = nullptr;
   }
 
-  return 0;
+  return ret_val;
 }
 
 bool AudioDeviceLinuxPulse::RecordingIsInitialized() const {
@@ -1172,13 +1197,14 @@ int32_t AudioDeviceLinuxPulse::StartPlayout() {
     return -1;
   }
 
-  if (_playing) {
-    return 0;
-  }
-
-  // Set state to ensure that playout starts from the audio thread.
+  _playStartEvent.Reset();
   {
     MutexLock lock(&mutex_);
+    if (_playing) {
+      return 0;
+    }
+
+    // Set state to ensure that playout starts from the audio thread.
     _startPlay = true;
   }
 
@@ -1187,7 +1213,7 @@ int32_t AudioDeviceLinuxPulse::StartPlayout() {
 
   // The audio thread will signal when playout has started.
   _timeEventPlay.Set();
-  if (!_playStartEvent.Wait(TimeDelta::Seconds(10))) {
+  if (!_playStartEvent.Wait(TimeDelta::Seconds(kPulseStartTimeoutSec))) {
     {
       MutexLock lock(&mutex_);
       _startPlay = false;
@@ -1197,15 +1223,17 @@ int32_t AudioDeviceLinuxPulse::StartPlayout() {
     return -1;
   }
 
+  bool playing = false;
   {
     MutexLock lock(&mutex_);
-    if (_playing) {
-      // The playing state is set by the audio thread after playout
-      // has started.
-    } else {
-      RTC_LOG(LS_ERROR) << "failed to activate playing";
-      return -1;
+    playing = _playing;
+    if (!playing) {
+      RTC_LOG(LS_ERROR) << "playout thread failed to activate playing";
     }
+  }
+  if (!playing) {
+    StopPlayout();
+    return -1;
   }
 
   return 0;
@@ -1230,6 +1258,7 @@ int32_t AudioDeviceLinuxPulse::StopPlayout() {
   RTC_LOG(LS_VERBOSE) << "stopping playback";
 
   // Stop Playout
+  int32_t ret_val = 0;
   PaLock();
 
   DisableWriteCallback();
@@ -1238,16 +1267,18 @@ int32_t AudioDeviceLinuxPulse::StopPlayout() {
   // Unset this here so that we don't get a TERMINATED callback
   LATE(pa_stream_set_state_callback)(_playStream, nullptr, nullptr);
 
-  if (LATE(pa_stream_get_state)(_playStream) != PA_STREAM_UNCONNECTED) {
+  const pa_stream_state_t stream_state = LATE(pa_stream_get_state)(_playStream);
+  if (stream_state != PA_STREAM_UNCONNECTED &&
+      stream_state != PA_STREAM_FAILED &&
+      stream_state != PA_STREAM_TERMINATED) {
     // Disconnect the stream
     if (LATE(pa_stream_disconnect)(_playStream) != PA_OK) {
       RTC_LOG(LS_ERROR) << "failed to disconnect play stream, err="
                         << LATE(pa_context_errno)(_paContext);
-      PaUnLock();
-      return -1;
+      ret_val = -1;
+    } else {
+      RTC_LOG(LS_VERBOSE) << "disconnected playback";
     }
-
-    RTC_LOG(LS_VERBOSE) << "disconnected playback";
   }
 
   LATE(pa_stream_unref)(_playStream);
@@ -1263,7 +1294,7 @@ int32_t AudioDeviceLinuxPulse::StopPlayout() {
     _playBuffer = nullptr;
   }
 
-  return 0;
+  return ret_val;
 }
 
 int32_t AudioDeviceLinuxPulse::PlayoutDelay(uint16_t& delayMS) const {
@@ -1711,6 +1742,68 @@ void AudioDeviceLinuxPulse::PaUnLock() {
   LATE(pa_threaded_mainloop_unlock)(_paMainloop);
 }
 
+bool AudioDeviceLinuxPulse::WaitForPulseStreamReady(pa_stream* stream,
+                                                    const char* stream_name) {
+  // Bound the wait: callers enter this helper from the audio worker thread
+  // while holding mutex_. A PulseAudio server stuck in CREATING/UNCONNECTED
+  // would otherwise wedge the worker in pa_threaded_mainloop_wait(), blocking
+  // concurrent StopRecording/StopPlayout from acquiring mutex_.
+  struct TimerCtx {
+    pa_threaded_mainloop* mainloop;
+    bool fired;
+  };
+  TimerCtx ctx{_paMainloop, false};
+
+  struct timeval when;
+  gettimeofday(&when, nullptr);
+  when.tv_sec += kPulseStreamReadyTimeoutSec;
+
+  pa_time_event* timer = _paMainloopApi->time_new(
+      _paMainloopApi, &when,
+      [](pa_mainloop_api* /*api*/, pa_time_event* /*e*/,
+         const struct timeval* /*tv*/, void* userdata) {
+        auto* c = static_cast<TimerCtx*>(userdata);
+        c->fired = true;
+        LATE(pa_threaded_mainloop_signal)(c->mainloop, 0);
+      },
+      &ctx);
+  if (!timer) {
+    RTC_LOG(LS_ERROR)
+        << stream_name << " stream wait: failed to arm timeout timer";
+    return false;
+  }
+
+  bool result = false;
+  while (true) {
+    const pa_stream_state_t state = LATE(pa_stream_get_state)(stream);
+    if (state == PA_STREAM_READY) {
+      result = true;
+      break;
+    }
+    if (state == PA_STREAM_FAILED) {
+      RTC_LOG(LS_ERROR) << stream_name << " stream failed, err="
+                        << LATE(pa_context_errno)(_paContext);
+      break;
+    }
+    if (state == PA_STREAM_TERMINATED) {
+      RTC_LOG(LS_ERROR) << stream_name << " stream terminated";
+      break;
+    }
+    if (ctx.fired) {
+      RTC_LOG(LS_ERROR) << stream_name << " stream wait timed out after "
+                        << kPulseStreamReadyTimeoutSec
+                        << "s, state=" << state;
+      break;
+    }
+    LATE(pa_threaded_mainloop_wait)(_paMainloop);
+  }
+
+  if (timer) {
+    _paMainloopApi->time_free(timer);
+  }
+  return result;
+}
+
 void AudioDeviceLinuxPulse::WaitForOperationCompletion(
     pa_operation* paOperation) const {
   if (!paOperation) {
@@ -1997,6 +2090,11 @@ bool AudioDeviceLinuxPulse::PlayThreadProcess() {
   MutexLock lock(&mutex_);
 
   if (quit_) {
+    if (_startPlay) {
+      _startPlay = false;
+      _playing = false;
+      _playStartEvent.Set();
+    }
     return false;
   }
 
@@ -2052,13 +2150,29 @@ bool AudioDeviceLinuxPulse::PlayThreadProcess() {
                                          ptr_cvolume, nullptr) != PA_OK) {
       RTC_LOG(LS_ERROR) << "failed to connect play stream, err="
                         << LATE(pa_context_errno)(_paContext);
+      PaUnLock();
+      if (_playDeviceName) {
+        delete[] _playDeviceName;
+        _playDeviceName = nullptr;
+      }
+      _startPlay = false;
+      _playing = false;
+      _playStartEvent.Set();
+      return true;
     }
 
     RTC_LOG(LS_VERBOSE) << "play stream connected";
 
-    // Wait for state change
-    while (LATE(pa_stream_get_state)(_playStream) != PA_STREAM_READY) {
-      LATE(pa_threaded_mainloop_wait)(_paMainloop);
+    if (!WaitForPulseStreamReady(_playStream, "playout")) {
+      PaUnLock();
+      if (_playDeviceName) {
+        delete[] _playDeviceName;
+        _playDeviceName = nullptr;
+      }
+      _startPlay = false;
+      _playing = false;
+      _playStartEvent.Set();
+      return true;
     }
 
     RTC_LOG(LS_VERBOSE) << "play stream ready";
@@ -2170,6 +2284,11 @@ bool AudioDeviceLinuxPulse::RecThreadProcess() {
 
   MutexLock lock(&mutex_);
   if (quit_) {
+    if (_startRec) {
+      _startRec = false;
+      _recording = false;
+      _recStartEvent.Set();
+    }
     return false;
   }
   if (_startRec) {
@@ -2195,13 +2314,29 @@ bool AudioDeviceLinuxPulse::RecThreadProcess() {
             (pa_stream_flags_t)_recStreamFlags) != PA_OK) {
       RTC_LOG(LS_ERROR) << "failed to connect rec stream, err="
                         << LATE(pa_context_errno)(_paContext);
+      PaUnLock();
+      if (_recDeviceName) {
+        delete[] _recDeviceName;
+        _recDeviceName = nullptr;
+      }
+      _startRec = false;
+      _recording = false;
+      _recStartEvent.Set();
+      return true;
     }
 
     RTC_LOG(LS_VERBOSE) << "connected";
 
-    // Wait for state change
-    while (LATE(pa_stream_get_state)(_recStream) != PA_STREAM_READY) {
-      LATE(pa_threaded_mainloop_wait)(_paMainloop);
+    if (!WaitForPulseStreamReady(_recStream, "recording")) {
+      PaUnLock();
+      if (_recDeviceName) {
+        delete[] _recDeviceName;
+        _recDeviceName = nullptr;
+      }
+      _startRec = false;
+      _recording = false;
+      _recStartEvent.Set();
+      return true;
     }
 
     RTC_LOG(LS_VERBOSE) << "done";

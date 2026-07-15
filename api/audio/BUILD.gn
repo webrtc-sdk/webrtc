@@ -20,6 +20,36 @@ rtc_source_set("audio_device") {
   ]
 }
 
+rtc_source_set("audio_processing_state") {
+  visibility = [ "*" ]
+  sources = [ "audio_processing_state.h" ]
+  deps = [
+    ":audio_device",
+    "..:audio_options_api",
+  ]
+}
+
+rtc_source_set("audio_processing_options_result") {
+  visibility = [ "*" ]
+  sources = [ "audio_processing_options_result.h" ]
+  deps = [ "../../rtc_base/system:rtc_export" ]
+}
+
+rtc_library("audio_processing_options_resolver") {
+  visibility = [ "*" ]
+  sources = [
+    "audio_processing_options_resolver.cc",
+    "audio_processing_options_resolver.h",
+  ]
+  deps = [
+    ":audio_device",
+    ":audio_processing_options_result",
+    "..:audio_options_api",
+    "..:function_view",
+    "../../rtc_base/system:rtc_export",
+  ]
+}
+
 if (rtc_include_internal_audio_device) {
   rtc_library("create_audio_device_module") {
     visibility = [ "*" ]
@@ -27,8 +57,15 @@ if (rtc_include_internal_audio_device) {
       "create_audio_device_module.cc",
       "create_audio_device_module.h",
     ]
+    if (is_mac || is_ios) {
+      sources += [
+        "create_audio_engine_device_module.h",
+        "create_audio_engine_device_module.mm",
+      ]
+    }
     deps = [
       ":audio_device",
+      "..:make_ref_counted",
       "..:scoped_refptr",
       "../../modules/audio_device:audio_device_impl",
       "../environment",

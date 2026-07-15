@@ -16,7 +16,6 @@
 
 #include "api/crypto/frame_encryptor_interface.h"
 #include "api/media_stream_interface.h"
-#include "api/media_types.h"
 #include "api/rtp_parameters.h"
 #include "api/rtp_sender_interface.h"
 #include "api/scoped_refptr.h"

@@ -10,6 +10,7 @@
 
 #import "RTCPeerConnectionFactory.h"
 
+#include "api/audio/audio_device.h"
 #include "api/peer_connection_interface.h"
 #include "api/scoped_refptr.h"
 #include "rtc_base/thread.h"
@@ -27,6 +28,8 @@ NS_ASSUME_NONNULL_BEGIN
     @property(nonatomic, readonly)
         webrtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface>
             nativeFactory;
+
+@property(nonatomic, readonly) webrtc::scoped_refptr<webrtc::AudioDeviceModule> nativeAudioDeviceModule;
 
 @property(nonatomic, readonly) webrtc::Thread* signalingThread;
 @property(nonatomic, readonly) webrtc::Thread* workerThread;
