@@ -158,7 +158,7 @@ class AudioDeviceLinuxALSA : public AudioDeviceGeneric {
 
   static void RecThreadFunc(void*);
   static void PlayThreadFunc(void*);
-  bool RecThreadProcess();
+  bool RecThreadProcess(int8_t* buffer);
   bool PlayThreadProcess();
 
   AudioDeviceBuffer* _ptrAudioBuffer;

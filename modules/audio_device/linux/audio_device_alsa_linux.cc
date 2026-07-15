@@ -1073,9 +1073,12 @@ int32_t AudioDeviceLinuxALSA::StartRecordingLocked() {
   _recording = true;
 
   // RECORDING
+  const size_t recording_buffer_size =
+      static_cast<size_t>(_recordingBufferSizeIn10MS);
   _ptrThreadRec = PlatformThread::SpawnJoinable(
-      [this] {
-        while (RecThreadProcess()) {
+      [this, recording_buffer_size] {
+        std::vector<int8_t> buffer(recording_buffer_size);
+        while (RecThreadProcess(buffer.data())) {
         }
       },
       "webrtc_audio_module_capture_thread",
@@ -1593,7 +1596,7 @@ bool AudioDeviceLinuxALSA::PlayThreadProcess() {
   return true;
 }
 
-bool AudioDeviceLinuxALSA::RecThreadProcess() {
+bool AudioDeviceLinuxALSA::RecThreadProcess(int8_t* buffer) {
   int err;
   snd_pcm_sframes_t frames;
   snd_pcm_sframes_t avail_frames;
@@ -1603,8 +1606,6 @@ bool AudioDeviceLinuxALSA::RecThreadProcess() {
     UnLock();
     return false;
   }
-
-  std::vector<int8_t> buffer(_recordingBufferSizeIn10MS);
 
   // return a positive number of frames ready otherwise a negative error code
   avail_frames = LATE(snd_pcm_avail_update)(_handleRecord);
@@ -1628,7 +1629,7 @@ bool AudioDeviceLinuxALSA::RecThreadProcess() {
   if (static_cast<uint32_t>(avail_frames) > _recordingFramesLeft)
     avail_frames = _recordingFramesLeft;
 
-  frames = LATE(snd_pcm_readi)(_handleRecord, buffer.data(),
+  frames = LATE(snd_pcm_readi)(_handleRecord, buffer,
                                avail_frames);  // frames to be written
   if (frames < 0) {
     RTC_LOG(LS_ERROR) << "capture snd_pcm_readi error: "
@@ -1643,8 +1644,8 @@ bool AudioDeviceLinuxALSA::RecThreadProcess() {
         LATE(snd_pcm_frames_to_bytes)(_handleRecord, _recordingFramesLeft);
     int size = LATE(snd_pcm_frames_to_bytes)(_handleRecord, frames);
 
-    memcpy(&_recordingBuffer[_recordingBufferSizeIn10MS - left_size],
-           buffer.data(), size);
+    memcpy(&_recordingBuffer[_recordingBufferSizeIn10MS - left_size], buffer,
+           size);
     _recordingFramesLeft -= frames;
 
     if (!_recordingFramesLeft) {  // buf is full
