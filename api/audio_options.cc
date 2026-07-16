@@ -39,7 +39,7 @@ const char *AudioProcessingModeToString(AudioProcessingMode mode) {
   return "auto";
 }
 
-void AudioProcessingModeToStringIfSet(SimpleStringBuilder *result, const char *key,
+void AudioProcessingModeToStringIfSet(StringBuilder *result, const char *key,
                                       const std::optional<AudioProcessingMode> &val) {
   if (val) {
     (*result) << key << ": " << AudioProcessingModeToString(*val) << ", ";

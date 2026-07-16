@@ -125,11 +125,6 @@ class WebRtcVoiceEngine final : public VoiceEngineInterface {
     return decoder_factory_;
   }
 
-  // Every option that is "set" will be applied. Every option not "set" will be
-  // ignored. This allows us to selectively turn on and off different options
-  // easily at any time.
-  void ApplyOptions(const AudioOptions& options);
-
   AudioDeviceModule* adm();
   AudioProcessing* apm() const;
   std::vector<RtpHeaderExtensionCapability> GetRtpHeaderExtensions(
@@ -148,11 +143,8 @@ class WebRtcVoiceEngine final : public VoiceEngineInterface {
 
   bool NeedsAuxiliaryCodecsAdded() const override { return true; }
 
-  AudioProcessingRuntimeState GetAudioProcessingRuntimeState() override;
-
   AudioProcessingState GetAudioProcessingState() override;
 
- private:
   // Every option that is "set" will be applied. Every option not "set" will be
   // ignored. This allows us to selectively turn on and off different options
   // easily at any time.

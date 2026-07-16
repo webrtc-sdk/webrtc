@@ -1282,7 +1282,6 @@ void AudioRtpSender::SetSend() {
 
   // `track_->enabled()` hops to the signaling thread, so call it before we hop
   // to the worker thread or else it will deadlock.
-  bool track_enabled = track_->enabled();
   InvalidateCache();
   bool success = worker_thread_->BlockingCall([&, ssrc = ssrc_] {
     RTC_DCHECK_RUN_ON(worker_thread_);

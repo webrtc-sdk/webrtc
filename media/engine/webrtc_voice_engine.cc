@@ -630,10 +630,6 @@ AudioProcessingOptionsResult WebRtcVoiceEngine::ApplyOptions(const AudioOptions 
     audio_state()->SetStereoChannelSwapping(*options.stereo_swapping);
   }
 
-  AudioProcessing* ap = apm();
-  if (!ap) {
-    return;
-
   if (options.audio_jitter_buffer_max_packets) {
     audio_jitter_buffer_max_packets_ =
         std::max(20, *options.audio_jitter_buffer_max_packets);
@@ -647,7 +643,7 @@ AudioProcessingOptionsResult WebRtcVoiceEngine::ApplyOptions(const AudioOptions 
         *options.audio_jitter_buffer_min_delay_ms;
   }
 
-  AudioProcessingApplyResult apply_result = ApplyAudioProcessingOptions(ap, adm(), options);
+  AudioProcessingApplyResult apply_result = ApplyAudioProcessingOptions(apm(), adm(), options);
   if (!apply_result.result.ok()) {
     RTC_LOG(LS_WARNING) << "Audio processing options were not fully applied: " << apply_result.result.message;
   }

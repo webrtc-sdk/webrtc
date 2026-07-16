@@ -202,8 +202,6 @@ class VoiceEngineInterface : public RtpHeaderExtensionQueryInterface,
   // automatically.
   virtual bool NeedsAuxiliaryCodecsAdded() const { return false; }
 
-  virtual AudioProcessingRuntimeState GetAudioProcessingRuntimeState() = 0;
-
   virtual AudioProcessingState GetAudioProcessingState() = 0;
 };
 
