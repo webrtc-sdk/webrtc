@@ -471,7 +471,8 @@ class AudioRtpSender : public DtmfProviderInterface, public RtpSenderBase {
     return scoped_refptr<AudioTrackInterface>(
         static_cast<AudioTrackInterface*>(track_.get()));
   }
-  std::optional<AudioOptions> GetTrackSourceOptions() const;
+  std::optional<AudioOptions> GetTrackSourceOptions() const
+      RTC_RUN_ON(signaling_thread_);
 
   LegacyStatsCollectorInterface* const legacy_stats_ = nullptr;
   const scoped_refptr<DtmfSender> dtmf_sender_;
