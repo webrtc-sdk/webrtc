@@ -11,6 +11,7 @@
 #ifndef COMMON_VIDEO_H265_H265_VPS_PARSER_H_
 #define COMMON_VIDEO_H265_H265_VPS_PARSER_H_
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -32,7 +33,7 @@ class RTC_EXPORT H265VpsParser {
 
     uint32_t id = 0;
     uint32_t vps_max_sub_layers_minus1 = 0;
-    uint32_t vps_max_num_reorder_pics[kMaxSubLayers] = {};
+    std::array<uint32_t, kMaxSubLayers> vps_max_num_reorder_pics = {};
   };
 
   // Unpack RBSP and parse VPS state from the supplied buffer.

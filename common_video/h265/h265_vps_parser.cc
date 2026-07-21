@@ -76,8 +76,8 @@ std::optional<H265VpsParser::VpsState> H265VpsParser::ParseInternal(
     // vps_max_dec_pic_buffering_minus1[ i ]: ue(v)
     reader.ReadExponentialGolomb();
     // vps_max_num_reorder_pics[ i ]: ue(v)
-    vps.vps_max_num_reorder_pics[i] = reader.ReadExponentialGolomb();
-    if (!reader.Ok() || (i > 0 && vps.vps_max_num_reorder_pics[i] < vps.vps_max_num_reorder_pics[i - 1])) {
+    vps.vps_max_num_reorder_pics.at(i) = reader.ReadExponentialGolomb();
+    if (!reader.Ok() || (i > 0 && vps.vps_max_num_reorder_pics.at(i) < vps.vps_max_num_reorder_pics.at(i - 1))) {
       return std::nullopt;
     }
 
@@ -86,7 +86,7 @@ std::optional<H265VpsParser::VpsState> H265VpsParser::ParseInternal(
   }
   if (!vps_sub_layer_ordering_info_present_flag) {
     for (uint32_t i = 0; i < vps.vps_max_sub_layers_minus1; ++i) {
-      vps.vps_max_num_reorder_pics[i] = vps.vps_max_num_reorder_pics[vps.vps_max_sub_layers_minus1];
+      vps.vps_max_num_reorder_pics.at(i) = vps.vps_max_num_reorder_pics.at(vps.vps_max_sub_layers_minus1);
     }
   }
   if (!reader.Ok() || !profile_tier_level) {
