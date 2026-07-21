@@ -1050,7 +1050,10 @@ if (current_os == "linux" || is_android) {
 
   rtc_library("simulcast_jni") {
     visibility = [ "*" ]
-    allow_poison = [ "software_video_codecs" ]
+    allow_poison = [
+      "software_video_codecs",
+      "environment_construction",
+    ]
     sources = [
       "src/jni/simulcast_video_encoder.cc",
       "src/jni/simulcast_video_encoder.h"

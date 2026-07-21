@@ -40,9 +40,9 @@ ScopedJavaLocalRef<jobject> NativeToJavaDataPacketCryptor(
 static jni_zero::ScopedJavaLocalRef<jobject> JNI_DataPacketCryptor_Encrypt(
     JNIEnv* env,
     jlong j_data_cryptor_pointer,
-    const jni_zero::JavaParamRef<jstring>& j_participant_id,
+    const JavaParamRef<jstring>& j_participant_id,
     int key_index,
-    const jni_zero::JavaParamRef<jbyteArray>& j_data) {
+    const JavaParamRef<jbyteArray>& j_data) {
   auto participant_id =
       JavaToNativeString(env, j_participant_id);
   auto data = JavaToNativeByteArray(env, j_data);
@@ -59,8 +59,8 @@ static jni_zero::ScopedJavaLocalRef<jobject> JNI_DataPacketCryptor_Encrypt(
         std::vector<int8_t>(packet->data.begin(), packet->data.end());
     auto int8tIv =
         std::vector<int8_t>(packet->iv.begin(), packet->iv.end());
-    auto j_data_out = NativeToJavaByteArray(env, webrtc::ArrayView<int8_t>(int8tData));
-    auto j_iv = NativeToJavaByteArray(env, webrtc::ArrayView<int8_t>(int8tIv));
+    auto j_data_out = NativeToJavaByteArray(env, int8tData);
+    auto j_iv = NativeToJavaByteArray(env, int8tIv);
     return Java_EncryptedPacket_Constructor(env, j_data_out, j_iv, packet->key_index);;
   }
 }
@@ -68,10 +68,10 @@ static jni_zero::ScopedJavaLocalRef<jobject> JNI_DataPacketCryptor_Encrypt(
 static jni_zero::ScopedJavaLocalRef<jbyteArray> JNI_DataPacketCryptor_Decrypt(
     JNIEnv* env,
     jlong j_data_cryptor_pointer,
-    const jni_zero::JavaParamRef<jstring>& j_participant_id,
+    const JavaParamRef<jstring>& j_participant_id,
     int key_index,
-    const jni_zero::JavaParamRef<jbyteArray>& j_data,
-    const jni_zero::JavaParamRef<jbyteArray>& j_iv) {
+    const JavaParamRef<jbyteArray>& j_data,
+    const JavaParamRef<jbyteArray>& j_iv) {
   auto participant_id =
       JavaToNativeString(env, j_participant_id);
   auto data = JavaToNativeByteArray(env, j_data);
@@ -92,7 +92,7 @@ static jni_zero::ScopedJavaLocalRef<jbyteArray> JNI_DataPacketCryptor_Decrypt(
     auto decryptedData = result.value();
     std::vector<int8_t> int8tDecryptedData =
         std::vector<int8_t>(decryptedData.begin(), decryptedData.end());
-    return NativeToJavaByteArray(env, webrtc::ArrayView<int8_t>(int8tDecryptedData));
+    return NativeToJavaByteArray(env, int8tDecryptedData);
   }
 }
 
