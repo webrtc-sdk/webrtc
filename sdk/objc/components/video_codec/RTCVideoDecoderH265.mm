@@ -139,8 +139,8 @@ uint8_t ComputeH265ReorderSizeFromVPS(const uint8_t *spsData, size_t spsDataSize
   if (!parsedVps) return 0;
 
   auto reorderSize = *std::max_element(
-      parsedVps->vps_max_num_reorder_pics,
-      parsedVps->vps_max_num_reorder_pics + parsedVps->vps_max_sub_layers_minus1 + 1);
+      parsedVps->vps_max_num_reorder_pics.begin(),
+      parsedVps->vps_max_num_reorder_pics.begin() + parsedVps->vps_max_sub_layers_minus1 + 1);
   // We use a max value of 16
   return std::min(reorderSize, 16u);
 }
