@@ -663,7 +663,11 @@ if (is_ios || is_mac) {
           "objc/components/renderer/metal/RTCMTLVideoView.h",
           "objc/components/renderer/metal/RTCMTLVideoView.m",
         ]
-        frameworks += [ "UIKit.framework" ]
+        # RTCMTLVideoView is cross-platform: it uses UIView on iOS and NSView on
+        # macOS. UIKit only exists on iOS; macOS gets AppKit below.
+        if (is_ios) {
+          frameworks += [ "UIKit.framework" ]
+        }
       }
       if (is_mac) {
         frameworks += [ "AppKit.framework" ]
