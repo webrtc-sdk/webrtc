@@ -1838,8 +1838,10 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
   if (state.DidAnyEnable() && observer_ != nullptr) {
     // Invoke here before configuring nodes. In iOS, session configuration is required before
     // enabling AGC, muted talker etc.
-    int32_t result = observer_->OnEngineWillEnable(
-        engine_manual_input_, state.next.IsOutputEnabled(), state.next.IsInputEnabled());
+    int32_t result = observer_->OnEngineWillEnable(engine_manual_input_,
+                                                   state.next.IsOutputEnabled(),
+                                                   state.next.IsInputEnabled(),
+                                                   state.next.voice_processing_enabled);
     if (result != 0) {
       LOGE() << "Call to OnEngineWillEnable returned error: " << result;
       return rollback(result);
@@ -2266,8 +2268,12 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   if (state.DidAnyEnable() && observer_ != nullptr) {
     // Invoke here before configuring nodes. In iOS, session configuration is required before
     // enabling AGC, muted talker etc.
+    // Voice processing is resolved in `state.next` but not committed to
+    // `engine_state_` yet, so observers cannot read it back and it is passed
+    // explicitly instead.
     int32_t result = observer_->OnEngineWillEnable(engine_device_, state.next.IsOutputEnabled(),
-                                                   state.next.IsInputEnabled());
+                                                   state.next.IsInputEnabled(),
+                                                   state.next.voice_processing_enabled);
     if (result != 0) {
       LOGE() << "Call to OnEngineWillEnable returned error: " << result;
       return rollback(result);
