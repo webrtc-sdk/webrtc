@@ -37,14 +37,16 @@ bool PlatformCertificateVerifier::VerifyChain(const SSLCertChain& chain) {
 
   JNIEnv* jni = AttachCurrentThreadIfNeeded();
 
-  ScopedJavaLocalRef<jclass> byte_array_class(jni, jni->FindClass("[B"));
+  ScopedJavaLocalRef<jclass> byte_array_class =
+      ScopedJavaLocalRef<jclass>::Adopt(jni, jni->FindClass("[B"));
   if (byte_array_class.is_null()) {
     return false;
   }
 
-  ScopedJavaLocalRef<jobjectArray> der_chain(
-      jni, jni->NewObjectArray(static_cast<jsize>(chain.GetSize()),
-                               byte_array_class.obj(), nullptr));
+  ScopedJavaLocalRef<jobjectArray> der_chain =
+      ScopedJavaLocalRef<jobjectArray>::Adopt(
+          jni, jni->NewObjectArray(static_cast<jsize>(chain.GetSize()),
+                                   byte_array_class.obj(), nullptr));
   if (der_chain.is_null()) {
     return false;
   }
@@ -54,8 +56,9 @@ bool PlatformCertificateVerifier::VerifyChain(const SSLCertChain& chain) {
   for (size_t i = 0; i < chain.GetSize(); ++i) {
     Buffer der;
     chain.Get(i).ToDER(&der);
-    ScopedJavaLocalRef<jbyteArray> element(
-        jni, jni->NewByteArray(static_cast<jsize>(der.size())));
+    ScopedJavaLocalRef<jbyteArray> element =
+        ScopedJavaLocalRef<jbyteArray>::Adopt(
+            jni, jni->NewByteArray(static_cast<jsize>(der.size())));
     if (element.is_null()) {
       return false;
     }
