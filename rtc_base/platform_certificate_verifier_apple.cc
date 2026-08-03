@@ -12,8 +12,6 @@
 #include <Security/Security.h>
 
 #include <memory>
-#include <utility>
-#include <vector>
 
 #include "rtc_base/buffer.h"
 #include "rtc_base/logging.h"
@@ -47,9 +45,7 @@ class ScopedCF {
 class AppleCertificateVerifier final : public SSLCertificateVerifier {
  public:
   bool Verify(const SSLCertificate& certificate) override {
-    std::vector<std::unique_ptr<SSLCertificate>> single;
-    single.push_back(certificate.Clone());
-    return VerifyChain(SSLCertChain(std::move(single)));
+    return VerifyChain(SSLCertChain(certificate.Clone()));
   }
 
   bool VerifyChain(const SSLCertChain& chain) override {
@@ -100,15 +96,28 @@ class AppleCertificateVerifier final : public SSLCertificateVerifier {
 
     // The peer sent the whole chain, so nothing needs to be fetched. Leaving
     // this enabled would allow an AIA lookup to block the network thread for
-    // the duration of a plaintext HTTP round trip mid-handshake.
+    // the duration of a plaintext HTTP round trip mid-handshake. Note that this
+    // also stops OCSP and CRL fetching, so revocation is decided on whatever
+    // the system has already cached; a blocking revocation fetch on this thread
+    // is the worse of the two.
     SecTrustSetNetworkFetchAllowed(trust.get(), false);
 
     CFErrorRef error = nullptr;
     const bool trusted = SecTrustEvaluateWithError(trust.get(), &error);
     ScopedCF<CFErrorRef> scoped_error(error);
     if (!trusted) {
-      RTC_LOG(LS_INFO) << "Peer certificate chain was rejected by the system "
-                          "trust store.";
+      ScopedCF<CFStringRef> reason(
+          error != nullptr ? CFErrorCopyDescription(error) : nullptr);
+      char buffer[256] = {};
+      if (reason && CFStringGetCString(reason.get(), buffer, sizeof(buffer),
+                                       kCFStringEncodingUTF8)) {
+        RTC_LOG(LS_INFO) << "Peer certificate chain was rejected by the system "
+                            "trust store: "
+                         << buffer;
+      } else {
+        RTC_LOG(LS_INFO) << "Peer certificate chain was rejected by the system "
+                            "trust store.";
+      }
     }
     return trusted;
   }

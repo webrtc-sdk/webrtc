@@ -14,9 +14,8 @@
 #include <wincrypt.h>
 // clang-format on
 
+#include <ios>
 #include <memory>
-#include <utility>
-#include <vector>
 
 #include "rtc_base/buffer.h"
 #include "rtc_base/logging.h"
@@ -53,9 +52,7 @@ PCCERT_CONTEXT CreateContext(const SSLCertificate& cert) {
 class WinCertificateVerifier final : public SSLCertificateVerifier {
  public:
   bool Verify(const SSLCertificate& certificate) override {
-    std::vector<std::unique_ptr<SSLCertificate>> single;
-    single.push_back(certificate.Clone());
-    return VerifyChain(SSLCertChain(std::move(single)));
+    return VerifyChain(SSLCertChain(certificate.Clone()));
   }
 
   bool VerifyChain(const SSLCertChain& chain) override {
