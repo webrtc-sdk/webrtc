@@ -1682,9 +1682,11 @@ rtc_library("ssl_adapter") {
     sources += [ "platform_certificate_verifier_win.cc" ]
     libs = [ "crypt32.lib" ]
   } else {
-    # Linux and the BSDs expose no trust evaluation API. Android has one, but
-    # reaching X509TrustManager needs a JNI target that does not belong in
-    # rtc_base. Both keep the built-in anchors as their only trust source.
+    # Linux and the BSDs expose no trust evaluation API at all. Android does,
+    # but only via X509TrustManager, and rtc_base has no JNI layer to call it
+    # with; that lives in sdk/android. The Android implementation therefore
+    # belongs there and gets injected, the way NetworkMonitorFactory already
+    # is. Until then both keep the built-in anchors as their trust source.
     sources += [ "platform_certificate_verifier_none.cc" ]
   }
 
@@ -2392,6 +2394,7 @@ if (rtc_include_tests) {
           "openssl_adapter_unittest.cc",
           "openssl_session_cache_unittest.cc",
           "openssl_utility_unittest.cc",
+          "platform_certificate_verifier_unittest.cc",
           "ssl_adapter_unittest.cc",
           "ssl_identity_unittest.cc",
           "ssl_stream_adapter_unittest.cc",
