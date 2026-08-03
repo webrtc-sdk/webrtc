@@ -69,6 +69,7 @@
 #include "sdk/android/src/jni/pc/media_stream_track.h"
 #include "sdk/android/src/jni/pc/owned_factory_and_threads.h"
 #include "sdk/android/src/jni/pc/peer_connection.h"
+#include "sdk/android/src/jni/pc/platform_certificate_verifier.h"
 #include "sdk/android/src/jni/pc/rtp_capabilities.h"
 #include "sdk/android/src/jni/pc/ssl_certificate_verifier_wrapper.h"
 #include "sdk/android/src/jni/pc/video.h"
@@ -545,6 +546,13 @@ static jlong JNI_PeerConnectionFactory_CreatePeerConnection(
     peer_connection_dependencies.tls_cert_verifier =
         std::make_unique<SSLCertificateVerifierWrapper>(
             jni, j_sslCertificateVerifier);
+  } else {
+    // The anchors compiled into rtc_base/ssl_roots.h are a small snapshot that
+    // omits, among others, the roots behind AWS ACM and Let's Encrypt. Defer to
+    // the platform trust store when they yield no path. Consulted only after
+    // built-in verification has failed, so nothing that connects today stops.
+    peer_connection_dependencies.tls_cert_verifier =
+        std::make_unique<PlatformCertificateVerifier>();
   }
 
   auto result =
