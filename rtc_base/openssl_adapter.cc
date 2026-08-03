@@ -35,6 +35,7 @@
 #include "rtc_base/numerics/safe_conversions.h"
 #include "rtc_base/openssl_session_cache.h"
 #include "rtc_base/openssl_utility.h"
+#include "rtc_base/platform_certificate_verifier.h"
 #include "rtc_base/socket.h"
 #include "rtc_base/socket_address.h"
 #include "rtc_base/ssl_adapter.h"
@@ -289,6 +290,15 @@ int OpenSSLAdapter::BeginSSL() {
 
   // Cleanup action to deal with on error cleanup a bit cleaner.
   EarlyExitCatcher early_exit_catcher(*this);
+
+  // Nothing was supplied by the embedder, so fall back to the OS trust store
+  // where one is reachable. This only widens what the built-in anchors in
+  // ssl_roots.h already accept: SSLVerifyInternal consults a verifier solely
+  // after the built-in path has failed.
+  if (ssl_cert_verifier_ == nullptr && role_ == SSL_CLIENT) {
+    platform_cert_verifier_ = CreatePlatformCertificateVerifier();
+    ssl_cert_verifier_ = platform_cert_verifier_.get();
+  }
 
   // First set up the context. We should either have a factory, with its own
   // pre-existing context, or be running standalone, in which case we will

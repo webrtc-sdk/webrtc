@@ -1665,11 +1665,28 @@ rtc_library("ssl_adapter") {
     "openssl_session_cache.h",
     "openssl_stream_adapter.cc",
     "openssl_stream_adapter.h",
+    "platform_certificate_verifier.h",
     "ssl_adapter.cc",
     "ssl_adapter.h",
     "ssl_stream_adapter.cc",
     "ssl_stream_adapter.h",
   ]
+
+  if (is_mac || is_ios) {
+    sources += [ "platform_certificate_verifier_apple.cc" ]
+    frameworks = [
+      "CoreFoundation.framework",
+      "Security.framework",
+    ]
+  } else if (is_win) {
+    sources += [ "platform_certificate_verifier_win.cc" ]
+    libs = [ "crypt32.lib" ]
+  } else {
+    # Linux and the BSDs expose no trust evaluation API. Android has one, but
+    # reaching X509TrustManager needs a JNI target that does not belong in
+    # rtc_base. Both keep the built-in anchors as their only trust source.
+    sources += [ "platform_certificate_verifier_none.cc" ]
+  }
 
   deps = [
     ":async_socket",
