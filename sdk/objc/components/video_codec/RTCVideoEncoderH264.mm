@@ -411,23 +411,23 @@ const char *H264ProfileName(const std::optional<webrtc::H264ProfileLevelId> &id)
 
 + (NSArray<RTC_OBJC_TYPE(RTCVideoCodecInfo) *> *)supportedCodecs {
   NSDictionary<NSString *, NSString *> *constrainedHighParams = @{
-    @"profile-level-id" : kRTCMaxSupportedH264ProfileLevelConstrainedHigh,
+    @"profile-level-id" : RTC_CONSTANT_TYPE(RTCMaxSupportedH264ProfileLevelConstrainedHigh),
     @"level-asymmetry-allowed" : @"1",
     @"packetization-mode" : @"1",
   };
   RTC_OBJC_TYPE(RTCVideoCodecInfo) *constrainedHighInfo =
       [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc]
-          initWithName:kRTCVideoCodecH264Name
+          initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecH264Name)
             parameters:constrainedHighParams];
 
   NSDictionary<NSString *, NSString *> *constrainedBaselineParams = @{
-    @"profile-level-id" : kRTCMaxSupportedH264ProfileLevelConstrainedBaseline,
+    @"profile-level-id" : RTC_CONSTANT_TYPE(RTCMaxSupportedH264ProfileLevelConstrainedBaseline),
     @"level-asymmetry-allowed" : @"1",
     @"packetization-mode" : @"1",
   };
   RTC_OBJC_TYPE(RTCVideoCodecInfo) *constrainedBaselineInfo =
       [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc]
-          initWithName:kRTCVideoCodecH264Name
+          initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecH264Name)
             parameters:constrainedBaselineParams];
 
   return @[ constrainedHighInfo, constrainedBaselineInfo ];
@@ -445,7 +445,7 @@ const char *H264ProfileName(const std::optional<webrtc::H264ProfileLevelId> &id)
   self = [super init];
   if (self) {
     _codecInfo = codecInfo;
-    _packetizationMode = RTCH264PacketizationModeNonInterleaved;
+    _packetizationMode = RTC_OBJC_TYPE(RTCH264PacketizationModeNonInterleaved);
     _profile_level_id = webrtc::ParseSdpForH264ProfileLevelId(
         [codecInfo nativeSdpVideoFormat].parameters);
     _previousPresentationTimeStamp = kCMTimeZero;

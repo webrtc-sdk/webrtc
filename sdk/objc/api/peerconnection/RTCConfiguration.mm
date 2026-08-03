@@ -542,11 +542,11 @@
 
 + (webrtc::SdpSemantics)nativeSdpSemanticsForSdpSemantics:(RTC_OBJC_TYPE(RTCSdpSemantics))sdpSemantics {
   switch (sdpSemantics) {
-    case RTCSdpSemanticsPlanB:
+    case RTC_OBJC_TYPE(RTCSdpSemanticsPlanB):
       RTC_ALLOW_PLAN_B_DEPRECATION_BEGIN();
       return webrtc::SdpSemantics::kPlanB_DEPRECATED;
       RTC_ALLOW_PLAN_B_DEPRECATION_END();
-    case RTCSdpSemanticsUnifiedPlan:
+    case RTC_OBJC_TYPE(RTCSdpSemanticsUnifiedPlan):
       return webrtc::SdpSemantics::kUnifiedPlan;
   }
 }
@@ -555,7 +555,7 @@
   switch (sdpSemantics) {
     case webrtc::SdpSemantics::kPlanB_DEPRECATED:
       RTC_ALLOW_PLAN_B_DEPRECATION_BEGIN();
-      return RTCSdpSemanticsPlanB;
+      return RTC_OBJC_TYPE(RTCSdpSemanticsPlanB);
       RTC_ALLOW_PLAN_B_DEPRECATION_END();
     case webrtc::SdpSemantics::kUnifiedPlan:
       return RTC_OBJC_TYPE(RTCSdpSemanticsUnifiedPlan);
