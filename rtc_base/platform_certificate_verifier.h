@@ -25,10 +25,24 @@ namespace webrtc {
 // small, infrequently regenerated snapshot. A chain that the host OS trusts may
 // have no anchor there, which surfaces as a TURN/TLS handshake failure.
 //
-// The verifier is consulted only after the built-in anchors have already failed
-// to produce a valid path, so it can widen what is accepted but never narrow
-// it. Hostname matching is not performed here; OpenSSLAdapter checks it
-// separately in SSLPostConnectionCheck.
+// With the built-in anchors compiled in, which is the default, the verifier is
+// consulted only after ssl_roots.h has already failed to produce a valid path,
+// so it can widen what is accepted but never narrow it. Under
+// WEBRTC_EXCLUDE_BUILT_IN_SSL_ROOT_CERTS there are no built-in anchors and it
+// becomes the only trust decision made.
+//
+// This is a default, not an override. OpenSSLAdapter installs it only when the
+// embedder supplied no verifier of its own, so anything set through
+// PeerConnectionDependencies::tls_cert_verifier — the ObjC
+// certificateVerifier: initialiser, Android's
+// PeerConnectionDependencies.setSSLCertificateVerifier — takes precedence and
+// replaces this outright. Note the consequence: an embedder that supplies a
+// verifier does not also get the OS trust store as a fallback behind it, which
+// matters for anyone who adopted that API as a workaround for the very gap this
+// closes.
+//
+// Hostname matching is not performed here; OpenSSLAdapter checks it separately
+// in SSLPostConnectionCheck.
 std::unique_ptr<SSLCertificateVerifier> CreatePlatformCertificateVerifier();
 
 }  //  namespace webrtc
