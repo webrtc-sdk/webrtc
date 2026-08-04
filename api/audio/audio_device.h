@@ -299,8 +299,14 @@ class AudioDeviceObserver {
   // AVAudioEngine lifecycle
   virtual int32_t OnEngineDidCreate(AVAudioEngine* engine) { return 0; }
 
+  // `voice_processing_enabled` reports the resolved Apple Voice Processing I/O
+  // state the engine is transitioning to. It is passed explicitly because the
+  // transition has not been committed to the device state yet when this fires,
+  // and observers that configure the audio session need it up front (iOS uses
+  // a reduced call-tuned speaker gain in the chat session modes that only
+  // Apple voice processing compensates for).
   virtual int32_t OnEngineWillEnable(AVAudioEngine* engine, bool playout_enabled,
-                                     bool recording_enabled) {
+                                     bool recording_enabled, bool voice_processing_enabled) {
     return 0;
   }
 
