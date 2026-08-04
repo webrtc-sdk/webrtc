@@ -140,11 +140,16 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
                didCreateEngine:(AVAudioEngine *)engine
     NS_SWIFT_NAME(audioDeviceModule(_:didCreateEngine:));
 
+// `isVoiceProcessingEnabled` reports the resolved Apple Voice Processing I/O
+// state the engine is transitioning to, which is not yet readable from the
+// module when this fires. Observers that configure the audio session use it
+// to pick a session mode matching the processing implementation.
 - (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
               willEnableEngine:(AVAudioEngine *)engine
               isPlayoutEnabled:(BOOL)isPlayoutEnabled
             isRecordingEnabled:(BOOL)isRecordingEnabled
-    NS_SWIFT_NAME(audioDeviceModule(_:willEnableEngine:isPlayoutEnabled:isRecordingEnabled:));
+      isVoiceProcessingEnabled:(BOOL)isVoiceProcessingEnabled
+    NS_SWIFT_NAME(audioDeviceModule(_:willEnableEngine:isPlayoutEnabled:isRecordingEnabled:isVoiceProcessingEnabled:));
 
 - (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
                willStartEngine:(AVAudioEngine *)engine
