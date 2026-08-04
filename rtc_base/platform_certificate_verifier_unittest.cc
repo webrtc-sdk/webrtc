@@ -40,6 +40,57 @@ std::unique_ptr<SSLCertificate> SelfSignedCert(absl::string_view name) {
   return identity == nullptr ? nullptr : identity->certificate().Clone();
 }
 
+// Accepts everything, which no real platform implementation would do for a
+// self-signed certificate. That difference is what lets the registry tests tell
+// a registered factory apart from the one compiled in.
+class AcceptAllVerifier final : public SSLCertificateVerifier {
+ public:
+  bool Verify(const SSLCertificate& /*certificate*/) override { return true; }
+};
+
+std::unique_ptr<SSLCertificateVerifier> MakeAcceptAllVerifier() {
+  return std::make_unique<AcceptAllVerifier>();
+}
+
+// SetPlatformCertificateVerifierFactory is process-wide, so a test that
+// registers must unregister however it leaves.
+class ScopedRegisteredFactory {
+ public:
+  explicit ScopedRegisteredFactory(PlatformCertificateVerifierFactory factory) {
+    SetPlatformCertificateVerifierFactory(factory);
+  }
+  ScopedRegisteredFactory(const ScopedRegisteredFactory&) = delete;
+  ScopedRegisteredFactory& operator=(const ScopedRegisteredFactory&) = delete;
+  ~ScopedRegisteredFactory() {
+    SetPlatformCertificateVerifierFactory(nullptr);
+  }
+};
+
+TEST(PlatformCertificateVerifierTest, RegisteredFactoryTakesPrecedence) {
+  std::unique_ptr<SSLCertificate> cert = SelfSignedCert("untrusted.invalid");
+  ASSERT_TRUE(cert != nullptr);
+
+  {
+    ScopedRegisteredFactory registered(&MakeAcceptAllVerifier);
+    std::unique_ptr<SSLCertificateVerifier> verifier =
+        CreatePlatformCertificateVerifier();
+    ASSERT_TRUE(verifier != nullptr);
+    // A platform implementation would refuse this; the registered one does not,
+    // so accepting it shows the registered factory was preferred. This is what
+    // lets Android reach its trust store on a build where rtc_base itself has no
+    // implementation to offer.
+    EXPECT_TRUE(verifier->VerifyChain(SSLCertChain(cert->Clone())));
+  }
+
+  // Leaving the scope must restore whatever the platform provides.
+  std::unique_ptr<SSLCertificateVerifier> restored =
+      CreatePlatformCertificateVerifier();
+  EXPECT_EQ(restored != nullptr, kPlatformVerifierExpected);
+  if (restored != nullptr) {
+    EXPECT_FALSE(restored->VerifyChain(SSLCertChain(cert->Clone())));
+  }
+}
+
 TEST(PlatformCertificateVerifierTest, FactoryMatchesPlatformSupport) {
   std::unique_ptr<SSLCertificateVerifier> verifier =
       CreatePlatformCertificateVerifier();

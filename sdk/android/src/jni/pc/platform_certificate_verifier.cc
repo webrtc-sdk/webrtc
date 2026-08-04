@@ -71,5 +71,9 @@ bool PlatformCertificateVerifier::VerifyChain(const SSLCertChain& chain) {
   return Java_PlatformCertificateVerifier_verifyServerChain(jni, der_chain);
 }
 
+std::unique_ptr<SSLCertificateVerifier> CreateAndroidCertificateVerifier() {
+  return std::make_unique<PlatformCertificateVerifier>();
+}
+
 }  // namespace jni
 }  // namespace webrtc

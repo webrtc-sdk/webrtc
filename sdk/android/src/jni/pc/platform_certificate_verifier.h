@@ -11,20 +11,22 @@
 #ifndef SDK_ANDROID_SRC_JNI_PC_PLATFORM_CERTIFICATE_VERIFIER_H_
 #define SDK_ANDROID_SRC_JNI_PC_PLATFORM_CERTIFICATE_VERIFIER_H_
 
+#include <memory>
+
 #include "rtc_base/ssl_certificate.h"
 
 namespace webrtc {
 namespace jni {
 
 // Defers to the platform trust store via X509TrustManager when the anchors in
-// rtc_base/ssl_roots.h yield no path for a peer chain. Installed as the default
-// tls_cert_verifier where the application has not supplied one of its own; it
-// is consulted only after built-in verification has already failed, so it can
-// widen what is accepted but never narrow it.
+// rtc_base/ssl_roots.h yield no path for a peer chain.
 //
 // rtc_base cannot host this: reaching the JVM requires the JNI layer, which
-// lives here. This mirrors how AndroidNetworkMonitorFactory supplies an
-// rtc_base interface from the Android SDK.
+// lives here. JNI_OnLoad registers it through
+// SetPlatformCertificateVerifierFactory, so OpenSSLAdapter picks it up for every
+// consumer rather than only those that build their dependencies through this
+// SDK. It is still only consulted after the built-in anchors have failed, and an
+// application-supplied tls_cert_verifier continues to take precedence.
 class PlatformCertificateVerifier : public SSLCertificateVerifier {
  public:
   PlatformCertificateVerifier();
@@ -33,6 +35,10 @@ class PlatformCertificateVerifier : public SSLCertificateVerifier {
   bool Verify(const SSLCertificate& certificate) override;
   bool VerifyChain(const SSLCertChain& chain) override;
 };
+
+// Matches rtc_base's PlatformCertificateVerifierFactory signature so that
+// JNI_OnLoad can hand it to SetPlatformCertificateVerifierFactory.
+std::unique_ptr<SSLCertificateVerifier> CreateAndroidCertificateVerifier();
 
 }  // namespace jni
 }  // namespace webrtc

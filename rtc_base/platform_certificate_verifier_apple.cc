@@ -125,7 +125,8 @@ class AppleCertificateVerifier final : public SSLCertificateVerifier {
 
 }  // namespace
 
-std::unique_ptr<SSLCertificateVerifier> CreatePlatformCertificateVerifier() {
+std::unique_ptr<SSLCertificateVerifier>
+CreateNativePlatformCertificateVerifier() {
   return std::make_unique<AppleCertificateVerifier>();
 }
 

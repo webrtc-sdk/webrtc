@@ -1665,6 +1665,7 @@ rtc_library("ssl_adapter") {
     "openssl_session_cache.h",
     "openssl_stream_adapter.cc",
     "openssl_stream_adapter.h",
+    "platform_certificate_verifier.cc",
     "platform_certificate_verifier.h",
     "ssl_adapter.cc",
     "ssl_adapter.h",

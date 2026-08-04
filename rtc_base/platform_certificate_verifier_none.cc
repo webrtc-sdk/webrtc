@@ -14,12 +14,17 @@
 
 namespace webrtc {
 
-// Linux, ChromeOS and the BSDs have no OS-level trust evaluation API to defer
-// to; the system roots are a directory of PEM files whose location varies by
-// distribution. Returning nullptr leaves the built-in anchors in
-// rtc_base/ssl_roots.h as the only trust source on those platforms, which is
-// the pre-existing behaviour.
-std::unique_ptr<SSLCertificateVerifier> CreatePlatformCertificateVerifier() {
+// Used where no trust store is reachable from rtc_base. Linux, ChromeOS and the
+// BSDs have no OS-level trust evaluation API at all; their system roots are a
+// directory of PEM files whose location varies by distribution. Android does
+// have one, but only through X509TrustManager, so sdk/android registers an
+// implementation via SetPlatformCertificateVerifierFactory instead and this is
+// never consulted there.
+//
+// Returning nullptr leaves the built-in anchors in rtc_base/ssl_roots.h as the
+// only trust source, which is the pre-existing behaviour.
+std::unique_ptr<SSLCertificateVerifier>
+CreateNativePlatformCertificateVerifier() {
   return nullptr;
 }
 
