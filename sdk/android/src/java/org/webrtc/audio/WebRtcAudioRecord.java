@@ -128,6 +128,17 @@ class WebRtcAudioRecord {
    */
   private class AudioRecordThread extends Thread {
     private volatile boolean keepAlive = true;
+    // The AudioRecord this thread most recently read from. Written only by
+    // this thread while running, read by it again during exit cleanup. The
+    // shared WebRtcAudioRecord.this.audioRecord field may already point at a
+    // newer record by the time this thread exits, so exit cleanup must not
+    // touch the shared field.
+    private @Nullable AudioRecord activeRecord;
+    // Handoff slot for an AudioRecord whose stop path gave up waiting for
+    // this thread (see stopRecordingIfNeededImpl). Exactly one side wins the
+    // getAndSet and performs the release.
+    private final AtomicReference<AudioRecord> orphanedRecord = new AtomicReference<>();
+    private final AtomicBoolean cleanupDone = new AtomicBoolean(false);
 
     public AudioRecordThread(String name) {
       super(name);
@@ -137,8 +148,14 @@ class WebRtcAudioRecord {
     public void run() {
       Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO);
       Logging.d(TAG, "AudioRecordThread" + WebRtcAudioUtils.getThreadInfo());
-      if (audioRecord != null) {
-        assertTrue(audioRecord.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING);
+      // Snapshot and assert under the lock so a concurrent stop (which sets
+      // keepAlive=false, detaches the record, and stops it under the same
+      // lock) cannot interleave between the null check and the state read.
+      synchronized (audioRecordStateLock) {
+        AudioRecord startupRecord = WebRtcAudioRecord.this.audioRecord;
+        if (keepAlive && startupRecord != null) {
+          assertTrue(startupRecord.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING);
+        }
       }
 
       // Audio recording has started and the client is informed about it.
@@ -157,31 +174,67 @@ class WebRtcAudioRecord {
           audioRecord = WebRtcAudioRecord.this.audioRecord;
           shouldReportData = nativeCalledInitRecording.get();
         }
-        
-        if (audioRecord == null && useAudioRecord) {
-          boolean result = initAudioRecord();
+        // Re-check after the snapshot: a stop may have completed while this
+        // thread waited at the monitor, and a subsequent start may already
+        // have installed a NEW record into the shared field. The stop path
+        // publishes keepAlive=false before detaching, under the same lock, so
+        // a snapshot that can observe a successor record always observes
+        // keepAlive == false. Exit without touching the successor.
+        if (!keepAlive) {
+          break;
+        }
+
+        // Do not re-create the AudioRecord once stopThread() has been called
+        // (re-checked under the lock inside the branch): a dying thread that
+        // re-inits would leave behind a record that no stop path will ever
+        // release.
+        if (audioRecord == null && useAudioRecord && keepAlive) {
+          boolean result;
+          synchronized (audioRecordStateLock) {
+            // A stop may have completed while this thread was blocked on the
+            // monitor; the keepAlive read above is stale in that case.
+            result = keepAlive && initAudioRecord();
+          }
 
           if (!result) {
-            // Failed audio record init, don't try again.
-            useAudioRecord = false;
-          } else {
-            synchronized (audioRecordStateLock) {
-              audioRecord = WebRtcAudioRecord.this.audioRecord;
-            }
-
-            assertTrue(audioRecord != null);
-            try {
-              audioRecord.startRecording();
-            } catch (IllegalStateException e) {
-              reportWebRtcAudioRecordStartError(AudioRecordStartErrorCode.AUDIO_RECORD_START_EXCEPTION,
-                  "AudioRecord.startRecording failed: " + e.getMessage());
-              audioRecord = null;
+            if (keepAlive) {
+              // Failed audio record init, don't try again.
               useAudioRecord = false;
             }
-            if (useAudioRecord && audioRecord.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING) {
-              reportWebRtcAudioRecordStartError(AudioRecordStartErrorCode.AUDIO_RECORD_START_STATE_MISMATCH,
-                  "AudioRecord.startRecording failed - incorrect state: "
-                      + audioRecord.getRecordingState());
+          } else {
+            boolean startFailed = false;
+            boolean stateMismatch = false;
+            synchronized (audioRecordStateLock) {
+              // Re-snapshot, start, and verify in one critical section, gated
+              // on keepAlive: a stop that completed in between must not let a
+              // dying reader adopt (and later stop) a successor record, and a
+              // record stopped by shutdown is not a start failure.
+              audioRecord = keepAlive ? WebRtcAudioRecord.this.audioRecord : null;
+              if (audioRecord != null) {
+                try {
+                  audioRecord.startRecording();
+                } catch (IllegalStateException e) {
+                  startFailed = true;
+                  reportWebRtcAudioRecordStartError(AudioRecordStartErrorCode.AUDIO_RECORD_START_EXCEPTION,
+                      "AudioRecord.startRecording failed: " + e.getMessage());
+                }
+                if (!startFailed
+                    && audioRecord.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING) {
+                  stateMismatch = true;
+                  reportWebRtcAudioRecordStartError(AudioRecordStartErrorCode.AUDIO_RECORD_START_STATE_MISMATCH,
+                      "AudioRecord.startRecording failed - incorrect state: "
+                          + audioRecord.getRecordingState());
+                }
+              }
+            }
+            if (audioRecord == null) {
+              // A concurrent stop either detached the fresh record before this
+              // thread could start it or finished while this thread waited at
+              // the monitor; that stop owns the record's release. Exit via the
+              // loop condition.
+              continue;
+            }
+            if (startFailed || stateMismatch) {
               audioRecord = null;
               useAudioRecord = false;
             }
@@ -189,10 +242,19 @@ class WebRtcAudioRecord {
         }
 
         if (audioRecord != null && !useAudioRecord) {
+          synchronized (audioRecordStateLock) {
+            // Release through the shared path only while this record is still
+            // the shared one; a concurrent stop may have detached it already
+            // and taken over its release.
+            if (WebRtcAudioRecord.this.audioRecord == audioRecord) {
+              releaseAudioResources();
+            }
+          }
           audioRecord = null;
-          releaseAudioResources();
         }
         
+        activeRecord = audioRecord;
+
         int bytesRead = 0;
         if (audioRecord != null) {
           bytesRead = audioRecord.read(byteBuffer, byteBuffer.capacity());
@@ -211,6 +273,11 @@ class WebRtcAudioRecord {
               }
             }
           } else {
+            if (!keepAlive) {
+              // The stop path stopped this record to unblock the read; exit
+              // through the loop condition without reporting an error.
+              continue;
+            }
             String errorMessage = "AudioRecord.read failed: " + bytesRead;
             Logging.e(TAG, errorMessage);
             
@@ -248,21 +315,50 @@ class WebRtcAudioRecord {
         }
       }
 
+      // Stop only the record this thread was reading. The shared field may
+      // already point at a newer AudioRecord created by a subsequent start;
+      // stopping that one would corrupt the new reader's in-flight read.
       try {
-        if (audioRecord != null) {
-          audioRecord.stop();
+        if (activeRecord != null) {
+          activeRecord.stop();
         }
       } catch (IllegalStateException e) {
         Logging.e(TAG, "AudioRecord.stop failed: " + e.getMessage());
       }
+      cleanupDone.set(true);
+      AudioRecord orphan = orphanedRecord.getAndSet(null);
+      if (orphan != null) {
+        // The stop path timed out joining this thread and transferred release
+        // responsibility here: releasing while this thread might still have
+        // been inside AudioRecord.read() would corrupt the platform client
+        // proxy state and abort the process.
+        Logging.w(TAG, "Releasing orphaned AudioRecord after delayed thread exit");
+        try {
+          orphan.stop();
+        } catch (IllegalStateException e) {
+          // Already stopped by the stop path.
+        }
+        orphan.release();
+      }
       doAudioRecordStateCallback(AUDIO_RECORD_STOP);
     }
 
-    // Stops the inner thread loop and also calls AudioRecord.stop().
-    // Does not block the calling thread.
+    // Stops the inner thread loop. Does not block the calling thread.
     public void stopThread() {
       Logging.d(TAG, "stopThread");
       keepAlive = false;
+    }
+
+    // Called by the stop path when its join timed out. Returns null when this
+    // thread will release the record on exit, or the record itself when this
+    // thread has already finished cleanup and the caller must release it.
+    // Exactly one side observes the record, in every interleaving.
+    public @Nullable AudioRecord transferRecordOwnership(AudioRecord record) {
+      orphanedRecord.set(record);
+      if (cleanupDone.get()) {
+        return orphanedRecord.getAndSet(null);
+      }
+      return null;
     }
   }
 
@@ -663,11 +759,11 @@ class WebRtcAudioRecord {
     Logging.d(TAG, "stopRecordingIfNeeded");
     synchronized(audioRecordStateLock) {
       clientCalledStartRecording.set(false);
-      if(audioThread != null) {
-        return stopRecordingIfNeededImpl();
+      if (audioThread == null) {
+        return true;
       }
     }
-    return true;
+    return stopRecordingIfNeededImpl();
   }
 
   @CalledByNative
@@ -676,19 +772,25 @@ class WebRtcAudioRecord {
     synchronized(audioRecordStateLock) {
       nativeCalledStartRecording.set(false);
       nativeCalledInitRecording.set(false);
-      return stopRecordingIfNeededImpl();
     }
+    return stopRecordingIfNeededImpl();
   }
 
   private boolean stopRecordingIfNeededImpl() {
+    final AudioRecordThread stoppingThread;
+    final @Nullable AudioRecord stoppingRecord;
     synchronized(audioRecordStateLock) {
       if(clientCalledStartRecording.get() || nativeCalledStartRecording.get()) {
         // Someone has still requested recording, ignore stop request.
         return true;
       }
 
+      if (audioThread == null) {
+        // Already stopped by a concurrent caller.
+        return true;
+      }
+
       Logging.d(TAG, "stopping recording");
-      assertTrue(audioThread != null);
       if (future != null) {
         if (!future.isDone()) {
           // Might be needed if the client calls startRecording(), stopRecording() back-to-back.
@@ -696,15 +798,57 @@ class WebRtcAudioRecord {
         }
         future = null;
       }
-      audioThread.stopThread();
-      if (!ThreadUtils.joinUninterruptibly(audioThread, AUDIO_RECORD_THREAD_JOIN_TIMEOUT_MS)) {
-        Logging.e(TAG, "Join of AudioRecordJavaThread timed out");
-        WebRtcAudioUtils.logAudioState(TAG, context, audioManager);
-      }
+      stoppingThread = audioThread;
       audioThread = null;
-      releaseAudioResources();
+      stoppingThread.stopThread();
+
+      // Detach the AudioRecord from the shared state before waiting for the
+      // thread, so a subsequent init/start builds fresh state instead of
+      // touching a record the stopping thread may still be reading.
+      stoppingRecord = audioRecord;
+      audioRecord = null;
+      effects.release();
+      audioSourceMatchesRecordingSessionRef.set(null);
+
+      // Stop the record before joining the thread. A blocking
+      // AudioRecord.read() only returns promptly once the record leaves the
+      // recording state, so without this the join below times out whenever
+      // the reader is stuck inside read().
+      if (stoppingRecord != null) {
+        try {
+          stoppingRecord.stop();
+        } catch (IllegalStateException e) {
+          Logging.e(TAG, "AudioRecord.stop failed: " + e.getMessage());
+        }
+      }
+    }
+
+    // Join outside audioRecordStateLock. The audio thread acquires that lock
+    // at the top of every loop iteration, so joining while holding it turns
+    // any stop that races a loop boundary into a guaranteed join timeout:
+    // the thread waits for the lock while the join waits for the thread.
+    if (!ThreadUtils.joinUninterruptibly(stoppingThread, AUDIO_RECORD_THREAD_JOIN_TIMEOUT_MS)) {
+      Logging.e(TAG, "Join of AudioRecordJavaThread timed out");
+      WebRtcAudioUtils.logAudioState(TAG, context, audioManager);
+      // The thread may still be inside AudioRecord.read(). Releasing the
+      // record here corrupts the platform AudioRecord client proxy and
+      // aborts the process (releaseBuffer: mUnreleased out of range), so
+      // hand release responsibility to the thread instead.
+      if (stoppingRecord != null) {
+        AudioRecord unclaimed = stoppingThread.transferRecordOwnership(stoppingRecord);
+        if (unclaimed != null) {
+          // The thread finished its cleanup during the handoff; no reader can
+          // be inside read() anymore, so releasing here is safe.
+          unclaimed.release();
+        }
+      }
       return true;
     }
+
+    if (stoppingRecord != null) {
+      stoppingRecord.release();
+    }
+    return true;
   }
 
   @TargetApi(Build.VERSION_CODES.M)
