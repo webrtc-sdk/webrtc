@@ -14,8 +14,10 @@
 #include <mach/mach.h>   // mach_task_self()
 #include <sys/sysctl.h>  // sysctlbyname()
 
+#include <algorithm>
 #include <memory>
 #include <span>
+#include <string_view>
 #include <vector>
 
 #include "modules/third_party/portaudio/pa_ringbuffer.h"
@@ -1639,6 +1641,21 @@ int32_t AudioDeviceMac::GetNumberDevices(const AudioObjectPropertyScope scope,
   return numberScopedDevices;
 }
 
+namespace {
+
+// Copies `src` into `dst` as a NUL-terminated string, truncating if `dst` is
+// too small. Does nothing if `dst` is empty or unset.
+void CopyStringToSpan(std::span<char> dst, std::string_view src) {
+  if (dst.data() == nullptr || dst.empty()) {
+    return;
+  }
+  const size_t chars_to_copy = std::min(src.size(), dst.size() - 1);
+  std::copy_n(src.data(), chars_to_copy, dst.data());
+  dst[chars_to_copy] = '\0';
+}
+
+}  // namespace
+
 int32_t AudioDeviceMac::GetDeviceName(const AudioObjectPropertyScope scope,
                                       const uint16_t index,
                                       std::span<char> name,
@@ -1690,10 +1707,8 @@ int32_t AudioDeviceMac::GetDeviceName(const AudioObjectPropertyScope scope,
 
     StringBuilder ss;
     ss.AppendFormat("default (%s)", devName.data());
-    const std::string& s = ss.str();
-    size_t chars_to_copy = std::min(s.size(), name.size() - 1);
-    std::copy_n(s.data(), chars_to_copy, name.data());
-    name[chars_to_copy] = '\0';
+    CopyStringToSpan(name, ss.str());
+    CopyStringToSpan(guid, "default");
   } else {
     if (index < numberDevices) {
       usedID = deviceIds[index];
@@ -1701,12 +1716,7 @@ int32_t AudioDeviceMac::GetDeviceName(const AudioObjectPropertyScope scope,
       usedID = index;
     }
     UInt32 len = name.size();
-    if (guid.data() != nullptr && guid.size() > 0) {
-      const std::string guid_str = std::to_string(deviceIds[index]);
-      size_t guid_chars_to_copy = std::min(guid_str.size(), guid.size() - 1);
-      std::copy_n(guid_str.data(), guid_chars_to_copy, guid.data());
-      guid[guid_chars_to_copy] = '\0';
-    }
+    CopyStringToSpan(guid, std::to_string(usedID));
     WEBRTC_CA_RETURN_ON_ERR(AudioObjectGetPropertyData(
         usedID, &propertyAddress, 0, NULL, &len, name.data()));
   }
