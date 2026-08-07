@@ -630,18 +630,9 @@ AudioProcessingOptionsResult WebRtcVoiceEngine::ApplyOptions(const AudioOptions 
     audio_state()->SetStereoChannelSwapping(*options.stereo_swapping);
   }
 
-  if (options.audio_jitter_buffer_max_packets) {
-    audio_jitter_buffer_max_packets_ =
-        std::max(20, *options.audio_jitter_buffer_max_packets);
-  }
-  if (options.audio_jitter_buffer_fast_accelerate) {
-    audio_jitter_buffer_fast_accelerate_ =
-        *options.audio_jitter_buffer_fast_accelerate;
-  }
-  if (options.audio_jitter_buffer_min_delay_ms) {
-    audio_jitter_buffer_min_delay_ms_ =
-        *options.audio_jitter_buffer_min_delay_ms;
-  }
+  // Jitter buffer options are not engine-level state; they are applied per
+  // receive channel (see WebRtcVoiceReceiveChannel's constructor and
+  // SetOptions).
 
   AudioProcessingApplyResult apply_result = ApplyAudioProcessingOptions(apm(), adm(), options);
   if (!apply_result.result.ok()) {
@@ -2138,6 +2129,17 @@ WebRtcVoiceReceiveChannel::WebRtcVoiceReceiveChannel(
       crypto_options_(crypto_options) {
   RTC_LOG(LS_VERBOSE) << "WebRtcVoiceReceiveChannel::WebRtcVoiceReceiveChannel";
   RTC_DCHECK(call);
+  // Streams may be added before SetOptions() is ever called, so seed the
+  // jitter buffer settings from the options the channel was created with.
+  // Keep this in sync with SetOptions().
+  if (options_.audio_jitter_buffer_max_packets) {
+    audio_config_.audio_jitter_buffer_max_packets =
+        std::max(20, *options_.audio_jitter_buffer_max_packets);
+  }
+  if (options_.audio_jitter_buffer_fast_accelerate) {
+    audio_config_.audio_jitter_buffer_fast_accelerate =
+        *options_.audio_jitter_buffer_fast_accelerate;
+  }
 }
 
 WebRtcVoiceReceiveChannel::~WebRtcVoiceReceiveChannel() {

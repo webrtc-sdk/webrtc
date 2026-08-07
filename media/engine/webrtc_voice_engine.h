@@ -176,14 +176,6 @@ class WebRtcVoiceEngine final : public VoiceEngineInterface {
   bool initialized_ RTC_GUARDED_BY(worker_thread_checker_) = false;
   std::optional<AudioOptions> last_requested_audio_processing_options_ RTC_GUARDED_BY(worker_thread_checker_);
   std::optional<AudioOptions> last_resolved_audio_processing_options_ RTC_GUARDED_BY(worker_thread_checker_);
-
-  // Jitter buffer settings for new streams.
-  size_t audio_jitter_buffer_max_packets_
-      RTC_GUARDED_BY(worker_thread_checker_) = 200;
-  bool audio_jitter_buffer_fast_accelerate_
-      RTC_GUARDED_BY(worker_thread_checker_) = false;
-  int audio_jitter_buffer_min_delay_ms_ RTC_GUARDED_BY(worker_thread_checker_) =
-      0;
 };
 
 class WebRtcVoiceSendChannel final : public MediaChannelUtil,
