@@ -796,14 +796,9 @@ TEST_F(RtpSenderReceiverTest, RemoteAudioTrackSetVolume) {
   EXPECT_EQ(1.0, audio_track_->GetSource()->GetVolume());
 
   audio_track_->GetSource()->SetVolume(0.5);
-<<<<<<< HEAD
-  // Wait for the worker thread to apply the volume change.
+  EXPECT_EQ(0.5, audio_track_->GetSource()->GetVolume());
   FlushWorker();
 
-=======
-  EXPECT_EQ(0.5, audio_track_->GetSource()->GetVolume());
-  run_loop_.Flush();
->>>>>>> aaeeee8077 (Add getter for track volume (#236))
   EXPECT_TRUE(
       voice_media_receive_channel()->GetOutputVolume(kAudioSsrc, &volume));
   EXPECT_EQ(0.5, volume);
@@ -811,11 +806,9 @@ TEST_F(RtpSenderReceiverTest, RemoteAudioTrackSetVolume) {
   // Disable the audio track, this should prevent setting the volume.
   audio_track_->set_enabled(false);
   audio_track_->GetSource()->SetVolume(0.8);
-<<<<<<< HEAD
-  FlushWorker();  // Wait for the the volume change.
-=======
   EXPECT_EQ(0.8, audio_track_->GetSource()->GetVolume());
->>>>>>> aaeeee8077 (Add getter for track volume (#236))
+  FlushWorker();  // Wait for the the volume change.
+
   EXPECT_TRUE(
       voice_media_receive_channel()->GetOutputVolume(kAudioSsrc, &volume));
   EXPECT_EQ(0, volume);
