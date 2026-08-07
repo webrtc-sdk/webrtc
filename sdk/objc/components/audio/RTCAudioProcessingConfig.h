@@ -23,7 +23,7 @@ RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCAudioProcessingConfig) : NSObject 
 
 @property(nonatomic, assign) BOOL isEchoCancellationEnabled;
-@property(nonatomic, assign) BOOL isEchoCancellationMobileMode;
+@property(nonatomic, assign) BOOL isEchoCancellationMobileMode DEPRECATED_MSG_ATTRIBUTE("no-op since M150");
 
 @property(nonatomic, assign) BOOL isNoiseSuppressionEnabled;
 @property(nonatomic, assign) BOOL isHighpassFilterEnabled;
