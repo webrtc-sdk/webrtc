@@ -140,17 +140,6 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
                didCreateEngine:(AVAudioEngine *)engine
     NS_SWIFT_NAME(audioDeviceModule(_:didCreateEngine:));
 
-// `isVoiceProcessingEnabled` reports the resolved Apple Voice Processing I/O
-// state the engine is transitioning to, which is not yet readable from the
-// module when this fires. Observers that configure the audio session use it
-// to pick a session mode matching the processing implementation.
-- (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
-              willEnableEngine:(AVAudioEngine *)engine
-              isPlayoutEnabled:(BOOL)isPlayoutEnabled
-            isRecordingEnabled:(BOOL)isRecordingEnabled
-      isVoiceProcessingEnabled:(BOOL)isVoiceProcessingEnabled
-    NS_SWIFT_NAME(audioDeviceModule(_:willEnableEngine:isPlayoutEnabled:isRecordingEnabled:isVoiceProcessingEnabled:));
-
 - (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
                willStartEngine:(AVAudioEngine *)engine
               isPlayoutEnabled:(BOOL)isPlayoutEnabled
@@ -191,6 +180,32 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
 
 - (void)audioDeviceModuleDidUpdateDevices:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
     NS_SWIFT_NAME(audioDeviceModuleDidUpdateDevices(_:));
+
+@optional
+
+// Exactly one of the two `willEnableEngine` variants below should be
+// implemented. They are optional only so that a single delegate can be
+// written against both this release and earlier ones; if both are
+// implemented, only the first is called.
+
+// `isVoiceProcessingEnabled` reports the resolved Apple Voice Processing I/O
+// state the engine is transitioning to, which is not yet readable from the
+// module when this fires. Observers that configure the audio session use it
+// to pick a session mode matching the processing implementation.
+- (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+              willEnableEngine:(AVAudioEngine *)engine
+              isPlayoutEnabled:(BOOL)isPlayoutEnabled
+            isRecordingEnabled:(BOOL)isRecordingEnabled
+      isVoiceProcessingEnabled:(BOOL)isVoiceProcessingEnabled
+    NS_SWIFT_NAME(audioDeviceModule(_:willEnableEngine:isPlayoutEnabled:isRecordingEnabled:isVoiceProcessingEnabled:));
+
+// Deprecated: called only when the variant above is not implemented.
+- (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+              willEnableEngine:(AVAudioEngine *)engine
+              isPlayoutEnabled:(BOOL)isPlayoutEnabled
+            isRecordingEnabled:(BOOL)isRecordingEnabled
+    NS_SWIFT_NAME(audioDeviceModule(_:willEnableEngine:isPlayoutEnabled:isRecordingEnabled:))
+        __attribute__((deprecated("Use the isVoiceProcessingEnabled: variant.")));
 
 @end
 

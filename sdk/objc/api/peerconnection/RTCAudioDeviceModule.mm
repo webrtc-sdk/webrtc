@@ -97,11 +97,30 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   int32_t OnEngineWillEnable(AVAudioEngine *engine, bool playout_enabled,
                              bool recording_enabled, bool voice_processing_enabled) override {
     if (delegate_ == nil) return 0;
-    return [delegate_ audioDeviceModule:adm_
-                       willEnableEngine:engine
-                       isPlayoutEnabled:playout_enabled
-                     isRecordingEnabled:recording_enabled
-               isVoiceProcessingEnabled:voice_processing_enabled];
+    if ([delegate_ respondsToSelector:@selector(audioDeviceModule:
+                                                  willEnableEngine:isPlayoutEnabled
+                                                                  :isRecordingEnabled
+                                                                  :isVoiceProcessingEnabled:)]) {
+      return [delegate_ audioDeviceModule:adm_
+                         willEnableEngine:engine
+                         isPlayoutEnabled:playout_enabled
+                       isRecordingEnabled:recording_enabled
+                 isVoiceProcessingEnabled:voice_processing_enabled];
+    }
+    // Fall back to the deprecated variant for delegates written against
+    // earlier releases, which cannot observe `voice_processing_enabled`.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    if ([delegate_ respondsToSelector:@selector(audioDeviceModule:
+                                                  willEnableEngine:isPlayoutEnabled
+                                                                  :isRecordingEnabled:)]) {
+      return [delegate_ audioDeviceModule:adm_
+                         willEnableEngine:engine
+                         isPlayoutEnabled:playout_enabled
+                       isRecordingEnabled:recording_enabled];
+    }
+#pragma clang diagnostic pop
+    return 0;
   }
 
   int32_t OnEngineWillStart(AVAudioEngine *engine, bool playout_enabled,
