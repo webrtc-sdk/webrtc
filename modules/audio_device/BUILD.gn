@@ -428,6 +428,8 @@ if (is_mac) {
 
       # Needed for CGEventSourceKeyState in audio_device_mac.cc:
       "CoreGraphics.framework",
+
+      "AVFoundation.framework",
     ]
   }
 }
