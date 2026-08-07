@@ -14,16 +14,19 @@
 #include <wincrypt.h>
 // clang-format on
 
-#include <ios>
 #include <memory>
 
 #include "rtc_base/buffer.h"
 #include "rtc_base/logging.h"
 #include "rtc_base/platform_certificate_verifier.h"
 #include "rtc_base/ssl_certificate.h"
+#include "rtc_base/string_utils.h"
 
 namespace webrtc {
 namespace {
+
+// From wininet.h, which cannot be included alongside wincrypt.h here.
+constexpr DWORD kSecurityFlagIgnoreCertCnInvalid = 0x00001000;
 
 class ScopedCertContext {
  public:
@@ -109,7 +112,7 @@ class WinCertificateVerifier final : public SSLCertificateVerifier {
     SSL_EXTRA_CERT_CHAIN_POLICY_PARA ssl_para = {};
     ssl_para.cbSize = sizeof(ssl_para);
     ssl_para.dwAuthType = AUTHTYPE_SERVER;
-    ssl_para.fdwChecks = SECURITY_FLAG_IGNORE_CERT_CN_INVALID;
+    ssl_para.fdwChecks = kSecurityFlagIgnoreCertCnInvalid;
 
     CERT_CHAIN_POLICY_PARA policy_para = {};
     policy_para.cbSize = sizeof(policy_para);
@@ -125,7 +128,7 @@ class WinCertificateVerifier final : public SSLCertificateVerifier {
     if (!checked || policy_status.dwError != 0) {
       RTC_LOG(LS_INFO) << "Peer certificate chain was rejected by the system "
                           "trust store, error 0x"
-                       << std::hex << policy_status.dwError;
+                       << ToHex(static_cast<int>(policy_status.dwError));
       return false;
     }
     return true;
