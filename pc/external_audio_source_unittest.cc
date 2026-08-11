@@ -91,9 +91,9 @@ TEST_F(ExternalAudioSourceTest, CreateRejectsInvalidArguments) {
   EXPECT_EQ(ExternalAudioSource::Create(44110, kNumChannels, 0,
                                         task_queue_factory_.get()),
             nullptr);
-  EXPECT_EQ(ExternalAudioSource::Create(kSampleRate, 0, 0,
-                                        task_queue_factory_.get()),
-            nullptr);
+  EXPECT_EQ(
+      ExternalAudioSource::Create(kSampleRate, 0, 0, task_queue_factory_.get()),
+      nullptr);
   EXPECT_EQ(ExternalAudioSource::Create(kSampleRate, kNumChannels, 15,
                                         task_queue_factory_.get()),
             nullptr);
@@ -114,8 +114,8 @@ TEST_F(ExternalAudioSourceTest, AppliesAudioOptions) {
   AudioOptions options;
   options.echo_cancellation = false;
   auto source = ExternalAudioSource::Create(
-      kSampleRate, kNumChannels, /*queue_size_ms=*/0,
-      task_queue_factory_.get(), &options, time_controller_.GetClock());
+      kSampleRate, kNumChannels, /*queue_size_ms=*/0, task_queue_factory_.get(),
+      &options, time_controller_.GetClock());
   EXPECT_EQ(source->options().echo_cancellation, false);
 }
 
@@ -152,9 +152,9 @@ TEST_F(ExternalAudioSourceTest, SyncModeRejectsNon10MsFrames) {
   source->AddSink(&sink);
 
   std::vector<int16_t> frame = RampFrame(kSamplesPer10Ms * 2);
-  EXPECT_FALSE(source->PushFrame(frame.data(), kSampleRate, kNumChannels,
-                                 /*samples_per_channel=*/kSamplesPer10Ms * 2 /
-                                     kNumChannels));
+  EXPECT_FALSE(source->PushFrame(
+      frame.data(), kSampleRate, kNumChannels,
+      /*samples_per_channel=*/kSamplesPer10Ms * 2 / kNumChannels));
   EXPECT_EQ(sink.frames_received_, 0);
 }
 
@@ -163,8 +163,7 @@ TEST_F(ExternalAudioSourceTest, RejectsMismatchedFormat) {
   std::vector<int16_t> frame = RampFrame(kSamplesPer10Ms);
 
   EXPECT_FALSE(source->PushFrame(frame.data(), /*sample_rate_hz=*/44100,
-                                 kNumChannels,
-                                 kSamplesPer10Ms / kNumChannels));
+                                 kNumChannels, kSamplesPer10Ms / kNumChannels));
   EXPECT_FALSE(source->PushFrame(frame.data(), kSampleRate,
                                  /*num_channels=*/1,
                                  kSamplesPer10Ms / kNumChannels));
@@ -187,8 +186,7 @@ TEST_F(ExternalAudioSourceTest, BufferedModePacesDeliveryIn10MsFrames) {
   // frames must be out by now, in order, split into 10 ms deliveries.
   ASSERT_GE(sink.frames_received_, 2);
   ASSERT_GE(sink.received_.size(), data.size());
-  EXPECT_TRUE(
-      std::equal(data.begin(), data.end(), sink.received_.begin()));
+  EXPECT_TRUE(std::equal(data.begin(), data.end(), sink.received_.begin()));
   EXPECT_EQ(source->BufferedDurationMs(), 0);
 }
 
@@ -269,15 +267,15 @@ TEST_F(ExternalAudioSourceTest, BufferedModeCompletionFiresOnDrain) {
   // A second completion-carrying push while one is pending is rejected.
   std::vector<int16_t> extra = RampFrame(kSamplesPer10Ms);
   EXPECT_FALSE(source->PushFrame(extra.data(), kSampleRate, kNumChannels,
-                                 kSamplesPer10Ms / kNumChannels,
-                                 [] {}));
+                                 kSamplesPer10Ms / kNumChannels, [] {}));
 
   // Draining to <= 40 ms buffered fires the completion.
   AdvanceMs(60);
   EXPECT_TRUE(completed);
 }
 
-TEST_F(ExternalAudioSourceTest, BufferedModeCompletionFiresInlineBelowThreshold) {
+TEST_F(ExternalAudioSourceTest,
+       BufferedModeCompletionFiresInlineBelowThreshold) {
   auto source = CreateSource(kQueueSizeMs);
 
   std::vector<int16_t> data = RampFrame(kSamplesPer10Ms);

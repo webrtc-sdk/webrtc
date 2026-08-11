@@ -11,7 +11,6 @@
 #import "RTCExternalAudioSource+Private.h"
 
 #import "RTCAudioSource+Private.h"
-#import "helpers/NSString+StdString.h"
 
 #include <vector>
 

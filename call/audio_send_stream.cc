@@ -38,6 +38,7 @@ std::string AudioSendStream::Config::ToString() const {
   ss << ", has audio_network_adaptor_config: "
      << (audio_network_adaptor_config ? "true" : "false");
   ss << ", has_dscp: " << (has_dscp ? "true" : "false");
+  ss << ", external_source: " << (external_source ? "true" : "false");
   ss << ", send_codec_spec: "
      << (send_codec_spec ? send_codec_spec->ToString() : "<unset>");
   ss << "}";
