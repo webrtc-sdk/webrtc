@@ -96,8 +96,7 @@ ExternalAudioSource::ExternalAudioSource(int sample_rate_hz,
             const size_t to_copy = std::min(available, samples_per_10ms_);
             std::copy_n(buffer_.begin() + read_offset_, to_copy,
                         frame_buffer_.begin());
-            std::fill(frame_buffer_.begin() + to_copy, frame_buffer_.end(),
-                      0);
+            std::fill(frame_buffer_.begin() + to_copy, frame_buffer_.end(), 0);
             read_offset_ += to_copy;
             // Reclaim consumed samples in one amortized pass instead of
             // memmoving the whole remainder every tick.
@@ -151,8 +150,7 @@ void ExternalAudioSource::AddSink(AudioTrackSinkInterface* sink) {
 void ExternalAudioSource::RemoveSink(AudioTrackSinkInterface* sink) {
   {
     MutexLock lock(&mutex_);
-    sinks_.erase(std::remove(sinks_.begin(), sinks_.end(), sink),
-                 sinks_.end());
+    sinks_.erase(std::remove(sinks_.begin(), sinks_.end(), sink), sinks_.end());
   }
   // Fence: the pacer delivers from a snapshot taken under mutex_ but calls
   // OnData outside it while holding delivery_mutex_. Waiting on that lock
@@ -163,12 +161,11 @@ void ExternalAudioSource::RemoveSink(AudioTrackSinkInterface* sink) {
   MutexLock fence(&delivery_mutex_);
 }
 
-bool ExternalAudioSource::PushFrame(
-    const int16_t* data,
-    int sample_rate_hz,
-    size_t num_channels,
-    size_t samples_per_channel,
-    absl::AnyInvocable<void() &&> on_complete) {
+bool ExternalAudioSource::PushFrame(const int16_t* data,
+                                    int sample_rate_hz,
+                                    size_t num_channels,
+                                    size_t samples_per_channel,
+                                    absl::AnyInvocable<void() &&> on_complete) {
   if (sample_rate_hz != sample_rate_hz_ || num_channels != num_channels_) {
     RTC_LOG(LS_WARNING) << "ExternalAudioSource: rejected frame with format "
                         << sample_rate_hz << "Hz/" << num_channels
@@ -178,6 +175,10 @@ bool ExternalAudioSource::PushFrame(
   }
   const size_t num_samples = samples_per_channel * num_channels;
 
+  // Decided while on_complete is still untouched: absl::AnyInvocable leaves
+  // the moved-from state unspecified, so it must not be tested again after
+  // the move below.
+  bool fire_inline = false;
   {
     MutexLock lock(&mutex_);
 
@@ -190,6 +191,7 @@ bool ExternalAudioSource::PushFrame(
         return false;
       }
       DeliverToSinks(sinks_, data, samples_per_channel);
+      fire_inline = static_cast<bool>(on_complete);
     } else {
       const size_t capacity = queue_size_samples_ + notify_threshold_samples_;
       const size_t buffered = buffer_.size() - read_offset_;
@@ -206,11 +208,13 @@ bool ExternalAudioSource::PushFrame(
       if (on_complete && buffered + num_samples > notify_threshold_samples_) {
         // Defer until the pacer drains the buffer below the threshold.
         on_complete_ = std::move(on_complete);
+      } else {
+        fire_inline = static_cast<bool>(on_complete);
       }
     }
   }
   // Invoked outside the lock so the handler may push the next frame.
-  if (on_complete) {
+  if (fire_inline) {
     std::move(on_complete)();
   }
   return true;

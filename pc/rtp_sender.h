@@ -18,6 +18,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <atomic>
 #include <memory>
 #include <optional>
 #include <string>
@@ -307,6 +308,16 @@ class LocalAudioSinkAdapter : public AudioTrackSinkInterface,
   LocalAudioSinkAdapter();
   virtual ~LocalAudioSinkAdapter();
 
+  // Reports whether the local track's source delivers audio externally
+  // (bypassing the ADM). Forwarded from AudioSourceInterface so the voice
+  // engine can keep AudioState from also feeding device audio. Written on
+  // the signaling thread (AudioRtpSender::SetSend) and read on the worker
+  // thread inside the same call's BlockingCall, which orders the write
+  // before the read; the atomic keeps the cross-thread access race-free.
+  void set_is_external_source(bool is_external_source) {
+    is_external_source_ = is_external_source;
+  }
+
  private:
   // AudioSinkInterface implementation.
   void OnData(const void* audio_data,
@@ -333,21 +344,14 @@ class LocalAudioSinkAdapter : public AudioTrackSinkInterface,
   // webrtc::AudioSource implementation.
   void SetSink(AudioSource::Sink* sink) override;
 
- public:
-  // Reports whether the local track's source delivers audio externally
-  // (bypassing the ADM). Forwarded from AudioSourceInterface so the voice
-  // engine can keep AudioState from also feeding device audio.
-  void set_is_external_source(bool is_external_source) {
-    is_external_source_ = is_external_source;
-  }
+  // webrtc::AudioSource implementation.
   bool is_external_source() const override { return is_external_source_; }
 
- private:
   AudioSource::Sink* sink_;
   // Critical section protecting `sink_`.
   Mutex lock_;
   int num_preferred_channels_ = -1;
-  bool is_external_source_ = false;
+  std::atomic<bool> is_external_source_{false};
 };
 
 class AudioRtpSender : public DtmfProviderInterface, public RtpSenderBase {
