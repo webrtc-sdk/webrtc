@@ -57,6 +57,12 @@ class AudioInput {
   // without stopping recording. Returns -1 if not supported.
   virtual int32_t SetMicrophoneMute(bool mute) { return -1; }
 
+  // Current capture source mute state, or nullopt if the input cannot mute.
+  // The input owns this state rather than the ADM caching it, so the value
+  // stays correct even when something other than SetMicrophoneMute changes it
+  // (for example JavaAudioDeviceModule.setMicrophoneMute from app code).
+  virtual std::optional<bool> MicrophoneMute() const { return std::nullopt; }
+
   virtual std::optional<bool> BuiltInAECIsRequested() const { return std::nullopt; }
   virtual std::optional<bool> BuiltInAECIsEnabled() const { return std::nullopt; }
   virtual std::optional<bool> BuiltInNSIsRequested() const { return std::nullopt; }
