@@ -244,9 +244,17 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
 
     /**
      * Control whether recording is stopped while all audio tracks are muted. The default is
-     * enabled: muting releases the AudioRecord so the OS mic-in-use indicator turns off. When
-     * disabled, capture keeps running while muted and captured audio is replaced with silence,
-     * making unmute instant at the cost of the mic indicator staying on.
+     * enabled: muting releases the AudioRecord so the OS mic-in-use indicator turns off, at the
+     * cost of a cold start on unmute.
+     *
+     * <p>When disabled, captured audio is replaced with silence while muted and unmute is instant.
+     * Note that recording then starts when the audio track is published and runs until it is
+     * unpublished, so the OS mic-in-use indicator stays on for the whole published lifetime of the
+     * track, not only while unmuted.
+     *
+     * <p>Apps that disable this should not also drive {@link #setMicrophoneMute(boolean)}
+     * themselves. Both write the same state, so an app level mute is cleared the next time a track
+     * is unmuted.
      */
     public Builder setStopRecordingOnMute(boolean stopRecordingOnMute) {
       this.stopRecordingOnMute = stopRecordingOnMute;
