@@ -806,6 +806,9 @@ class WebRtcAudioRecord {
   // the microphone is muted.
   @CalledByNative
   public void setMicrophoneMute(boolean mute) {
+    if (microphoneMute == mute) {
+      return;
+    }
     Logging.w(TAG, "setMicrophoneMute(" + mute + ")");
     microphoneMute = mute;
   }
