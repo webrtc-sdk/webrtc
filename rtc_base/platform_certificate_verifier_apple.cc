@@ -60,6 +60,10 @@ class AppleCertificateVerifier final : public SSLCertificateVerifier {
       return false;
     }
 
+    // Appended in the order received. SSLCertificateVerifier::VerifyChain is
+    // documented to deliver the chain leaf first, then intermediates, which is
+    // also what SecTrustCreateWithCertificates expects: it evaluates element 0
+    // and treats the remainder as candidate intermediates.
     for (size_t i = 0; i < chain.GetSize(); ++i) {
       Buffer der;
       chain.Get(i).ToDER(&der);

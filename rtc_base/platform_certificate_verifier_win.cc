@@ -76,11 +76,24 @@ class WinCertificateVerifier final : public SSLCertificateVerifier {
     for (size_t i = 1; i < chain.GetSize(); ++i) {
       Buffer der;
       chain.Get(i).ToDER(&der);
-      CertAddEncodedCertificateToStore(
-          intermediates, X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, der.data(),
-          static_cast<DWORD>(der.size()), CERT_STORE_ADD_ALWAYS, NULL);
+      if (!CertAddEncodedCertificateToStore(
+              intermediates, X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,
+              der.data(), static_cast<DWORD>(der.size()),
+              CERT_STORE_ADD_ALWAYS, NULL)) {
+        const DWORD error = GetLastError();
+        // Not fatal by itself, since the engine may still find this issuer in a
+        // system store. Logged so that a path failure below is attributable
+        // rather than unexplained.
+        RTC_LOG(LS_WARNING) << "Could not add peer certificate at depth " << i
+                            << " to the temporary store, error "
+                            << ToHex(static_cast<int>(error));
+      }
     }
 
+    // SSLCertificateVerifier::VerifyChain is documented to deliver the chain
+    // leaf first, then intermediates, so element 0 is the server certificate
+    // and the loop above covers the rest. CertGetCertificateChain wants the
+    // leaf as its subject, with the others merely available to it.
     ScopedCertContext leaf(CreateContext(chain.Get(0)));
     if (!leaf.get()) {
       CertCloseStore(intermediates, 0);
