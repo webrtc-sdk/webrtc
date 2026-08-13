@@ -12,9 +12,11 @@
 
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
+#include "rtc_base/platform_certificate_verifier.h"
 #include "rtc_base/ssl_adapter.h"
 #include "sdk/android/native_api/jni/class_loader.h"
 #include "sdk/android/src/jni/jvm.h"
+#include "sdk/android/src/jni/pc/platform_certificate_verifier.h"
 
 #undef JNIEXPORT
 #define JNIEXPORT __attribute__((visibility("default")))
@@ -31,6 +33,12 @@ extern "C" jint JNIEXPORT JNICALL JNI_OnLoad(JavaVM* jvm, void* reserved) {
 
   RTC_CHECK(InitializeSSL()) << "Failed to InitializeSSL()";
   InitClassLoader(GetEnv());
+
+  // Android's trust anchors are only reachable through X509TrustManager, which
+  // rtc_base cannot call. Register here rather than injecting through
+  // PeerConnectionDependencies so that consumers binding the C++ API directly,
+  // which never construct their dependencies through this SDK, are covered too.
+  SetPlatformCertificateVerifierFactory(&CreateAndroidCertificateVerifier);
 
   return ret;
 }

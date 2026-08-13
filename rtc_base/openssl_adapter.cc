@@ -35,6 +35,7 @@
 #include "rtc_base/numerics/safe_conversions.h"
 #include "rtc_base/openssl_session_cache.h"
 #include "rtc_base/openssl_utility.h"
+#include "rtc_base/platform_certificate_verifier.h"
 #include "rtc_base/socket.h"
 #include "rtc_base/socket_address.h"
 #include "rtc_base/ssl_adapter.h"
@@ -290,6 +291,20 @@ int OpenSSLAdapter::BeginSSL() {
 
   // Cleanup action to deal with on error cleanup a bit cleaner.
   EarlyExitCatcher early_exit_catcher(*this);
+
+  // Nothing was supplied by the embedder, so fall back to the OS trust store
+  // where one is reachable.
+  //
+  // With the built-in anchors compiled in, which is the default, this can only
+  // widen what is accepted: SSLVerifyInternal consults a verifier solely after
+  // ssl_roots.h has already failed to produce a path. Under
+  // WEBRTC_EXCLUDE_BUILT_IN_SSL_ROOT_CERTS there are no built-in anchors and
+  // the verifier is the only trust decision made, which is still an
+  // improvement on the alternative there: no verifier fails every handshake.
+  if (ssl_cert_verifier_ == nullptr && role_ == SSL_CLIENT) {
+    platform_cert_verifier_ = CreatePlatformCertificateVerifier();
+    ssl_cert_verifier_ = platform_cert_verifier_.get();
+  }
 
   // First set up the context. We should either have a factory, with its own
   // pre-existing context, or be running standalone, in which case we will

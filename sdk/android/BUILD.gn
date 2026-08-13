@@ -356,6 +356,7 @@ if (is_android) {
       "src/java/org/webrtc/NativeAndroidVideoTrackSource.java",
       "src/java/org/webrtc/NativeCapturerObserver.java",
       "src/java/org/webrtc/NativeLibrary.java",
+      "src/java/org/webrtc/PlatformCertificateVerifier.java",
     ]
 
     deps = [
@@ -829,6 +830,8 @@ if (current_os == "linux" || is_android) {
       "src/jni/pc/peer_connection.h",
       "src/jni/pc/peer_connection_factory.cc",
       "src/jni/pc/peer_connection_factory.h",
+      "src/jni/pc/platform_certificate_verifier.cc",
+      "src/jni/pc/platform_certificate_verifier.h",
       "src/jni/pc/rtc_certificate.cc",
       "src/jni/pc/rtc_certificate.h",
       "src/jni/pc/rtc_stats_collector_callback_wrapper.cc",
@@ -1635,6 +1638,7 @@ if (current_os == "linux" || is_android) {
       "api/org/webrtc/audio/AudioProcessingImplementation.java",
       "api/org/webrtc/audio/AudioProcessingMode.java",
       "api/org/webrtc/audio/AudioProcessingState.java",
+      "src/java/org/webrtc/PlatformCertificateVerifier.java",
     ]
     namespace = "webrtc::jni"
   }

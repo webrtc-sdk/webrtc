@@ -143,6 +143,10 @@ class OpenSSLAdapter final : public SSLAdapter {
   OpenSSLSessionCache* ssl_session_cache_ = nullptr;
   // Optional SSL Certificate verifier which can be set by a third party.
   SSLCertificateVerifier* ssl_cert_verifier_ = nullptr;
+  // Fallback verifier backed by the OS trust store, used when no verifier was
+  // supplied and the platform provides one. Owns what `ssl_cert_verifier_`
+  // points at in that case.
+  std::unique_ptr<SSLCertificateVerifier> platform_cert_verifier_;
   // The current connection state of the (d)TLS connection.
   SSLState state_;
 
