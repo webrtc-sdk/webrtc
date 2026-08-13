@@ -438,22 +438,29 @@ class AndroidAudioDeviceModule : public AudioDeviceModule {
   }
 
   int32_t MicrophoneMuteIsAvailable(bool* available) override {
-    RTC_DLOG(LS_INFO) << __FUNCTION__ << " - Not implemented";
-    return -1;
+    RTC_DLOG(LS_INFO) << __FUNCTION__;
+    if (!initialized_)
+      return -1;
+    *available = input_->MicrophoneMute().has_value();
+    RTC_DLOG(LS_INFO) << "output: " << *available;
+    return 0;
   }
 
   int32_t SetMicrophoneMute(bool enable) override {
     RTC_DLOG(LS_INFO) << __FUNCTION__ << "(" << enable << ")";
-    if (input_->SetMicrophoneMute(enable) != 0) {
+    if (!initialized_)
       return -1;
-    }
-    microphone_mute_ = enable;
-    return 0;
+    return input_->SetMicrophoneMute(enable);
   }
 
   int32_t MicrophoneMute(bool* enabled) const override {
     RTC_DLOG(LS_INFO) << __FUNCTION__;
-    *enabled = microphone_mute_;
+    if (!initialized_)
+      return -1;
+    std::optional<bool> mute = input_->MicrophoneMute();
+    if (!mute.has_value())
+      return -1;
+    *enabled = *mute;
     return 0;
   }
 
@@ -639,7 +646,6 @@ class AndroidAudioDeviceModule : public AudioDeviceModule {
   std::unique_ptr<AudioDeviceBuffer> audio_device_buffer_;
 
   bool initialized_;
-  bool microphone_mute_ = false;
 };
 
 }  // namespace

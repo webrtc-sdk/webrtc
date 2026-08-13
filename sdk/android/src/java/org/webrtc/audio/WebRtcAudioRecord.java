@@ -954,6 +954,14 @@ class WebRtcAudioRecord {
     microphoneMute = mute;
   }
 
+  // Returns the current mute state. This class owns the state, so both native
+  // callers and app callers of JavaAudioDeviceModule.setMicrophoneMute read
+  // back the same value.
+  @CalledByNative
+  public boolean getMicrophoneMute() {
+    return microphoneMute;
+  }
+
   // Sets whether NoiseSuppressor should be enabled or disabled.
   // Returns true if the enabling was successful, otherwise false is returned (this is also the case
   // if the NoiseSuppressor effect is not supported).
