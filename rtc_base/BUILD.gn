@@ -1665,11 +1665,31 @@ rtc_library("ssl_adapter") {
     "openssl_session_cache.h",
     "openssl_stream_adapter.cc",
     "openssl_stream_adapter.h",
+    "platform_certificate_verifier.cc",
+    "platform_certificate_verifier.h",
     "ssl_adapter.cc",
     "ssl_adapter.h",
     "ssl_stream_adapter.cc",
     "ssl_stream_adapter.h",
   ]
+
+  if (is_mac || is_ios) {
+    sources += [ "platform_certificate_verifier_apple.cc" ]
+    frameworks = [
+      "CoreFoundation.framework",
+      "Security.framework",
+    ]
+  } else if (is_win) {
+    sources += [ "platform_certificate_verifier_win.cc" ]
+    libs = [ "crypt32.lib" ]
+  } else {
+    # Linux and the BSDs expose no trust evaluation API at all. Android does,
+    # but only via X509TrustManager, and rtc_base has no JNI layer to call it
+    # with; that lives in sdk/android. The Android implementation therefore
+    # belongs there and gets injected, the way NetworkMonitorFactory already
+    # is. Until then both keep the built-in anchors as their trust source.
+    sources += [ "platform_certificate_verifier_none.cc" ]
+  }
 
   deps = [
     ":async_socket",
@@ -2375,6 +2395,7 @@ if (rtc_include_tests) {
           "openssl_adapter_unittest.cc",
           "openssl_session_cache_unittest.cc",
           "openssl_utility_unittest.cc",
+          "platform_certificate_verifier_unittest.cc",
           "ssl_adapter_unittest.cc",
           "ssl_identity_unittest.cc",
           "ssl_stream_adapter_unittest.cc",

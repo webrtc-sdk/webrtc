@@ -95,12 +95,13 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
   }
 
   int32_t OnEngineWillEnable(AVAudioEngine *engine, bool playout_enabled,
-                             bool recording_enabled) override {
+                             bool recording_enabled, bool voice_processing_enabled) override {
     if (delegate_ == nil) return 0;
     return [delegate_ audioDeviceModule:adm_
                        willEnableEngine:engine
                        isPlayoutEnabled:playout_enabled
-                     isRecordingEnabled:recording_enabled];
+                     isRecordingEnabled:recording_enabled
+               isVoiceProcessingEnabled:voice_processing_enabled];
   }
 
   int32_t OnEngineWillStart(AVAudioEngine *engine, bool playout_enabled,
