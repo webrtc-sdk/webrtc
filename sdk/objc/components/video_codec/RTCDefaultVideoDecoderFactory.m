@@ -34,6 +34,9 @@
   [result
       addObjectsFromArray:[RTC_OBJC_TYPE(RTCVideoDecoderVP8) supportedCodecs]];
 
+  [result addObject:[[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc]
+                        initWithName:RTC_CONSTANT_TYPE(RTCVideoCodecH265Name)]];
+
   [result
       addObjectsFromArray:[RTC_OBJC_TYPE(RTCVideoDecoderVP9) supportedCodecs]];
 
