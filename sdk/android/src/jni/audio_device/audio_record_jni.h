@@ -78,6 +78,9 @@ class AudioRecordJni : public AudioInput {
   int32_t EnableBuiltInAEC(bool enable) override;
   int32_t EnableBuiltInNS(bool enable) override;
 
+  int32_t SetMicrophoneMute(bool mute) override;
+  std::optional<bool> MicrophoneMute() const override;
+
   std::optional<bool> BuiltInAECIsRequested() const override;
   std::optional<bool> BuiltInAECIsEnabled() const override;
   std::optional<bool> BuiltInNSIsRequested() const override;

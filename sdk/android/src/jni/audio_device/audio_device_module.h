@@ -53,6 +53,16 @@ class AudioInput {
   virtual int32_t EnableBuiltInAEC(bool enable) = 0;
   virtual int32_t EnableBuiltInNS(bool enable) = 0;
 
+  // Mutes at the capture source by replacing recorded audio with silence,
+  // without stopping recording. Returns -1 if not supported.
+  virtual int32_t SetMicrophoneMute(bool mute) { return -1; }
+
+  // Current capture source mute state, or nullopt if the input cannot mute.
+  // The input owns this state rather than the ADM caching it, so the value
+  // stays correct even when something other than SetMicrophoneMute changes it
+  // (for example JavaAudioDeviceModule.setMicrophoneMute from app code).
+  virtual std::optional<bool> MicrophoneMute() const { return std::nullopt; }
+
   virtual std::optional<bool> BuiltInAECIsRequested() const { return std::nullopt; }
   virtual std::optional<bool> BuiltInAECIsEnabled() const { return std::nullopt; }
   virtual std::optional<bool> BuiltInNSIsRequested() const { return std::nullopt; }
@@ -113,7 +123,8 @@ scoped_refptr<AudioDeviceModule> CreateAudioDeviceModuleFromInputAndOutput(
     bool is_stereo_record_supported,
     uint16_t playout_delay_ms,
     std::unique_ptr<AudioInput> audio_input,
-    std::unique_ptr<AudioOutput> audio_output);
+    std::unique_ptr<AudioOutput> audio_output,
+    bool is_stop_on_mute_mode_enabled = true);
 
 }  // namespace jni
 

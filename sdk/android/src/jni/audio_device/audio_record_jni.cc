@@ -234,6 +234,18 @@ int32_t AudioRecordJni::EnableBuiltInAEC(bool enable) {
              : -1;
 }
 
+int32_t AudioRecordJni::SetMicrophoneMute(bool mute) {
+  RTC_LOG(LS_INFO) << "SetMicrophoneMute(" << mute << ")";
+  RTC_DCHECK(thread_checker_.IsCurrent());
+  Java_WebRtcAudioRecord_setMicrophoneMute(env_, j_audio_record_, mute);
+  return 0;
+}
+
+std::optional<bool> AudioRecordJni::MicrophoneMute() const {
+  RTC_DCHECK(thread_checker_.IsCurrent());
+  return Java_WebRtcAudioRecord_getMicrophoneMute(env_, j_audio_record_);
+}
+
 int32_t AudioRecordJni::EnableBuiltInNS(bool enable) {
   RTC_LOG(LS_INFO) << "EnableBuiltInNS(" << enable << ")";
   RTC_DCHECK(thread_checker_.IsCurrent());
