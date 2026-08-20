@@ -586,6 +586,16 @@ public class PeerConnection {
      */
     public boolean enableIceGatheringOnAnyAddressPorts;
 
+    /**
+     * Enable SNAP (SCTP INIT in SDP), part of WARP. Saves a round trip on
+     * data channel setup when the remote peer also supports it.
+     * See: https://www.ietf.org/archive/id/draft-hancke-tsvwg-snap-00.html
+     * This maps to an immutable field of the native configuration, so it must
+     * hold the same value at peer connection creation and on every
+     * setConfiguration call.
+     */
+    public boolean enableSctpSnap;
+
     /** Limit ports used for connections. */
     public int portAllocatorMinPort;
     public int portAllocatorMaxPort;
@@ -637,6 +647,7 @@ public class PeerConnection {
       portAllocatorMaxPort = 0;
       portAllocatorFlags = 0;
       enableIceGatheringOnAnyAddressPorts = false;
+      enableSctpSnap = false;
     }
 
     @CalledByNative
@@ -860,6 +871,11 @@ public class PeerConnection {
     @CalledByNative("RTCConfiguration")
     boolean getEnableIceGatheringOnAnyAddressPorts() {
       return enableIceGatheringOnAnyAddressPorts;
+    }
+
+    @CalledByNative("RTCConfiguration")
+    boolean getEnableSctpSnap() {
+      return enableSctpSnap;
     }
   };
 
