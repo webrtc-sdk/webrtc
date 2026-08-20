@@ -66,6 +66,7 @@
 @synthesize iceUnwritableMinChecks = _iceUnwritableMinChecks;
 @synthesize iceInactiveTimeout = _iceInactiveTimeout;
 @synthesize enableIceGatheringOnAnyAddressPorts = _enableIceGatheringOnAnyAddressPorts;
+@synthesize enableSctpSnap = _enableSctpSnap;
 
 - (instancetype)init {
   // Copy defaults.
@@ -172,6 +173,7 @@
         [NSNumber numberWithInt:*config.ice_inactive_timeout] :
         nil;
     _enableIceGatheringOnAnyAddressPorts = config.enable_any_address_ports;
+    _enableSctpSnap = config.enable_sctp_snap;
   }
   return self;
 }
@@ -334,6 +336,7 @@
         std::optional<int>(_iceInactiveTimeout.intValue);
   }
   nativeConfig->enable_any_address_ports = _enableIceGatheringOnAnyAddressPorts;
+  nativeConfig->enable_sctp_snap = _enableSctpSnap;
   return nativeConfig.release();
 }
 

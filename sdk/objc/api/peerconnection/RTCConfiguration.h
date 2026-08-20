@@ -271,6 +271,15 @@ RTC_OBJC_EXPORT
   */
 @property(nonatomic, assign) BOOL enableIceGatheringOnAnyAddressPorts;
 
+/** Enable SNAP (SCTP INIT in SDP), part of WARP. Saves a round trip on
+ *  data channel setup when the remote peer also supports it.
+ *  See: https://www.ietf.org/archive/id/draft-hancke-tsvwg-snap-00.html
+ *  This maps to an immutable field of the native configuration, so it must
+ *  hold the same value at peer connection creation and on every
+ *  setConfiguration call. Defaults to false.
+ */
+@property(nonatomic, assign) BOOL enableSctpSnap;
+
 - (instancetype)init;
 
 @end
