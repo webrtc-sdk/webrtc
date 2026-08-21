@@ -243,6 +243,14 @@ std::unique_ptr<VideoEncoder> ObjCVideoEncoderFactory::Create(
       alloc] initWithNativeSdpVideoFormat:format];
   id<RTC_OBJC_TYPE(RTCVideoEncoder)> encoder =
       [encoder_factory_ createEncoder:info];
+  if (encoder == nil) {
+    // A nil encoder would still be wrapped below and, through nil messaging,
+    // report success from InitEncode without ever producing frames. Fail the
+    // codec selection instead.
+    RTC_LOG(LS_ERROR) << "ObjC encoder factory returned nil encoder for "
+                      << format.name;
+    return nullptr;
+  }
   if ([encoder conformsToProtocol:@protocol(RTC_OBJC_TYPE(
                                       RTCNativeVideoEncoderBuilder))]) {
     id<RTC_OBJC_TYPE(RTCNativeVideoEncoderBuilder)> builder =

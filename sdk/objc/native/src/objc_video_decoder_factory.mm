@@ -104,6 +104,14 @@ std::unique_ptr<VideoDecoder> ObjCVideoDecoderFactory::Create(
       id<RTC_OBJC_TYPE(RTCVideoDecoder)> decoder =
           [decoder_factory_ createDecoder:codecInfo];
 
+      if (decoder == nil) {
+        // A nil decoder would still be wrapped below and silently drop every
+        // frame through nil messaging. Fail the codec selection instead.
+        RTC_LOG(LS_ERROR) << "ObjC decoder factory returned nil decoder for "
+                          << format.name;
+        return nullptr;
+      }
+
       if ([decoder conformsToProtocol:@protocol(RTC_OBJC_TYPE(
                                           RTCNativeVideoDecoderBuilder))]) {
         id<RTC_OBJC_TYPE(RTCNativeVideoDecoderBuilder)> builder =

@@ -53,11 +53,13 @@
         [addingCodecs addObject: codec];
     }
 
+#if defined(RTC_USE_LIBAOM_AV1_ENCODER)
     auto av1Format = webrtc::SdpVideoFormat(
          webrtc::kAv1CodecName, webrtc::CodecParameterMap(),
          webrtc::LibaomAv1EncoderSupportedScalabilityModes());
     RTC_OBJC_TYPE(RTCVideoCodecInfo) *av1Codec = [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithNativeSdpVideoFormat: av1Format];
     [addingCodecs addObject: av1Codec];
+#endif
 
     // H265
     auto *h265Codec = [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc]
