@@ -405,5 +405,31 @@ TEST_F(ConnectionTest, TooBigDeltaIsNotSent) {
   EXPECT_FALSE(received_goog_delta_ack);
 }
 
+TEST_F(ConnectionTest, NoImplicitDtlsInStunAck) {
+  Connection* lconn = CreateConnection(ICEROLE_CONTROLLING);
+  int ack_size = -1;
+  lconn->RegisterDtlsPiggyback(DtlsStunPiggybackCallbacks(
+      [&](auto type) {
+        std::optional<absl::string_view> data = "test";
+        std::optional<std::vector<uint32_t>> ack;
+        return std::make_pair(data, ack);
+      },
+      [&](auto data, auto ack) { ack_size = ack ? ack->size() : -1; }));
+  Connection* rconn = CreateConnection(ICEROLE_CONTROLLED);
+  rconn->RegisterDtlsPiggyback(DtlsStunPiggybackCallbacks(
+      [&](auto type) {
+        std::vector<uint32_t> empty;
+        std::optional<absl::string_view> data;
+        std::optional<std::vector<uint32_t>> ack = empty;
+        return std::make_pair(data, ack);
+      },
+      [&](auto data, auto ack) {}));
+  BufferT<uint8_t> reply;
+  SendPingAndCaptureReply(lconn, rconn, env().clock().CurrentTime().ms(),
+                          &reply);
+  lconn->OnReadPacket(ReceivedIpPacket(reply, SocketAddress(), std::nullopt));
+  EXPECT_EQ(ack_size, 0);
+}
+
 }  // namespace
 }  // namespace webrtc
