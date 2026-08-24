@@ -523,7 +523,7 @@ bool DtlsTransportInternalImpl::AppendSrtpKeyingMaterial(
 bool DtlsTransportInternalImpl::SetupDtls() {
   RTC_DCHECK(dtls_role_);
 
-  if (SSLStreamAdapter::IsBoringSsl()) {
+  if (SSLStreamAdapter::IsBoringSsl() && !dtls_in_stun_disabled_) {
     dtls_in_stun_ = ice_transport()->config().dtls_handshake_in_stun;
   }
 
@@ -709,12 +709,33 @@ int DtlsTransportInternalImpl::SendPacket(
 }
 
 void DtlsTransportInternalImpl::DisableDtlsInStun() {
+  RTC_DCHECK_RUN_ON(&thread_checker_);
+  // The remote description may arrive after the handshake started.
+  if (dtls_state() != DtlsTransportState::kNew) {
+    return;
+  }
+  dtls_in_stun_disabled_ = true;
   dtls_in_stun_ = false;
+  peer_supports_dtls_in_stun_ = false;
   if (ice_transport_) {
     ice_transport_->internal()->ResetDtlsStunPiggybackCallbacks();
   }
   if (downward_) {
     downward_->SetDtlsStunPiggybackController(nullptr);
+  }
+}
+
+void DtlsTransportInternalImpl::MaybeStartDtlsInStun() {
+  RTC_DCHECK_RUN_ON(&thread_checker_);
+  if (peer_supports_dtls_in_stun_) {
+    return;
+  }
+  peer_supports_dtls_in_stun_ = true;
+  dtls_in_stun_disabled_ = false;
+  // The remote description may arrive after ICE became writable and DTLS
+  // already started.
+  if (dtls_state() == DtlsTransportState::kNew) {
+    MaybeStartDtls();
   }
 }
 
@@ -903,6 +924,10 @@ void DtlsTransportInternalImpl::OnReadPacket(PacketTransportInternal* transport,
   RTC_DCHECK_RUN_ON(&thread_checker_);
   RTC_DCHECK(transport == ice_transport());
 
+  if (piggybacked) {
+    peer_supports_dtls_in_stun_ = true;
+  }
+
   if (!dtls_active_) {
     // Not doing DTLS.
     NotifyPacketReceived(packet);
@@ -1073,7 +1098,8 @@ void DtlsTransportInternalImpl::OnNetworkRouteChanged(
 void DtlsTransportInternalImpl::MaybeStartDtls() {
   //  When adding the DTLS handshake in STUN we want to call StartSSL even
   //  before the ICE transport is ready.
-  if (dtls_ && (ice_transport()->writable() || dtls_in_stun_)) {
+  if (dtls_ && (ice_transport()->writable() ||
+                (dtls_in_stun_ && peer_supports_dtls_in_stun_))) {
     ConfigureHandshakeTimeout();
 
     RTC_LOG(LS_INFO)

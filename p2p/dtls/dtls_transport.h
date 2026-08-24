@@ -243,6 +243,8 @@ class DtlsTransportInternalImpl : public DtlsTransportInternal {
   // Disable DTLS-in-STUN.
   void DisableDtlsInStun() override;
 
+  void MaybeStartDtlsInStun() override;
+
   IceTransportInternal* ice_transport() override;
 
   // For informational purposes. Tells if the DTLS handshake has finished.
@@ -359,6 +361,10 @@ class DtlsTransportInternalImpl : public DtlsTransportInternal {
   // (so that we return PIGGYBACK_ACK to client if we get STUN_BINDING_REQUEST
   // directly). Maybe disabled in SetupDtls has been called.
   bool dtls_in_stun_ = false;
+  bool peer_supports_dtls_in_stun_ = false;
+  // Set when the remote description did not signal support; makes the
+  // decision survive SetupDtls() re-reading the ICE config.
+  bool dtls_in_stun_disabled_ = false;
   // Has DtlsInStun Complete been run?
   // This variable is used to prevent reinitializing after dtls-restart.
   bool dtls_in_stun_complete_ = false;

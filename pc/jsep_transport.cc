@@ -241,6 +241,11 @@ RTCError JsepTransport::SetRemoteJsepTransportDescription(
     if (rtcp_dtls_transport() != nullptr) {
       rtcp_dtls_transport()->DisableDtlsInStun();
     }
+  } else {
+    rtp_dtls_transport()->MaybeStartDtlsInStun();
+    if (rtcp_dtls_transport() != nullptr) {
+      rtcp_dtls_transport()->MaybeStartDtlsInStun();
+    }
   }
   SetRemoteIceParameters(ice_parameters, rtp_dtls_transport()->ice_transport());
 
