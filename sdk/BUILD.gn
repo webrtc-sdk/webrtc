@@ -1765,6 +1765,7 @@ if (is_ios || is_mac) {
           "objc/components/video_codec/RTCVideoEncoderFactorySimulcast.h",
           "objc/api/video_codec/RTCVideoEncoderSimulcast.h",
           "objc/components/audio/RTCAudioBuffer.h",
+          "objc/components/audio/RTCAudioDevice.h",
           "objc/components/audio/RTCAudioProcessingModule.h",
           "objc/components/audio/RTCDefaultAudioProcessingModule.h",
           "objc/components/audio/RTCAudioCustomProcessingDelegate.h",
