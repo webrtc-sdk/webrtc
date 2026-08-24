@@ -1798,9 +1798,6 @@ if (is_ios || is_mac) {
           ":videocodec_objc",
           ":videotoolbox_objc",
         ]
-        if (is_ios && (target_environment != "xrdevice" && target_environment != "xrsimulator")) {
-          deps += [ ":metal_objc" ]
-        }
         if (!build_with_chromium) {
           deps += [
             ":callback_logger_objc",
