@@ -140,6 +140,12 @@ DtlsStunPiggybackController::GetDataToPiggyback(
   RTC_DCHECK(!writing_packets_);
 
   if (pending_packets_.empty()) {
+    // In confirmed state include an empty data attribute. Can happen e.g.
+    // with PQC after receiving a partial flight.
+    // In unconfirmed and pending states do not include the attribute.
+    if (state_ == State::CONFIRMED) {
+      return "";
+    }
     return std::nullopt;
   }
 

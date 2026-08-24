@@ -546,8 +546,9 @@ TEST_F(DtlsStunPiggybackControllerTest, DontSendAckedPackets) {
   server_.ReportDataPiggybacked(
       std::nullopt,
       std::vector<uint32_t>({ComputeDtlsPacketHash(dtls_flight1)}));
-  // No unacked packet exists.
-  EXPECT_FALSE(server_.GetDataToPiggyback(STUN_BINDING_REQUEST).has_value());
+  // No unacked packet exists, i.e. empty response.
+  auto response = server_.GetDataToPiggyback(STUN_BINDING_REQUEST);
+  EXPECT_TRUE(response && response->empty());
 }
 
 TEST_F(DtlsStunPiggybackControllerTest, LimitAckSize) {
@@ -602,6 +603,19 @@ TEST_F(DtlsStunPiggybackControllerTest, EmptyDataDoesNotClearAck) {
       std::nullopt,
       std::vector<uint32_t>({ComputeDtlsPacketHash(dtls_flight1)}));
 
+  EXPECT_EQ(server_.GetAckToPiggyback(STUN_BINDING_REQUEST)->size(), 1u);
+}
+
+TEST_F(DtlsStunPiggybackControllerTest, NoEmptyDataInPending) {
+  std::vector<uint8_t> packet = FakeDtlsPacket(0x5487);
+
+  server_.ReportDataPiggybacked(
+      WrapInStun(STUN_ATTR_META_DTLS_IN_STUN, packet)->array_view(),
+      std::nullopt);
+  // If this is one of the two packets of a PQC client hello the server
+  // does not have a response yet.
+  auto response = server_.GetDataToPiggyback(STUN_BINDING_REQUEST);
+  EXPECT_TRUE(response && response->empty());
   EXPECT_EQ(server_.GetAckToPiggyback(STUN_BINDING_REQUEST)->size(), 1u);
 }
 
