@@ -240,6 +240,9 @@ class DtlsTransportInternalImpl : public DtlsTransportInternal {
   bool AppendSrtpKeyingMaterial(
       ZeroOnFreeBuffer<uint8_t>& keying_material) override;
 
+  // Disable DTLS-in-STUN.
+  void DisableDtlsInStun() override;
+
   IceTransportInternal* ice_transport() override;
 
   // For informational purposes. Tells if the DTLS handshake has finished.

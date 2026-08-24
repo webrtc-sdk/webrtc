@@ -708,6 +708,16 @@ int DtlsTransportInternalImpl::SendPacket(
   }
 }
 
+void DtlsTransportInternalImpl::DisableDtlsInStun() {
+  dtls_in_stun_ = false;
+  if (ice_transport_) {
+    ice_transport_->internal()->ResetDtlsStunPiggybackCallbacks();
+  }
+  if (downward_) {
+    downward_->SetDtlsStunPiggybackController(nullptr);
+  }
+}
+
 IceTransportInternal* DtlsTransportInternalImpl::ice_transport() {
   return ice_transport_->internal();
 }

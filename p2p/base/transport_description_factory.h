@@ -28,6 +28,9 @@ struct TransportOptions {
   // If true, ICE renomination is supported and will be used if it is also
   // supported by the remote side.
   bool enable_ice_renomination = false;
+  // If true, SPED (STUN Protocol for Embedding DTLS) is supported and will
+  // be used if it is also supported by the remote side.
+  bool dtls_handshake_in_stun = false;
 };
 
 // Creates transport descriptions according to the supplied configuration.
