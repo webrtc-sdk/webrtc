@@ -1769,6 +1769,14 @@ if (is_ios || is_mac) {
           "objc/components/audio/RTCAudioCustomProcessingDelegate.h",
           "objc/components/audio/RTCAudioProcessingConfig.h",
         ]
+        if (rtc_use_h265) {
+          sources += [
+            "objc/components/video_codec/RTCCodecSpecificInfoH265.h",
+            "objc/components/video_codec/RTCH265ProfileLevelId.h",
+            "objc/components/video_codec/RTCVideoDecoderH265.h",
+            "objc/components/video_codec/RTCVideoEncoderH265.h",
+          ]
+        }
         if (!build_with_chromium) {
           sources += [
             "objc/api/logging/RTCCallbackLogger.h",
