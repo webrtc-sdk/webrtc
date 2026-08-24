@@ -1287,10 +1287,6 @@ void DtlsTransportInternalImpl::FlushPendingDtlsPacket() {
 
   if (ice_transport()->writable() && dtls_in_stun_) {
     auto data_to_send = dtls_stun_piggyback_controller_.GetPending();
-    if (data_to_send.empty()) {
-      // No data to send, we're done.
-      return;
-    }
     for (const auto& packet : data_to_send) {
       AsyncSocketPacketOptions packet_options;
       ice_transport()->SendPacket(reinterpret_cast<const char*>(packet.data()),
