@@ -666,6 +666,9 @@ rtc_library("dtls_stun_piggyback_controller") {
     "dtls/dtls_stun_piggyback_callbacks.h",
     "dtls/dtls_stun_piggyback_controller.cc",
     "dtls/dtls_stun_piggyback_controller.h",
+    "dtls/dtls_stun_piggyback_controller_interface.h",
+    "dtls/dtls_stun_piggyback_controller_sped.cc",
+    "dtls/dtls_stun_piggyback_controller_sped.h",
   ]
   deps = [
     ":dtls_utils",

@@ -40,6 +40,8 @@
 #include "p2p/base/packet_transport_internal.h"
 #include "p2p/dtls/dtls_stun_piggyback_callbacks.h"
 #include "p2p/dtls/dtls_stun_piggyback_controller.h"
+#include "p2p/dtls/dtls_stun_piggyback_controller_interface.h"
+#include "p2p/dtls/dtls_stun_piggyback_controller_sped.h"
 #include "p2p/dtls/dtls_transport_internal.h"
 #include "p2p/dtls/dtls_utils.h"
 #include "rtc_base/async_packet_socket.h"
@@ -144,7 +146,7 @@ StreamInterfaceChannel::StreamInterfaceChannel(
       packets_(kMaxPendingPackets, kMaxDtlsPacketLen) {}
 
 void StreamInterfaceChannel::SetDtlsStunPiggybackController(
-    DtlsStunPiggybackController* dtls_stun_piggyback_controller) {
+    DtlsStunPiggybackControllerInterface* dtls_stun_piggyback_controller) {
   dtls_stun_piggyback_controller_ = dtls_stun_piggyback_controller;
 }
 
@@ -257,17 +259,29 @@ DtlsTransportInternalImpl::DtlsTransportInternalImpl(
       srtp_ciphers_(crypto_options.GetSupportedDtlsSrtpCryptoSuites()),
       ephemeral_key_exchange_cipher_groups_(
           crypto_options.ephemeral_key_exchange_cipher_groups.GetEnabled()),
-      ssl_max_version_(max_version),
-      dtls_stun_piggyback_controller_(
-          [this](std::span<const uint8_t> piggybacked_dtls_packet) {
-            if (piggybacked_dtls_callback_ == nullptr) {
-              return;
-            }
-            piggybacked_dtls_callback_(
-                this,
-                ReceivedIpPacket(piggybacked_dtls_packet, SocketAddress()));
-          },
-          [this](bool success) { CompleteDtlsInStun(success); }) {
+      ssl_max_version_(max_version) {
+  auto dtls_data_callback =
+      [this](std::span<const uint8_t> piggybacked_dtls_packet) {
+        if (piggybacked_dtls_callback_ == nullptr) {
+          return;
+        }
+        piggybacked_dtls_callback_(
+            this, ReceivedIpPacket(piggybacked_dtls_packet, SocketAddress()));
+      };
+  auto piggyback_complete_callback = [this](bool success) {
+    CompleteDtlsInStun(success);
+  };
+  if (env_.field_trials().IsEnabled("WebRTC-DtlsStunPiggybackControllerSped")) {
+    dtls_stun_piggyback_controller_ =
+        std::make_unique<DtlsStunPiggybackControllerSped>(
+            std::move(dtls_data_callback),
+            std::move(piggyback_complete_callback));
+  } else {
+    dtls_stun_piggyback_controller_ =
+        std::make_unique<DtlsStunPiggybackController>(
+            std::move(dtls_data_callback),
+            std::move(piggyback_complete_callback));
+  }
   RTC_DCHECK(ice_transport_);
   ConnectToIceTransport();
   if (SSLStreamAdapter::IsBoringSsl()) {
@@ -303,7 +317,7 @@ void DtlsTransportInternalImpl::CompleteDtlsInStun(bool success) {
   }
   ice_transport()->ResetDtlsStunPiggybackCallbacks();
 
-  DeregisterReceivedPacketCallback(&dtls_stun_piggyback_controller_);
+  DeregisterReceivedPacketCallback(dtls_stun_piggyback_controller_.get());
 }
 
 DtlsTransportState DtlsTransportInternalImpl::dtls_state() const {
@@ -533,13 +547,13 @@ bool DtlsTransportInternalImpl::SetupDtls() {
 
     if (dtls_in_stun_ && !dtls_in_stun_complete_) {
       downward_ptr->SetDtlsStunPiggybackController(
-          &dtls_stun_piggyback_controller_);
+          dtls_stun_piggyback_controller_.get());
 
       RegisterReceivedPacketCallback(
-          &dtls_stun_piggyback_controller_,
+          dtls_stun_piggyback_controller_.get(),
           [this](webrtc::PacketTransportInternal* transport,
                  const ReceivedIpPacket& packet) {
-            dtls_stun_piggyback_controller_.ApplicationPacketReceived(packet);
+            dtls_stun_piggyback_controller_->ApplicationPacketReceived(packet);
           });
     }
     if (ssl_stream_factory_) {
@@ -806,9 +820,9 @@ void DtlsTransportInternalImpl::ConnectToIceTransport() {
         std::optional<absl::string_view> data;
         std::optional<std::vector<uint32_t>> ack;
         if (dtls_in_stun_) {
-          data = dtls_stun_piggyback_controller_.GetDataToPiggyback(
+          data = dtls_stun_piggyback_controller_->GetDataToPiggyback(
               stun_message_type);
-          ack = dtls_stun_piggyback_controller_.GetAckToPiggyback(
+          ack = dtls_stun_piggyback_controller_->GetAckToPiggyback(
               stun_message_type);
         }
         return std::make_pair(data, ack);
@@ -818,7 +832,7 @@ void DtlsTransportInternalImpl::ConnectToIceTransport() {
         if (!dtls_in_stun_) {
           return;
         }
-        dtls_stun_piggyback_controller_.ReportDataPiggybacked(data, acks);
+        dtls_stun_piggyback_controller_->ReportDataPiggybacked(data, acks);
       }));
   SetPiggybackDtlsDataCallback([this](PacketTransportInternal* transport,
                                       const ReceivedIpPacket& packet) {
@@ -1034,7 +1048,7 @@ void DtlsTransportInternalImpl::OnDtlsEvent(int sig, int err) {
       int ssl_version_bytes;
       bool ret = dtls_->GetSslVersionBytes(&ssl_version_bytes);
       RTC_DCHECK(ret);
-      dtls_stun_piggyback_controller_.SetDtlsHandshakeComplete(
+      dtls_stun_piggyback_controller_->SetDtlsHandshakeComplete(
           dtls_role_ == SSL_CLIENT, ssl_version_bytes == kDtls13VersionBytes);
       set_dtls_state(DtlsTransportState::kConnected);
       set_writable(true);
@@ -1236,7 +1250,7 @@ void DtlsTransportInternalImpl::set_dtls_state(DtlsTransportState state) {
     }
   }
   if (dtls_state_ == DtlsTransportState::kFailed) {
-    dtls_stun_piggyback_controller_.SetDtlsFailed();
+    dtls_stun_piggyback_controller_->SetDtlsFailed();
   }
   SendDtlsState(this, state);
 }
@@ -1274,8 +1288,8 @@ void DtlsTransportInternalImpl::UpdateHandshakeTimeout() {
   const auto rtt_ms = ice_transport()->GetRttEstimate();
   int delay_ms = ComputeRetransmissionTimeout(
       rtt_ms.value_or(kDefaultHandshakeEstimateRttMs));
-  if (dtls_stun_piggyback_controller_.state() ==
-          DtlsStunPiggybackController::State::OFF &&
+  if (dtls_stun_piggyback_controller_->state() ==
+          DtlsStunPiggybackControllerInterface::State::OFF &&
       dtls_role_ == SSL_CLIENT) {
     // We sent one STUN BINDING request with an embedded DTLS packet and
     // discovered that peer does not support DtlsInStun. The DTLS packet will be
@@ -1300,29 +1314,30 @@ void DtlsTransportInternalImpl::SetPiggybackDtlsDataCallback(
 
 bool DtlsTransportInternalImpl::IsDtlsPiggybackSupportedByPeer() {
   RTC_DCHECK_RUN_ON(&thread_checker_);
-  return dtls_in_stun_ && (dtls_stun_piggyback_controller_.state() !=
-                           DtlsStunPiggybackController::State::OFF);
+  return dtls_in_stun_ && (dtls_stun_piggyback_controller_->state() !=
+                           DtlsStunPiggybackControllerInterface::State::OFF);
 }
 
 bool DtlsTransportInternalImpl::WasDtlsCompletedByPiggybacking() {
   RTC_DCHECK_RUN_ON(&thread_checker_);
-  return dtls_in_stun_ && (dtls_stun_piggyback_controller_.state() ==
-                               DtlsStunPiggybackController::State::COMPLETE ||
-                           dtls_stun_piggyback_controller_.state() ==
-                               DtlsStunPiggybackController::State::PENDING);
+  return dtls_in_stun_ &&
+         (dtls_stun_piggyback_controller_->state() ==
+              DtlsStunPiggybackControllerInterface::State::COMPLETE ||
+          dtls_stun_piggyback_controller_->state() ==
+              DtlsStunPiggybackControllerInterface::State::PENDING);
 }
 
 void DtlsTransportInternalImpl::FlushPendingDtlsPacket() {
   RTC_DCHECK_RUN_ON(&thread_checker_);
 
-  if (dtls_stun_piggyback_controller_.state() ==
-      DtlsStunPiggybackController::State::COMPLETE) {
+  if (dtls_stun_piggyback_controller_->state() ==
+      DtlsStunPiggybackControllerInterface::State::COMPLETE) {
     // We're done.
     return;
   }
 
   if (ice_transport()->writable() && dtls_in_stun_) {
-    auto data_to_send = dtls_stun_piggyback_controller_.GetPending();
+    auto data_to_send = dtls_stun_piggyback_controller_->GetPending();
     for (const auto& packet : data_to_send) {
       AsyncSocketPacketOptions packet_options;
       ice_transport()->SendPacket(reinterpret_cast<const char*>(packet.data()),
@@ -1343,7 +1358,7 @@ int DtlsTransportInternalImpl::GetStunDataCount() const {
   if (!dtls_in_stun_) {
     return 0;
   }
-  return dtls_stun_piggyback_controller_.GetCountOfReceivedData();
+  return dtls_stun_piggyback_controller_->GetCountOfReceivedData();
 }
 
 }  // namespace webrtc
