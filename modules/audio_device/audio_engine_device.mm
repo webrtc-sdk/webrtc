@@ -1181,14 +1181,12 @@ AudioDeviceModule::PlatformAudioProcessingState AudioEngineDevice::GetPlatformAu
   state.is_voice_processing_bypassed_requested = engine_state_.voice_processing_bypassed;
   state.is_voice_processing_agc_enabled_requested = engine_state_.voice_processing_agc_enabled;
 
-  // Without an instantiated input node there is no hardware VP state to read,
-  // and reading -[AVAudioEngine inputNode] here would create the input unit and
-  // trigger the microphone permission prompt on a playout-only engine.
-  if (engine_device_ == nil || !input_node_instantiated_) {
+  // Without an instantiated input node there is no hardware VP state to read.
+  AVAudioInputNode* input_node = InputNodeOrNil();
+  if (input_node == nil) {
     return state;
   }
 
-  AVAudioInputNode *input_node = engine_device_.inputNode;
   @try {
     const bool vp_active = input_node.isVoiceProcessingEnabled;
     const bool bypassed_active = vp_active ? input_node.voiceProcessingBypassed : true;
@@ -1583,6 +1581,21 @@ int32_t AudioEngineDevice::InitRecordingPersistentMode(bool* enabled) {
 
 // ----------------------------------------------------------------------------------------------------
 // Private - Engine Related
+
+AVAudioInputNode* AudioEngineDevice::InputNode() {
+  RTC_DCHECK_RUN_ON(thread_);
+  RTC_DCHECK(engine_device_ != nil);
+  input_node_instantiated_ = true;
+  return engine_device_.inputNode;
+}
+
+AVAudioInputNode* AudioEngineDevice::InputNodeOrNil() const {
+  RTC_DCHECK_RUN_ON(thread_);
+  if (engine_device_ == nil || !input_node_instantiated_) {
+    return nil;
+  }
+  return engine_device_.inputNode;
+}
 
 void AudioEngineDevice::ReconfigureEngine() {
   LOGI() << "ReconfigureEngine";
@@ -2139,10 +2152,8 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
 
   auto inputNode = [this, state]() {
     RTC_DCHECK_RUN_ON(thread_);
-    RTC_DCHECK(engine_device_ != nil);
     RTC_DCHECK(state.prev.IsInputEnabled() || state.next.IsInputEnabled());
-    input_node_instantiated_ = true;
-    return engine_device_.inputNode;
+    return InputNode();
   };
 
   auto outputNode = [this, state]() {
@@ -2218,14 +2229,10 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       // Stop AudioUnits explicitly before releasing the engine. Required for VPIO
       // which creates an aggregate device and IO thread that may not be fully torn
       // down by -[AVAudioEngine stop] alone, and harmless for standard I/O nodes.
-      // Only stop the input unit if this engine instance ever instantiated the
-      // input node. Reading -[AVAudioEngine inputNode] creates the input unit on
-      // first access, which on iOS triggers the microphone permission prompt. A
-      // playout-only engine (for example a subscribe-only viewer) has no input
-      // unit to stop and must not be the reason the prompt appears on teardown.
-      if (input_node_instantiated_) {
-        AVAudioInputNode* input_node = engine_device_.inputNode;
-        if (input_node != nil && input_node.audioUnit != nullptr) {
+      // A playout-only engine (for example a subscribe-only viewer) never
+      // instantiated its input node, so there is no input unit to stop.
+      if (AVAudioInputNode* input_node = InputNodeOrNil()) {
+        if (input_node.audioUnit != nullptr) {
           OSStatus err = AudioOutputUnitStop(input_node.audioUnit);
           if (err != noErr) {
             LOGW() << "AudioOutputUnitStop (input) returned: " << err;
@@ -3066,14 +3073,10 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       // Stop AudioUnits explicitly before releasing the engine. Required for VPIO
       // which creates an aggregate device and IO thread that may not be fully torn
       // down by -[AVAudioEngine stop] alone, and harmless for standard I/O nodes.
-      // Only stop the input unit if this engine instance ever instantiated the
-      // input node. Reading -[AVAudioEngine inputNode] creates the input unit on
-      // first access, which on iOS triggers the microphone permission prompt. A
-      // playout-only engine (for example a subscribe-only viewer) has no input
-      // unit to stop and must not be the reason the prompt appears on teardown.
-      if (input_node_instantiated_) {
-        AVAudioInputNode* input_node = engine_device_.inputNode;
-        if (input_node != nil && input_node.audioUnit != nullptr) {
+      // A playout-only engine (for example a subscribe-only viewer) never
+      // instantiated its input node, so there is no input unit to stop.
+      if (AVAudioInputNode* input_node = InputNodeOrNil()) {
+        if (input_node.audioUnit != nullptr) {
           OSStatus err = AudioOutputUnitStop(input_node.audioUnit);
           if (err != noErr) {
             LOGW() << "AudioOutputUnitStop (input) returned: " << err;

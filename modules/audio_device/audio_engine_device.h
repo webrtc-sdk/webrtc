@@ -493,6 +493,14 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   // AudioEngine observer methods. May be called from any thread.
   void ReconfigureEngine();
 
+  // The only two ways to reach engine_device_.inputNode. -[AVAudioEngine inputNode]
+  // instantiates the input audio unit on first access, which on iOS triggers the
+  // microphone permission prompt, so callers must be explicit about intent:
+  // InputNode() instantiates (input is being enabled), InputNodeOrNil() never
+  // does and returns nil unless this engine instance already instantiated it.
+  AVAudioInputNode* InputNode();
+  AVAudioInputNode* InputNodeOrNil() const;
+
 // Device related
 #if TARGET_OS_OSX
   static OSStatus objectListenerProc(AudioObjectID objectId, UInt32 numberAddresses,
@@ -557,10 +565,8 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   // AVAudioEngine objects
   AVAudioEngine* engine_device_ RTC_GUARDED_BY(thread_);
   // True once the current `engine_device_` instance has instantiated its
-  // inputNode. -[AVAudioEngine inputNode] creates the input audio unit on first
-  // access, and on iOS that alone triggers the microphone permission prompt.
-  // A playout-only engine must therefore never reach for the input node, not
-  // even while stopping units on teardown.
+  // inputNode. Never read engine_device_.inputNode directly, go through
+  // InputNode() or InputNodeOrNil() so this flag stays accurate.
   bool input_node_instantiated_ RTC_GUARDED_BY(thread_) = false;
   AVAudioEngine* engine_manual_input_ RTC_GUARDED_BY(thread_);
 
