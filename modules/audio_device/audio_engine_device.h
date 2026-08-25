@@ -493,13 +493,18 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   // AudioEngine observer methods. May be called from any thread.
   void ReconfigureEngine();
 
+  // Accessors for the device engine's I/O nodes. They take the in-flight
+  // transition so they can assert the node is only reached while the matching
+  // side is, or is being, enabled.
+  //
   // The only two ways to reach engine_device_.inputNode. -[AVAudioEngine inputNode]
   // instantiates the input audio unit on first access, which on iOS triggers the
   // microphone permission prompt, so callers must be explicit about intent:
   // InputNode() instantiates (input is being enabled), InputNodeOrNil() never
   // does and returns nil unless this engine instance already instantiated it.
-  AVAudioInputNode* InputNode();
+  AVAudioInputNode* InputNode(const EngineStateUpdate& state);
   AVAudioInputNode* InputNodeOrNil() const;
+  AVAudioOutputNode* OutputNode(const EngineStateUpdate& state);
 
 // Device related
 #if TARGET_OS_OSX

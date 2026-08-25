@@ -1582,9 +1582,10 @@ int32_t AudioEngineDevice::InitRecordingPersistentMode(bool* enabled) {
 // ----------------------------------------------------------------------------------------------------
 // Private - Engine Related
 
-AVAudioInputNode* AudioEngineDevice::InputNode() {
+AVAudioInputNode* AudioEngineDevice::InputNode(const EngineStateUpdate& state) {
   RTC_DCHECK_RUN_ON(thread_);
   RTC_DCHECK(engine_device_ != nil);
+  RTC_DCHECK(state.prev.IsInputEnabled() || state.next.IsInputEnabled());
   input_node_instantiated_ = true;
   return engine_device_.inputNode;
 }
@@ -1595,6 +1596,13 @@ AVAudioInputNode* AudioEngineDevice::InputNodeOrNil() const {
     return nil;
   }
   return engine_device_.inputNode;
+}
+
+AVAudioOutputNode* AudioEngineDevice::OutputNode(const EngineStateUpdate& state) {
+  RTC_DCHECK_RUN_ON(thread_);
+  RTC_DCHECK(engine_device_ != nil);
+  RTC_DCHECK(state.prev.IsOutputEnabled() || state.next.IsOutputEnabled());
+  return engine_device_.outputNode;
 }
 
 void AudioEngineDevice::ReconfigureEngine() {
@@ -2150,19 +2158,6 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     return result;
   };
 
-  auto inputNode = [this, state]() {
-    RTC_DCHECK_RUN_ON(thread_);
-    RTC_DCHECK(state.prev.IsInputEnabled() || state.next.IsInputEnabled());
-    return InputNode();
-  };
-
-  auto outputNode = [this, state]() {
-    RTC_DCHECK_RUN_ON(thread_);
-    RTC_DCHECK(engine_device_ != nil);
-    RTC_DCHECK(state.prev.IsOutputEnabled() || state.next.IsOutputEnabled());
-    return engine_device_.outputNode;
-  };
-
   // --------------------------------------------------------------------------------------------
   // Step: Stop AVAudioEngine
   //
@@ -2355,7 +2350,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     NSError* error = nil;
     BOOL set_vp_result = NO;
     @try {
-      set_vp_result = [inputNode() setVoiceProcessingEnabled:state.next.voice_processing_enabled
+      set_vp_result = [InputNode(state) setVoiceProcessingEnabled:state.next.voice_processing_enabled
                                                        error:&error];
     } @catch (NSException* exception) {
       LOGE() << "setVoiceProcessingEnabled threw exception: "
@@ -2375,7 +2370,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       // VP mute defaults to false on fresh enable; set unconditionally to avoid
       // a potentially unsafe hardware read.
       if (state.next.mute_mode == MuteMode::RestartEngine) {
-        inputNode().voiceProcessingInputMuted = false;
+        InputNode(state).voiceProcessingInputMuted = false;
       }
 
       // Muted talker detection.
@@ -2397,7 +2392,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
           }));
         };
 
-        BOOL set_listener_result = [inputNode() setMutedSpeechActivityEventListener:listener_block];
+        BOOL set_listener_result = [InputNode(state) setMutedSpeechActivityEventListener:listener_block];
         if (set_listener_result) {
           LOGI() << "setMutedSpeechActivityEventListener success";
         } else {
@@ -2416,7 +2411,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     LOGI() << "Enabling output for AVAudioEngine...";
     RTC_DCHECK(!engine_device_.running);
 
-    AVAudioFormat* output_node_format = [outputNode() outputFormatForBus:0];
+    AVAudioFormat* output_node_format = [OutputNode(state) outputFormatForBus:0];
 
     LOGI() << "Output format sampleRate: " << output_node_format.sampleRate
            << " channels: " << output_node_format.channelCount
@@ -2496,7 +2491,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       // mainMixerNode -> outputNode is connected by default by AVAudioEngine, but we connect anyways
       // with format.
       [engine_device_ connect:engine_device_.mainMixerNode
-                           to:outputNode()
+                           to:OutputNode(state)
                        format:engine_output_format];
     } @catch (NSException* exception) {
       LOGE() << "Failed to connect output nodes: " << exception.reason.UTF8String;
@@ -2507,7 +2502,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       NSDictionary* context = @{};
       int32_t result =
           this->observer_->OnEngineWillConnectOutput(engine_device_, engine_device_.mainMixerNode,
-                                                     outputNode(), engine_output_format, context);
+                                                     OutputNode(state), engine_output_format, context);
       if (result != 0) {
         LOGE() << "Call to OnEngineWillConnectOutput returned error: " << result;
         return rollback(result);
@@ -2548,7 +2543,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     // hardware format) for a nonzero sample rate and channel count to see if input is in an enabled
     // state. Trying to perform input through the input node when it isn’t available or in an
     // enabled state causes the engine to throw an error (when possible) or an exception.
-    AVAudioFormat* input_node_format = [inputNode() outputFormatForBus:0];
+    AVAudioFormat* input_node_format = [InputNode(state) outputFormatForBus:0];
     // Example formats:
     // Airpods: 1 ch,  24000 Hz, Float32
     // Mac: 9 ch,  48000 Hz, Float32
@@ -2681,7 +2676,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
         kAudioEngineInputMixerNodeKey : input_mixer_node_,
       };
       int32_t result = observer_->OnEngineWillConnectInput(
-          engine_device_, inputNode(), input_mixer_node_, engine_input_format, context);
+          engine_device_, InputNode(state), input_mixer_node_, engine_input_format, context);
       if (result != 0) {
         LOGE() << "Call to OnEngineWillConnectInput returned error: " << result;
         return rollback(result);
@@ -2701,7 +2696,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       if (input_mixer_connections.count == 0) {
         LOGI() << "Nothing connected to input mixer, connecting input node...";
         // Default implementation.
-        [engine_device_ connect:inputNode() to:input_mixer_node_ format:engine_input_format];
+        [engine_device_ connect:InputNode(state) to:input_mixer_node_ format:engine_input_format];
       }
     } @catch (NSException* exception) {
       LOGE() << "Failed to connect input nodes: " << exception.reason.UTF8String;
@@ -2740,7 +2735,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     // Set unconditionally to avoid a potentially unsafe VP property read.
     if (state.prev.voice_processing_enabled) {
       LOGI() << "Update mute (voice processing) unmuting vp for stop-recording";
-      inputNode().voiceProcessingInputMuted = false;
+      InputNode(state).voiceProcessingInputMuted = false;
     }
 
     // Detach input mixer node
@@ -2805,7 +2800,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
         (state.prev.mute_mode == MuteMode::VoiceProcessing) && state.prev.input_muted;
     if (should_vp_mute != prev_vp_mute) {
       LOGI() << "Update mute (voice processing): " << should_vp_mute;
-      inputNode().voiceProcessingInputMuted = should_vp_mute;
+      InputNode(state).voiceProcessingInputMuted = should_vp_mute;
     }
   }
 
@@ -2838,7 +2833,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       ducking_config.duckingLevel = ToAVDuckingLevel(state.next.ducking_level);
 
       LOGI() << "setVoiceProcessingOtherAudioDuckingConfiguration";
-      inputNode().voiceProcessingOtherAudioDuckingConfiguration = ducking_config;
+      InputNode(state).voiceProcessingOtherAudioDuckingConfiguration = ducking_config;
     }
   }
 #endif
@@ -2850,7 +2845,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       (!vp_was_configured ||
        state.prev.voice_processing_bypassed != state.next.voice_processing_bypassed)) {
     LOGI() << "setting voiceProcessingBypassed: " << state.next.voice_processing_bypassed;
-    inputNode().voiceProcessingBypassed = state.next.voice_processing_bypassed;
+    InputNode(state).voiceProcessingBypassed = state.next.voice_processing_bypassed;
   }
 
   // --------------------------------------------------------------------------------------------
@@ -2860,7 +2855,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       (!vp_was_configured ||
        state.prev.voice_processing_agc_enabled != state.next.voice_processing_agc_enabled)) {
     LOGI() << "setting voiceProcessingAGCEnabled: " << state.next.voice_processing_agc_enabled;
-    inputNode().voiceProcessingAGCEnabled = state.next.voice_processing_agc_enabled;
+    InputNode(state).voiceProcessingAGCEnabled = state.next.voice_processing_agc_enabled;
   }
 
   // --------------------------------------------------------------------------------------------
@@ -2877,7 +2872,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
         LOGI() << "Setting input device: " << input_device_name.value_or("Unknown") << " ("
                << requested_input_device_id << ")";
 
-        AudioUnit input_unit = inputNode().audioUnit;
+        AudioUnit input_unit = InputNode(state).audioUnit;
         OSStatus set_input_err = AudioUnitSetProperty(
             input_unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 1,
             &requested_input_device_id, sizeof(requested_input_device_id));
@@ -2900,7 +2895,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
         auto output_device_name = mac_audio_utils::GetDeviceName(output_deviceId);
         LOGI() << "Setting output device: " << output_device_name.value_or("Unknown") << " ("
                << output_deviceId << ")";
-        AudioUnit outputUnit = outputNode().audioUnit;
+        AudioUnit outputUnit = OutputNode(state).audioUnit;
         OSStatus err = AudioUnitSetProperty(outputUnit, kAudioOutputUnitProperty_CurrentDevice,
                                             kAudioUnitScope_Global, 0, &output_deviceId,
                                             sizeof(output_deviceId));
