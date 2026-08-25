@@ -556,6 +556,12 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
   // AVAudioEngine objects
   AVAudioEngine* engine_device_ RTC_GUARDED_BY(thread_);
+  // True once the current `engine_device_` instance has instantiated its
+  // inputNode. -[AVAudioEngine inputNode] creates the input audio unit on first
+  // access, and on iOS that alone triggers the microphone permission prompt.
+  // A playout-only engine must therefore never reach for the input node, not
+  // even while stopping units on teardown.
+  bool input_node_instantiated_ RTC_GUARDED_BY(thread_) = false;
   AVAudioEngine* engine_manual_input_ RTC_GUARDED_BY(thread_);
 
   // Used for manual rendering mode
