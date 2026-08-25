@@ -504,6 +504,12 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   AVAudioInputNode* InputNodeOrNil() const;
   AVAudioOutputNode* OutputNode(const EngineStateUpdate& state);
 
+  // Stops the device engine's I/O audio units explicitly before the engine is
+  // released. Required for VPIO, which creates an aggregate device and IO thread
+  // that -[AVAudioEngine stop] alone may not fully tear down, and harmless for
+  // standard I/O nodes. Must be called on `thread_` with engine_device_ set.
+  void StopDeviceEngineAudioUnits();
+
 // Device related
 #if TARGET_OS_OSX
   static OSStatus objectListenerProc(AudioObjectID objectId, UInt32 numberAddresses,

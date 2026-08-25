@@ -1605,6 +1605,31 @@ AVAudioOutputNode* AudioEngineDevice::OutputNode(const EngineStateUpdate& state)
   return engine_device_.outputNode;
 }
 
+void AudioEngineDevice::StopDeviceEngineAudioUnits() {
+  RTC_DCHECK_RUN_ON(thread_);
+  RTC_DCHECK(engine_device_ != nil);
+
+  // A playout-only engine (for example a subscribe-only viewer) never
+  // instantiated its input node, so there is no input unit to stop and it must
+  // not be instantiated here.
+  if (AVAudioInputNode* input_node = InputNodeOrNil()) {
+    if (input_node.audioUnit != nullptr) {
+      OSStatus err = AudioOutputUnitStop(input_node.audioUnit);
+      if (err != noErr) {
+        LOGW() << "AudioOutputUnitStop (input) returned: " << err;
+      }
+    }
+  }
+
+  AVAudioOutputNode* output_node = engine_device_.outputNode;
+  if (output_node != nil && output_node.audioUnit != nullptr) {
+    OSStatus err = AudioOutputUnitStop(output_node.audioUnit);
+    if (err != noErr) {
+      LOGW() << "AudioOutputUnitStop (output) returned: " << err;
+    }
+  }
+}
+
 void AudioEngineDevice::ReconfigureEngine() {
   LOGI() << "ReconfigureEngine";
 
@@ -2221,27 +2246,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     LOGI() << "Recreate required, releasing AVAudioEngine...";
 
     if (engine_device_ != nil) {
-      // Stop AudioUnits explicitly before releasing the engine. Required for VPIO
-      // which creates an aggregate device and IO thread that may not be fully torn
-      // down by -[AVAudioEngine stop] alone, and harmless for standard I/O nodes.
-      // A playout-only engine (for example a subscribe-only viewer) never
-      // instantiated its input node, so there is no input unit to stop.
-      if (AVAudioInputNode* input_node = InputNodeOrNil()) {
-        if (input_node.audioUnit != nullptr) {
-          OSStatus err = AudioOutputUnitStop(input_node.audioUnit);
-          if (err != noErr) {
-            LOGW() << "AudioOutputUnitStop (input) returned: " << err;
-          }
-        }
-      }
-      AVAudioOutputNode* output_node = engine_device_.outputNode;
-
-      if (output_node != nil && output_node.audioUnit != nullptr) {
-        OSStatus err = AudioOutputUnitStop(output_node.audioUnit);
-        if (err != noErr) {
-          LOGW() << "AudioOutputUnitStop (output) returned: " << err;
-        }
-      }
+      StopDeviceEngineAudioUnits();
     }
 
     if (observer_ != nullptr && engine_device_ != nil) {
@@ -3065,29 +3070,7 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   if (state.prev.IsAnyEnabled() && !state.next.IsAnyEnabled()) {
     RTC_DCHECK(engine_device_ != nullptr);
 
-    {
-      // Stop AudioUnits explicitly before releasing the engine. Required for VPIO
-      // which creates an aggregate device and IO thread that may not be fully torn
-      // down by -[AVAudioEngine stop] alone, and harmless for standard I/O nodes.
-      // A playout-only engine (for example a subscribe-only viewer) never
-      // instantiated its input node, so there is no input unit to stop.
-      if (AVAudioInputNode* input_node = InputNodeOrNil()) {
-        if (input_node.audioUnit != nullptr) {
-          OSStatus err = AudioOutputUnitStop(input_node.audioUnit);
-          if (err != noErr) {
-            LOGW() << "AudioOutputUnitStop (input) returned: " << err;
-          }
-        }
-      }
-      AVAudioOutputNode* output_node = engine_device_.outputNode;
-
-      if (output_node != nil && output_node.audioUnit != nullptr) {
-        OSStatus err = AudioOutputUnitStop(output_node.audioUnit);
-        if (err != noErr) {
-          LOGW() << "AudioOutputUnitStop (output) returned: " << err;
-        }
-      }
-    }
+    StopDeviceEngineAudioUnits();
 
     if (observer_ != nullptr) {
       int32_t result = observer_->OnEngineWillRelease(engine_device_);
