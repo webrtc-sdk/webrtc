@@ -1698,6 +1698,7 @@ if (is_ios || is_mac) {
           "objc/api/peerconnection/RTCTracing.h",
           "objc/api/peerconnection/RTCVideoSource.h",
           "objc/api/peerconnection/RTCVideoTrack.h",
+          "objc/api/video_codec/RTCVideoCodecConstants.h",
           "objc/api/video_codec/RTCVideoDecoderAV1.h",
           "objc/api/video_codec/RTCVideoDecoderVP8.h",
           "objc/api/video_codec/RTCVideoDecoderVP9.h",
@@ -1750,11 +1751,20 @@ if (is_ios || is_mac) {
           "objc/components/video_codec/RTCVideoEncoderFactorySimulcast.h",
           "objc/api/video_codec/RTCVideoEncoderSimulcast.h",
           "objc/components/audio/RTCAudioBuffer.h",
+          "objc/components/audio/RTCAudioDevice.h",
           "objc/components/audio/RTCAudioProcessingModule.h",
           "objc/components/audio/RTCDefaultAudioProcessingModule.h",
           "objc/components/audio/RTCAudioCustomProcessingDelegate.h",
           "objc/components/audio/RTCAudioProcessingConfig.h",
         ]
+        if (rtc_use_h265) {
+          sources += [
+            "objc/components/video_codec/RTCCodecSpecificInfoH265.h",
+            "objc/components/video_codec/RTCH265ProfileLevelId.h",
+            "objc/components/video_codec/RTCVideoDecoderH265.h",
+            "objc/components/video_codec/RTCVideoEncoderH265.h",
+          ]
+        }
         if (!build_with_chromium) {
           sources += [
             "objc/api/logging/RTCCallbackLogger.h",
@@ -1774,9 +1784,6 @@ if (is_ios || is_mac) {
           ":videocodec_objc",
           ":videotoolbox_objc",
         ]
-        if (is_ios && (target_environment != "xrdevice" && target_environment != "xrsimulator")) {
-          deps += [ ":metal_objc" ]
-        }
         if (!build_with_chromium) {
           deps += [
             ":callback_logger_objc",
