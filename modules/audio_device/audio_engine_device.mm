@@ -2253,7 +2253,6 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     }
 
     engine_device_ = nil;
-    input_node_instantiated_ = false;
   }
 
   // --------------------------------------------------------------------------------------------
@@ -2265,13 +2264,15 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     RTC_DCHECK(engine_device_ == nil);
 
     engine_device_ = [[AVAudioEngine alloc] init];
+    // Per engine instance: a fresh engine has no input node yet. This is the
+    // only place the flag needs resetting, it is unobservable while
+    // engine_device_ is nil.
     input_node_instantiated_ = false;
 
     rollback_actions.push_back([this]() {
       RTC_DCHECK_RUN_ON(thread_);
       LOGI() << "Rolling back create AVAudioEngine (device)...";
       engine_device_ = nil;
-      input_node_instantiated_ = false;
     });
 
     if (observer_ != nullptr) {
@@ -3098,7 +3099,6 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
 
     LOGI() << "Releasing AVAudioEngine...";
     engine_device_ = nil;
-    input_node_instantiated_ = false;
   }
 
   // --- Diagnostic: final state after apply ---

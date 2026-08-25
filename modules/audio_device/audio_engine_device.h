@@ -570,8 +570,9 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   // AVAudioEngine objects
   AVAudioEngine* engine_device_ RTC_GUARDED_BY(thread_);
   // True once the current `engine_device_` instance has instantiated its
-  // inputNode. Never read engine_device_.inputNode directly, go through
-  // InputNode() or InputNodeOrNil() so this flag stays accurate.
+  // inputNode. Reset whenever a new engine is allocated, meaningless while
+  // engine_device_ is nil. Never read engine_device_.inputNode directly, go
+  // through InputNode() or InputNodeOrNil() so this flag stays accurate.
   bool input_node_instantiated_ RTC_GUARDED_BY(thread_) = false;
   AVAudioEngine* engine_manual_input_ RTC_GUARDED_BY(thread_);
 
