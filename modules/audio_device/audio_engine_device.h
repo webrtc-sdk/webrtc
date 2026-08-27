@@ -493,6 +493,23 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   // AudioEngine observer methods. May be called from any thread.
   void ReconfigureEngine();
 
+  // Device engine I/O node accessors. Must be called on `thread_`. The ones
+  // taking the in-flight transition assert that the matching side is, or is
+  // being, enabled. -[AVAudioEngine inputNode] instantiates the input audio
+  // unit on first access, which on iOS triggers the microphone permission
+  // prompt, so these are the only two ways to reach it: InputNode()
+  // instantiates it (input is being enabled), InputNodeOrNil() never does and
+  // returns nil unless this engine instance already instantiated it.
+  AVAudioInputNode* InputNode(const EngineStateUpdate& state);
+  AVAudioInputNode* InputNodeOrNil() const;
+  AVAudioOutputNode* OutputNode(const EngineStateUpdate& state);
+
+  // Stops the device engine's I/O audio units explicitly before the engine is
+  // released. Required for VPIO, which creates an aggregate device and IO thread
+  // that -[AVAudioEngine stop] alone may not fully tear down, and harmless for
+  // standard I/O nodes. Must be called on `thread_` with engine_device_ set.
+  void StopDeviceEngineAudioUnits();
+
 // Device related
 #if TARGET_OS_OSX
   static OSStatus objectListenerProc(AudioObjectID objectId, UInt32 numberAddresses,
@@ -556,6 +573,11 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
   // AVAudioEngine objects
   AVAudioEngine* engine_device_ RTC_GUARDED_BY(thread_);
+  // True once the current `engine_device_` instance has instantiated its
+  // inputNode. Reset whenever a new engine is allocated, meaningless while
+  // engine_device_ is nil. Never read engine_device_.inputNode directly, go
+  // through InputNode() or InputNodeOrNil() so this flag stays accurate.
+  bool input_node_instantiated_ RTC_GUARDED_BY(thread_) = false;
   AVAudioEngine* engine_manual_input_ RTC_GUARDED_BY(thread_);
 
   // Used for manual rendering mode
