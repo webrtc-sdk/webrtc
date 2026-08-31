@@ -652,20 +652,9 @@ void Connection::MaybeHandleDtlsPiggybackingAttributes(
   if (dtls_piggyback_ack != nullptr) {
     piggyback_acks = dtls_piggyback_ack->GetUInt32Vector();
   }
-  // A response implicitly acknowledges the original embedded packet
-  // when the ack attribute is included.
-  if (dtls_piggyback_ack != nullptr && original_request != nullptr) {
-    const StunByteStringAttribute* request_dtls_piggyback =
-        original_request->msg()->GetByteString(STUN_ATTR_META_DTLS_IN_STUN);
-    if (request_dtls_piggyback) {
-      uint32_t sent_hash =
-          ComputeDtlsPacketHash(request_dtls_piggyback->array_view());
-      if (!piggyback_acks) {
-        piggyback_acks = {};
-      }
-      piggyback_acks->push_back(sent_hash);
-    }
-  }
+  // TODO: bugs.webrtc.org/367395350 - a binding response could
+  // implicitly acknowledge data sent in its associated binding
+  // request.
   dtls_stun_piggyback_callbacks_.recv_data(piggyback_data, piggyback_acks);
 }
 

@@ -425,6 +425,7 @@ class FakePeerConnectionBase : public PeerConnectionInternal {
   }
 
   CandidateStatsList GetPooledCandidateStats() const override { return {}; }
+  bool CanAttemptDtlsStunPiggybacking() const override { return false; }
 
  protected:
   Environment env_;

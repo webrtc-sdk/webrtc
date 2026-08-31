@@ -3124,7 +3124,7 @@ PeerConnection::InitializeUnDemuxablePacketHandler() {
   };
 }
 
-bool PeerConnection::CanAttemptDtlsStunPiggybacking() {
+bool PeerConnection::CanAttemptDtlsStunPiggybacking() const {
   return dtls_enabled_ && SSLStreamAdapter::IsBoringSsl() &&
          env_.field_trials().IsEnabled("WebRTC-IceHandshakeDtls");
 }

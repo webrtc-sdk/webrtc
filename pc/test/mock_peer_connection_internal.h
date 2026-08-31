@@ -385,6 +385,7 @@ class MockPeerConnectionInternal : public PeerConnectionInternal {
               (int channel_id, DataChannelInterface::DataState),
               (override));
   MOCK_METHOD(PayloadTypePicker&, payload_type_picker, (), (override));
+  MOCK_METHOD(bool, CanAttemptDtlsStunPiggybacking, (), (const, override));
 };
 
 }  // namespace webrtc

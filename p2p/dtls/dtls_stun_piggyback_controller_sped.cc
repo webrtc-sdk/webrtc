@@ -8,7 +8,7 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#include "p2p/dtls/dtls_stun_piggyback_controller.h"
+#include "p2p/dtls/dtls_stun_piggyback_controller_sped.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -30,20 +30,21 @@
 
 namespace webrtc {
 
-DtlsStunPiggybackController::DtlsStunPiggybackController(
+DtlsStunPiggybackControllerSped::DtlsStunPiggybackControllerSped(
     absl::AnyInvocable<void(std::span<const uint8_t>)> dtls_data_callback,
     // NOLINTNEXTLINE(readability/casting) - not a cast; false positive!
     absl::AnyInvocable<void(bool) &&> piggyback_complete_callback)
     : dtls_data_callback_(std::move(dtls_data_callback)),
       piggyback_complete_callback_(std::move(piggyback_complete_callback)) {}
 
-DtlsStunPiggybackController::~DtlsStunPiggybackController() {
+DtlsStunPiggybackControllerSped::~DtlsStunPiggybackControllerSped() {
   RTC_DCHECK(dtls_data_callback_);
   RTC_DCHECK(piggyback_complete_callback_);
 }
 
-void DtlsStunPiggybackController::SetDtlsHandshakeComplete(bool is_dtls_client,
-                                                           bool is_dtls13) {
+void DtlsStunPiggybackControllerSped::SetDtlsHandshakeComplete(
+    bool is_dtls_client,
+    bool is_dtls13) {
   RTC_DCHECK_RUN_ON(&sequence_checker_);
 
   // Peer does not support this so fallback to a normal DTLS handshake
@@ -51,36 +52,23 @@ void DtlsStunPiggybackController::SetDtlsHandshakeComplete(bool is_dtls_client,
   if (state_ == State::OFF) {
     return;
   }
+
+  // As DTLS 1.2 client we have nothing more to send at this point
+  // but will continue to send ACK attributes until receiving
+  // the last flight from the server.
+  if (is_dtls_client && !is_dtls13) {
+    pending_packets_.clear();
+  }
   state_ = State::PENDING;
 }
 
-void DtlsStunPiggybackController::ApplicationPacketReceived(
+void DtlsStunPiggybackControllerSped::ApplicationPacketReceived(
     const ReceivedIpPacket& packet) {
   RTC_DCHECK_RUN_ON(&sequence_checker_);
-
-  if (state_ == State::OFF) {
-    return;
-  }
-
-  RTC_DCHECK(packet.decryption_info() == ReceivedIpPacket::kDtlsDecrypted ||
-             packet.decryption_info() == ReceivedIpPacket::kSrtpEncrypted);
-
-  if (packet.decryption_info() == ReceivedIpPacket::kDtlsDecrypted) {
-    // We should be writable before this to happen.
-    RTC_DCHECK(state_ == State::PENDING);
-  } else if (packet.decryption_info() == ReceivedIpPacket::kSrtpEncrypted) {
-    // Peer sending encrypted srtp mean that it must be writable,
-    // but we don't necessarily know that it's decodable. However, if
-    // we are also dtls-writable (PENDING) this means that we are complete.
-    if (state_ != State::PENDING) {
-      return;
-    }
-  }
-  state_ = State::COMPLETE;
-  CallCompleteCallback(/*success=*/true);
+  // TODO: bugs.webrtc.org/367395350 - remove this.
 }
 
-void DtlsStunPiggybackController::SetDtlsFailed() {
+void DtlsStunPiggybackControllerSped::SetDtlsFailed() {
   RTC_DCHECK_RUN_ON(&sequence_checker_);
 
   if (state_ == State::TENTATIVE || state_ == State::CONFIRMED ||
@@ -92,7 +80,8 @@ void DtlsStunPiggybackController::SetDtlsFailed() {
   CallCompleteCallback(/*success=*/false);
 }
 
-void DtlsStunPiggybackController::CapturePacket(std::span<const uint8_t> data) {
+void DtlsStunPiggybackControllerSped::CapturePacket(
+    std::span<const uint8_t> data) {
   RTC_DCHECK_RUN_ON(&sequence_checker_);
   if (!IsDtlsPacket(data)) {
     return;
@@ -109,12 +98,12 @@ void DtlsStunPiggybackController::CapturePacket(std::span<const uint8_t> data) {
   pending_packets_.Add(data);
 }
 
-void DtlsStunPiggybackController::ClearCachedPacketForTesting() {
+void DtlsStunPiggybackControllerSped::ClearCachedPacketForTesting() {
   RTC_DCHECK_RUN_ON(&sequence_checker_);
   pending_packets_.clear();
 }
 
-void DtlsStunPiggybackController::Flush() {
+void DtlsStunPiggybackControllerSped::Flush() {
   // Flush is called by the StreamInterface (and the underlying SSL BIO)
   // after a flight of packets has been sent.
   RTC_DCHECK_RUN_ON(&sequence_checker_);
@@ -122,7 +111,7 @@ void DtlsStunPiggybackController::Flush() {
 }
 
 std::optional<absl::string_view>
-DtlsStunPiggybackController::GetDataToPiggyback(
+DtlsStunPiggybackControllerSped::GetDataToPiggyback(
     StunMessageType stun_message_type) {
   RTC_DCHECK_RUN_ON(&sequence_checker_);
   RTC_DCHECK(stun_message_type == STUN_BINDING_REQUEST ||
@@ -155,7 +144,7 @@ DtlsStunPiggybackController::GetDataToPiggyback(
 }
 
 std::optional<const std::vector<uint32_t>>
-DtlsStunPiggybackController::GetAckToPiggyback(
+DtlsStunPiggybackControllerSped::GetAckToPiggyback(
     StunMessageType stun_message_type) {
   RTC_DCHECK_RUN_ON(&sequence_checker_);
 
@@ -166,12 +155,12 @@ DtlsStunPiggybackController::GetAckToPiggyback(
 }
 
 std::vector<std::span<const uint8_t>>
-DtlsStunPiggybackController::GetPending() {
+DtlsStunPiggybackControllerSped::GetPending() {
   RTC_DCHECK_RUN_ON(&sequence_checker_);
   return pending_packets_.GetAll();
 }
 
-void DtlsStunPiggybackController::ReportDataPiggybacked(
+void DtlsStunPiggybackControllerSped::ReportDataPiggybacked(
     std::optional<std::span<uint8_t>> data,
     std::optional<std::vector<uint32_t>> acks) {
   RTC_DCHECK_RUN_ON(&sequence_checker_);
@@ -182,20 +171,29 @@ void DtlsStunPiggybackController::ReportDataPiggybacked(
     return;
   }
 
+  // We sent dtls piggybacked but got nothing in return or
+  // we received a stun request with neither attribute set
+  // => peer does not support.
+  if (state_ == State::TENTATIVE && !data.has_value() && !acks.has_value()) {
+    RTC_LOG(LS_INFO) << "DTLS-STUN piggybacking not supported by peer.";
+    state_ = State::OFF;
+    // TODO: bugs.webrtc.org/367395350 - we cached a client hello
+    // which needs to be sent by the DTLS transport now.
+    // CallCompleteCallback(/*success=*/false);
+    return;
+  }
+
+  // In PENDING state the peer may have stopped sending the ack
+  // when it moved to the COMPLETE state. Move to the same state.
+  if (state_ == State::PENDING && !data.has_value() && !acks.has_value()) {
+    RTC_LOG(LS_INFO) << "DTLS-STUN piggybacking complete.";
+    state_ = State::COMPLETE;
+    CallCompleteCallback(/*success=*/true);
+    return;
+  }
+
+  // We sent dtls piggybacked and got something in return => peer does support.
   if (state_ == State::TENTATIVE) {
-    if (!data.has_value() && !acks.has_value()) {
-      // We sent dtls piggybacked but got nothing in return or
-      // we received a stun request with neither attribute set
-      // => peer does not support.
-      RTC_LOG(LS_INFO) << "DTLS-STUN piggybacking not supported by peer.";
-      state_ = State::OFF;
-      // TODO: bugs.webrtc.org/367395350 - We should call CallCompleteCallback
-      // here but this causes a slew of failed tests. Investigate why!
-      // CallCompleteCallback(/*success=*/false);
-      return;
-    }
-    // We sent dtls piggybacked and got something in return => peer does
-    // support.
     state_ = State::CONFIRMED;
   }
 
@@ -214,32 +212,34 @@ void DtlsStunPiggybackController::ReportDataPiggybacked(
     }
   }
 
-  if (data.has_value() && !data->empty()) {
-    // Drop non-DTLS packets.
-    if (!IsDtlsPacket(*data)) {
-      RTC_LOG(LS_WARNING) << "Dropping non-DTLS data.";
-      return;
-    }
-    ++data_recv_count_;
-    ReportDtlsPacket(*data);
-
-    // Forwards the data to the DTLS layer. Note that this will call
-    // ProcessDtlsPacket() again which does not change the state.
-    dtls_data_callback_(*data);
-  }
-
-  if (state_ == State::PENDING && pending_packets_.empty()) {
-    // We are writeable(PENDING) and have no pending packets, i.e.
-    // peer has acked everything we sent, this means that we
-    // are complete.
+  // The response to the final flight of the handshake will not contain
+  // the DTLS data but will contain an ack.
+  // Must not happen on the initial server to client packet which
+  // has no DTLS data yet.
+  if (state_ == State::PENDING && !data.has_value() && acks.has_value()) {
     RTC_LOG(LS_INFO) << "DTLS-STUN piggybacking complete.";
     state_ = State::COMPLETE;
     CallCompleteCallback(/*success=*/true);
     return;
   }
+
+  if (!data.has_value() || data->empty()) {
+    return;
+  }
+  // Drop non-DTLS packets.
+  if (!IsDtlsPacket(*data)) {
+    RTC_LOG(LS_WARNING) << "Dropping non-DTLS data.";
+    return;
+  }
+  data_recv_count_++;
+  ReportDtlsPacket(*data);
+
+  // Forwards the data to the DTLS layer. Note that this will call
+  // ProcessDtlsPacket() again which does not change the state.
+  dtls_data_callback_(*data);
 }
 
-void DtlsStunPiggybackController::ReportDtlsPacket(
+void DtlsStunPiggybackControllerSped::ReportDtlsPacket(
     std::span<const uint8_t> data) {
   RTC_DCHECK_RUN_ON(&sequence_checker_);
 
@@ -263,7 +263,7 @@ void DtlsStunPiggybackController::ReportDtlsPacket(
   }
 }
 
-void DtlsStunPiggybackController::CallCompleteCallback(bool success) {
+void DtlsStunPiggybackControllerSped::CallCompleteCallback(bool success) {
   RTC_DCHECK_RUN_ON(&sequence_checker_);
   pending_packets_.clear();
   handshake_messages_received_.clear();
