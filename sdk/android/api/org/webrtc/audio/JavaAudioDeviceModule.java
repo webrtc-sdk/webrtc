@@ -495,24 +495,47 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
     audioInput.setUseAudioRecord(enable);
   }
 
-  public void prewarmRecording() {
-    prewarmRecording(null);
+  public boolean prewarmRecording() {
+    return prewarmRecording(null);
   }
 
-  public void prewarmRecording(@Nullable AudioProcessingOptions options) {
+  /**
+   * Applies the platform audio processing options and starts recording ahead of the native
+   * start request so the first captured frames are available sooner.
+   *
+   * @return true if recording is running, false if the recorder could not be initialized or
+   *     started. Failures are also reported through the registered
+   *     {@link AudioRecordErrorCallback}. The options are applied either way and the native
+   *     start path retries the recorder later, so a false result is not fatal.
+   */
+  public boolean prewarmRecording(@Nullable AudioProcessingOptions options) {
     audioInput.applyPlatformAudioProcessingOptions(options);
-    audioInput.initRecordingIfNeeded();
-    audioInput.prewarmRecordingIfNeeded();
+    if (!audioInput.initRecordingIfNeeded()) {
+      Logging.w(TAG, "prewarmRecording: recorder initialization failed, skipping prewarm");
+      return false;
+    }
+    return audioInput.prewarmRecordingIfNeeded();
   }
 
-  public void requestStartRecording() {
-    requestStartRecording(null);
+  public boolean requestStartRecording() {
+    return requestStartRecording(null);
   }
 
-  public void requestStartRecording(@Nullable AudioProcessingOptions options) {
+  /**
+   * Applies the platform audio processing options and starts recording on behalf of the client.
+   * Recording keeps running until {@link #requestStopRecording()} is called.
+   *
+   * @return true if recording is running, false if the recorder could not be initialized or
+   *     started. Failures are also reported through the registered
+   *     {@link AudioRecordErrorCallback}.
+   */
+  public boolean requestStartRecording(@Nullable AudioProcessingOptions options) {
     audioInput.applyPlatformAudioProcessingOptions(options);
-    audioInput.initRecordingIfNeeded();
-    audioInput.startRecordingIfNeeded();
+    if (!audioInput.initRecordingIfNeeded()) {
+      Logging.w(TAG, "requestStartRecording: recorder initialization failed");
+      return false;
+    }
+    return audioInput.startRecordingIfNeeded();
   }
 
   public void requestStopRecording() {

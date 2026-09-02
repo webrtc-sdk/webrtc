@@ -728,7 +728,14 @@ class WebRtcAudioRecord {
         // Disabling useAudioRecord allows for "recordingless" recording, 
         // where we emit audio buffers to be mixed in by client.
         if (useAudioRecord) {
-          assertTrue(audioRecord != null);
+          // A failed initRecording leaves audioRecord null. Client callers such as
+          // prewarmRecordingIfNeeded can reach this point in that state, so report
+          // it as a start error instead of asserting.
+          if (audioRecord == null) {
+            reportWebRtcAudioRecordStartError(AudioRecordStartErrorCode.AUDIO_RECORD_START_STATE_MISMATCH,
+                "AudioRecord.startRecording failed: recorder was not initialized");
+            return false;
+          }
           try {
             audioRecord.startRecording();
           } catch (IllegalStateException e) {
