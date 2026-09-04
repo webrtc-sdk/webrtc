@@ -522,14 +522,16 @@ void DcSctpTransport::OnMessageReceived(dcsctp::DcSctpMessage message) {
                         << " on an SCTP packet. Dropping.";
     return;
   }
-  receive_buffer_.Clear();
-  if (!IsEmptyPPID(message.ppid()))
-    receive_buffer_.AppendData(message.payload().data(),
-                               message.payload().size());
+
+  CopyOnWriteBuffer payload =
+      IsEmptyPPID(message.ppid())
+          ? CopyOnWriteBuffer()
+          : CopyOnWriteBuffer(message.payload().data(),
+                              message.payload().size());
 
   if (data_channel_sink_) {
     data_channel_sink_->OnDataReceived(message.stream_id().value(), *type,
-                                       receive_buffer_);
+                                       payload);
   }
 }
 
