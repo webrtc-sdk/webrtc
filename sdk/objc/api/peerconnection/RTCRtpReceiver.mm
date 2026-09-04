@@ -17,6 +17,9 @@
 #import "base/RTCLogging.h"
 #import "helpers/NSString+StdString.h"
 
+#include <cmath>
+#include <optional>
+
 #include "api/media_stream_interface.h"
 
 namespace webrtc {
@@ -97,6 +100,17 @@ void RtpReceiverDelegateAdapter::OnFirstPacketReceivedAfterReceptiveChange(
                           initWithNativeRtpSource:nativeSource]];
   }
   return result;
+}
+
+- (void)setJitterBufferMinimumDelay:(nullable NSNumber *)delaySeconds {
+  // A non-finite value reaches a fatal saturated_cast<int> in the native
+  // jitter buffer, so treat nil or NaN/inf as a request to restore the default.
+  if (delaySeconds == nil || !std::isfinite(delaySeconds.doubleValue)) {
+    _nativeRtpReceiver->SetJitterBufferMinimumDelay(std::nullopt);
+  } else {
+    _nativeRtpReceiver->SetJitterBufferMinimumDelay(
+        std::optional<double>(delaySeconds.doubleValue));
+  }
 }
 
 - (void)dealloc {

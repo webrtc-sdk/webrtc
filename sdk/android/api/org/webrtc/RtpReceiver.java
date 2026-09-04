@@ -87,6 +87,30 @@ public class RtpReceiver {
     nativeSetFrameDecryptor(nativeRtpReceiver, frameDecryptor.getNativeFrameDecryptor());
   }
 
+  /**
+   * Sets the minimum jitter buffer delay in seconds for this receiver, or pass
+   * null to restore the default behaviour. The receiver keeps at least this
+   * much media buffered before playout, trading latency for smoothness on weak
+   * networks. Note the unit: the equivalent browser attribute,
+   * RTCRtpReceiver.jitterBufferTarget, is expressed in milliseconds, so a
+   * browser value of 500 corresponds to 0.5 here. Values are clamped to
+   * [0, 10] seconds internally. Wraps the C++
+   * RtpReceiverInterface::SetJitterBufferMinimumDelay.
+   */
+  public void setJitterBufferMinimumDelay(@Nullable Double delaySeconds) {
+    checkRtpReceiverExists();
+    if (delaySeconds == null) {
+      nativeClearJitterBufferMinimumDelay(nativeRtpReceiver);
+      return;
+    }
+    // A non-finite delay reaches a fatal saturated_cast<int> in the native
+    // jitter buffer when it is converted to milliseconds, so reject it here.
+    if (delaySeconds.isNaN() || delaySeconds.isInfinite()) {
+      throw new IllegalArgumentException("delaySeconds must be finite, was " + delaySeconds);
+    }
+    nativeSetJitterBufferMinimumDelay(nativeRtpReceiver, delaySeconds);
+  }
+
   private void checkRtpReceiverExists() {
     if (nativeRtpReceiver == 0) {
       throw new IllegalStateException("RtpReceiver has been disposed.");
@@ -101,4 +125,6 @@ public class RtpReceiver {
   private static native long nativeSetObserver(long rtpReceiver, Observer observer);
   private static native void nativeUnsetObserver(long rtpReceiver, long nativeObserver);
   private static native void nativeSetFrameDecryptor(long rtpReceiver, long nativeFrameDecryptor);
+  private static native void nativeSetJitterBufferMinimumDelay(long rtpReceiver, double delaySeconds);
+  private static native void nativeClearJitterBufferMinimumDelay(long rtpReceiver);
 }

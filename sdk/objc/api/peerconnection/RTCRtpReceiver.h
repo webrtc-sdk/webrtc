@@ -93,6 +93,18 @@ the current RTCRtpReceiver in the last ten seconds.
 /** The delegate for this RtpReceiver. */
 @property(nonatomic, weak) id<RTC_OBJC_TYPE(RTCRtpReceiverDelegate)> delegate;
 
+/** Sets the minimum jitter buffer delay in seconds for this receiver.
+ *  Pass nil to restore the default behaviour. The receiver keeps at least
+ *  this much media buffered before playout, trading latency for smoothness
+ *  on weak networks. Note the unit: the equivalent browser attribute,
+ *  RTCRtpReceiver.jitterBufferTarget, is expressed in milliseconds, so a
+ *  browser value of 500 corresponds to 0.5 here. Values are clamped to
+ *  [0, 10] seconds internally. Non-finite values (NaN, infinity) are
+ *  treated as nil. Wraps the C++
+ *  RtpReceiverInterface::SetJitterBufferMinimumDelay.
+ */
+- (void)setJitterBufferMinimumDelay:(nullable NSNumber *)delaySeconds;
+
 @end
 
 RTC_OBJC_EXPORT
