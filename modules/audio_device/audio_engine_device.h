@@ -191,7 +191,13 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
     // AUDIO STATE LOGIC
     //
     // Device Mode:
-    // - Output follows input to keep AVAudioEngine IO active for capture.
+    // - Output follows input only while voice processing is enabled: Apple's
+    //   Voice Processing I/O couples the input and output units, so a VP
+    //   engine must run both. Without voice processing there is no structural
+    //   requirement, and keeping output off avoids claiming the shared output
+    //   device for capture-only states (input warm-up, mic-only before any
+    //   remote track), which is audible as a dip in other apps' audio on
+    //   macOS.
     // - Input respects mute mode restrictions (RestartEngine + input_muted)
     //
     // Manual Mode:
@@ -207,7 +213,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
       switch (render_mode) {
         case RenderMode::Device:
-          return IsInputEnabled() || output_enabled;
+          return (IsInputEnabled() && voice_processing_enabled) || output_enabled;
         case RenderMode::Manual:
           return output_enabled || input_enabled || input_enabled_persistent_mode;
       }
@@ -218,7 +224,7 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
 
       switch (render_mode) {
         case RenderMode::Device:
-          return IsInputRunning() || output_running;
+          return (IsInputRunning() && voice_processing_enabled) || output_running;
         case RenderMode::Manual:
           return output_running || input_running;
       }
