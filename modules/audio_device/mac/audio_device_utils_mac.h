@@ -52,6 +52,17 @@ bool IsInputDevice(AudioObjectID device_id);
 
 bool IsOutputDevice(AudioObjectID device_id);
 
+// Creates a private (process local) aggregate device combining the given
+// output and input devices, so a single HAL I/O unit can address both. The
+// output device is the clock master and drift compensation is enabled for
+// the input sub device. Returns the aggregate AudioObjectID on success.
+std::optional<AudioObjectID> CreatePrivateAggregateDevice(
+    AudioObjectID output_device_id,
+    AudioObjectID input_device_id);
+
+// Destroys an aggregate device created by CreatePrivateAggregateDevice.
+bool DestroyAggregateDevice(AudioObjectID aggregate_device_id);
+
 }  // namespace mac_audio_utils
 }  // namespace webrtc
 
