@@ -2,6 +2,12 @@
 
 This repository contains a fork of WebRTC from Google with various improvements.
 
+The original upstream lives here: https://webrtc.googlesource.com/src.
+
+Upstream versions are pulled from https://chromiumdash.appspot.com/branches.
+
+Releases are build in [webrtc-build](https://github.com/webrtc-sdk/webrtc-build) and land in [releases](https://github.com/webrtc-sdk/webrtc-build/releases).
+
 ## Main changes
 
 ### All
