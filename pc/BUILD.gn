@@ -1289,6 +1289,31 @@ rtc_library("local_audio_source") {
     "../api:scoped_refptr",
   ]
 }
+rtc_library("custom_audio_source") {
+  visibility = [ "*" ]
+  sources = [
+    "custom_audio_source.cc",
+    "custom_audio_source.h",
+  ]
+  public_deps = [ ":local_audio_source" ]
+  deps = [
+    "../api:array_view",
+    "../api:audio_options_api",
+    "../api:make_ref_counted",
+    "../api:media_stream_interface",
+    "../api:scoped_refptr",
+    "../api/task_queue",
+    "../api/units:time_delta",
+    "../rtc_base:checks",
+    "../rtc_base:logging",
+    "../rtc_base:macromagic",
+    "../rtc_base/synchronization:mutex",
+    "../rtc_base/task_utils:repeating_task",
+    "../system_wrappers",
+    "//third_party/abseil-cpp/absl/functional:any_invocable",
+  ]
+}
+
 rtc_library("peer_connection") {
   visibility = [ ":*" ]
   sources = [
