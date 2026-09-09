@@ -1615,6 +1615,12 @@ if (is_ios || is_mac) {
           "-install_name",
           "@rpath/$output_name.framework/$output_name",
         ]
+        # Only Apple's ld can emit mergeable-library metadata (ld64.lld has no
+        # equivalent); llvm-strip also rejects the resulting LC_ATOM_INFO, so build
+        # with enable_stripping=false when using this.
+        if (use_apple_linker) {
+          ldflags += [ "-Wl,-make_mergeable" ]
+        }
 
         deps = [
           ":audio_objc",
