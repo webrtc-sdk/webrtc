@@ -87,7 +87,7 @@ void decompressionOutputCallback(void *decoderRef,
 
 + (NSArray<RTC_OBJC_TYPE(RTCVideoCodecInfo) *> *)supportedCodecs {
   NSDictionary<NSString *, NSString *> *constrainedHighParams = @{
-    @"profile-level-id" : RTC_CONSTANT_TYPE(RTCMaxSupportedH264ProfileLevelConstrainedHigh),
+    @"profile-level-id" : RTC_OBJC_TYPE(RTCMaxSupportedH264ProfileLevelConstrainedHigh)(),
     @"level-asymmetry-allowed" : @"1",
     @"packetization-mode" : @"1",
   };
@@ -97,7 +97,7 @@ void decompressionOutputCallback(void *decoderRef,
             parameters:constrainedHighParams];
 
   NSDictionary<NSString *, NSString *> *constrainedBaselineParams = @{
-    @"profile-level-id" : RTC_CONSTANT_TYPE(RTCMaxSupportedH264ProfileLevelConstrainedBaseline),
+    @"profile-level-id" : RTC_OBJC_TYPE(RTCMaxSupportedH264ProfileLevelConstrainedBaseline)(),
     @"level-asymmetry-allowed" : @"1",
     @"packetization-mode" : @"1",
   };

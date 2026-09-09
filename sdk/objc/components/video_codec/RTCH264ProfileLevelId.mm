@@ -33,10 +33,23 @@ NSString *MaxSupportedProfileLevelConstrainedBaseline();
 NSString *const RTC_CONSTANT_TYPE(RTCVideoCodecH264Name) = @(webrtc::kH264CodecName);
 NSString *const RTC_CONSTANT_TYPE(RTCLevel31ConstrainedHigh) = @"640c1f";
 NSString *const RTC_CONSTANT_TYPE(RTCLevel31ConstrainedBaseline) = @"42e01f";
-NSString *const RTC_CONSTANT_TYPE(RTCMaxSupportedH264ProfileLevelConstrainedHigh) =
-    MaxSupportedProfileLevelConstrainedHigh();
-NSString *const RTC_CONSTANT_TYPE(RTCMaxSupportedH264ProfileLevelConstrainedBaseline) =
-    MaxSupportedProfileLevelConstrainedBaseline();
+NSString *RTC_OBJC_TYPE(RTCMaxSupportedH264ProfileLevelConstrainedHigh)(void) {
+  static NSString *profileLevel = nil;
+  static dispatch_once_t once;
+  dispatch_once(&once, ^{
+    profileLevel = MaxSupportedProfileLevelConstrainedHigh();
+  });
+  return profileLevel;
+}
+
+NSString *RTC_OBJC_TYPE(RTCMaxSupportedH264ProfileLevelConstrainedBaseline)(void) {
+  static NSString *profileLevel = nil;
+  static dispatch_once_t once;
+  dispatch_once(&once, ^{
+    profileLevel = MaxSupportedProfileLevelConstrainedBaseline();
+  });
+  return profileLevel;
+}
 
 namespace {
 
