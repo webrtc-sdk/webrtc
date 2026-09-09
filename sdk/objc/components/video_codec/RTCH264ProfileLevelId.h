@@ -15,8 +15,13 @@
 RTC_OBJC_EXPORT extern NSString *const RTC_CONSTANT_TYPE(RTCVideoCodecH264Name);
 RTC_OBJC_EXPORT extern NSString *const RTC_CONSTANT_TYPE(RTCLevel31ConstrainedHigh);
 RTC_OBJC_EXPORT extern NSString *const RTC_CONSTANT_TYPE(RTCLevel31ConstrainedBaseline);
-RTC_OBJC_EXPORT extern NSString *const RTC_CONSTANT_TYPE(RTCMaxSupportedH264ProfileLevelConstrainedHigh);
-RTC_OBJC_EXPORT extern NSString *const RTC_CONSTANT_TYPE(RTCMaxSupportedH264ProfileLevelConstrainedBaseline);
+/** Highest H.264 Constrained High profile-level-id the local encoder supports.
+ *  Computed lazily: the first call may query VideoToolbox and take tens of
+ *  milliseconds, so avoid calling it on the main thread during app launch. */
+RTC_EXTERN NSString *RTC_OBJC_TYPE(RTCMaxSupportedH264ProfileLevelConstrainedHigh)(void);
+/** Highest H.264 Constrained Baseline profile-level-id the local encoder supports.
+ *  See the note above. */
+RTC_EXTERN NSString *RTC_OBJC_TYPE(RTCMaxSupportedH264ProfileLevelConstrainedBaseline)(void);
 
 /** H264 Profiles and levels. */
 typedef NS_ENUM(NSUInteger, RTC_OBJC_TYPE(RTCH264Profile)) {

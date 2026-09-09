@@ -21,7 +21,7 @@
   NSString *codecName = RTC_CONSTANT_TYPE(RTCVideoCodecH264Name);
 
   NSDictionary<NSString *, NSString *> *constrainedHighParams = @{
-    @"profile-level-id" : RTC_CONSTANT_TYPE(RTCMaxSupportedH264ProfileLevelConstrainedHigh),
+    @"profile-level-id" : RTC_OBJC_TYPE(RTCMaxSupportedH264ProfileLevelConstrainedHigh)(),
     @"level-asymmetry-allowed" : @"1",
     @"packetization-mode" : @"1",
   };
@@ -32,7 +32,7 @@
   [codecs addObject:constrainedHighInfo];
 
   NSDictionary<NSString *, NSString *> *constrainedBaselineParams = @{
-    @"profile-level-id" : RTC_CONSTANT_TYPE(RTCMaxSupportedH264ProfileLevelConstrainedBaseline),
+    @"profile-level-id" : RTC_OBJC_TYPE(RTCMaxSupportedH264ProfileLevelConstrainedBaseline)(),
     @"level-asymmetry-allowed" : @"1",
     @"packetization-mode" : @"1",
   };
