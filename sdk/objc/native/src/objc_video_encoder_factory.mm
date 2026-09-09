@@ -113,11 +113,16 @@ class ObjCVideoEncoder : public VideoEncoder {
         ScalingSettings(qp_thresholds.low, qp_thresholds.high) :
         ScalingSettings::kOff;
 
-    info.requested_resolution_alignment = encoder_.resolutionAlignment > 0 ?: 1;
+    NSInteger alignment = encoder_.resolutionAlignment;
+    info.requested_resolution_alignment =
+        alignment > 0 ? static_cast<uint32_t>(alignment) : 1;
     info.apply_alignment_to_all_simulcast_layers =
         encoder_.applyAlignmentToAllSimulcastLayers;
     info.supports_native_handle = encoder_.supportsNativeHandle;
-    info.is_hardware_accelerated = true;
+    info.is_hardware_accelerated =
+        [encoder_ respondsToSelector:@selector(isHardwareAccelerated)] ?
+        encoder_.isHardwareAccelerated :
+        true;
     return info;
   }
 
