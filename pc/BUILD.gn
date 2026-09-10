@@ -1289,6 +1289,31 @@ rtc_library("local_audio_source") {
     "../api:scoped_refptr",
   ]
 }
+rtc_library("custom_audio_source") {
+  visibility = [ "*" ]
+  sources = [
+    "custom_audio_source.cc",
+    "custom_audio_source.h",
+  ]
+  public_deps = [ ":local_audio_source" ]
+  deps = [
+    "../api:array_view",
+    "../api:audio_options_api",
+    "../api:make_ref_counted",
+    "../api:media_stream_interface",
+    "../api:scoped_refptr",
+    "../api/task_queue",
+    "../api/units:time_delta",
+    "../rtc_base:checks",
+    "../rtc_base:logging",
+    "../rtc_base:macromagic",
+    "../rtc_base/synchronization:mutex",
+    "../rtc_base/task_utils:repeating_task",
+    "../system_wrappers",
+    "//third_party/abseil-cpp/absl/functional:any_invocable",
+  ]
+}
+
 rtc_library("peer_connection") {
   visibility = [ ":*" ]
   sources = [
@@ -2559,6 +2584,25 @@ if (rtc_include_tests && !build_with_chromium) {
       "../rtc_base:timeutils",
       "../test:test_support",
       "../test:wait_until",
+      "../test/time_controller",
+    ]
+  }
+
+  rtc_cc_test("custom_audio_source_unittest") {
+    sources = [ "custom_audio_source_unittest.cc" ]
+    deps = [
+      ":custom_audio_source",
+      ":local_audio_source",
+      "../api:array_view",
+      "../api:audio_options_api",
+      "../api:media_stream_interface",
+      "../api:scoped_refptr",
+      "../api/task_queue:default_task_queue_factory",
+      "../api/units:time_delta",
+      "../api/units:timestamp",
+      "../rtc_base:platform_thread",
+      "../rtc_base:rtc_event",
+      "../test:test_support",
       "../test/time_controller",
     ]
   }
@@ -4121,6 +4165,7 @@ if (rtc_include_tests && !build_with_chromium) {
     testonly = true
     tests = [
       ":dtmf_sender_unittest",
+      ":custom_audio_source_unittest",
       ":ice_server_parsing_unittest",
       ":jitter_buffer_delay_unittest",
       ":jsep_session_description_unittest",

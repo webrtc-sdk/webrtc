@@ -270,6 +270,19 @@ class RTC_EXPORT AudioSourceInterface : public MediaSourceInterface {
   // audio network adaptation on the source is the wrong layer of abstraction).
   virtual const AudioOptions options() const;
   virtual void SetOptions(const AudioOptions & /* options */) {}
+
+  // Where this source's samples come from. Decides whether AudioState feeds
+  // device capture into the send streams fed by this source.
+  enum class SourceType {
+    // Fed by the AudioDeviceModule through AudioState. The default.
+    kAudioDeviceModule,
+    // Fed by the application through the source's own AddSink delivery
+    // path. AudioState must not also push device audio into it.
+    kCustom,
+  };
+  virtual SourceType source_type() const {
+    return SourceType::kAudioDeviceModule;
+  }
 };
 
 // Interface of the audio processor used by the audio track to collect
