@@ -33,10 +33,17 @@
 // Struct that we pass to the decoder per frame to decode. We receive it again
 // in the decoder callback.
 struct RTCH265FrameDecodeParams {
-  RTCH265FrameDecodeParams(int64_t ts, uint64_t reorderSize)
-      : timestamp(ts), reorderSize(reorderSize) {}
+  RTCH265FrameDecodeParams(int64_t ts, uint64_t reorderSize, bool bitstreamCarriesColorInfo)
+      : timestamp(ts),
+        reorderSize(reorderSize),
+        bitstreamCarriesColorInfo(bitstreamCarriesColorInfo) {}
   int64_t timestamp;
   uint64_t reorderSize{0};
+  // Captured on the decode thread at decode time. The VideoToolbox output
+  // callback runs on a separate thread and must not read decoder state:
+  // _videoFormat may be released and replaced by a new format while frames
+  // decoded against the previous one are still in flight.
+  bool bitstreamCarriesColorInfo{false};
 };
 
 @interface RTC_OBJC_TYPE (RTCVideoDecoderH265) ()
@@ -183,7 +190,16 @@ void h265DecompressionOutputCallback(void *decoderRef, void *params, OSStatus st
     return;
   }
 
-  overrideColorSpaceAttachments(imageBuffer);
+  // Only guess colour attachments when the bitstream signalled none. Streams
+  // that carry VUI colour information (e.g. HDR10: PQ transfer + BT.2020
+  // primaries) already have correct attachments propagated by VideoToolbox
+  // from the format description; overriding them mistags the frames as
+  // BT.709/sRGB and HDR content renders washed out. Read from the per-frame
+  // params (captured at decode time) rather than the decoder, whose
+  // _videoFormat may already belong to a newer format.
+  if (!decodeParams->bitstreamCarriesColorInfo) {
+    overrideColorSpaceAttachments(imageBuffer);
+  }
 
   // TODO(tkchin): Handle CVO properly.
   RTC_OBJC_TYPE(RTCCVPixelBuffer) *frameBuffer =
@@ -204,6 +220,16 @@ void h265DecompressionOutputCallback(void *decoderRef, void *params, OSStatus st
   OSStatus _error;
   bool _useHEVC;
   webrtc::RTCVideoFrameReorderQueue _reorderQueue;
+}
+
+static BOOL gPreferHighBitDepthOutput = NO;
+
++ (BOOL)preferHighBitDepthOutput {
+  return gPreferHighBitDepthOutput;
+}
+
++ (void)setPreferHighBitDepthOutput:(BOOL)preferHighBitDepthOutput {
+  gPreferHighBitDepthOutput = preferHighBitDepthOutput;
 }
 
 - (instancetype)init {
@@ -312,14 +338,17 @@ CMSampleBufferRef H265BufferToCMSampleBuffer(const uint8_t *buffer, size_t buffe
   }
   RTC_DCHECK(sampleBuffer);
   VTDecodeFrameFlags decodeFlags = kVTDecodeFrame_EnableAsynchronousDecompression;
+  bool bitstreamCarriesColorInfo = [self bitstreamCarriesColorInfo];
   std::unique_ptr<RTCH265FrameDecodeParams> frameDecodeParams;
-  frameDecodeParams.reset(new RTCH265FrameDecodeParams(timeStamp, _reorderQueue.reorderSize()));
+  frameDecodeParams.reset(new RTCH265FrameDecodeParams(timeStamp, _reorderQueue.reorderSize(),
+                                                       bitstreamCarriesColorInfo));
   OSStatus status = VTDecompressionSessionDecodeFrame(
       _decompressionSession, sampleBuffer, decodeFlags, frameDecodeParams.release(), nullptr);
   // Re-initialize the decoder if we have an invalid session while the app is
   // active and retry the decode request.
   if (status == kVTInvalidSessionErr && [self resetDecompressionSession] == WEBRTC_VIDEO_CODEC_OK) {
-    frameDecodeParams.reset(new RTCH265FrameDecodeParams(timeStamp, _reorderQueue.reorderSize()));
+    frameDecodeParams.reset(new RTCH265FrameDecodeParams(timeStamp, _reorderQueue.reorderSize(),
+                                                         bitstreamCarriesColorInfo));
     status = VTDecompressionSessionDecodeFrame(_decompressionSession, sampleBuffer, decodeFlags,
                                                frameDecodeParams.release(), nullptr);
   }
@@ -420,8 +449,16 @@ CMSampleBufferRef H265BufferToCMSampleBuffer(const uint8_t *buffer, size_t buffe
 #endif
       kCVPixelBufferIOSurfacePropertiesKey, kCVPixelBufferPixelFormatTypeKey};
   CFDictionaryRef ioSurfaceValue = CreateCFTypeDictionary(nullptr, nullptr, 0);
-  int64_t nv12type = kCVPixelFormatType_420YpCbCr8BiPlanarFullRange;
-  CFNumberRef pixelFormat = CFNumberCreate(nullptr, kCFNumberLongType, &nv12type);
+  // Forcing NV12 would crush high bit depth output (e.g. HEVC Main10) to
+  // 8 bits. Request a 10-bit biplanar format for such streams, but only when
+  // the app has opted in via preferHighBitDepthOutput — downstream consumers
+  // that assume 8-bit NV12 (RTCMTLVideoView, RTCCVPixelBuffer's I420
+  // conversion) do not handle 10-bit output. 8-bit streams keep NV12 either
+  // way.
+  int64_t pixelFormatType = (gPreferHighBitDepthOutput && [self isHighBitDepthFormat])
+      ? kCVPixelFormatType_420YpCbCr10BiPlanarVideoRange
+      : kCVPixelFormatType_420YpCbCr8BiPlanarFullRange;
+  CFNumberRef pixelFormat = CFNumberCreate(nullptr, kCFNumberLongType, &pixelFormatType);
   CFTypeRef values[attributesSize] = {kCFBooleanTrue, ioSurfaceValue, pixelFormat};
   CFDictionaryRef attributes = CreateCFTypeDictionary(keys, values, attributesSize);
   if (ioSurfaceValue) {
@@ -451,6 +488,34 @@ CMSampleBufferRef H265BufferToCMSampleBuffer(const uint8_t *buffer, size_t buffe
 - (void)configureDecompressionSession {
   RTC_DCHECK(_decompressionSession);
   VTSessionSetProperty(_decompressionSession, kVTDecompressionPropertyKey_RealTime, kCFBooleanTrue);
+}
+
+// Returns true when the active format description signals a luma bit depth
+// above 8 (e.g. HEVC Main10), read from bit_depth_luma_minus8 in the hvcC
+// decoder configuration record.
+- (bool)isHighBitDepthFormat {
+  if (!_videoFormat) {
+    return false;
+  }
+  CFDictionaryRef atoms = (CFDictionaryRef)CMFormatDescriptionGetExtension(
+      _videoFormat, kCMFormatDescriptionExtension_SampleDescriptionExtensionAtoms);
+  if (!atoms) {
+    return false;
+  }
+  CFDataRef hvcc = (CFDataRef)CFDictionaryGetValue(atoms, (CFStringRef) @"hvcC");
+  if (!hvcc || CFDataGetLength(hvcc) < 18) {
+    return false;
+  }
+  return (CFDataGetBytePtr(hvcc)[17] & 0x07) > 0;
+}
+
+// Whether the active format description carries colour information parsed
+// from the bitstream (VUI colour description). VideoToolbox propagates these
+// extensions onto output pixel buffers, so no fallback tagging is needed.
+- (bool)bitstreamCarriesColorInfo {
+  return _videoFormat &&
+         CMFormatDescriptionGetExtension(_videoFormat, kCMFormatDescriptionExtension_ColorPrimaries) !=
+             nullptr;
 }
 
 - (void)destroyDecompressionSession {
