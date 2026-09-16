@@ -106,6 +106,9 @@ class FakeDtlsTransport : public DtlsTransportInternal {
     ice_transport_->DeregisterReceivedPacketCallback(this);
   }
 
+  void DisableDtlsInStun() override {}
+  void MaybeStartDtlsInStun() override {}
+
   // Get inner fake ICE transport.
   FakeIceTransportInternal* fake_ice_transport() { return ice_transport_; }
 

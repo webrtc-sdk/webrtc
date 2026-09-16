@@ -54,6 +54,7 @@
 #include "pc/test/fake_audio_capture_module.h"
 #include "pc/test/integration_test_helpers.h"
 #include "pc/test/mock_peer_connection_observers.h"
+#include "rtc_base/ssl_stream_adapter.h"
 #include "rtc_base/thread.h"
 #include "system_wrappers/include/metrics.h"
 #include "test/create_test_field_trials.h"
@@ -2109,6 +2110,22 @@ TEST_F(SdpOfferAnswerTest,
   EXPECT_FALSE(callee_transceiver->receptive());
   EXPECT_TRUE(callee->SetRemoteDescription(caller->CreateRollback()));
   EXPECT_TRUE(callee_transceiver->receptive());
+}
+
+TEST_F(SdpOfferAnswerTest, IceOptionsDtlsInStun) {
+  if (!SSLStreamAdapter::IsBoringSsl()) {
+    GTEST_SKIP() << "DTLS-in-STUN requires BoringSSL.";
+  }
+  auto pc1 = CreatePeerConnection("WebRTC-IceHandshakeDtls/Enabled/");
+  pc1->AddAudioTrack("audio_track", {});
+
+  auto offer = pc1->CreateOfferAndSetAsLocal();
+  ASSERT_NE(offer, nullptr);
+
+  const auto& transport_infos = offer->description()->transport_infos();
+  ASSERT_THAT(transport_infos, SizeIs(1));
+  const auto& transport_description = transport_infos[0].description;
+  EXPECT_TRUE(transport_description.HasOption("sped"));
 }
 
 #ifdef WEBRTC_HAVE_SCTP

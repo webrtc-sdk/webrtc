@@ -99,6 +99,19 @@ SdpMungingType DetermineTransportModification(
       if (created_trickle && !set_trickle) {
         return SdpMungingType::kIceOptionsTrickle;
       }
+      // Munging new features is not allowed.
+      bool created_sped =
+          absl::c_find(
+              last_created_transport_infos[i].description.transport_options,
+              ICE_OPTION_SPED) !=
+          last_created_transport_infos[i].description.transport_options.end();
+      bool set_sped =
+          absl::c_find(transport_infos_to_set[i].description.transport_options,
+                       ICE_OPTION_SPED) !=
+          transport_infos_to_set[i].description.transport_options.end();
+      if (created_sped != set_sped) {
+        return SdpMungingType::kIceOptionsSped;
+      }
       return SdpMungingType::kIceOptions;
     }
   }
@@ -770,6 +783,7 @@ bool IsSdpMungingAllowed(SdpMungingType sdp_munging_type,
     case SdpMungingType::kSframe:
       return false;
     case SdpMungingType::kDataChannelSctpInit:
+    case SdpMungingType::kIceOptionsSped:
       return false;
     case SdpMungingType::kCryptex:
       return false;

@@ -92,7 +92,7 @@ class ConnectionTest : public ::testing::Test {
   void SendPingAndCaptureReply(Connection* lconn,
                                Connection* rconn,
                                int64_t ms,
-                               BufferT<uint8_t>* reply) {
+                               Buffer* reply) {
     TestPort* lport =
         lconn->PortForTest() == lport_.get() ? lport_.get() : rport_.get();
     TestPort* rport =
@@ -116,7 +116,7 @@ class ConnectionTest : public ::testing::Test {
   void SendPingAndReceiveResponse(Connection* lconn,
                                   Connection* rconn,
                                   int64_t ms) {
-    BufferT<uint8_t> reply;
+    Buffer reply;
     SendPingAndCaptureReply(lconn, rconn, ms, &reply);
 
     lconn->OnReadPacket(ReceivedIpPacket(reply, SocketAddress(), std::nullopt));
@@ -206,7 +206,7 @@ TEST_F(ConnectionTest, ConnectionForgetLearnedStateDiscardsPendingPings) {
   EXPECT_TRUE(lconn->writable());
   EXPECT_TRUE(lconn->receiving());
 
-  BufferT<uint8_t> reply;
+  Buffer reply;
   SendPingAndCaptureReply(lconn, rconn, 10, &reply);
 
   lconn->ForgetLearnedState();
@@ -403,6 +403,77 @@ TEST_F(ConnectionTest, TooBigDeltaIsNotSent) {
       ReceivedIpPacket(rport_->last_stun_buf(), SocketAddress(), std::nullopt));
 
   EXPECT_FALSE(received_goog_delta_ack);
+}
+
+class DtlsStunPiggybackConnectionTest : public ConnectionTest {};
+
+TEST_F(DtlsStunPiggybackConnectionTest, Callbacks) {
+  std::optional<size_t> request_data_size;
+  std::optional<size_t> request_ack_size;
+  std::optional<size_t> response_data_size;
+  std::optional<size_t> response_ack_size;
+
+  Connection* lconn = CreateConnection(ICEROLE_CONTROLLING);
+  lconn->RegisterDtlsPiggyback(DtlsStunPiggybackCallbacks(
+      [&](auto type) {
+        std::optional<absl::string_view> data = "request";
+        std::optional<std::vector<uint32_t>> ack = {{0}};
+        return std::make_pair(data, ack);
+      },
+      [&](auto data, auto ack) {
+        if (data)
+          response_data_size = data->size();
+        if (ack)
+          response_ack_size = ack->size();
+      }));
+  Connection* rconn = CreateConnection(ICEROLE_CONTROLLED);
+  rconn->RegisterDtlsPiggyback(DtlsStunPiggybackCallbacks(
+      [&](auto type) { return std::make_pair(std::nullopt, std::nullopt); },
+      [&](auto data, auto ack) {
+        if (data)
+          request_data_size = data->size();
+        if (ack)
+          request_ack_size = ack->size();
+      }));
+  Buffer reply;
+  SendPingAndCaptureReply(lconn, rconn, env().clock().CurrentTime().ms(),
+                          &reply);
+  lconn->OnReadPacket(ReceivedIpPacket(reply, SocketAddress(), std::nullopt));
+
+  EXPECT_EQ(request_data_size, 7);
+  EXPECT_EQ(request_ack_size, 1);
+  EXPECT_EQ(response_data_size, std::nullopt);
+  EXPECT_EQ(response_ack_size, std::nullopt);
+}
+
+TEST_F(DtlsStunPiggybackConnectionTest, NoImplicitDtlsInStunAck) {
+  std::optional<size_t> ack_size;
+
+  Connection* lconn = CreateConnection(ICEROLE_CONTROLLING);
+  lconn->RegisterDtlsPiggyback(DtlsStunPiggybackCallbacks(
+      [&](auto type) {
+        std::optional<absl::string_view> data = "test";
+        std::optional<std::vector<uint32_t>> ack;
+        return std::make_pair(data, ack);
+      },
+      [&](auto data, auto ack) {
+        if (ack)
+          ack_size = ack->size();
+      }));
+  Connection* rconn = CreateConnection(ICEROLE_CONTROLLED);
+  rconn->RegisterDtlsPiggyback(DtlsStunPiggybackCallbacks(
+      [&](auto type) {
+        std::vector<uint32_t> empty;
+        std::optional<absl::string_view> data;
+        std::optional<std::vector<uint32_t>> ack = empty;
+        return std::make_pair(data, ack);
+      },
+      [&](auto data, auto ack) {}));
+  Buffer reply;
+  SendPingAndCaptureReply(lconn, rconn, env().clock().CurrentTime().ms(),
+                          &reply);
+  lconn->OnReadPacket(ReceivedIpPacket(reply, SocketAddress(), std::nullopt));
+  EXPECT_EQ(ack_size, 0);
 }
 
 }  // namespace
