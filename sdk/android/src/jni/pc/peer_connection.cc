@@ -437,8 +437,17 @@ void PeerConnectionObserverJni::OnRemoveStream(
   RTC_ALLOW_PLAN_B_DEPRECATION_BEGIN();
   JNIEnv* env = AttachCurrentThreadIfNeeded();
   NativeToJavaStreamsMap::iterator it = remote_streams_.find(stream.get());
-  RTC_CHECK(it != remote_streams_.end())
-      << "unexpected stream: " << stream.get();
+  if (it == remote_streams_.end()) {
+    // The Java observer never saw this stream (it was not surfaced through
+    // OnAddStream), so there is nothing to tell it and nothing to erase.
+    // Aborting the process here -- the previous RTC_CHECK -- took down
+    // production apps during subscribe/unsubscribe churn
+    // (react-native-webrtc#1787, livekit/react-native-webrtc#77).
+    RTC_LOG(LS_WARNING) << "OnRemoveStream: unknown stream " << stream.get()
+                        << ", ignoring";
+    RTC_ALLOW_PLAN_B_DEPRECATION_END();
+    return;
+  }
   Java_Observer_onRemoveStream(env, j_observer_global_,
                                it->second.j_media_stream());
   remote_streams_.erase(it);
