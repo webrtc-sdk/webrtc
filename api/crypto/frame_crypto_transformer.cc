@@ -730,7 +730,8 @@ void FrameCryptorTransformer::decryptFrame(
 
         auto new_material = key_handler->RatchetKeyMaterial(currentKeyMaterial);
         ratcheted_key_set = key_handler->DeriveKeys(
-            new_material, key_provider_->options().ratchet_salt, 128);
+            new_material, key_provider_->options().ratchet_salt,
+            key_provider_->options().frame_key_bits());
 
         if (AesEncryptDecrypt(EncryptOrDecrypt::kDecrypt, algorithm_,
                               ratcheted_key_set->encryption_key, iv,
@@ -924,7 +925,8 @@ RTCErrorOr<std::vector<uint8_t>> DataPacketCryptor::Decrypt(
 
         auto new_material = key_handler->RatchetKeyMaterial(currentKeyMaterial);
         ratcheted_key_set = key_handler->DeriveKeys(
-            new_material, key_provider_->options().ratchet_salt, 128);
+            new_material, key_provider_->options().ratchet_salt,
+            key_provider_->options().frame_key_bits());
 
         if (AesEncryptDecrypt(EncryptOrDecrypt::kDecrypt, algorithm_,
                               ratcheted_key_set->encryption_key, iv,
