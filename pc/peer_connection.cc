@@ -1023,6 +1023,10 @@ PeerConnection::AddTransceiver(MediaType media_type,
                        ? MediaType::AUDIO
                        : MediaType::VIDEO));
   }
+  if (IsClosed()) {
+    return RTC_LOG_ERROR(RTCError(RTCErrorType::INVALID_STATE)
+                         << "PeerConnection is closed.");
+  }
 
   size_t num_rids = absl::c_count_if(init.send_encodings,
                                      [](const RtpEncodingParameters& encoding) {

@@ -1111,6 +1111,53 @@ TEST_F(PeerConnectionRtpTestUnifiedPlan,
 }
 
 TEST_F(PeerConnectionRtpTestUnifiedPlan,
+       AddTransceiverWithAudioTrackErrorIfClosed) {
+  auto caller = CreatePeerConnection();
+
+  auto audio_track = caller->CreateAudioTrack("a");
+  caller->pc()->Close();
+
+  caller->observer()->clear_legacy_renegotiation_needed();
+  caller->observer()->clear_latest_negotiation_needed_event();
+  auto result = caller->pc()->AddTransceiver(audio_track);
+  ASSERT_FALSE(result.ok());
+  EXPECT_EQ(RTCErrorType::INVALID_STATE, result.error().type());
+  EXPECT_FALSE(caller->observer()->legacy_renegotiation_needed());
+  EXPECT_FALSE(caller->observer()->has_negotiation_needed_event());
+}
+
+TEST_F(PeerConnectionRtpTestUnifiedPlan,
+       AddTransceiverWithVideoTrackErrorIfClosed) {
+  auto caller = CreatePeerConnection();
+
+  auto video_track = caller->CreateVideoTrack("v");
+  caller->pc()->Close();
+
+  caller->observer()->clear_legacy_renegotiation_needed();
+  caller->observer()->clear_latest_negotiation_needed_event();
+  auto result = caller->pc()->AddTransceiver(video_track);
+  ASSERT_FALSE(result.ok());
+  EXPECT_EQ(RTCErrorType::INVALID_STATE, result.error().type());
+  EXPECT_FALSE(caller->observer()->legacy_renegotiation_needed());
+  EXPECT_FALSE(caller->observer()->has_negotiation_needed_event());
+}
+
+TEST_F(PeerConnectionRtpTestUnifiedPlan,
+       AddTransceiverWithMediaTypeErrorIfClosed) {
+  auto caller = CreatePeerConnection();
+
+  caller->pc()->Close();
+
+  caller->observer()->clear_legacy_renegotiation_needed();
+  caller->observer()->clear_latest_negotiation_needed_event();
+  auto result = caller->pc()->AddTransceiver(MediaType::AUDIO);
+  ASSERT_FALSE(result.ok());
+  EXPECT_EQ(RTCErrorType::INVALID_STATE, result.error().type());
+  EXPECT_FALSE(caller->observer()->legacy_renegotiation_needed());
+  EXPECT_FALSE(caller->observer()->has_negotiation_needed_event());
+}
+
+TEST_F(PeerConnectionRtpTestUnifiedPlan,
        CanClosePeerConnectionWithoutCrashing) {
   auto caller = CreatePeerConnection();
 
