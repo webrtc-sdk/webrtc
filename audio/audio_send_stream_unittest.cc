@@ -386,6 +386,7 @@ TEST(AudioSendStreamTest, ConfigToString) {
       "send_transport: null, "
       "min_bitrate_bps: 12000, max_bitrate_bps: 34000, has "
       "audio_network_adaptor_config: false, has_dscp: true, "
+      "source_type: audio_device_module, "
       "send_codec_spec: {nack_enabled: true, "
       "enable_non_sender_rtt: false, cng_payload_type: 42, "
       "red_payload_type: 43, payload_type: 103, "
