@@ -389,6 +389,10 @@ class FrameCryptorTransformerObserver : public webrtc::RefCountInterface {
   virtual ~FrameCryptorTransformerObserver() {}
 };
 
+// Whether a frame (server-injected-frame trailer already stripped) is one of
+// the blank frames the LiveKit SFU injects; nothing else may skip decryption.
+RTC_EXPORT bool IsKnownSifPayload(std::span<const uint8_t> payload);
+
 class RTC_EXPORT FrameCryptorTransformer
     : public webrtc::RefCountedObject<webrtc::FrameTransformerInterface> {
  public:
