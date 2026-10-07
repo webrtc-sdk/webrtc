@@ -57,6 +57,13 @@ RTC_OBJC_EXPORT
    expected output size. */
 @property(nonatomic, readonly) BOOL supportsNativeHandle;
 
+@optional
+
+/** Whether the encoder is hardware accelerated. Affects CPU overuse detection
+   thresholds and the power efficiency reported in stats. Assumed YES when not
+   implemented, matching the built in encoders. */
+@property(nonatomic, readonly) BOOL isHardwareAccelerated;
+
 @end
 
 NS_ASSUME_NONNULL_END
