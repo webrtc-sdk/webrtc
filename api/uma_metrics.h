@@ -252,6 +252,8 @@ enum SdpMungingType {
   kDataChannelSctpInit = 100,
   kDataChannelMaxMessageSize = 101,
   kDataChannelSctpPort = 102,
+  // Overflow area.
+  kIceOptionsSped = 110,
   kMaxValue,
 };
 

@@ -154,6 +154,9 @@ class PeerConnectionSdpMethods {
   // Keeps track of assigned payload types and comes up with reasonable
   // suggestions when new PTs need to be assigned.
   virtual PayloadTypePicker& payload_type_picker() = 0;
+
+  // Determine whether DTLS-in-STUN is configured.
+  virtual bool CanAttemptDtlsStunPiggybacking() const = 0;
 };
 
 // Functions defined in this class are called by other objects,

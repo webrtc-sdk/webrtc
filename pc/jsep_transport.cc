@@ -234,6 +234,19 @@ RTCError JsepTransport::SetRemoteJsepTransportDescription(
 
   remote_description_.reset(new JsepTransportDescription(jsep_description));
   RTC_DCHECK(rtp_dtls_transport());
+  bool has_dtls_in_stun =
+      jsep_description.transport_desc.HasOption(ICE_OPTION_SPED);
+  if (!has_dtls_in_stun) {
+    rtp_dtls_transport()->DisableDtlsInStun();
+    if (rtcp_dtls_transport() != nullptr) {
+      rtcp_dtls_transport()->DisableDtlsInStun();
+    }
+  } else {
+    rtp_dtls_transport()->MaybeStartDtlsInStun();
+    if (rtcp_dtls_transport() != nullptr) {
+      rtcp_dtls_transport()->MaybeStartDtlsInStun();
+    }
+  }
   SetRemoteIceParameters(ice_parameters, rtp_dtls_transport()->ice_transport());
 
   if (rtcp_dtls_transport()) {

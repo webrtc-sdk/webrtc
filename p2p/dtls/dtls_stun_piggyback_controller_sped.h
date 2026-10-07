@@ -8,8 +8,8 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#ifndef P2P_DTLS_DTLS_STUN_PIGGYBACK_CONTROLLER_H_
-#define P2P_DTLS_DTLS_STUN_PIGGYBACK_CONTROLLER_H_
+#ifndef P2P_DTLS_DTLS_STUN_PIGGYBACK_CONTROLLER_SPED_H_
+#define P2P_DTLS_DTLS_STUN_PIGGYBACK_CONTROLLER_SPED_H_
 
 #include <cstdint>
 #include <optional>
@@ -30,7 +30,7 @@ namespace webrtc {
 
 // This class is not thread safe; all methods must be called on the same thread
 // as the constructor.
-class DtlsStunPiggybackController
+class DtlsStunPiggybackControllerSped
     : public DtlsStunPiggybackControllerInterface {
  public:
   // Never ack more than 4 packets.
@@ -38,12 +38,12 @@ class DtlsStunPiggybackController
 
   // dtls_data_callback will be called with any DTLS packets received
   // piggybacked.
-  DtlsStunPiggybackController(
+  DtlsStunPiggybackControllerSped(
       absl::AnyInvocable<void(std::span<const uint8_t>)> dtls_data_callback,
       // NOLINTNEXTLINE(readability/casting) - not a cast; false positive!
       absl::AnyInvocable<void(bool) &&> piggyback_complete_callback);
 
-  ~DtlsStunPiggybackController() override;
+  ~DtlsStunPiggybackControllerSped() override;
 
   State state() const override {
     RTC_DCHECK_RUN_ON(&sequence_checker_);
@@ -116,5 +116,4 @@ class DtlsStunPiggybackController
 
 }  //  namespace webrtc
 
-
-#endif  // P2P_DTLS_DTLS_STUN_PIGGYBACK_CONTROLLER_H_
+#endif  // P2P_DTLS_DTLS_STUN_PIGGYBACK_CONTROLLER_SPED_H_

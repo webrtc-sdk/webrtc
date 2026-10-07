@@ -467,6 +467,7 @@ class PeerConnection : public PeerConnectionInternal,
     RTC_DCHECK_RUN_ON(signaling_thread());
     sdp_handler_->DisableSdpMungingChecksForTesting();
   }
+  bool CanAttemptDtlsStunPiggybacking() const override;
 
  protected:
   // Available for webrtc::scoped_refptr creation
@@ -628,8 +629,6 @@ class PeerConnection : public PeerConnectionInternal,
 
   absl::AnyInvocable<void(const RtpPacketReceived& parsed_packet) const>
   InitializeUnDemuxablePacketHandler();
-
-  bool CanAttemptDtlsStunPiggybacking();
 
   // Runs a task on the signaling thread. If the current thread is the signaling
   // thread, the task will run immediately. Otherwise it will be posted to the
