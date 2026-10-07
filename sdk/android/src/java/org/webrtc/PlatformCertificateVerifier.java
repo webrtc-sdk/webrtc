@@ -10,6 +10,7 @@
 
 package org.webrtc;
 
+import android.net.http.X509TrustManagerExtensions;
 import androidx.annotation.Nullable;
 import java.io.ByteArrayInputStream;
 import java.security.KeyStore;
@@ -26,12 +27,14 @@ import javax.net.ssl.X509TrustManager;
  * anchors compiled into rtc_base/ssl_roots.h contain no path for it.
  *
  * <p>Only reachable from native code; the chain arrives whole, so no certificate has to be fetched
- * to complete it. Hostname matching is not done here — OpenSSLAdapter checks it separately.
+ * to complete it. The connection's hostname is passed on so that the platform can pick the
+ * application's network security policy for it; matching it against the certificate is still
+ * done by OpenSSLAdapter.
  */
 final class PlatformCertificateVerifier {
   private static final String TAG = "PlatformCertificateVerifier";
 
-  @Nullable private static X509TrustManager trustManager;
+  @Nullable private static X509TrustManagerExtensions trustManager;
   @Nullable private static CertificateFactory certificateFactory;
   private static boolean initialized;
 
@@ -50,7 +53,7 @@ final class PlatformCertificateVerifier {
       factory.init((KeyStore) null);
       for (TrustManager candidate : factory.getTrustManagers()) {
         if (candidate instanceof X509TrustManager) {
-          trustManager = (X509TrustManager) candidate;
+          trustManager = new X509TrustManagerExtensions((X509TrustManager) candidate);
           break;
         }
       }
@@ -65,19 +68,27 @@ final class PlatformCertificateVerifier {
 
   /**
    * @param derChain peer certificates in DER form, leaf first.
+   * @param hostname the name the connection was made to, or empty when none was given.
    * @return whether the chain terminates in an anchor the platform trusts.
    */
   @CalledByNative
-  static boolean verifyServerChain(byte[][] derChain) {
+  static boolean verifyServerChain(byte[][] derChain, String hostname) {
     if (derChain == null || derChain.length == 0 || !initialize()) {
       return false;
     }
-    final X509TrustManager manager = trustManager;
+    final X509TrustManagerExtensions manager = trustManager;
     final CertificateFactory factory = certificateFactory;
     if (manager == null || factory == null) {
       return false;
     }
+    return verifyServerChain(derChain, hostname, manager, factory);
+  }
 
+  static boolean verifyServerChain(byte[][] derChain, @Nullable String hostname,
+      X509TrustManagerExtensions manager, CertificateFactory factory) {
+    if (derChain == null || derChain.length == 0) {
+      return false;
+    }
     try {
       List<X509Certificate> parsed = new ArrayList<>(derChain.length);
       for (byte[] der : derChain) {
@@ -89,7 +100,11 @@ final class PlatformCertificateVerifier {
       // The key algorithm of the leaf stands in for the TLS key-exchange authType, which is not
       // available at this layer. Conscrypt uses it only to pick a validation profile.
       String authType = chain[0].getPublicKey().getAlgorithm();
-      manager.checkServerTrusted(chain, authType == null ? "RSA" : authType);
+      // An application with domain-specific network security configuration only accepts the
+      // hostname-aware check. Without a hostname the platform applies its hostname-free policy,
+      // which is what was done before a hostname was available here.
+      manager.checkServerTrusted(chain, authType == null ? "RSA" : authType,
+          hostname == null || hostname.isEmpty() ? null : hostname);
       return true;
     } catch (Exception e) {
       Logging.d(TAG, "Peer certificate chain was rejected by the platform trust store: " + e);
