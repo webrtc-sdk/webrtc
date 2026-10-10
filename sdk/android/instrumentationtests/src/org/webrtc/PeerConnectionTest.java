@@ -16,6 +16,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 
 import androidx.test.InstrumentationRegistry;
@@ -211,5 +212,33 @@ public class PeerConnectionTest {
     PeerConnection offeringPC =
         factory.createPeerConnection(config, mock(PeerConnection.Observer.class));
     assertNotNull(offeringPC);
+  }
+
+  @Test
+  @SmallTest
+  public void testCryptoOptionsGcmOnlySrtp() throws Exception {
+    // SHA1_80 stays enabled unless the application turns it off.
+    assertTrue(CryptoOptions.builder().createCryptoOptions().getSrtp()
+                   .getEnableAes128Sha1_80CryptoCipher());
+
+    CryptoOptions gcmOnly = CryptoOptions.builder()
+                                .setEnableGcmCryptoSuites(true)
+                                .setEnableAes128Sha1_80CryptoCipher(false)
+                                .createCryptoOptions();
+    assertFalse(gcmOnly.getSrtp().getEnableAes128Sha1_80CryptoCipher());
+
+    PeerConnectionFactory factory = PeerConnectionFactory.builder().createPeerConnectionFactory();
+    PeerConnection.RTCConfiguration config = new PeerConnection.RTCConfiguration(Arrays.asList());
+    config.sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN;
+    config.cryptoOptions = gcmOnly;
+    PeerConnection pc = factory.createPeerConnection(config, mock(PeerConnection.Observer.class));
+    assertNotNull(pc);
+
+    // No SRTP suite at all would abort natively; the builder refuses it instead.
+    try {
+      CryptoOptions.builder().setEnableAes128Sha1_80CryptoCipher(false).createCryptoOptions();
+      fail("expected IllegalStateException");
+    } catch (IllegalStateException expected) {
+    }
   }
 }
