@@ -152,6 +152,12 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
             isRecordingEnabled:(BOOL)isRecordingEnabled
     NS_SWIFT_NAME(audioDeviceModule(_:didStopEngine:isPlayoutEnabled:isRecordingEnabled:));
 
+// `isPlayoutEnabled` and `isRecordingEnabled` describe the state the engine is
+// left in. Also called when an enable operation fails after a successful
+// `willEnableEngine`, with the state from before that operation, so the
+// delegate can release what it acquired there. No call follows a
+// `willEnableEngine` that returns an error, so a delegate must not hold
+// anything for that operation when it fails.
 - (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
               didDisableEngine:(AVAudioEngine *)engine
               isPlayoutEnabled:(BOOL)isPlayoutEnabled

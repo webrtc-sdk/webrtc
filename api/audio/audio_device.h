@@ -320,6 +320,12 @@ class AudioDeviceObserver {
     return 0;
   }
 
+  // `playout_enabled` and `recording_enabled` describe the state the engine is
+  // left in. Also called when an enable operation fails after a successful
+  // OnEngineWillEnable, with the state from before that operation, so the
+  // observer can release what it acquired in OnEngineWillEnable. No call
+  // follows an OnEngineWillEnable that returns an error, so an observer must
+  // not hold anything for that operation when it fails.
   virtual int32_t OnEngineDidDisable(AVAudioEngine* engine, bool playout_enabled,
                                      bool recording_enabled) {
     return 0;

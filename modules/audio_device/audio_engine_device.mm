@@ -1907,11 +1907,15 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
       // that will now never happen, and without this call it is never told the
       // engine rolled back. Reuses OnEngineDidDisable with the previous state so
       // existing observers release what they acquired without adopting a new
-      // callback. The result is ignored, the rollback itself cannot be aborted.
+      // callback. The result is only logged since the rollback itself cannot be
+      // aborted.
       if (observer_ != nullptr) {
         LOGW() << "Enable rolled back after OnEngineWillEnable, notifying observer (Manual)";
-        observer_->OnEngineDidDisable(engine_manual_input_, state.prev.IsOutputEnabled(),
-                                      state.prev.IsInputEnabled());
+        int32_t result = observer_->OnEngineDidDisable(
+            engine_manual_input_, state.prev.IsOutputEnabled(), state.prev.IsInputEnabled());
+        if (result != 0) {
+          LOGE() << "Call to OnEngineDidDisable returned error during rollback: " << result;
+        }
       }
     });
   }
@@ -2333,11 +2337,15 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       // that will now never happen, and without this call it is never told the
       // engine rolled back. Reuses OnEngineDidDisable with the previous state so
       // existing observers release what they acquired without adopting a new
-      // callback. The result is ignored, the rollback itself cannot be aborted.
+      // callback. The result is only logged since the rollback itself cannot be
+      // aborted.
       if (observer_ != nullptr) {
         LOGW() << "Enable rolled back after OnEngineWillEnable, notifying observer";
-        observer_->OnEngineDidDisable(engine_device_, state.prev.IsOutputEnabled(),
-                                      state.prev.IsInputEnabled());
+        int32_t result = observer_->OnEngineDidDisable(engine_device_, state.prev.IsOutputEnabled(),
+                                                       state.prev.IsInputEnabled());
+        if (result != 0) {
+          LOGE() << "Call to OnEngineDidDisable returned error during rollback: " << result;
+        }
       }
     });
   }
