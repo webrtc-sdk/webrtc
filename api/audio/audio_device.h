@@ -331,6 +331,10 @@ class AudioDeviceObserver {
     return 0;
   }
 
+  // Also called when an operation that created `engine` fails after a
+  // successful OnEngineDidCreate, right before the engine is dropped, so the
+  // observer can tear down what it set up in OnEngineDidCreate. No call follows
+  // an OnEngineDidCreate that returns an error.
   virtual int32_t OnEngineWillRelease(AVAudioEngine* engine) { return 0; }
 
   // Override the input node configuration with a custom implementation.
