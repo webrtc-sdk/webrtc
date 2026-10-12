@@ -72,14 +72,16 @@ struct RtpSenderInfo {
 // RtpTransceiver.
 class RtpTransmissionManager : public RtpSenderBase::SetStreamsObserver {
  public:
-  RtpTransmissionManager(const Environment& env,
-                         bool is_unified_plan,
-                         ConnectionContext* context,
-                         CodecLookupHelper* codec_lookup_helper,
-                         UsagePattern* usage_pattern,
-                         PeerConnectionObserver* observer,
-                         LegacyStatsCollectorInterface* legacy_stats,
-                         absl::AnyInvocable<void()> on_negotiation_needed);
+  RtpTransmissionManager(
+      const Environment& env,
+      bool is_unified_plan,
+      ConnectionContext* context,
+      CodecLookupHelper* codec_lookup_helper,
+      UsagePattern* usage_pattern,
+      PeerConnectionObserver* observer,
+      LegacyStatsCollectorInterface* legacy_stats,
+      absl::AnyInvocable<void()> on_negotiation_needed,
+      RtpFrameTransformerFactory frame_transformer_factory = nullptr);
 
   // No move or copy permitted.
   RtpTransmissionManager(const RtpTransmissionManager&) = delete;
@@ -252,6 +254,7 @@ class RtpTransmissionManager : public RtpSenderBase::SetStreamsObserver {
   }
 
   const Environment env_;
+  const RtpFrameTransformerFactory frame_transformer_factory_;
   TransceiverList transceivers_;
 
   // These lists store sender info seen in local/remote descriptions.

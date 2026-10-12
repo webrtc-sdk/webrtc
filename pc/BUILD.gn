@@ -1774,6 +1774,7 @@ rtc_library("rtp_transmission_manager") {
     ":transceiver_list",
     ":usage_pattern",
     ":video_rtp_receiver",
+    "../api:frame_transformer_interface",
     "../api:libjingle_peerconnection_api",
     "../api:make_ref_counted",
     "../api:media_stream_interface",

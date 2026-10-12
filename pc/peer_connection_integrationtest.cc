@@ -15,9 +15,13 @@
 // do NOT add it here, but instead add it to the file
 // slow_peer_connection_integrationtest.cc
 
+#include <array>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <map>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -30,6 +34,7 @@
 #include "absl/strings/string_view.h"
 #include "api/candidate.h"
 #include "api/crypto/crypto_options.h"
+#include "api/data_channel_interface.h"
 #include "api/dtmf_sender_interface.h"
 #include "api/jsep.h"
 #include "api/make_ref_counted.h"
@@ -159,6 +164,166 @@ class PeerConnectionIntegrationTestUnifiedPlan
   PeerConnectionIntegrationTestUnifiedPlan()
       : PeerConnectionIntegrationBaseTest(SdpSemantics::kUnifiedPlan) {}
 };
+
+// Identity transforms verify that supplied factories reach the real media
+// pipelines. These are test controls, not encryption implementations.
+class CreationTestFrameTransformer : public FrameTransformerInterface {
+ public:
+  CreationTestFrameTransformer(
+      MediaType type,
+      std::shared_ptr<std::array<std::atomic<int>, 4>> counts,
+      size_t index)
+      : audio_(type == MediaType::AUDIO),
+        counts_(std::move(counts)),
+        index_(index) {}
+  void Transform(std::unique_ptr<TransformableFrameInterface> frame) override {
+    scoped_refptr<TransformedFrameCallback> callback;
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      auto found = callbacks_.find(audio_ ? 0 : frame->GetSsrc());
+      if (found == callbacks_.end())
+        return;
+      callback = found->second;
+    }
+    ++(*counts_)[index_];
+    callback->OnTransformedFrame(std::move(frame));
+  }
+  void RegisterTransformedFrameCallback(
+      scoped_refptr<TransformedFrameCallback> callback) override {
+    RegisterTransformedFrameSinkCallback(std::move(callback), 0);
+  }
+  void UnregisterTransformedFrameCallback() override {
+    UnregisterTransformedFrameSinkCallback(0);
+  }
+  void RegisterTransformedFrameSinkCallback(
+      scoped_refptr<TransformedFrameCallback> callback,
+      uint32_t ssrc) override {
+    std::lock_guard<std::mutex> lock(mutex_);
+    callbacks_[ssrc] = std::move(callback);
+  }
+  void UnregisterTransformedFrameSinkCallback(uint32_t ssrc) override {
+    std::lock_guard<std::mutex> lock(mutex_);
+    callbacks_.erase(ssrc);
+  }
+
+ private:
+  const bool audio_;
+  const std::shared_ptr<std::array<std::atomic<int>, 4>> counts_;
+  const size_t index_;
+  std::mutex mutex_;
+  std::map<uint32_t, scoped_refptr<TransformedFrameCallback>> callbacks_;
+};
+
+// Modes: ordinary media, null sender factory, null receiver factory, and
+// supplied identity factories. Each runs with initial negotiation and with
+// new RTP objects created after a bundled data-channel transport is active.
+class PeerConnectionCreationTransformerMediaTest
+    : public PeerConnectionIntegrationBaseTest,
+      public WithParamInterface<std::tuple<int, bool>> {
+ protected:
+  PeerConnectionCreationTransformerMediaTest()
+      : PeerConnectionIntegrationBaseTest(SdpSemantics::kUnifiedPlan) {}
+};
+
+TEST_P(PeerConnectionCreationTransformerMediaTest, MediaFactoryOnCreation) {
+  const auto [mode, active_transport] = GetParam();
+  PeerConnectionInterface::RTCConfiguration config;
+  config.sdp_semantics = SdpSemantics::kUnifiedPlan;
+  config.bundle_policy = PeerConnectionInterface::kBundlePolicyMaxBundle;
+  PeerConnectionDependencies caller_dependencies(nullptr);
+  PeerConnectionDependencies callee_dependencies(nullptr);
+  auto null_factory = [](MediaType, const std::string&,
+                         TransformableFrameInterface::Direction)
+      -> scoped_refptr<FrameTransformerInterface> { return nullptr; };
+  auto counts = std::make_shared<std::array<std::atomic<int>, 4>>();
+  for (auto& count : *counts)
+    count.store(0);
+  if (mode == 1) {
+    caller_dependencies.rtp_frame_transformer_factory = null_factory;
+  } else if (mode == 2) {
+    callee_dependencies.rtp_frame_transformer_factory = null_factory;
+  } else if (mode == 3) {
+    auto factory = [counts](MediaType type, const std::string&,
+                            TransformableFrameInterface::Direction direction)
+        -> scoped_refptr<FrameTransformerInterface> {
+      size_t index =
+          (type == MediaType::VIDEO ? 2 : 0) +
+          (direction == TransformableFrameInterface::Direction::kReceiver ? 1
+                                                                          : 0);
+      return make_ref_counted<CreationTestFrameTransformer>(type, counts,
+                                                            index);
+    };
+    caller_dependencies.rtp_frame_transformer_factory = factory;
+    callee_dependencies.rtp_frame_transformer_factory = factory;
+  }
+  ASSERT_TRUE(CreatePeerConnectionWrappersWithConfigAndDeps(
+      config, std::move(caller_dependencies), config,
+      std::move(callee_dependencies)));
+  ConnectFakeSignaling();
+  scoped_refptr<DtlsTransportInterface> existing_transport;
+  if (active_transport) {
+    caller()->CreateDataChannel();
+    caller()->CreateAndSetAndSignalOffer();
+    ASSERT_THAT(WaitUntil([&] { return SignalingStateStable(); }, IsTrue()),
+                IsRtcOk());
+    ASSERT_THAT(WaitUntil(
+                    [&] {
+                      return caller()->data_channel()->state() ==
+                                 DataChannelInterface::kOpen &&
+                             callee()->data_channel() &&
+                             callee()->data_channel()->state() ==
+                                 DataChannelInterface::kOpen;
+                    },
+                    IsTrue()),
+                IsRtcOk());
+    EXPECT_EQ(callee()->dtls_transport_information().state(),
+              DtlsTransportState::kConnected);
+    EXPECT_TRUE(callee()->pc()->GetReceivers().empty());
+    existing_transport = callee()->sctp_dtls_transport();
+  }
+  caller()->AddAudioVideoTracks();
+  caller()->CreateAndSetAndSignalOffer();
+  ASSERT_THAT(WaitUntil([&] { return SignalingStateStable(); }, IsTrue()),
+              IsRtcOk());
+  ASSERT_THAT(WaitUntil([&] { return DtlsConnected(); }, IsTrue()), IsRtcOk());
+  ASSERT_EQ(callee()->pc()->GetReceivers().size(), 2u);
+  if (active_transport) {
+    EXPECT_EQ(caller()->data_channel()->state(), DataChannelInterface::kOpen);
+    EXPECT_EQ(callee()->data_channel()->state(), DataChannelInterface::kOpen);
+    EXPECT_EQ(callee()->dtls_transport_information().state(),
+              DtlsTransportState::kConnected);
+    for (const auto& receiver : callee()->pc()->GetReceivers()) {
+      EXPECT_EQ(receiver->dtls_transport(), existing_transport);
+    }
+  }
+  if (mode == 0 || mode == 3) {
+    MediaExpectations expectations;
+    expectations.CalleeExpectsSomeAudioAndVideo();
+    ASSERT_TRUE(ExpectNewFrames(expectations));
+    if (mode == 3) {
+      for (const auto& count : *counts)
+        EXPECT_GT(count.load(), 0);
+    }
+  } else {
+    // Observe absolute counts, including any frame leaked during negotiation.
+    // Waiting for an undesired frame must time out, not succeed immediately.
+    EXPECT_THAT(WaitUntil(
+                    [&] {
+                      return callee()->audio_frames_received() > 0 ||
+                             callee()->min_video_frames_received_per_track() >
+                                 0;
+                    },
+                    IsTrue(), {.timeout = TimeDelta::Seconds(2)}),
+                Not(IsRtcOk()));
+    EXPECT_EQ(callee()->audio_frames_received(), 0);
+    EXPECT_EQ(callee()->min_video_frames_received_per_track(), 0);
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(CreationTime,
+                         PeerConnectionCreationTransformerMediaTest,
+                         ::testing::Combine(Values(0, 1, 2, 3),
+                                            ::testing::Bool()));
 
 // Test the OnFirstPacketReceived callback from audio/video RtpReceivers.  This
 // includes testing that the callback is invoked if an observer is connected

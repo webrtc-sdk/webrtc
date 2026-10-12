@@ -14,6 +14,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -270,6 +271,70 @@ class PeerConnectionFactoryTest : public ::testing::Test {
   // this should only be used when known to be safe.
   FakePortAllocator* raw_port_allocator_;
 };
+
+// These interface tests cover opt-in wiring, not first-frame media behavior.
+TEST_F(PeerConnectionFactoryTest, CreationTransformerFactoryRejectsPlanB) {
+  PeerConnectionInterface::RTCConfiguration config;
+  config.sdp_semantics = SdpSemantics::kPlanB_DEPRECATED;
+  PeerConnectionDependencies dependencies(&observer_);
+  bool called = false;
+  dependencies.rtp_frame_transformer_factory =
+      [&](MediaType, const std::string&, TransformableFrameInterface::Direction)
+      -> scoped_refptr<FrameTransformerInterface> {
+    called = true;
+    return nullptr;
+  };
+  auto result =
+      factory_->CreatePeerConnectionOrError(config, std::move(dependencies));
+  ASSERT_FALSE(result.ok());
+  EXPECT_EQ(result.error().type(), RTCErrorType::UNSUPPORTED_OPERATION);
+  EXPECT_FALSE(called);
+}
+
+TEST_F(PeerConnectionFactoryTest,
+       CreationTransformerFactoryRunsForEveryAudioAndVideoEndpoint) {
+  struct Invocation {
+    MediaType media_type;
+    std::string id;
+    TransformableFrameInterface::Direction direction;
+  };
+  std::vector<Invocation> invocations;
+  Thread* expected_thread = Thread::Current();
+  PeerConnectionInterface::RTCConfiguration config;
+  config.sdp_semantics = SdpSemantics::kUnifiedPlan;
+  PeerConnectionDependencies dependencies(&observer_);
+  dependencies.allocator = std::move(port_allocator_);
+  dependencies.rtp_frame_transformer_factory =
+      [&](MediaType type, const std::string& id,
+          TransformableFrameInterface::Direction direction)
+      -> scoped_refptr<FrameTransformerInterface> {
+    EXPECT_EQ(Thread::Current(), expected_thread);
+    invocations.push_back({type, id, direction});
+    return nullptr;
+  };
+  auto result =
+      factory_->CreatePeerConnectionOrError(config, std::move(dependencies));
+  ASSERT_TRUE(result.ok());
+  EXPECT_TRUE(invocations.empty());
+  auto pc = result.MoveValue();
+  for (MediaType type : {MediaType::AUDIO, MediaType::VIDEO}) {
+    size_t previous = invocations.size();
+    auto transceiver = pc->AddTransceiver(type);
+    ASSERT_TRUE(transceiver.ok());
+    ASSERT_EQ(invocations.size(), previous + 2);
+    EXPECT_EQ(invocations[previous].media_type, type);
+    EXPECT_EQ(invocations[previous].id, transceiver.value()->sender()->id());
+    EXPECT_EQ(invocations[previous].direction,
+              TransformableFrameInterface::Direction::kSender);
+    EXPECT_EQ(invocations[previous + 1].media_type, type);
+    EXPECT_EQ(invocations[previous + 1].id,
+              transceiver.value()->receiver()->id());
+    EXPECT_EQ(invocations[previous + 1].direction,
+              TransformableFrameInterface::Direction::kReceiver);
+  }
+  pc->Close();
+  EXPECT_EQ(invocations.size(), 4u);
+}
 
 // Since there is no public PeerConnectionFactory API to control RTX usage, need
 // to reconstruct factory with our own ConnectionContext.

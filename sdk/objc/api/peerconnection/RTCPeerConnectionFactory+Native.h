@@ -69,6 +69,17 @@ NS_ASSUME_NONNULL_BEGIN
                       dependencies:(std::unique_ptr<webrtc::PeerConnectionDependencies>)dependencies
                           delegate:(nullable id<RTC_OBJC_TYPE(RTCPeerConnectionDelegate)>)delegate;
 
+/** Opt-in creation-time transformer factory; null results drop media. */
+- (nullable RTC_OBJC_TYPE(RTCPeerConnection) *)
+    peerConnectionWithConfiguration:
+        (RTC_OBJC_TYPE(RTCConfiguration) *)configuration
+                        constraints:
+                            (RTC_OBJC_TYPE(RTCMediaConstraints) *)constraints
+            frameTransformerFactory:
+                (webrtc::RtpFrameTransformerFactory)frameTransformerFactory
+                           delegate:(nullable id<RTC_OBJC_TYPE(
+                                         RTCPeerConnectionDelegate)>)delegate;
+
 @end
 
 NS_ASSUME_NONNULL_END

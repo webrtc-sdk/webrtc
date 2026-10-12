@@ -774,6 +774,11 @@ class PeerConnectionIntegrationWrapper : public PeerConnectionObserver,
     });
   }
 
+  scoped_refptr<DtlsTransportInterface> sctp_dtls_transport() {
+    return network_thread_->BlockingCall(
+        [&] { return pc()->GetSctpTransport()->dtls_transport(); });
+  }
+
   // Setting the local description and sending the SDP message over the fake
   // signaling channel are combined into the same method because the SDP
   // message needs to be sent as soon as SetLocalDescription finishes, without

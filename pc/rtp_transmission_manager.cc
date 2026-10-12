@@ -52,6 +52,23 @@ namespace webrtc {
 
 namespace {
 
+class DropFrameTransformer : public FrameTransformerInterface {
+ public:
+  void Transform(std::unique_ptr<TransformableFrameInterface> frame) override {}
+};
+
+scoped_refptr<FrameTransformerInterface> CreateRequiredTransformer(
+    const RtpFrameTransformerFactory& factory,
+    MediaType media_type,
+    const std::string& id,
+    TransformableFrameInterface::Direction direction) {
+  auto transformer = factory(media_type, id, direction);
+  if (!transformer) {
+    transformer = make_ref_counted<DropFrameTransformer>();
+  }
+  return transformer;
+}
+
 const char kDefaultAudioSenderId[] = "defaulta0";
 const char kDefaultVideoSenderId[] = "defaultv0";
 
@@ -65,8 +82,10 @@ RtpTransmissionManager::RtpTransmissionManager(
     UsagePattern* usage_pattern,
     PeerConnectionObserver* observer,
     LegacyStatsCollectorInterface* legacy_stats,
-    absl::AnyInvocable<void()> on_negotiation_needed)
+    absl::AnyInvocable<void()> on_negotiation_needed,
+    RtpFrameTransformerFactory frame_transformer_factory)
     : env_(env),
+      frame_transformer_factory_(std::move(frame_transformer_factory)),
       is_unified_plan_(is_unified_plan),
       context_(context),
       codec_lookup_helper_(codec_lookup_helper),
@@ -282,6 +301,11 @@ RtpTransmissionManager::CreateSender(
         VideoRtpSender::Create(env_, worker_thread(), id, this));
     NoteUsageEvent(UsageEvent::VIDEO_ADDED);
   }
+  if (frame_transformer_factory_) {
+    sender->SetFrameTransformer(CreateRequiredTransformer(
+        frame_transformer_factory_, media_type, id,
+        TransformableFrameInterface::Direction::kSender));
+  }
   bool set_track_succeeded = sender->SetTrack(track.get());
   RTC_DCHECK(set_track_succeeded);
   sender->internal()->set_stream_ids(stream_ids);
@@ -308,6 +332,11 @@ RtpTransmissionManager::CreateReceiver(MediaType media_type,
         make_ref_counted<VideoRtpReceiver>(worker_thread(), receiver_id,
                                            std::vector<std::string>({})));
     NoteUsageEvent(UsageEvent::VIDEO_ADDED);
+  }
+  if (frame_transformer_factory_) {
+    receiver->SetFrameTransformer(CreateRequiredTransformer(
+        frame_transformer_factory_, media_type, receiver_id,
+        TransformableFrameInterface::Direction::kReceiver));
   }
   return receiver;
 }

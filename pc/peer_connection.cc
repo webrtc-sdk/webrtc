@@ -641,10 +641,12 @@ PeerConnection::PeerConnection(
       codec_lookup_helper_.get());
   rtp_manager_ = std::make_unique<RtpTransmissionManager>(
       env_, IsUnifiedPlan(), context_.get(), codec_lookup_helper_.get(),
-      &usage_pattern_, observer_, legacy_stats_.get(), [this]() {
+      &usage_pattern_, observer_, legacy_stats_.get(),
+      [this]() {
         RTC_DCHECK_RUN_ON(signaling_thread());
         sdp_handler_->UpdateNegotiationNeeded();
-      });
+      },
+      std::move(dependencies.rtp_frame_transformer_factory));
   // Add default audio/video transceivers for Plan B SDP.
   if (!IsUnifiedPlan() && ConfiguredForMedia()) {
     rtp_manager_->transceivers()->Add(

@@ -514,6 +514,26 @@ static webrtc::Environment CreateDefaultEnvironment() {
                                                                delegate:delegate];
 }
 
+- (nullable RTC_OBJC_TYPE(RTCPeerConnection) *)
+    peerConnectionWithConfiguration:
+        (RTC_OBJC_TYPE(RTCConfiguration) *)configuration
+                        constraints:
+                            (RTC_OBJC_TYPE(RTCMediaConstraints) *)constraints
+            frameTransformerFactory:
+                (webrtc::RtpFrameTransformerFactory)frameTransformerFactory
+                           delegate:
+                               (id<RTC_OBJC_TYPE(RTCPeerConnectionDelegate)>)
+                                   delegate {
+  auto dependencies =
+      std::make_unique<webrtc::PeerConnectionDependencies>(nullptr);
+  dependencies->rtp_frame_transformer_factory =
+      std::move(frameTransformerFactory);
+  return [self peerConnectionWithDependencies:configuration
+                                  constraints:constraints
+                                 dependencies:std::move(dependencies)
+                                     delegate:delegate];
+}
+
 - (void)setOptions:
     (nonnull RTC_OBJC_TYPE(RTCPeerConnectionFactoryOptions) *)options {
   RTC_DCHECK(options != nil);

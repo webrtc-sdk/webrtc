@@ -244,6 +244,12 @@ PeerConnectionFactory::CreatePeerConnectionOrError(
     PeerConnectionDependencies dependencies) {
   RTC_DCHECK_RUN_ON(signaling_thread());
 
+  if (dependencies.rtp_frame_transformer_factory &&
+      configuration.sdp_semantics != SdpSemantics::kUnifiedPlan) {
+    return RTCError(RTCErrorType::UNSUPPORTED_OPERATION,
+                    "RTP transformer factory requires Unified Plan");
+  }
+
   // TODO(https://crbug.com/webrtc/13528): Remove support for kPlanB.
   if (configuration.sdp_semantics == SdpSemantics::kPlanB_DEPRECATED) {
     RTC_LOG(LS_WARNING)

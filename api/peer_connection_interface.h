@@ -95,6 +95,7 @@
 #include "api/environment/environment.h"
 #include "api/fec_controller.h"
 #include "api/field_trials_view.h"
+#include "api/frame_transformer_interface.h"
 #include "api/ice_transport_interface.h"
 #include "api/jsep.h"
 #include "api/legacy_stats_types.h"
@@ -1378,6 +1379,15 @@ class PeerConnectionObserver {
   virtual void OnInterestingUsage(int /* usage_pattern */) {}
 };
 
+// Called synchronously on the signaling thread before an RTP object can
+// activate media. Do not reenter PeerConnection or wait for JavaScript.
+// Return a distinct transformer per object; null installs a drop-only guard.
+using RtpFrameTransformerFactory =
+    std::function<scoped_refptr<FrameTransformerInterface>(
+        MediaType,
+        const std::string&,
+        TransformableFrameInterface::Direction)>;
+
 // PeerConnectionDependencies holds all of PeerConnections dependencies.
 // A dependency is distinct from a configuration as it defines significant
 // executable code that can be provided by a user of the API.
@@ -1395,6 +1405,9 @@ struct RTC_EXPORT PeerConnectionDependencies final {
   PeerConnectionDependencies(PeerConnectionDependencies&&);
   PeerConnectionDependencies& operator=(PeerConnectionDependencies&&) = default;
   ~PeerConnectionDependencies();
+  // Optional and creation-time only; absent preserves ordinary media.
+  // Supported only for Unified Plan.
+  RtpFrameTransformerFactory rtp_frame_transformer_factory;
   // Mandatory dependencies
   PeerConnectionObserver* observer = nullptr;
   // Optional dependencies
