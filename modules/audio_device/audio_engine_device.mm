@@ -1884,6 +1884,22 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
         LOGE() << "Call to OnEngineDidCreate returned error: " << result;
         return rollback(result);
       }
+      rollback_actions.push_back([this]() {
+        RTC_DCHECK_RUN_ON(thread_);
+        // An observer may set up per-engine state in OnEngineDidCreate, such as
+        // attaching its own nodes, and only tear it down in OnEngineWillRelease.
+        // If a later step fails, the create rollback drops this engine, so tell
+        // the observer first. The engine is still valid here because this runs
+        // before the create rollback. The result is only logged since the
+        // rollback itself cannot be aborted.
+        if (observer_ != nullptr) {
+          LOGW() << "Create rolled back after OnEngineDidCreate, notifying observer (Manual)";
+          int32_t result = observer_->OnEngineWillRelease(engine_manual_input_);
+          if (result != 0) {
+            LOGE() << "Call to OnEngineWillRelease returned error during rollback: " << result;
+          }
+        }
+      });
     }
   }
 
@@ -2304,6 +2320,22 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
         LOGE() << "Call to OnEngineDidCreate returned error: " << result;
         return rollback(result);
       }
+      rollback_actions.push_back([this]() {
+        RTC_DCHECK_RUN_ON(thread_);
+        // An observer may set up per-engine state in OnEngineDidCreate, such as
+        // attaching its own nodes, and only tear it down in OnEngineWillRelease.
+        // If a later step fails, the create rollback drops this engine, so tell
+        // the observer first. The engine is still valid here because this runs
+        // before the create rollback. The result is only logged since the
+        // rollback itself cannot be aborted.
+        if (observer_ != nullptr) {
+          LOGW() << "Create rolled back after OnEngineDidCreate, notifying observer";
+          int32_t result = observer_->OnEngineWillRelease(engine_device_);
+          if (result != 0) {
+            LOGE() << "Call to OnEngineWillRelease returned error during rollback: " << result;
+          }
+        }
+      });
     }
   }
 

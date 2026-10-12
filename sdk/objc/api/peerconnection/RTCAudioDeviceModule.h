@@ -164,6 +164,10 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
             isRecordingEnabled:(BOOL)isRecordingEnabled
     NS_SWIFT_NAME(audioDeviceModule(_:didDisableEngine:isPlayoutEnabled:isRecordingEnabled:));
 
+// Also called when an operation that created `engine` fails after a
+// successful `didCreateEngine`, right before the engine is dropped, so the
+// delegate can tear down what it set up there. No call follows a
+// `didCreateEngine` that returns an error.
 - (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
              willReleaseEngine:(AVAudioEngine *)engine
     NS_SWIFT_NAME(audioDeviceModule(_:willReleaseEngine:));
