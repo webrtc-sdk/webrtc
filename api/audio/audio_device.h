@@ -327,6 +327,22 @@ class AudioDeviceObserver {
 
   virtual int32_t OnEngineWillRelease(AVAudioEngine* engine) { return 0; }
 
+  // Audio session interruption events (iOS). Both fire on the device thread
+  // and must not block.
+  //
+  // OnAudioSessionInterruptionBegan fires before the engine reacts, which stops
+  // it if it is running.
+  //
+  // OnAudioSessionInterruptionEnded fires before the engine reacts, for every
+  // interruption end RTCAudioSession reports. Besides the system's own end,
+  // RTCAudioSession sends one each time the app becomes active, each time the
+  // app reports a CallKit activation to it, and when the session is activated
+  // through it while interrupted. So an end can arrive without a matching
+  // begin. By then RTCAudioSession has already activated or deactivated the
+  // session according to its activation count.
+  virtual void OnAudioSessionInterruptionBegan() {}
+  virtual void OnAudioSessionInterruptionEnded(bool should_resume) {}
+
   // Override the input node configuration with a custom implementation.
   virtual int32_t OnEngineWillConnectInput(AVAudioEngine* engine, AVAudioNode* src,
                                            AVAudioNode* dst, AVAudioFormat* format,
