@@ -296,7 +296,15 @@ class AudioDeviceObserver {
   virtual void OnDevicesUpdated() {}
   virtual void OnSpeechActivityEvent(AudioDeviceModule::SpeechActivityEvent event) {}
 
-  // AVAudioEngine lifecycle
+  // AVAudioEngine lifecycle.
+  //
+  // Setup hooks (OnEngineDidCreate, OnEngineWillEnable, OnEngineWillStart and
+  // the connect hooks below) can fail the operation. A non-zero result rolls
+  // it back, and the caller gets the error.
+  //
+  // Teardown hooks (OnEngineDidStop, OnEngineDidDisable and OnEngineWillRelease)
+  // run once the engine has stopped, which cannot be undone. A non-zero result
+  // is only logged, and the operation completes.
   virtual int32_t OnEngineDidCreate(AVAudioEngine* engine) { return 0; }
 
   // `voice_processing_enabled` reports the resolved Apple Voice Processing I/O

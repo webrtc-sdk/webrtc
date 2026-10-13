@@ -1832,8 +1832,8 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
       int32_t result = observer_->OnEngineDidStop(
           engine_manual_input_, state.next.IsOutputEnabled(), state.next.IsInputEnabled());
       if (result != 0) {
+        // Teardown hooks cannot fail the operation, see AudioDeviceObserver.
         LOGE() << "Call to OnEngineDidStop returned error: " << result;
-        return rollback(result);
       }
     }
   }
@@ -2000,8 +2000,8 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
     int32_t result = observer_->OnEngineDidDisable(
         engine_manual_input_, state.next.IsOutputEnabled(), state.next.IsInputEnabled());
     if (result != 0) {
+      // Teardown hooks cannot fail the operation, see AudioDeviceObserver.
       LOGE() << "Call to OnEngineDidDisable returned error: " << result;
-      return rollback(result);
     }
   }
 
@@ -2121,8 +2121,8 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
     if (observer_ != nullptr) {
       int32_t result = observer_->OnEngineWillRelease(engine_manual_input_);
       if (result != 0) {
+        // Teardown hooks cannot fail the operation, see AudioDeviceObserver.
         LOGE() << "Call to OnEngineWillRelease returned error: " << result;
-        return rollback(result);
       }
     }
     LOGI() << "Releasing AVAudioEngine (Manual)...";
@@ -2240,8 +2240,8 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
         int32_t result = observer_->OnEngineDidStop(engine_device_, state.next.IsOutputEnabled(),
                                                     state.next.IsInputEnabled());
         if (result != 0) {
+          // Teardown hooks cannot fail the operation, see AudioDeviceObserver.
           LOGE() << "Call to OnEngineDidStop returned error: " << result;
-          return rollback(result);
         }
       }
     }
@@ -2286,8 +2286,8 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     if (observer_ != nullptr && engine_device_ != nil) {
       int32_t result = observer_->OnEngineWillRelease(engine_device_);
       if (result != 0) {
+        // Teardown hooks cannot fail the operation, see AudioDeviceObserver.
         LOGE() << "Call to OnEngineWillRelease returned error: " << result;
-        return rollback(result);
       }
     }
 
@@ -2858,8 +2858,8 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     int32_t result = observer_->OnEngineDidDisable(engine_device_, state.next.IsOutputEnabled(),
                                                    state.next.IsInputEnabled());
     if (result != 0) {
+      // Teardown hooks cannot fail the operation, see AudioDeviceObserver.
       LOGE() << "Call to OnEngineDidDisable returned error: " << result;
-      return rollback(result);
     }
   }
 
@@ -3143,8 +3143,8 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     if (observer_ != nullptr) {
       int32_t result = observer_->OnEngineWillRelease(engine_device_);
       if (result != 0) {
+        // Teardown hooks cannot fail the operation, see AudioDeviceObserver.
         LOGE() << "Call to OnEngineWillRelease returned error: " << result;
-        return rollback(result);
       }
     }
 

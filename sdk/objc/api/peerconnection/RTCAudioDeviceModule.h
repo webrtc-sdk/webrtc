@@ -135,7 +135,15 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
     : (RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule didReceiveSpeechActivityEvent
     : (RTC_OBJC_TYPE(RTCSpeechActivityEvent))speechActivityEvent NS_SWIFT_NAME(audioDeviceModule(_:didReceiveSpeechActivityEvent:));
 
-// Engine events
+// Engine events.
+//
+// Setup events (`didCreateEngine`, `willEnableEngine`, `willStartEngine` and the
+// configure methods) can fail the operation. A non-zero result rolls it back,
+// and the caller gets the error.
+//
+// Teardown events (`didStopEngine`, `didDisableEngine` and `willReleaseEngine`)
+// fire once the engine has stopped, which cannot be undone. A non-zero result
+// is only logged, and the operation completes.
 - (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
                didCreateEngine:(AVAudioEngine *)engine
     NS_SWIFT_NAME(audioDeviceModule(_:didCreateEngine:));
