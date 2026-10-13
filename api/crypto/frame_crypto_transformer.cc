@@ -26,9 +26,7 @@
 
 #include <algorithm>
 #include <array>
-#include <iomanip>
 #include <iostream>
-#include <sstream>
 #include <string>
 
 #include "absl/container/inlined_vector.h"
@@ -151,25 +149,6 @@ inline bool NeedsRbspUnescaping(std::span<const uint8_t> frame) {
   return false;
 }
 
-std::string to_uint8_list(std::span<const uint8_t> data) {
-  std::stringstream ss;
-  ss << "[";
-  for (uint8_t b : data) {
-    ss << static_cast<unsigned>(b) << ",";
-  }
-  ss << "]";
-  return ss.str();
-}
-
-std::string to_hex(std::span<const uint8_t> data) {
-  std::stringstream ss;
-  ss << std::uppercase << std::hex << std::setfill('0');
-  for (uint8_t b : data) {
-    ss << std::setw(2) << static_cast<unsigned>(b);
-  }
-  return ss.str();
-}
-
 uint8_t get_unencrypted_bytes(webrtc::TransformableFrameInterface* frame,
                               webrtc::FrameCryptorTransformer::MediaType type) {
   uint8_t unencrypted_bytes = 0;
@@ -263,12 +242,10 @@ int DeriveHkdfSha256FromSecret(const std::vector<uint8_t>& secret,
     return ErrorUnexpected;
   }
 
-  RTC_LOG(LS_INFO) << "secret " << to_uint8_list(secret)
-                   << " len " << secret.size() << " slat << "
-                   << to_uint8_list(salt) << " len "
-                   << salt.size() << "\n derived_key "
-                   << to_uint8_list(derived_key)
-                   << " len " << derived_key.size();
+  // Never log key material: only sizes.
+  RTC_LOG(LS_VERBOSE) << "Derived HKDF-SHA256 key, secret len "
+                      << secret.size() << ", salt len " << salt.size()
+                      << ", derived key len " << derived_key.size();
 
   return Success;
 }
@@ -287,13 +264,10 @@ int DerivePBKDF2KeyFromRawKey(const std::vector<uint8_t> raw_key,
     return ErrorUnexpected;
   }
 
-  RTC_LOG(LS_INFO) << "raw_key "
-                   << to_uint8_list(raw_key) << " len "
-                   << raw_key.size() << " slat << "
-                   << to_uint8_list(salt) << " len "
-                   << salt.size() << "\n derived_key "
-                   << to_uint8_list(derived_key)
-                   << " len " << derived_key.size();
+  // Never log key material: only sizes.
+  RTC_LOG(LS_VERBOSE) << "Derived PBKDF2 key, raw key len " << raw_key.size()
+                      << ", salt len " << salt.size()
+                      << ", derived key len " << derived_key.size();
 
   return Success;
 }
