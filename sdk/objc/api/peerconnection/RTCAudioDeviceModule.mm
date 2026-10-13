@@ -177,6 +177,19 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
                                 context:context];
   }
 
+  void OnAudioSessionInterruptionBegan() override {
+    if ([delegate_ respondsToSelector:@selector(audioDeviceModuleDidBeginInterruption:)]) {
+      [delegate_ audioDeviceModuleDidBeginInterruption:adm_];
+    }
+  }
+
+  void OnAudioSessionInterruptionEnded(bool should_resume) override {
+    if ([delegate_ respondsToSelector:@selector(audioDeviceModule:
+                                                  didEndInterruptionWithShouldResume:)]) {
+      [delegate_ audioDeviceModule:adm_ didEndInterruptionWithShouldResume:should_resume];
+    }
+  }
+
   __weak id<RTC_OBJC_TYPE(RTCAudioDeviceModuleDelegate)> delegate_;
 
  private:

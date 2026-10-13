@@ -207,6 +207,26 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
     NS_SWIFT_NAME(audioDeviceModule(_:willEnableEngine:isPlayoutEnabled:isRecordingEnabled:))
         __attribute__((deprecated("Use the isVoiceProcessingEnabled: variant.")));
 
+// Audio session interruption events. Both fire on the device thread and must
+// not block.
+//
+// `audioDeviceModuleDidBeginInterruption:` fires before the engine reacts,
+// which stops it if it is running.
+//
+// `audioDeviceModule:didEndInterruptionWithShouldResume:` fires before the
+// engine reacts, for every interruption end RTCAudioSession reports. Besides
+// the system's own end, RTCAudioSession sends one each time the app becomes
+// active, each time the app reports a CallKit activation to it, and when the
+// session is activated through it while interrupted. So an end can arrive
+// without a matching begin. By then RTCAudioSession has already activated or
+// deactivated the session according to its activation count.
+- (void)audioDeviceModuleDidBeginInterruption:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+    NS_SWIFT_NAME(audioDeviceModuleDidBeginInterruption(_:));
+
+- (void)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+    didEndInterruptionWithShouldResume:(BOOL)shouldResume
+    NS_SWIFT_NAME(audioDeviceModule(_:didEndInterruptionWithShouldResume:));
+
 @end
 
 RTC_OBJC_EXPORT
