@@ -191,7 +191,8 @@ JNI_FrameCryptorFactory_CreateFrameCryptorKeyProvider(
     jint j_failureTolerance,
     jint j_keyRingSize,
     jboolean j_discardFrameWhenCryptorNotReady,
-    jint j_keyDerivationAlgorithmIndex) {
+    jint j_keyDerivationAlgorithmIndex,
+    jint j_keySize) {
   auto ratchetSalt = JavaToNativeByteArray(env, j_ratchetSalt);
   KeyProviderOptions options;
   options.ratchet_salt =
@@ -205,6 +206,7 @@ JNI_FrameCryptorFactory_CreateFrameCryptorKeyProvider(
   options.key_ring_size = j_keyRingSize;
   options.discard_frame_when_cryptor_not_ready = j_discardFrameWhenCryptorNotReady;
   options.key_derivation_algorithm = KeyDerivationAlgorithmFromIndex(j_keyDerivationAlgorithmIndex);
+  options.key_size = j_keySize;
   return NativeToJavaFrameCryptorKeyProvider(
       env, webrtc::make_ref_counted<webrtc::DefaultKeyProviderImpl>(options));
 }

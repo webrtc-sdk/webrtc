@@ -53,6 +53,70 @@ TEST(FrameCryptor, KeyProvider) {
   EXPECT_NE(new_keyset->encryption_key, keyset->encryption_key);
 }
 
+TEST(FrameCryptor, KeySizeDefaultsTo128) {
+  auto key_options = KeyProviderOptions();
+  EXPECT_EQ(key_options.key_size, 128);
+  EXPECT_EQ(key_options.frame_key_bits(), 128u);
+  key_options.ratchet_salt =
+      std::vector<uint8_t>({0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07});
+  auto key_provider =
+      webrtc::make_ref_counted<DefaultKeyProviderImpl>(key_options);
+  key_provider->SetKey("participant_1", 0,
+                       std::vector<uint8_t>{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+                                            11, 12, 13, 14, 15});
+  auto keyset = key_provider->GetKey("participant_1")->GetKeySet(0);
+  ASSERT_NE(keyset, nullptr);
+  // Unchanged behaviour: the same 16-byte key as FrameCryptor.KeyProvider.
+  EXPECT_EQ(keyset->encryption_key,
+            std::vector<uint8_t>({166, 88, 205, 82, 239, 186, 202, 223, 236,
+                                  223, 224, 160, 220, 87, 78, 195}));
+}
+
+TEST(FrameCryptor, KeySize256DerivesA32ByteKey) {
+  auto key_options = KeyProviderOptions();
+  key_options.key_size = 256;
+  EXPECT_EQ(key_options.frame_key_bits(), 256u);
+  key_options.ratchet_salt =
+      std::vector<uint8_t>({0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07});
+
+  // The copy constructor carries key_size.
+  KeyProviderOptions copied(key_options);
+  EXPECT_EQ(copied.key_size, 256);
+
+  auto key_provider =
+      webrtc::make_ref_counted<DefaultKeyProviderImpl>(key_options);
+  key_provider->SetKey("participant_1", 0, std::vector<uint8_t>(32, 7));
+  auto key_handler = key_provider->GetKey("participant_1");
+  ASSERT_NE(key_handler, nullptr);
+  auto keyset = key_handler->GetKeySet(0);
+  ASSERT_NE(keyset, nullptr);
+  EXPECT_EQ(keyset->encryption_key.size(), 32u);
+
+  // A ratchet keeps the 256-bit size: the encrypt site and the
+  // ratchet-window sites all read frame_key_bits().
+  key_handler->RatchetKey(0);
+  auto ratcheted = key_handler->GetKeySet(0);
+  ASSERT_NE(ratcheted, nullptr);
+  EXPECT_EQ(ratcheted->encryption_key.size(), 32u);
+  EXPECT_NE(ratcheted->encryption_key, keyset->encryption_key);
+}
+
+TEST(FrameCryptor, InvalidKeySizeBehavesAs128) {
+  auto key_options = KeyProviderOptions();
+  key_options.key_size = 192;
+  EXPECT_EQ(key_options.frame_key_bits(), 128u);
+  key_options.ratchet_salt =
+      std::vector<uint8_t>({0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07});
+  auto key_provider =
+      webrtc::make_ref_counted<DefaultKeyProviderImpl>(key_options);
+  key_provider->SetKey("participant_1", 0,
+                       std::vector<uint8_t>{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+                                            11, 12, 13, 14, 15});
+  auto keyset = key_provider->GetKey("participant_1")->GetKeySet(0);
+  ASSERT_NE(keyset, nullptr);
+  EXPECT_EQ(keyset->encryption_key.size(), 16u);
+}
+
 TEST(DataPacketCryptor, BasicTest) {
   auto key_options = KeyProviderOptions();
   key_options.ratchet_salt =

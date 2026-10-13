@@ -71,6 +71,17 @@ RTC_OBJC_EXPORT
     discardFrameWhenCryptorNotReady:(BOOL)discardFrameWhenCryptorNotReady
              keyDerivationAlgorithm:(RTC_OBJC_TYPE(RTCKeyDerivationAlgorithm))keyDerivationAlgorithm;
 
+/** keySize is the frame key length in bits: 128 (the default of every other initializer) or 256. */
+- (instancetype)initWithRatchetSalt:(NSData *)salt
+                  ratchetWindowSize:(int)windowSize
+                      sharedKeyMode:(BOOL)sharedKey
+                uncryptedMagicBytes:(nullable NSData *)uncryptedMagicBytes
+                   failureTolerance:(int)failureTolerance
+                        keyRingSize:(int)keyRingSize
+    discardFrameWhenCryptorNotReady:(BOOL)discardFrameWhenCryptorNotReady
+             keyDerivationAlgorithm:(RTC_OBJC_TYPE(RTCKeyDerivationAlgorithm))keyDerivationAlgorithm
+                            keySize:(int)keySize;
+
 @end
 
 NS_ASSUME_NONNULL_END
