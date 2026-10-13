@@ -593,10 +593,6 @@ void AudioEngineDevice::OnInterruptionBegin() {
     });
     if (result != 0) {
       LOGE() << "Failed to update engine state for interruption begin, error: " << result;
-      // The engine is already stopped by now, only the observer failed. Keep
-      // the flag, otherwise the interruption end sees no change and never
-      // restarts the engine.
-      engine_state_.is_interrupted = true;
     }
   }));
 }
@@ -2211,7 +2207,12 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
                                                     state.next.IsInputEnabled());
         if (result != 0) {
           LOGE() << "Call to OnEngineDidStop returned error: " << result;
-          return rollback(result);
+          // The system already stopped audio for the interruption, and no caller
+          // can see this error or retry. Rolling back would drop the interruption
+          // flag, so the interruption end would never restart the engine.
+          if (!state.DidBeginInterruption()) {
+            return rollback(result);
+          }
         }
       }
     }
