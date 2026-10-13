@@ -119,6 +119,9 @@ AudioAllocationConfig::AudioAllocationConfig(
 }
 
 namespace internal {
+
+using SourceType = AudioSourceInterface::SourceType;
+
 AudioSendStream::AudioSendStream(
     const Environment& env,
     const webrtc::AudioSendStream::Config& config,
@@ -377,8 +380,13 @@ void AudioSendStream::Start() {
   }
   channel_send_->StartSend();
   sending_ = true;
-  audio_state()->AddSendingStream(this, encoder_sample_rate_hz_,
-                                  encoder_num_channels_);
+  // Only ADM-fed streams register with AudioState. Custom sources deliver
+  // audio directly via AddSink, so AudioState must not also push
+  // device-captured audio into them.
+  if (config_.source_type == SourceType::kAudioDeviceModule) {
+    audio_state()->AddSendingStream(this, encoder_sample_rate_hz_,
+                                    encoder_num_channels_);
+  }
 }
 
 void AudioSendStream::Stop() {
@@ -390,7 +398,10 @@ void AudioSendStream::Stop() {
   RemoveBitrateObserver();
   channel_send_->StopSend();
   sending_ = false;
-  audio_state()->RemoveSendingStream(this);
+  // Only unregister if we registered (ADM-fed streams only).
+  if (config_.source_type == SourceType::kAudioDeviceModule) {
+    audio_state()->RemoveSendingStream(this);
+  }
 }
 
 void AudioSendStream::SendAudioData(std::unique_ptr<AudioFrame> audio_frame) {
@@ -581,7 +592,7 @@ void AudioSendStream::StoreEncoderProperties(int sample_rate_hz,
                                              size_t num_channels) {
   encoder_sample_rate_hz_ = sample_rate_hz;
   encoder_num_channels_ = num_channels;
-  if (sending_) {
+  if (sending_ && config_.source_type == SourceType::kAudioDeviceModule) {
     // Update AudioState's information about the stream.
     audio_state()->AddSendingStream(this, sample_rate_hz, num_channels);
   }
