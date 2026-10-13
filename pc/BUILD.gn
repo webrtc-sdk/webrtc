@@ -2865,6 +2865,7 @@ if (rtc_include_tests && !build_with_chromium) {
     deps = [
       ":android_black_magic",
       ":connection_context",
+      ":media_factory",
       ":pc_test_utils",
       ":peer_connection_factory",
       "../api:create_modular_peer_connection_factory",
@@ -2886,6 +2887,7 @@ if (rtc_include_tests && !build_with_chromium) {
       "../api/audio_codecs:builtin_audio_encoder_factory",
       "../api/environment",
       "../api/environment:environment_factory",
+      "../api/transport:bitrate_settings",
       "../api/units:time_delta",
       "../api/units:timestamp",
       "../api/video_codecs:scalability_mode",
@@ -2899,7 +2901,9 @@ if (rtc_include_tests && !build_with_chromium) {
       "../api/video_codecs:video_encoder_factory_template_libvpx_vp8_adapter",
       "../api/video_codecs:video_encoder_factory_template_libvpx_vp9_adapter",
       "../api/video_codecs:video_encoder_factory_template_open_h264_adapter",
+      "../call:call_interfaces",
       "../media:media_constants",
+      "../media:media_engine",
       "../media:rtc_media_tests_utils",
       "../modules/audio_processing:mocks",
       "../p2p:fake_port_allocator",
@@ -2915,6 +2919,7 @@ if (rtc_include_tests && !build_with_chromium) {
       "../test:fileutils",
       "../test:run_loop",
       "../test:test_support",
+      "//third_party/abseil-cpp/absl/strings:string_view",
     ]
   }
 
