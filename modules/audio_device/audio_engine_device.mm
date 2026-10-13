@@ -593,6 +593,10 @@ void AudioEngineDevice::OnInterruptionBegin() {
     });
     if (result != 0) {
       LOGE() << "Failed to update engine state for interruption begin, error: " << result;
+      // The engine is already stopped by now, only the observer failed. Keep
+      // the flag, otherwise the interruption end sees no change and never
+      // restarts the engine.
+      engine_state_.is_interrupted = true;
     }
   }));
 }
