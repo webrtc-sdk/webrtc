@@ -37,6 +37,8 @@ CryptoOptions JavaToNativeCryptoOptions(
       Java_Srtp_getEnableGcmCryptoSuites(jni, j_srtp);
   native_crypto_options.srtp.enable_aes128_sha1_32_crypto_cipher =
       Java_Srtp_getEnableAes128Sha1_32CryptoCipher(jni, j_srtp);
+  native_crypto_options.srtp.enable_aes128_sha1_80_crypto_cipher =
+      Java_Srtp_getEnableAes128Sha1_80CryptoCipher(jni, j_srtp);
   native_crypto_options.srtp.enable_encrypted_rtp_header_extensions =
       Java_Srtp_getEnableEncryptedRtpHeaderExtensions(jni, j_srtp);
   native_crypto_options.sframe.require_frame_encryption =
