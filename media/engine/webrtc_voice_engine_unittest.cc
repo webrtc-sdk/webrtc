@@ -88,6 +88,7 @@
 namespace webrtc {
 namespace {
 using ::testing::_;
+using ::testing::AnyNumber;
 using ::testing::ContainerEq;
 using ::testing::Contains;
 using ::testing::Field;
@@ -4831,6 +4832,90 @@ TEST_P(WebRtcVoiceEngineTestFake, InitRecordingOnSend) {
                                  CryptoOptions()));
 
   send_channel->SetSend(true);
+}
+
+TEST_P(WebRtcVoiceEngineTestFake, EnabledRecordingStillRestartsOnUnmute) {
+  ASSERT_TRUE(SetupSendStream());
+  device()->stop_on_mute = true;
+  auto recording = std::make_shared<bool>(true);
+  EXPECT_CALL(*adm_, Recording()).WillRepeatedly([recording] {
+    return *recording;
+  });
+  EXPECT_CALL(*adm_, RecordingIsInitialized()).WillRepeatedly(Return(false));
+  EXPECT_CALL(*adm_, StopRecording())
+      .WillOnce([recording] {
+        *recording = false;
+        return 0;
+      })
+      .RetiresOnSaturation();
+  EXPECT_CALL(*adm_, InitRecording()).WillOnce(Return(0));
+  EXPECT_CALL(*adm_, StartRecording()).WillOnce([recording] {
+    *recording = true;
+    return 0;
+  });
+  if (apm_) {
+    EXPECT_CALL(*apm_, set_output_will_be_muted(_)).Times(AnyNumber());
+  }
+  ASSERT_TRUE(
+      send_channel_->SetAudioSend(kSsrcX, false, nullptr, &fake_source_));
+  EXPECT_FALSE(*recording);
+  ASSERT_TRUE(
+      send_channel_->SetAudioSend(kSsrcX, true, nullptr, &fake_source_));
+  EXPECT_TRUE(*recording);
+}
+
+TEST_P(WebRtcVoiceEngineTestFake, DisabledRecordingSkipsEagerInitialization) {
+  EXPECT_CALL(*adm_, StopRecording()).WillOnce(Return(0)).RetiresOnSaturation();
+  engine_->GetAudioState()->SetRecording(false);
+  EXPECT_CALL(*adm_, RecordingIsInitialized()).Times(0);
+  EXPECT_CALL(*adm_, Recording()).Times(0);
+  EXPECT_CALL(*adm_, InitRecording()).Times(0);
+  EXPECT_CALL(*adm_, StartRecording()).Times(0);
+
+  auto channel = engine_->CreateSendChannel(
+      env_, &call_, MediaConfig(), AudioOptions(), CryptoOptions());
+  EXPECT_TRUE(channel->SetSend(true));
+  EXPECT_TRUE(channel->SetSend(false));
+  EXPECT_TRUE(channel->SetSend(true));
+}
+
+TEST_P(WebRtcVoiceEngineTestFake,
+       DisabledRecordingSkipsMicrophoneMuteOnMuteUnmute) {
+  ASSERT_TRUE(SetupSendStream());
+  EXPECT_CALL(*adm_, StopRecording()).WillOnce(Return(0)).RetiresOnSaturation();
+  engine_->GetAudioState()->SetRecording(false);
+  EXPECT_CALL(*adm_, InitRecording()).Times(0);
+  EXPECT_CALL(*adm_, StartRecording()).Times(0);
+  EXPECT_CALL(*adm_, SetMicrophoneMute(_)).Times(0);
+  if (apm_) {
+    // Capture processing still follows the mute state.
+    EXPECT_CALL(*apm_, set_output_will_be_muted(true));
+    EXPECT_CALL(*apm_, set_output_will_be_muted(false));
+  }
+  ASSERT_TRUE(
+      send_channel_->SetAudioSend(kSsrcX, false, nullptr, &fake_source_));
+  ASSERT_TRUE(
+      send_channel_->SetAudioSend(kSsrcX, true, nullptr, &fake_source_));
+}
+
+TEST_P(WebRtcVoiceEngineTestFake,
+       DisabledRecordingSkipsStopOnMuteRestartOnUnmute) {
+  ASSERT_TRUE(SetupSendStream());
+  device()->stop_on_mute = true;
+  EXPECT_CALL(*adm_, StopRecording()).WillOnce(Return(0)).RetiresOnSaturation();
+  engine_->GetAudioState()->SetRecording(false);
+  EXPECT_CALL(*adm_, Recording()).WillRepeatedly(Return(false));
+  EXPECT_CALL(*adm_, RecordingIsInitialized()).Times(0);
+  EXPECT_CALL(*adm_, InitRecording()).Times(0);
+  EXPECT_CALL(*adm_, StartRecording()).Times(0);
+  EXPECT_CALL(*adm_, SetMicrophoneMute(_)).Times(0);
+  if (apm_) {
+    EXPECT_CALL(*apm_, set_output_will_be_muted(_)).Times(AnyNumber());
+  }
+  ASSERT_TRUE(
+      send_channel_->SetAudioSend(kSsrcX, false, nullptr, &fake_source_));
+  ASSERT_TRUE(
+      send_channel_->SetAudioSend(kSsrcX, true, nullptr, &fake_source_));
 }
 
 TEST_P(WebRtcVoiceEngineTestFake, SkipInitRecordingOnSend) {
