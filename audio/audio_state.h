@@ -47,6 +47,7 @@ class AudioState : public webrtc::AudioState {
 
   void SetPlayout(bool enabled) override;
   void SetRecording(bool enabled) override;
+  bool recording_enabled() const override;
 
   void SetStereoChannelSwapping(bool enable) override;
 

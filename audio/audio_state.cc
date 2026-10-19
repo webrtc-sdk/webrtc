@@ -133,6 +133,11 @@ void AudioState::SetRecording(bool enabled) {
   recording_enabled_ = enabled;
 }
 
+bool AudioState::recording_enabled() const {
+  RTC_DCHECK_RUN_ON(&thread_checker_);
+  return recording_enabled_;
+}
+
 void AudioState::AddSendingStream(webrtc::AudioSendStream* stream,
                                   int sample_rate_hz,
                                   size_t num_channels) {
@@ -142,9 +147,9 @@ void AudioState::AddSendingStream(webrtc::AudioSendStream* stream,
   properties.num_channels = num_channels;
   UpdateAudioTransportWithSendingStreams();
 
-  // Make sure recording is initialized; start recording if enabled.
+  // Initialize and start recording only when device recording is enabled.
   auto* adm = config_.audio_device_module.get();
-  if (!adm->Recording()) {
+  if (recording_enabled_ && !adm->Recording()) {
     if (adm->InitRecording() == 0) {
       if (recording_enabled_) {
 #if defined(WEBRTC_WIN)
