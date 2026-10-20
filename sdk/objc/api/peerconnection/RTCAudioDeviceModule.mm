@@ -177,9 +177,11 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
                                 context:context];
   }
 
-  void OnAudioSessionInterruptionBegan() override {
-    if ([delegate_ respondsToSelector:@selector(audioDeviceModuleDidBeginInterruption:)]) {
-      [delegate_ audioDeviceModuleDidBeginInterruption:adm_];
+  void OnAudioSessionInterruptionBegan(uint32_t reason) override {
+    if ([delegate_ respondsToSelector:@selector(audioDeviceModule:
+                                                  didBeginInterruptionWithReason:)]) {
+      [delegate_ audioDeviceModule:adm_
+          didBeginInterruptionWithReason:static_cast<AVAudioSessionInterruptionReason>(reason)];
     }
   }
 

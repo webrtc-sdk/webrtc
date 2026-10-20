@@ -331,7 +331,9 @@ class AudioDeviceObserver {
   // and must not block.
   //
   // OnAudioSessionInterruptionBegan fires before the engine reacts, which stops
-  // it if it is running.
+  // it if it is running. `reason` is the raw AVAudioSessionInterruptionReason
+  // value, AVAudioSessionInterruptionReasonDefault (0) when the system gave
+  // none.
   //
   // OnAudioSessionInterruptionEnded fires before the engine reacts, for every
   // interruption end RTCAudioSession reports. Besides the system's own end,
@@ -340,7 +342,7 @@ class AudioDeviceObserver {
   // through it while interrupted. So an end can arrive without a matching
   // begin. By then RTCAudioSession has already activated or deactivated the
   // session according to its activation count.
-  virtual void OnAudioSessionInterruptionBegan() {}
+  virtual void OnAudioSessionInterruptionBegan(uint32_t reason) {}
   virtual void OnAudioSessionInterruptionEnded(bool should_resume) {}
 
   // Override the input node configuration with a custom implementation.

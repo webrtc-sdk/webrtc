@@ -210,8 +210,9 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
 // Audio session interruption events. Both fire on the device thread and must
 // not block.
 //
-// `audioDeviceModuleDidBeginInterruption:` fires before the engine reacts,
-// which stops it if it is running.
+// `audioDeviceModule:didBeginInterruptionWithReason:` fires before the engine
+// reacts, which stops it if it is running. `reason` is
+// AVAudioSessionInterruptionReasonDefault when the system gave none.
 //
 // `audioDeviceModule:didEndInterruptionWithShouldResume:` fires before the
 // engine reacts, for every interruption end RTCAudioSession reports. Besides
@@ -220,8 +221,9 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
 // session is activated through it while interrupted. So an end can arrive
 // without a matching begin. By then RTCAudioSession has already activated or
 // deactivated the session according to its activation count.
-- (void)audioDeviceModuleDidBeginInterruption:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
-    NS_SWIFT_NAME(audioDeviceModuleDidBeginInterruption(_:));
+- (void)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+    didBeginInterruptionWithReason:(AVAudioSessionInterruptionReason)reason
+    NS_SWIFT_NAME(audioDeviceModule(_:didBeginInterruptionWithReason:));
 
 - (void)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
     didEndInterruptionWithShouldResume:(BOOL)shouldResume

@@ -11,6 +11,8 @@
 #ifndef SDK_OBJC_NATIVE_SRC_AUDIO_AUDIO_SESSION_OBSERVER_H_
 #define SDK_OBJC_NATIVE_SRC_AUDIO_AUDIO_SESSION_OBSERVER_H_
 
+#include <cstdint>
+
 #include "rtc_base/thread.h"
 
 namespace webrtc {
@@ -18,8 +20,9 @@ namespace webrtc {
 // Observer interface for listening to AVAudioSession events.
 class AudioSessionObserver {
  public:
-  // Called when audio session interruption begins.
-  virtual void OnInterruptionBegin() = 0;
+  // Called when audio session interruption begins. `reason` is the raw
+  // AVAudioSessionInterruptionReason value.
+  virtual void OnInterruptionBegin(uint32_t reason) = 0;
 
   // Called when audio session interruption ends.
   virtual void OnInterruptionEnd(bool should_resume) = 0;

@@ -152,7 +152,7 @@ class AudioDeviceIOS : public AudioDeviceGeneric,
   int32_t StereoRecording(bool& enabled) const override;
 
   // AudioSessionObserver methods. May be called from any thread.
-  void OnInterruptionBegin() override;
+  void OnInterruptionBegin(uint32_t reason) override;
   void OnInterruptionEnd(bool should_resume) override;
   void OnValidRouteChange() override;
   void OnCanPlayOrRecordChange(bool can_play_or_record) override;

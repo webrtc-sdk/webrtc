@@ -30,8 +30,10 @@
 #pragma mark - RTC_OBJC_TYPE(RTCAudioSessionDelegate)
 
 - (void)audioSessionDidBeginInterruption:
-    (RTC_OBJC_TYPE(RTCAudioSession) *)session {
-  _observer->OnInterruptionBegin();
+            (RTC_OBJC_TYPE(RTCAudioSession) *)session
+                                  reason:
+                                      (AVAudioSessionInterruptionReason)reason {
+  _observer->OnInterruptionBegin(static_cast<uint32_t>(reason));
 }
 
 - (void)audioSessionDidEndInterruption:(RTC_OBJC_TYPE(RTCAudioSession) *)session

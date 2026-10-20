@@ -582,14 +582,14 @@ int32_t AudioEngineDevice::StopRecording() {
 // ----------------------------------------------------------------------------------------------------
 // AudioSessionObserver
 
-void AudioEngineDevice::OnInterruptionBegin() {
-  LOGI() << "OnInterruptionBegin";
+void AudioEngineDevice::OnInterruptionBegin(uint32_t reason) {
+  LOGI() << "OnInterruptionBegin reason: " << reason;
 
   RTC_DCHECK(thread_);
-  thread_->PostTask(SafeTask(safety_, [this] {
+  thread_->PostTask(SafeTask(safety_, [this, reason] {
     RTC_DCHECK_RUN_ON(thread_);
     if (observer_ != nullptr) {
-      observer_->OnAudioSessionInterruptionBegan();
+      observer_->OnAudioSessionInterruptionBegan(reason);
     }
     int32_t result = this->ModifyEngineState([](EngineState state) -> EngineState {
       state.is_interrupted = true;
