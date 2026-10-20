@@ -327,13 +327,30 @@ class AudioDeviceObserver {
 
   virtual int32_t OnEngineWillRelease(AVAudioEngine* engine) { return 0; }
 
-  // Audio session interruption events (iOS). Both fire on the device thread
-  // and must not block.
+  // Audio session events (iOS).
+  //
+  // Each event runs synchronously on the ADM's worker thread, the thread that
+  // runs every engine operation and the rest of WebRTC's worker thread work.
+  // The callback blocks that thread until it returns: the engine does not
+  // react to the event and no other ADM call runs in the meantime. Return
+  // quickly and move slow work, such as activating the audio session, to
+  // another queue.
   //
   // OnAudioSessionInterruptionBegan fires before the engine reacts, which stops
   // it if it is running. `reason` is the raw AVAudioSessionInterruptionReason
-  // value, AVAudioSessionInterruptionReasonDefault (0) when the system gave
-  // none.
+  // value from the notification:
+  //   0 Default: another audio session was activated, for example by a phone
+  //     call. Also used when the notification has no reason.
+  //   1 AppWasSuspended: the system suspended the app. Not sent since iOS 16.
+  //   2 BuiltInMicMuted: the built-in mic was muted, for example by closing
+  //     an iPad Smart Folio.
+  //   3 SceneWasBackgrounded: the app's scene went to the background. visionOS
+  //     only.
+  //   4 RouteDisconnected: the audio route was disconnected. Sent only when the
+  //     app opted in with setPrefersInterruptionOnRouteDisconnect: (iOS 17).
+  //   5 DeviceUnauthenticated: the device was taken off or locked. Defined only
+  //     in the visionOS SDK.
+  // Later OS versions may add values.
   //
   // OnAudioSessionInterruptionEnded fires before the engine reacts, for every
   // interruption end RTCAudioSession reports. Besides the system's own end,
@@ -342,13 +359,18 @@ class AudioDeviceObserver {
   // through it while interrupted. So an end can arrive without a matching
   // begin. By then RTCAudioSession has already activated or deactivated the
   // session according to its activation count.
+  // `should_resume` is the system's AVAudioSessionInterruptionOptionShouldResume
+  // hint. True means the app may resume audio now, for example after a phone
+  // call ends. False means the system leaves resuming to the user, for example
+  // after the user started music in another app. The ends RTCAudioSession sends
+  // on its own always pass true. The ADM restarts the engine whatever the
+  // value.
   virtual void OnAudioSessionInterruptionBegan(uint32_t reason) {}
   virtual void OnAudioSessionInterruptionEnded(bool should_resume) {}
 
-  // Fires on the device thread after the system has reset the media services
-  // (iOS), and must not block. Every audio object created before the reset,
-  // including the engine, no longer works. The ADM does not react to the reset
-  // itself.
+  // Fires after the system has reset the media services, on the worker thread
+  // as described above. Every audio object created before the reset, including
+  // the engine, no longer works. The ADM does not react to the reset itself.
   virtual void OnAudioSessionMediaServicesReset() {}
 
   // Override the input node configuration with a custom implementation.
