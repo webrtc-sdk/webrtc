@@ -252,9 +252,27 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
     didEndInterruptionWithShouldResume:(BOOL)shouldResume
     NS_SWIFT_NAME(audioDeviceModule(_:didEndInterruptionWithShouldResume:));
 
-// Fires after the system has reset the media services, on the worker thread as
-// described above. Every audio object created before the reset, including the
-// engine, no longer works. The module does not react to the reset itself.
+// `audioDeviceModuleMediaServicesWereReset:` fires after the system has
+// restarted its media services daemon
+// (AVAudioSessionMediaServicesWereResetNotification), on the worker thread as
+// described above. This is rare in the field. To trigger it on a device, use
+// Settings > Developer > Reset Media Services.
+//
+// State when it fires:
+//   - Every audio object created before the reset no longer works, including
+//     the engine and its nodes.
+//   - The audio session lost its category, mode and options. RTCAudioSession
+//     has already activated the session if its activation count is above 0,
+//     and deactivated it otherwise, but has not restored the configuration.
+//   - The module does not react to the reset. Its state still says the engine
+//     is running as before, so audio stays dead until something rebuilds the
+//     engine.
+//
+// To recover, configure and activate the audio session again, then rebuild the
+// engine, for example by setting engine availability off and back on, which
+// releases the engine and creates a new one. Do this off the worker thread.
+// There is no separate method for the media services being lost, because the
+// reset always follows.
 - (void)audioDeviceModuleMediaServicesWereReset:
     (RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
     NS_SWIFT_NAME(audioDeviceModuleMediaServicesWereReset(_:));
