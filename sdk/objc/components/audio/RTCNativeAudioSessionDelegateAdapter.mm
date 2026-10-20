@@ -74,6 +74,7 @@
 }
 
 - (void)audioSessionMediaServerReset:(RTC_OBJC_TYPE(RTCAudioSession) *)session {
+  _observer->OnMediaServicesReset();
 }
 
 - (void)audioSession:(RTC_OBJC_TYPE(RTCAudioSession) *)session

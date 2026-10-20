@@ -345,6 +345,12 @@ class AudioDeviceObserver {
   virtual void OnAudioSessionInterruptionBegan(uint32_t reason) {}
   virtual void OnAudioSessionInterruptionEnded(bool should_resume) {}
 
+  // Fires on the device thread after the system has reset the media services
+  // (iOS), and must not block. Every audio object created before the reset,
+  // including the engine, no longer works. The ADM does not react to the reset
+  // itself.
+  virtual void OnAudioSessionMediaServicesReset() {}
+
   // Override the input node configuration with a custom implementation.
   virtual int32_t OnEngineWillConnectInput(AVAudioEngine* engine, AVAudioNode* src,
                                            AVAudioNode* dst, AVAudioFormat* format,

@@ -35,6 +35,9 @@ class AudioSessionObserver {
 
   virtual void OnChangedOutputVolume() = 0;
 
+  // Called when the system has reset the media services.
+  virtual void OnMediaServicesReset() {}
+
  protected:
   virtual ~AudioSessionObserver() {}
 };

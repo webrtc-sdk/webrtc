@@ -229,6 +229,14 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
     didEndInterruptionWithShouldResume:(BOOL)shouldResume
     NS_SWIFT_NAME(audioDeviceModule(_:didEndInterruptionWithShouldResume:));
 
+// Fires on the device thread after the system has reset the media services,
+// and must not block. Every audio object created before the reset, including
+// the engine, no longer works. The audio device module does not react to the
+// reset itself.
+- (void)audioDeviceModuleMediaServicesWereReset:
+    (RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+    NS_SWIFT_NAME(audioDeviceModuleMediaServicesWereReset(_:));
+
 @end
 
 RTC_OBJC_EXPORT

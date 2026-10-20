@@ -635,6 +635,18 @@ void AudioEngineDevice::OnChangedOutputVolume() {
   RTC_DCHECK(thread_);
 }
 
+void AudioEngineDevice::OnMediaServicesReset() {
+  LOGI() << "OnMediaServicesReset";
+
+  RTC_DCHECK(thread_);
+  thread_->PostTask(SafeTask(safety_, [this] {
+    RTC_DCHECK_RUN_ON(thread_);
+    if (observer_ != nullptr) {
+      observer_->OnAudioSessionMediaServicesReset();
+    }
+  }));
+}
+
 // ----------------------------------------------------------------------------------------------------
 // Not Implemented
 

@@ -192,6 +192,12 @@ class AudioDeviceObserver : public webrtc::AudioDeviceObserver {
     }
   }
 
+  void OnAudioSessionMediaServicesReset() override {
+    if ([delegate_ respondsToSelector:@selector(audioDeviceModuleMediaServicesWereReset:)]) {
+      [delegate_ audioDeviceModuleMediaServicesWereReset:adm_];
+    }
+  }
+
   __weak id<RTC_OBJC_TYPE(RTCAudioDeviceModuleDelegate)> delegate_;
 
  private:
