@@ -52,9 +52,12 @@ class AudioState : public RefCountInterface {
   virtual void SetPlayout(bool enabled) = 0;
 
   // Enable/disable recording of the audio channels. Enabled by default.
-  // This will stop recording of the underlying audio device and no audio
-  // packets will be encoded or transmitted.
+  // Disabling stops device recording and prevents recording initialization
+  // and start until re-enabled. This does not gate independently fed sources.
   virtual void SetRecording(bool enabled) = 0;
+
+  // Accessed on the same worker sequence as SetRecording().
+  virtual bool recording_enabled() const = 0;
 
   virtual void SetStereoChannelSwapping(bool enable) = 0;
 

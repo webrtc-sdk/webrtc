@@ -410,13 +410,18 @@ TEST_P(AudioStateTest, AddStreamDoesNothingIfRecordingDisabled) {
   auto* adm = reinterpret_cast<MockAudioDeviceModule*>(
       helper.config().audio_device_module.get());
 
-  EXPECT_CALL(*adm, StopRecording()).Times(2);
+  EXPECT_TRUE(audio_state->recording_enabled());
+  EXPECT_CALL(*adm, StopRecording()).Times(3);
   audio_state->SetRecording(false);
+  EXPECT_FALSE(audio_state->recording_enabled());
 
   MockAudioSendStream stream;
-  EXPECT_CALL(*adm, StartRecording).Times(0);
-  audio_state->AddSendingStream(&stream, kSampleRate, kNumberOfChannels);
-  audio_state->RemoveSendingStream(&stream);
+  EXPECT_CALL(*adm, InitRecording()).Times(0);
+  EXPECT_CALL(*adm, StartRecording()).Times(0);
+  for (int i = 0; i < 2; ++i) {
+    audio_state->AddSendingStream(&stream, kSampleRate, kNumberOfChannels);
+    audio_state->RemoveSendingStream(&stream);
+  }
 }
 
 TEST_P(AudioStateTest, AlwaysCallInitRecordingBeforeStartRecording) {
@@ -443,6 +448,7 @@ TEST_P(AudioStateTest, AlwaysCallInitRecordingBeforeStartRecording) {
     EXPECT_CALL(*adm, InitRecording());
     EXPECT_CALL(*adm, StartRecording());
     audio_state->SetRecording(true);
+    EXPECT_TRUE(audio_state->recording_enabled());
   }
 
   EXPECT_CALL(*adm, StopRecording());
