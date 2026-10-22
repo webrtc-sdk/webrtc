@@ -24,6 +24,7 @@
 #include "api/crypto/crypto_options.h"
 #include "api/crypto/frame_encryptor_interface.h"
 #include "api/frame_transformer_interface.h"
+#include "api/media_stream_interface.h"
 #include "api/rtp_headers.h"
 #include "api/rtp_parameters.h"
 #include "api/rtp_sender_interface.h"
@@ -176,6 +177,12 @@ class AudioSendStream : public AudioSender {
     // An optional frame transformer used by insertable streams to transform
     // encoded frames.
     scoped_refptr<webrtc::FrameTransformerInterface> frame_transformer;
+
+    // Where the stream's audio comes from. Only kAudioDeviceModule streams
+    // register with AudioState, which pushes device-captured audio into them.
+    // kCustom streams are fed directly through the source's AddSink path.
+    AudioSourceInterface::SourceType source_type =
+        AudioSourceInterface::SourceType::kAudioDeviceModule;
   };
 
   ~AudioSendStream() override = default;
