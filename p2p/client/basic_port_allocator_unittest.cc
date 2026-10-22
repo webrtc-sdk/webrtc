@@ -25,6 +25,7 @@
 #include "api/async_dns_resolver.h"
 #include "api/candidate.h"
 #include "api/environment/environment.h"
+#include "api/environment/environment_factory.h"
 #include "api/field_trials.h"
 #include "api/test/rtc_error_matchers.h"
 #include "api/transport/enums.h"
@@ -37,6 +38,7 @@
 #include "p2p/base/port_interface.h"
 #include "p2p/base/stun_port.h"
 #include "p2p/base/stun_request.h"
+#include "p2p/base/turn_port.h"
 #include "p2p/test/nat_server.h"
 #include "p2p/test/nat_socket_factory.h"
 #include "p2p/test/nat_types.h"
@@ -64,6 +66,7 @@
 #include "test/create_test_field_trials.h"
 #include "test/gmock.h"
 #include "test/gtest.h"
+#include "test/run_loop.h"
 #include "test/time_controller/simulated_time_controller.h"
 #include "test/wait_until.h"
 
@@ -2742,6 +2745,446 @@ TEST_F(BasicPortAllocatorTest, Select4DifferentIntefaces) {
                            kClientIPv6Addr3));
   EXPECT_TRUE(HasCandidate(candidates_, IceCandidateType::kHost, "udp",
                            kClientIPv6Addr5));
+}
+
+// Created by Fanbingqi, 2026-10-22 22:27 Asia/Shanghai.
+// Purpose: detect retained shared UDP bindings after their last borrower
+// retires. Observe actual VirtualSocketServer bindings, with real
+// allocator/port objects. The environment clock is fixture-local; no
+// process-global clock or metrics resets are used. New candidates must still
+// appear on subsequent regathers.
+class SharedSocketBindingObserver : public VirtualSocketServer {
+ public:
+  bool HasBinding(const SocketAddress& address) {
+    return LookupBinding(address) != nullptr;
+  }
+};
+
+class SharedSocketRecordingFactory : public BasicPacketSocketFactory {
+ public:
+  explicit SharedSocketRecordingFactory(SocketFactory* factory)
+      : BasicPacketSocketFactory(factory) {}
+
+  std::unique_ptr<AsyncPacketSocket> CreateUdpSocket(
+      const Environment& env,
+      const SocketAddress& address,
+      uint16_t min_port,
+      uint16_t max_port) override {
+    auto socket = BasicPacketSocketFactory::CreateUdpSocket(env, address,
+                                                            min_port, max_port);
+    if (socket) {
+      // Address values observe bindings without retaining socket ownership.
+      addresses.push_back(socket->GetLocalAddress());
+    }
+    return socket;
+  }
+
+  std::vector<SocketAddress> addresses;
+};
+
+class SharedSocketReleaseObserver : public StunMessageObserver {
+ public:
+  explicit SharedSocketReleaseObserver(std::shared_ptr<int> releases)
+      : releases_(std::move(releases)) {}
+  void ReceivedMessage(const TurnMessage* message) override {
+    const auto* lifetime = message->GetUInt32(STUN_ATTR_LIFETIME);
+    if (message->type() == TURN_REFRESH_REQUEST && lifetime &&
+        lifetime->value() == 0) {
+      ++*releases_;
+    }
+  }
+  void ReceivedChannelData(std::span<const uint8_t>) override {}
+
+ private:
+  std::shared_ptr<int> releases_;
+};
+
+class BasicPortAllocatorSharedSocketReleaseTest : public ::testing::Test {
+ protected:
+  BasicPortAllocatorSharedSocketReleaseTest()
+      : firewall_(&sockets_),
+        loop_(&firewall_),
+        clock_(Timestamp::Zero()),
+        env_(CreateEnvironment(&clock_)),
+        factory_(&firewall_),
+        networks_(Thread::Current()),
+        allocator_(env_, &networks_, &factory_) {
+    allocator_.Initialize();
+    allocator_.set_step_delay(0);
+    networks_.AddInterface(kClientAddr, "shared-socket-test");
+  }
+
+  void TearDown() override {
+    session_.reset();
+    loop_.Flush();
+    for (const auto& address : factory_.addresses) {
+      EXPECT_FALSE(sockets_.HasBinding(address)) << address.ToString();
+    }
+  }
+
+  void Start(uint32_t disabled = PORTALLOCATOR_DISABLE_STUN |
+                                 PORTALLOCATOR_DISABLE_RELAY |
+                                 PORTALLOCATOR_DISABLE_TCP) {
+    allocator_.set_flags(PORTALLOCATOR_ENABLE_SHARED_SOCKET | disabled);
+    session_ =
+        allocator_.CreateSession("shared-socket", 1, kIceUfrag0, kIcePwd0);
+    session_->SubscribeCandidatesAllocationDone(
+        this, [this](PortAllocatorSession*) { ++allocation_complete_count_; });
+    session_->SubscribeCandidatesReady(
+        this, [this](PortAllocatorSession*, const std::vector<Candidate>& c) {
+          candidate_count_ += c.size();
+        });
+    session_->StartGettingPorts();
+  }
+
+  void FinishAllocation(int expected_count) {
+    ASSERT_TRUE(WaitUntil(
+        [&] {
+          return allocation_complete_count_ >= expected_count &&
+                 session_->CandidatesAllocationDone();
+        },
+        {.timeout = TimeDelta::Seconds(2)}));
+    loop_.Flush();
+  }
+
+  void RetireOnlyPort() {
+    auto ready = session_->ReadyPorts();
+    ASSERT_EQ(ready.size(), 1u);
+    auto* port = static_cast<Port*>(ready.front());
+    ASSERT_TRUE(port->connections().empty());
+    // Destroy sends its notification before deleting the actual port. Check
+    // resource retirement only after Destroy returns and posted tasks drain.
+    port->Destroy();
+    loop_.Flush();
+  }
+
+  TestTurnServer* AddTurn(const SocketAddress& internal = kTurnUdpIntAddr) {
+    auto server =
+        std::make_unique<TestTurnServer>(env_, Thread::Current(), &firewall_,
+                                         internal, kTurnUdpExtAddr, PROTO_UDP);
+    auto* result = server.get();
+    turn_servers_.push_back(std::move(server));
+    RelayServerConfig config;
+    config.credentials = RelayCredentials(kTurnUsername, kTurnPassword);
+    config.ports.emplace_back(internal, PROTO_UDP);
+    allocator_.AddTurnServerForTesting(config);
+    return result;
+  }
+
+  Port* FindPort(IceCandidateType type) {
+    for (auto* port : session_->ReadyPorts()) {
+      if (port->Type() == type)
+        return static_cast<Port*>(port);
+    }
+    return nullptr;
+  }
+
+  void RoundTrip(Port* port) {
+    ASSERT_NE(port, nullptr);
+    BasicPacketSocketFactory peer_factory(&firewall_);
+    auto peer = peer_factory.CreateUdpSocket(env_, kRemoteClientAddr, 0, 0);
+    ASSERT_NE(peer, nullptr);
+    Candidate remote = port->Candidates().front();
+    remote.set_address(peer->GetLocalAddress());
+    remote.set_protocol("udp");
+    remote.set_type(IceCandidateType::kHost);
+    Connection* connection =
+        port->CreateConnection(remote, Port::ORIGIN_MESSAGE);
+    ASSERT_NE(connection, nullptr);
+    // A TURN connection creates the permission/entry through the real server.
+    loop_.Flush();
+    const std::vector<uint8_t> payload = {0x80, 0x61, 0x15, 0x12, 0x7f};
+    auto received = std::make_shared<bool>(false);
+    // A known remote address is dispatched to Connection before Port's
+    // unknown-address callback. Observe the real connection's payload path.
+    connection->RegisterReceivedPacketCallback(
+        [received, payload](Connection*, const ReceivedIpPacket& packet) {
+          const auto data = packet.payload();
+          *received = std::vector<uint8_t>(data.begin(), data.end()) == payload;
+        });
+    peer->RegisterReceivedPacketCallback(
+        [](AsyncPacketSocket* socket, const ReceivedIpPacket& packet) {
+          socket->SendTo(packet.payload(), packet.source_address(),
+                         AsyncSocketPacketOptions());
+        });
+    EXPECT_EQ(port->SendTo(payload, peer->GetLocalAddress(),
+                           AsyncSocketPacketOptions(), true),
+              static_cast<int>(payload.size()));
+    EXPECT_TRUE(WaitUntil([&] { return *received; },
+                          {.timeout = TimeDelta::Seconds(2)}));
+    // Keep cleanup reachable after a send failure and unregister before
+    // Connection destruction, as required by its teardown contract.
+    connection->DeregisterReceivedPacketCallback();
+    port->DestroyConnection(connection);
+    loop_.Flush();
+  }
+
+  SharedSocketBindingObserver sockets_;
+  FirewallSocketServer firewall_;
+  test::RunLoop loop_;
+  SimulatedClock clock_;
+  Environment env_;
+  SharedSocketRecordingFactory factory_;
+  FakeNetworkManager networks_;
+  BasicPortAllocator allocator_;
+  std::vector<std::unique_ptr<TestTurnServer>> turn_servers_;
+  std::unique_ptr<PortAllocatorSession> session_;
+  int allocation_complete_count_ = 0;
+  size_t candidate_count_ = 0;
+};
+
+// The completion entry point must handle both an unused socket and a live
+// borrower. Allocation completion does not end the borrower's data path.
+TEST_F(BasicPortAllocatorSharedSocketReleaseTest,
+       CompletionWithoutBorrowerReleasesSocket) {
+  Start(PORTALLOCATOR_DISABLE_UDP | PORTALLOCATOR_DISABLE_STUN |
+        PORTALLOCATOR_DISABLE_RELAY);
+  FinishAllocation(1);
+  ASSERT_EQ(factory_.addresses.size(), 1u);
+  ASSERT_EQ(session_->ReadyPorts().size(), 1u);
+  ASSERT_EQ(session_->ReadyPorts().front()->GetProtocol(), PROTO_TCP);
+  EXPECT_FALSE(sockets_.HasBinding(factory_.addresses.front()));
+}
+
+TEST_F(BasicPortAllocatorSharedSocketReleaseTest,
+       CompletionWithBorrowerKeepsSocket) {
+  Start();
+  FinishAllocation(1);
+  ASSERT_EQ(factory_.addresses.size(), 1u);
+  EXPECT_TRUE(sockets_.HasBinding(factory_.addresses.front()));
+  RoundTrip(FindPort(IceCandidateType::kHost));
+}
+
+// The stop entry point must cancel pending creation without retiring a port
+// that still uses its socket.
+TEST_F(BasicPortAllocatorSharedSocketReleaseTest,
+       StopWithoutBorrowerReleasesSocket) {
+  networks_.StartUpdating();
+  loop_.Flush();
+  const auto networks = networks_.GetNetworks();
+  ASSERT_EQ(networks.size(), 1u);
+  BasicPortAllocatorSession session(&allocator_, "cancel", 1, kIceUfrag0,
+                                    kIcePwd0);
+  PortConfiguration config({}, kIceUfrag0, kIcePwd0, &env_.field_trials());
+  int completed = 0;
+  AllocationSequence sequence(&session, networks.front(), &config,
+                              PORTALLOCATOR_ENABLE_SHARED_SOCKET,
+                              [&] { ++completed; });
+  sequence.Init();
+  sequence.Start();
+  sequence.Stop();
+  ASSERT_EQ(sequence.state(), AllocationSequence::kStopped);
+  ASSERT_EQ(factory_.addresses.size(), 1u);
+  loop_.Flush();
+  EXPECT_FALSE(sockets_.HasBinding(factory_.addresses.front()));
+  EXPECT_TRUE(session.ReadyPorts().empty());
+  EXPECT_EQ(completed, 0);
+  networks_.StopUpdating();
+}
+
+TEST_F(BasicPortAllocatorSharedSocketReleaseTest, StopWithBorrowerKeepsSocket) {
+  allocator_.set_step_delay(60000);
+  Start();
+  ASSERT_TRUE(WaitUntil([&] { return !session_->ReadyPorts().empty(); }));
+  ASSERT_EQ(allocation_complete_count_, 0);
+  ASSERT_EQ(factory_.addresses.size(), 1u);
+  session_->StopGettingPorts();
+  loop_.Flush();
+  EXPECT_TRUE(sockets_.HasBinding(factory_.addresses.front()));
+  RoundTrip(FindPort(IceCandidateType::kHost));
+}
+
+// The destruction entry point must account for future as well as existing
+// borrowers. The Relay phase has not registered its port when UDP retires.
+TEST_F(BasicPortAllocatorSharedSocketReleaseTest,
+       PortDestroyedWhileAllocatingKeepsSocket) {
+  AddTurn();
+  allocator_.set_step_delay(1000);
+  Start(PORTALLOCATOR_DISABLE_STUN | PORTALLOCATOR_DISABLE_TCP);
+  ASSERT_TRUE(
+      WaitUntil([&] { return FindPort(IceCandidateType::kHost) != nullptr; },
+                {.timeout = TimeDelta::Millis(500)}));
+  ASSERT_EQ(allocation_complete_count_, 0);
+  ASSERT_EQ(FindPort(IceCandidateType::kRelay), nullptr);
+  ASSERT_EQ(factory_.addresses.size(), 1u);
+  RetireOnlyPort();
+  ASSERT_TRUE(sockets_.HasBinding(factory_.addresses.front()));
+  allocator_.set_step_delay(0);
+  FinishAllocation(1);
+  auto* turn = FindPort(IceCandidateType::kRelay);
+  ASSERT_NE(turn, nullptr);
+  ASSERT_TRUE(turn->SharedSocket());
+  RoundTrip(turn);
+}
+
+enum class RemainingBorrower { kUdp, kLastOfTwoTurns };
+
+class BasicPortAllocatorSharedSocketRemainingBorrowerTest
+    : public BasicPortAllocatorSharedSocketReleaseTest,
+      public ::testing::WithParamInterface<RemainingBorrower> {};
+
+TEST_P(BasicPortAllocatorSharedSocketRemainingBorrowerTest,
+       PortDestroyedWithRemainingBorrowerKeepsSocket) {
+  AddTurn();
+  const bool multiple_turns = GetParam() == RemainingBorrower::kLastOfTwoTurns;
+  if (multiple_turns)
+    AddTurn(SocketAddress("99.99.99.7", 3478));
+  Start(PORTALLOCATOR_DISABLE_STUN | PORTALLOCATOR_DISABLE_TCP);
+  FinishAllocation(1);
+  ASSERT_EQ(session_->ReadyPorts().size(), multiple_turns ? 3u : 2u);
+  ASSERT_EQ(factory_.addresses.size(), 1u);
+  for (auto* port : session_->ReadyPorts())
+    ASSERT_TRUE(static_cast<Port*>(port)->SharedSocket());
+  if (GetParam() == RemainingBorrower::kUdp) {
+    FindPort(IceCandidateType::kRelay)->Destroy();
+  } else {
+    FindPort(IceCandidateType::kHost)->Destroy();
+    // The first flush observes retention after UDP removal separately from
+    // the later removal of one TURN registration.
+    loop_.Flush();
+    ASSERT_EQ(session_->ReadyPorts().size(), 2u);
+    for (auto* port : session_->ReadyPorts())
+      EXPECT_EQ(port->Type(), IceCandidateType::kRelay);
+    ASSERT_TRUE(sockets_.HasBinding(factory_.addresses.front()));
+    FindPort(IceCandidateType::kRelay)->Destroy();
+  }
+  loop_.Flush();
+  ASSERT_EQ(session_->ReadyPorts().size(), 1u);
+  EXPECT_TRUE(sockets_.HasBinding(factory_.addresses.front()));
+  RoundTrip(FindPort(GetParam() == RemainingBorrower::kUdp
+                         ? IceCandidateType::kHost
+                         : IceCandidateType::kRelay));
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    Borrowers,
+    BasicPortAllocatorSharedSocketRemainingBorrowerTest,
+    ::testing::Values(RemainingBorrower::kUdp,
+                      RemainingBorrower::kLastOfTwoTurns),
+    [](const ::testing::TestParamInfo<RemainingBorrower>& info) {
+      switch (info.param) {
+        case RemainingBorrower::kUdp:
+          return "Udp";
+        case RemainingBorrower::kLastOfTwoTurns:
+          return "LastOfTwoTurns";
+      }
+      return "";
+    });
+
+struct LastBorrowerCase {
+  bool stopped;
+  bool turn;
+};
+
+class BasicPortAllocatorSharedSocketTerminalTest
+    : public BasicPortAllocatorSharedSocketReleaseTest,
+      public ::testing::WithParamInterface<LastBorrowerCase> {};
+
+TEST_P(BasicPortAllocatorSharedSocketTerminalTest,
+       LastPortDestroyedReleasesSocket) {
+  const auto [stopped, turn] = GetParam();
+  auto releases = std::make_shared<int>(0);
+  if (turn) {
+    AddTurn()->server()->SetStunMessageObserver(
+        std::make_unique<SharedSocketReleaseObserver>(releases));
+  }
+  if (stopped)
+    allocator_.set_step_delay(1000);
+  Start(PORTALLOCATOR_DISABLE_STUN | PORTALLOCATOR_DISABLE_TCP |
+        (turn ? 0 : PORTALLOCATOR_DISABLE_RELAY));
+  if (stopped) {
+    ASSERT_TRUE(
+        WaitUntil([&] { return FindPort(IceCandidateType::kHost) != nullptr; },
+                  {.timeout = TimeDelta::Millis(500)}));
+    // Relay retains its already-posted deadline. The later TCP phase will use
+    // this longer delay, so ready ports exist before allocation completes.
+    allocator_.set_step_delay(60000);
+    if (turn) {
+      ASSERT_TRUE(WaitUntil(
+          [&] { return FindPort(IceCandidateType::kRelay) != nullptr; },
+          {.timeout = TimeDelta::Seconds(2)}));
+    }
+    ASSERT_EQ(allocation_complete_count_, 0);
+  } else {
+    FinishAllocation(1);
+  }
+  ASSERT_EQ(session_->ReadyPorts().size(), turn ? 2u : 1u);
+  ASSERT_EQ(factory_.addresses.size(), 1u);
+  if (turn)
+    FindPort(IceCandidateType::kHost)->Destroy();
+  auto* last =
+      FindPort(turn ? IceCandidateType::kRelay : IceCandidateType::kHost);
+  ASSERT_NE(last, nullptr);
+  ASSERT_TRUE(last->SharedSocket());
+  // RoundTrip drains tasks, so it must precede the Stop/Destroy/Stop sequence.
+  RoundTrip(last);
+  ASSERT_TRUE(last->connections().empty());
+  if (stopped)
+    ASSERT_EQ(allocation_complete_count_, 0);
+  const auto address = factory_.addresses.front();
+  bool notified_while_bound = false;
+  last->SubscribePortDestroyed(this, [&](PortInterface*) {
+    notified_while_bound = sockets_.HasBinding(address);
+  });
+  if (stopped)
+    session_->StopGettingPorts();
+  last->Destroy();
+  if (stopped)
+    session_->StopGettingPorts();
+  // Notification precedes the destructor. Queued checks must leave its socket
+  // available until destruction returns, then safely tolerate repeated checks.
+  loop_.Flush();
+  EXPECT_TRUE(notified_while_bound);
+  EXPECT_TRUE(session_->ReadyPorts().empty());
+  EXPECT_FALSE(sockets_.HasBinding(address));
+  if (turn)
+    EXPECT_EQ(*releases, 1);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    TerminalStates,
+    BasicPortAllocatorSharedSocketTerminalTest,
+    ::testing::Values(LastBorrowerCase{false, false},
+                      LastBorrowerCase{false, true},
+                      LastBorrowerCase{true, true}),
+    [](const ::testing::TestParamInfo<LastBorrowerCase>& info) {
+      return std::string(info.param.stopped ? "Stopped" : "Completed") +
+             (info.param.turn ? "Turn" : "Udp");
+    });
+
+// These two supplemental scenarios cover owner teardown before queued checks
+// and resource convergence across real failed-network regathers.
+TEST_F(BasicPortAllocatorSharedSocketReleaseTest, CloseSessionBeforeCheck) {
+  Start();
+  FinishAllocation(1);
+  FindPort(IceCandidateType::kHost)->Destroy();
+  session_.reset();  // Queued reclamation must not access the deleted sequence.
+  loop_.Flush();
+  EXPECT_FALSE(sockets_.HasBinding(factory_.addresses.front()));
+}
+
+TEST_F(BasicPortAllocatorSharedSocketReleaseTest, RepeatedFailedRegathers) {
+  Start();
+  FinishAllocation(1);
+  session_->ClearGettingPorts();
+  for (int round = 1; round <= 3; ++round) {
+    SCOPED_TRACE(round);
+    const size_t previous_allocations = factory_.addresses.size();
+    const size_t previous_candidates = candidate_count_;
+    // No Connection was ever created. Advance the injected port clock past its
+    // idle timeout; real RegatherOnFailedNetworks prunes and retires old ports.
+    clock_.AdvanceTimeMilliseconds(60000);
+    session_->RegatherOnFailedNetworks();
+    FinishAllocation(round + 1);
+    ASSERT_EQ(factory_.addresses.size(), previous_allocations + 1);
+    ASSERT_GT(candidate_count_, previous_candidates);
+    ASSERT_EQ(session_->ReadyPorts().size(), 1u);
+    for (size_t i = 0; i < previous_allocations; ++i) {
+      EXPECT_FALSE(sockets_.HasBinding(factory_.addresses[i]))
+          << "old allocation " << i << " survived regather " << round;
+    }
+    EXPECT_TRUE(sockets_.HasBinding(factory_.addresses.back()));
+  }
 }
 
 }  // namespace
