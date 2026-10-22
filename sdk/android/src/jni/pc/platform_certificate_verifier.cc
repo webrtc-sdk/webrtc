@@ -17,6 +17,7 @@
 #include "rtc_base/buffer.h"
 #include "rtc_base/ssl_certificate.h"
 #include "sdk/android/generated_peerconnection_jni/PlatformCertificateVerifier_jni.h"
+#include "sdk/android/native_api/jni/java_types.h"
 #include "sdk/android/native_api/jni/jvm.h"
 #include "sdk/android/native_api/jni/scoped_java_ref.h"
 
@@ -31,6 +32,11 @@ bool PlatformCertificateVerifier::Verify(const SSLCertificate& certificate) {
 }
 
 bool PlatformCertificateVerifier::VerifyChain(const SSLCertChain& chain) {
+  return VerifyChain(chain, "");
+}
+
+bool PlatformCertificateVerifier::VerifyChain(const SSLCertChain& chain,
+                                              absl::string_view hostname) {
   if (chain.GetSize() == 0) {
     return false;
   }
@@ -68,7 +74,8 @@ bool PlatformCertificateVerifier::VerifyChain(const SSLCertChain& chain) {
                                element.obj());
   }
 
-  return Java_PlatformCertificateVerifier_verifyServerChain(jni, der_chain);
+  return Java_PlatformCertificateVerifier_verifyServerChain(
+      jni, der_chain, NativeToJavaString(jni, hostname));
 }
 
 std::unique_ptr<SSLCertificateVerifier> CreateAndroidCertificateVerifier() {
