@@ -132,6 +132,17 @@ class SSLCertificateVerifier {
  public:
   virtual ~SSLCertificateVerifier() = default;
 
+  // Verify the chain for the hostname supplied to SSLAdapter::StartSSL, not a
+  // name inferred from the certificate. The hostname can be empty when the
+  // caller did not provide one. Host-aware implementations must handle that
+  // explicitly. SSLAdapter still checks the certificate's hostname separately.
+  // Delegate to the existing API so leaf-only and chain-only implementations
+  // remain source compatible.
+  virtual bool VerifyChain(const SSLCertChain& chain,
+                           absl::string_view hostname) {
+    return VerifyChain(chain);
+  }
+
   // Verify a complete certificate chain (leaf first, then intermediates).
   // Default implementation verifies only the leaf certificate for backward
   // compatibility. New implementations should override VerifyChain() to perform

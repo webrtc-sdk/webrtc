@@ -88,11 +88,16 @@ if (rtc_include_tests) {
     testonly = true
     sources = [
       "frame_crypto_transformer_unittest.cc",
+      "sif_payload_unittest.cc",
     ]
     deps = [
       ":crypto",
       ":frame_crypto_transformer",
       "//testing/gtest",
+      "//third_party/boringssl",
+      "../../api:mock_transformable_video_frame",
+      "../../rtc_base:rtc_event",
+      "../../rtc_base:threading",
       "../../test:test_support",
     ]
   }
