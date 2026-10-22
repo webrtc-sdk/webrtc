@@ -36,15 +36,23 @@ public final class CryptoOptions {
      */
     private final boolean enableAes128Sha1_32CryptoCipher;
     /**
+     * If set to true (the default), the crypto cipher kSrtpAes128CmSha1_80 will be
+     * included in the list of supported ciphers during negotiation. Setting it to
+     * false together with enableGcmCryptoSuites leaves only the AEAD GCM suites, so
+     * a peer that also supports them negotiates AEAD_AES_256_GCM.
+     */
+    private final boolean enableAes128Sha1_80CryptoCipher;
+    /**
      * If set to true, encrypted RTP header extensions as defined in RFC 6904
      * will be negotiated. They will only be used if both peers support them.
      */
     private final boolean enableEncryptedRtpHeaderExtensions;
 
     private Srtp(boolean enableGcmCryptoSuites, boolean enableAes128Sha1_32CryptoCipher,
-        boolean enableEncryptedRtpHeaderExtensions) {
+        boolean enableAes128Sha1_80CryptoCipher, boolean enableEncryptedRtpHeaderExtensions) {
       this.enableGcmCryptoSuites = enableGcmCryptoSuites;
       this.enableAes128Sha1_32CryptoCipher = enableAes128Sha1_32CryptoCipher;
+      this.enableAes128Sha1_80CryptoCipher = enableAes128Sha1_80CryptoCipher;
       this.enableEncryptedRtpHeaderExtensions = enableEncryptedRtpHeaderExtensions;
     }
 
@@ -56,6 +64,11 @@ public final class CryptoOptions {
     @CalledByNative
     public boolean getEnableAes128Sha1_32CryptoCipher() {
       return enableAes128Sha1_32CryptoCipher;
+    }
+
+    @CalledByNative
+    public boolean getEnableAes128Sha1_80CryptoCipher() {
+      return enableAes128Sha1_80CryptoCipher;
     }
 
     @CalledByNative
@@ -90,9 +103,10 @@ public final class CryptoOptions {
   private final SFrame sframe;
 
   private CryptoOptions(boolean enableGcmCryptoSuites, boolean enableAes128Sha1_32CryptoCipher,
-      boolean enableEncryptedRtpHeaderExtensions, boolean requireFrameEncryption) {
-    this.srtp = new Srtp(
-        enableGcmCryptoSuites, enableAes128Sha1_32CryptoCipher, enableEncryptedRtpHeaderExtensions);
+      boolean enableAes128Sha1_80CryptoCipher, boolean enableEncryptedRtpHeaderExtensions,
+      boolean requireFrameEncryption) {
+    this.srtp = new Srtp(enableGcmCryptoSuites, enableAes128Sha1_32CryptoCipher,
+        enableAes128Sha1_80CryptoCipher, enableEncryptedRtpHeaderExtensions);
     this.sframe = new SFrame(requireFrameEncryption);
   }
 
@@ -113,6 +127,7 @@ public final class CryptoOptions {
   public static class Builder {
     private boolean enableGcmCryptoSuites;
     private boolean enableAes128Sha1_32CryptoCipher;
+    private boolean enableAes128Sha1_80CryptoCipher = true;
     private boolean enableEncryptedRtpHeaderExtensions;
     private boolean requireFrameEncryption;
 
@@ -128,6 +143,11 @@ public final class CryptoOptions {
       return this;
     }
 
+    public Builder setEnableAes128Sha1_80CryptoCipher(boolean enableAes128Sha1_80CryptoCipher) {
+      this.enableAes128Sha1_80CryptoCipher = enableAes128Sha1_80CryptoCipher;
+      return this;
+    }
+
     public Builder setEnableEncryptedRtpHeaderExtensions(
         boolean enableEncryptedRtpHeaderExtensions) {
       this.enableEncryptedRtpHeaderExtensions = enableEncryptedRtpHeaderExtensions;
@@ -140,8 +160,14 @@ public final class CryptoOptions {
     }
 
     public CryptoOptions createCryptoOptions() {
+      // The native side RTC_CHECKs that at least one SRTP crypto suite is enabled.
+      if (!enableGcmCryptoSuites && !enableAes128Sha1_32CryptoCipher
+          && !enableAes128Sha1_80CryptoCipher) {
+        throw new IllegalStateException("CryptoOptions: no SRTP crypto suite enabled");
+      }
       return new CryptoOptions(enableGcmCryptoSuites, enableAes128Sha1_32CryptoCipher,
-          enableEncryptedRtpHeaderExtensions, requireFrameEncryption);
+          enableAes128Sha1_80CryptoCipher, enableEncryptedRtpHeaderExtensions,
+          requireFrameEncryption);
     }
   }
 }
