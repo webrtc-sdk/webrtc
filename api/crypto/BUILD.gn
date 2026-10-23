@@ -25,6 +25,7 @@ rtc_library("frame_crypto_transformer") {
 
   deps = [
    "//api:frame_transformer_interface",
+   "//rtc_base:bitstream_reader",
   ]
 
   if (rtc_build_ssl) {
@@ -92,6 +93,9 @@ if (rtc_include_tests) {
     deps = [
       ":crypto",
       ":frame_crypto_transformer",
+      "..:mock_transformable_video_frame",
+      "../../common_video",
+      "../../rtc_base:rtc_event",
       "//testing/gtest",
       "../../test:test_support",
     ]

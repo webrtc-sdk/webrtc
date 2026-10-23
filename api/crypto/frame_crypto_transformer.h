@@ -17,6 +17,9 @@
 #ifndef WEBRTC_FRAME_CRYPTOR_TRANSFORMER_H_
 #define WEBRTC_FRAME_CRYPTOR_TRANSFORMER_H_
 
+#include <cstddef>
+#include <cstdint>
+#include <span>
 #include <unordered_map>
 
 #include "api/frame_transformer_interface.h"
@@ -30,6 +33,10 @@
 #include "rtc_base/thread.h"
 
 namespace webrtc {
+
+// Returns the clear Annex B prefix through the first slice's PPS id, falling
+// back to the NALU header plus one byte if the slice header cannot be parsed.
+size_t GetH264UnencryptedBytes(std::span<const uint8_t> data);
 
 const size_t DEFAULT_KEYRING_SIZE = 16;
 const size_t MAX_KEYRING_SIZE = 256;

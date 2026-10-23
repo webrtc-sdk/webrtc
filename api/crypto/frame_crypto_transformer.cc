@@ -24,6 +24,7 @@
 #include <openssl/pem.h>
 #include <openssl/rand.h>
 
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -38,6 +39,7 @@
 #include "common_video/h265/h265_common.h"
 #endif // RTC_ENABLE_H265
 #include "modules/rtp_rtcp/source/rtp_format_h264.h"
+#include "rtc_base/bitstream_reader.h"
 #include "rtc_base/byte_buffer.h"
 #include "rtc_base/crypto_random.h"
 #include "rtc_base/logging.h"
@@ -168,9 +170,59 @@ std::string to_hex(std::span<const uint8_t> data) {
   return ss.str();
 }
 
-uint8_t get_unencrypted_bytes(webrtc::TransformableFrameInterface* frame,
-                              webrtc::FrameCryptorTransformer::MediaType type) {
-  uint8_t unencrypted_bytes = 0;
+size_t webrtc::GetH264UnencryptedBytes(std::span<const uint8_t> data) {
+  const auto nalu_indices = webrtc::H264::FindNaluIndices(data);
+  int idx = 0;
+  for (const auto& index : nalu_indices) {
+    const auto slice =
+        data.subspan(index.payload_start_offset, index.payload_size);
+    if (slice.empty()) {
+      continue;
+    }
+    const auto nalu_type = webrtc::H264::ParseNaluType(slice[0]);
+    if (nalu_type != webrtc::H264::NaluType::kIdr &&
+        nalu_type != webrtc::H264::NaluType::kSlice) {
+      continue;
+    }
+
+    size_t unencrypted_bytes = index.payload_start_offset + 2;
+    const auto prefix = slice.first(std::min(slice.size(), size_t{16}));
+    const auto rbsp = webrtc::H264::ParseRbsp(prefix);
+    webrtc::BitstreamReader reader(std::span<const uint8_t>(rbsp).subspan(1));
+    reader.ReadExponentialGolomb();  // first_mb_in_slice
+    reader.ReadExponentialGolomb();  // slice_type
+    reader.ReadExponentialGolomb();  // pic_parameter_set_id
+    if (reader.Ok()) {
+      // Include the NALU header and round the consumed bits up to a byte.
+      const size_t rbsp_bytes = rbsp.size() - reader.RemainingBitCount() / 8;
+      if (rbsp_bytes > 9) {
+        return unencrypted_bytes;
+      }
+      size_t escaped_bytes = 0;
+      for (size_t i = 0; i < rbsp_bytes; ++i) {
+        if (escaped_bytes >= 2 && prefix[escaped_bytes - 2] == 0 &&
+            prefix[escaped_bytes - 1] == 0 && prefix[escaped_bytes] == 3) {
+          ++escaped_bytes;
+        }
+        ++escaped_bytes;
+      }
+      // Only bytes through the PPS id affect the boundary, so encryption and
+      // decryption agree even after the suffix has been encrypted.
+      unencrypted_bytes =
+          index.payload_start_offset + std::max(size_t{2}, escaped_bytes);
+    }
+    RTC_LOG(LS_INFO) << "NonParameterSetNalu::payload_size: "
+                     << index.payload_size << ", nalu_type " << nalu_type
+                     << ", NaluIndex [" << idx++
+                     << "] offset: " << index.payload_start_offset;
+    return unencrypted_bytes;
+  }
+  return 0;
+}
+
+size_t get_unencrypted_bytes(webrtc::TransformableFrameInterface* frame,
+                             webrtc::FrameCryptorTransformer::MediaType type) {
+  size_t unencrypted_bytes = 0;
   switch (type) {
     case webrtc::FrameCryptorTransformer::MediaType::kAudioFrame:
       unencrypted_bytes = 1;
@@ -186,29 +238,7 @@ uint8_t get_unencrypted_bytes(webrtc::TransformableFrameInterface* frame,
         unencrypted_bytes = videoFrame->IsKeyFrame() ? 10 : 3;
       } else if (videoFrame->header().codec ==
                  webrtc::VideoCodecType::kVideoCodecH264) {
-        std::span<const uint8_t> data_in = frame->GetData();
-        std::vector<webrtc::H264::NaluIndex> nalu_indices =
-            webrtc::H264::FindNaluIndices(data_in);
-
-        int idx = 0;
-        for (const auto& index : nalu_indices) {
-          std::span<const uint8_t> slice =
-              data_in.subspan(index.payload_start_offset);
-          webrtc::H264::NaluType nalu_type =
-              webrtc::H264::ParseNaluType(slice[0]);
-          switch (nalu_type) {
-            case webrtc::H264::NaluType::kIdr:
-            case webrtc::H264::NaluType::kSlice:
-              unencrypted_bytes = index.payload_start_offset + 2;
-              RTC_LOG(LS_INFO)
-                  << "NonParameterSetNalu::payload_size: " << index.payload_size
-                  << ", nalu_type " << nalu_type << ", NaluIndex [" << idx++
-                  << "] offset: " << index.payload_start_offset;
-              return unencrypted_bytes;
-            default:
-              break;
-          }
-        }
+        unencrypted_bytes = webrtc::GetH264UnencryptedBytes(frame->GetData());
 #ifdef RTC_ENABLE_H265
       } else if (videoFrame->header().codec ==
                  webrtc::VideoCodecType::kVideoCodecH265) {
@@ -504,7 +534,7 @@ void FrameCryptorTransformer::encryptFrame(
   }
 
   auto key_set = key_handler->GetKeySet(key_index_);
-  uint8_t unencrypted_bytes = get_unencrypted_bytes(frame.get(), type_);
+  size_t unencrypted_bytes = get_unencrypted_bytes(frame.get(), type_);
 
   webrtc::Buffer frame_header =
       webrtc::Buffer::CreateUninitializedWithSize(unencrypted_bytes);
@@ -634,7 +664,7 @@ void FrameCryptorTransformer::decryptFrame(
     }
   }
 
-  uint8_t unencrypted_bytes = get_unencrypted_bytes(frame.get(), type_);
+  size_t unencrypted_bytes = get_unencrypted_bytes(frame.get(), type_);
 
   webrtc::Buffer frame_header =
       webrtc::Buffer::CreateUninitializedWithSize(unencrypted_bytes);

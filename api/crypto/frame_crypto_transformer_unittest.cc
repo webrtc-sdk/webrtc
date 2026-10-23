@@ -1,15 +1,203 @@
 #include "api/crypto/frame_crypto_transformer.h"
 
+#include <algorithm>
 #include <chrono>
 #include <memory>
+#include <optional>
 #include <string>
 #include <thread>
+#include <utility>
+#include <vector>
 
+#include "api/test/mock_transformable_video_frame.h"
+#include "common_video/h264/pps_parser.h"
+#include "rtc_base/event.h"
 #include "rtc_base/logging.h"
 #include "test/gmock.h"
 #include "test/gtest.h"
 
 namespace webrtc {
+namespace {
+
+void ExpectH264ClearPrefix(std::vector<uint8_t> data, size_t expected) {
+  EXPECT_EQ(GetH264UnencryptedBytes(data), expected);
+  if (expected <= data.size()) {
+    // The decryptor must find the same boundary with an arbitrary ciphertext
+    // suffix, including one that looks like an emulation prevention byte.
+    for (uint8_t byte : {0x00, 0x03, 0xff}) {
+      std::fill(data.begin() + expected, data.end(), byte);
+      EXPECT_EQ(GetH264UnencryptedBytes(data), expected);
+    }
+    data.resize(expected);
+    EXPECT_EQ(GetH264UnencryptedBytes(data), expected);
+  }
+}
+
+class CapturingFrameCallback : public TransformedFrameCallback {
+ public:
+  void OnTransformedFrame(
+      std::unique_ptr<TransformableFrameInterface> frame) override {
+    const auto data = frame->GetData();
+    data_.assign(data.begin(), data.end());
+    ready_.Set();
+  }
+
+  std::optional<std::vector<uint8_t>> WaitForData() {
+    if (!ready_.Wait(TimeDelta::Seconds(5))) {
+      return std::nullopt;
+    }
+    return data_;
+  }
+
+ private:
+  std::vector<uint8_t> data_;
+  Event ready_;
+};
+
+std::optional<std::vector<uint8_t>> TransformH264Frame(
+    std::vector<uint8_t> data,
+    TransformableFrameInterface::Direction direction,
+    scoped_refptr<KeyProvider> key_provider) {
+  RTPVideoHeader header;
+  header.codec = kVideoCodecH264;
+  auto frame =
+      std::make_unique<testing::NiceMock<MockTransformableVideoFrame>>();
+  ON_CALL(*frame, header).WillByDefault(testing::ReturnRef(header));
+  ON_CALL(*frame, IsKeyFrame).WillByDefault(testing::Return(true));
+  ON_CALL(*frame, GetDirection).WillByDefault(testing::Return(direction));
+  ON_CALL(*frame, GetSsrc).WillByDefault(testing::Return(1234u));
+  ON_CALL(*frame, GetTimestamp).WillByDefault(testing::Return(5678u));
+  ON_CALL(*frame, GetData).WillByDefault([&data] {
+    return std::span<const uint8_t>(data);
+  });
+  EXPECT_CALL(*frame, SetData)
+      .WillOnce([&data](std::span<const uint8_t> output) {
+        data.assign(output.begin(), output.end());
+      });
+
+  auto callback = make_ref_counted<CapturingFrameCallback>();
+  scoped_refptr<FrameCryptorTransformer> cryptor(new FrameCryptorTransformer(
+      nullptr, "participant_1", FrameCryptorTransformer::MediaType::kVideoFrame,
+      FrameCryptorTransformer::Algorithm::kAesGcm, key_provider));
+  cryptor->SetEnabled(true);
+  scoped_refptr<FrameTransformerInterface> transformer = cryptor;
+  transformer->RegisterTransformedFrameSinkCallback(callback, 1234u);
+  transformer->Transform(std::move(frame));
+  return callback->WaitForData();
+}
+
+void ExpectH264FrameRoundTrip(std::span<const uint8_t> slice,
+                              size_t clear_nalu_bytes) {
+  auto options = KeyProviderOptions();
+  options.shared_key = true;
+  options.ratchet_salt = {0, 1, 2, 3, 4, 5, 6, 7};
+  auto key_provider = make_ref_counted<DefaultKeyProviderImpl>(options);
+  ASSERT_TRUE(key_provider->SetSharedKey(
+      0, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}));
+
+  std::vector<uint8_t> original{0, 0, 0,    1,    0x67, 0x42, 0, 0x1f, 0, 0,
+                                0, 1, 0x68, 0xce, 0x06, 0xe2, 0, 0,    0, 1};
+  const size_t idr_offset = original.size();
+  original.insert(original.end(), slice.begin(), slice.end());
+  original.insert(original.end(), {0x12, 0x34, 0x56, 0x78, 0, 0, 3, 1});
+
+  const auto encrypted = TransformH264Frame(
+      original, TransformableFrameInterface::Direction::kSender, key_provider);
+  ASSERT_TRUE(encrypted.has_value());
+  ASSERT_GT(encrypted->size(), original.size());
+  EXPECT_NE(*encrypted, original);
+
+  const size_t clear_bytes = idr_offset + clear_nalu_bytes;
+  EXPECT_EQ(GetH264UnencryptedBytes(*encrypted), clear_bytes);
+  EXPECT_THAT(std::span<const uint8_t>(*encrypted).first(clear_bytes),
+              testing::ElementsAreArray(
+                  std::span<const uint8_t>(original).first(clear_bytes)));
+  // The depacketizer parses this before the receiver's decryptor runs.
+  const auto slice_header = PpsParser::ParseSliceHeader(
+      std::span<const uint8_t>(*encrypted).subspan(idr_offset + 1));
+  ASSERT_TRUE(slice_header.has_value());
+  EXPECT_EQ(slice_header->pic_parameter_set_id, 0u);
+
+  const auto decrypted = TransformH264Frame(
+      *encrypted, TransformableFrameInterface::Direction::kReceiver,
+      key_provider);
+  ASSERT_TRUE(decrypted.has_value());
+  EXPECT_EQ(*decrypted, original);
+}
+
+}  // namespace
+
+TEST(FrameCryptor, H264QuickSyncEncryptedPpsAndRoundTrip) {
+  const uint8_t slice[] = {0x65, 0x88, 0x80, 0x40, 0x87, 0x0a};
+  ExpectH264FrameRoundTrip(slice, 3);
+}
+
+TEST(FrameCryptor, H264VideoToolboxEncryptedPpsAndRoundTrip) {
+  const uint8_t slice[] = {0x65, 0xb8, 0x00, 0x40, 0x00, 0x84};
+  ExpectH264FrameRoundTrip(slice, 2);
+}
+
+TEST(H264UnencryptedBytes, VideoToolboxWithParameterSets) {
+  const std::vector<uint8_t> data{0, 0, 0,    1,    0x67, 0x42, 0x00, 0x1f, 0,
+                                  0, 0, 1,    0x68, 0xce, 0x06, 0xe2, 0,    0,
+                                  0, 1, 0x65, 0xb8, 0x00, 0x40, 0x00, 0x84};
+  // first_mb_in_slice=0 (1 bit), slice_type=2 (3), PPS id=0 (1).
+  ExpectH264ClearPrefix(data, 20u + 2);
+}
+
+TEST(H264UnencryptedBytes, QuickSyncIdrAndSlice) {
+  for (uint8_t header : {0x65, 0x61}) {
+    // first_mb_in_slice=0 (1 bit), slice_type=7 (7), PPS id=0 (1).
+    ExpectH264ClearPrefix({0, 0, 0, 1, header, 0x88, 0x80, 0x40, 0x87, 0x0a},
+                          4u + 3);
+  }
+}
+
+TEST(H264UnencryptedBytes, EmulationPreventionBytes) {
+  // RBSP: 00 00 01 00 00 00 22; first_mb_in_slice=8388607 (47 bits),
+  // slice_type=7 (7), PPS id=0 (1). Both 03 bytes must remain clear.
+  ExpectH264ClearPrefix(
+      {0, 0, 0, 1, 0x65, 0, 0, 3, 1, 0, 0, 3, 0, 0x22, 0x40, 0x87}, 4u + 10);
+}
+
+TEST(H264UnencryptedBytes, LargeParameterSets) {
+  std::vector<uint8_t> data{0, 0, 0, 1, 0x67};
+  data.resize(260, 0x55);
+  const std::vector<uint8_t> tail{0, 0, 0, 1,    0x68, 0xce, 0x06, 0xe2, 0,
+                                  0, 0, 1, 0x65, 0x88, 0x80, 0x40, 0x87, 0x0a};
+  data.insert(data.end(), tail.begin(), tail.end());
+  ExpectH264ClearPrefix(data, 272u + 3);
+}
+
+TEST(H264UnencryptedBytes, NaluHeaderOnlyFallsBack) {
+  ExpectH264ClearPrefix({0, 0, 0, 1, 0x65}, 4u + 2);
+}
+
+TEST(H264UnencryptedBytes, TruncatedGolombFallsBack) {
+  // first_mb_in_slice=0 and slice_type=7 fill the byte; PPS id is missing.
+  ExpectH264ClearPrefix({0, 0, 0, 1, 0x65, 0x88}, 4u + 2);
+}
+
+TEST(H264UnencryptedBytes, OversizedHeaderFallsBack) {
+  // Three 31-bit ue(v) fields require more than the nine-byte NALU cap.
+  EXPECT_EQ(GetH264UnencryptedBytes(std::vector<uint8_t>{
+                0, 0, 0, 1, 0x65, 0, 1, 0, 0, 3, 0, 2, 0, 0, 3, 0, 4, 0, 0}),
+            4u + 2);
+}
+
+TEST(H264UnencryptedBytes, EmptyNalusAndNoSlice) {
+  EXPECT_EQ(GetH264UnencryptedBytes({}), 0u);
+  EXPECT_EQ(GetH264UnencryptedBytes(
+                std::vector<uint8_t>{0, 0, 0, 1, 0, 0, 0, 1, 0x67}),
+            0u);
+}
+
+TEST(H264UnencryptedBytes, EscapeAfterPpsIdIsOutsideClearPrefix) {
+  // first_mb_in_slice=0, slice_type=0, PPS id=65535 (35 bits total).
+  // The clear prefix ends in 00 00; a following 03 must not extend it.
+  ExpectH264ClearPrefix({0, 0, 0, 1, 0x65, 0xc0, 0, 0x20, 0, 0, 3, 0x40},
+                        4u + 6);
+}
 
 TEST(FrameCryptor, KeyProvider) {
   auto key_options = KeyProviderOptions();
