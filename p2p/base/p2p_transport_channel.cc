@@ -1881,6 +1881,12 @@ void P2PTransportChannel::SwitchSelectedConnectionInternal(
     RTC_LOG(LS_INFO) << ToString() << ": No selected connection";
   }
 
+  // Keep the ICE controller's selected connection in sync before an
+  // immediate ping decides whether to nominate the new connection. Otherwise
+  // the controller still sees the previous (or no) selected connection when
+  // computing the USE_CANDIDATE attribute for that ping.
+  ice_controller_->OnConnectionSwitched(selected_connection_);
+
   if (conn != nullptr && ice_role_ == ICEROLE_CONTROLLING &&
       ((ice_field_trials_.send_ping_on_switch_ice_controlling &&
         old_selected_connection != nullptr) ||
@@ -1905,8 +1911,6 @@ void P2PTransportChannel::SwitchSelectedConnectionInternal(
   }
 
   ++selected_candidate_pair_changes_;
-
-  ice_controller_->OnConnectionSwitched(selected_connection_);
 }
 
 TimeDelta P2PTransportChannel::ComputeEstimatedDisconnectedTime(
