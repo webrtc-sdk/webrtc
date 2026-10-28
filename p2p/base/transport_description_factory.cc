@@ -48,6 +48,9 @@ std::unique_ptr<TransportDescription> TransportDescriptionFactory::CreateOffer(
   if (options.enable_ice_renomination) {
     desc->AddOption(ICE_OPTION_RENOMINATION);
   }
+  if (options.dtls_handshake_in_stun) {
+    desc->AddOption(ICE_OPTION_SPED);
+  }
 
   if (SSLStreamAdapter::IsBoringSsl() &&
       field_trials_.IsEnabled("WebRTC-IceHandshakeDtls") &&
@@ -105,7 +108,9 @@ std::unique_ptr<TransportDescription> TransportDescriptionFactory::CreateAnswer(
        current_description->HasOption(ICE_OPTION_GOOG_SPED_V1))) {
     desc->AddOption(ICE_OPTION_GOOG_SPED_V1);
   }
-
+  if (options.dtls_handshake_in_stun) {
+    desc->AddOption(ICE_OPTION_SPED);
+  }
   // Special affordance for testing: Answer without DTLS params
   // if we are insecure without a certificate, or if we are
   // insecure with a non-DTLS offer.
