@@ -171,15 +171,8 @@
 }
 
 - (void)performLayout {
-  CGRect bounds = self.bounds;
-  self.metalView.frame = bounds;
-  if (!CGSizeEqualToSize(self.videoFrameSize, CGSizeZero)) {
-    self.metalView.drawableSize = [self drawableSize];
-  } else {
-    // Apply scale factor for default size as well (when videoFrameSize is zero)
-    CGFloat scale = [self currentScaleFactor];
-    self.metalView.drawableSize = CGSizeMake(bounds.size.width * scale, bounds.size.height * scale);
-  }
+  self.metalView.frame = self.bounds;
+  self.metalView.drawableSize = [self drawableSize];
 }
 
 #pragma mark - MTKViewDelegate methods
@@ -272,8 +265,16 @@
 }
 
 - (CGSize)drawableSize {
-  // Flip width/height if the rotations are not the same.
+  CGFloat scale = [self currentScaleFactor];
+  CGSize boundsSize = self.bounds.size;
   CGSize videoFrameSize = self.videoFrameSize;
+
+  // Until setSize: reports a video size, cover the pixels of the view.
+  if (CGSizeEqualToSize(videoFrameSize, CGSizeZero)) {
+    return CGSizeMake(boundsSize.width * scale, boundsSize.height * scale);
+  }
+
+  // Flip width/height if the rotations are not the same.
   RTC_OBJC_TYPE(RTCVideoRotation) videoRotation = [self videoRotation];
 
   BOOL useLandscape =
@@ -292,8 +293,6 @@
   // covers on screen, keeping the aspect ratio, so a large stream in a small
   // view doesn't allocate full resolution drawables. The larger ratio keeps
   // an aspect fill crop from being undersampled. Never upscale the video.
-  CGFloat scale = [self currentScaleFactor];
-  CGSize boundsSize = self.bounds.size;
   if (boundsSize.width > 0 && boundsSize.height > 0 && size.width > 0 &&
       size.height > 0) {
     CGFloat ratio = MAX(boundsSize.width * scale / size.width,
