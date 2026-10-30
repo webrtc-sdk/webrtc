@@ -287,10 +287,22 @@
   } else {
     size = CGSizeMake(videoFrameSize.height, videoFrameSize.width);
   }
-  
-  // Apply scale factor for retina displays
+
+  // videoFrameSize is already in pixels. Shrink it to the pixels the view
+  // covers on screen, keeping the aspect ratio, so a large stream in a small
+  // view doesn't allocate full resolution drawables. The larger ratio keeps
+  // an aspect fill crop from being undersampled. Never upscale the video.
   CGFloat scale = [self currentScaleFactor];
-  return CGSizeMake(size.width * scale, size.height * scale);
+  CGSize boundsSize = self.bounds.size;
+  if (boundsSize.width > 0 && boundsSize.height > 0 && size.width > 0 &&
+      size.height > 0) {
+    CGFloat ratio = MAX(boundsSize.width * scale / size.width,
+                        boundsSize.height * scale / size.height);
+    if (ratio < 1.0) {
+      size = CGSizeMake(ceil(size.width * ratio), ceil(size.height * ratio));
+    }
+  }
+  return size;
 }
 
 #pragma mark - RTC_OBJC_TYPE(RTCVideoRenderer)
