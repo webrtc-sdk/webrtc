@@ -104,6 +104,8 @@
 
 - (void)setVideoContentMode:(UIViewContentMode)mode {
   self.metalView.contentMode = mode;
+  // The drawable size depends on the content mode.
+  [self setNeedsLayout];
 }
 #endif
 
@@ -168,6 +170,15 @@
   }
 #endif
   return MAX(scale, 1.0);
+}
+
+- (BOOL)isAspectFit {
+#if TARGET_OS_IPHONE
+  return self.metalView.contentMode == UIViewContentModeScaleAspectFit;
+#elif TARGET_OS_OSX
+  return self.metalView.layerContentsPlacement ==
+      NSViewLayerContentsPlacementScaleProportionallyToFit;
+#endif
 }
 
 - (void)performLayout {
@@ -291,12 +302,16 @@
 
   // videoFrameSize is already in pixels. Shrink it to the pixels the view
   // covers on screen, keeping the aspect ratio, so a large stream in a small
-  // view doesn't allocate full resolution drawables. The larger ratio keeps
-  // an aspect fill crop from being undersampled. Never upscale the video.
+  // view doesn't allocate full resolution drawables. Aspect fit shows the
+  // whole video, so the smaller ratio is what is displayed. Other modes keep
+  // the larger ratio so an aspect fill crop is not undersampled. Never
+  // upscale the video.
   if (boundsSize.width > 0 && boundsSize.height > 0 && size.width > 0 &&
       size.height > 0) {
-    CGFloat ratio = MAX(boundsSize.width * scale / size.width,
-                        boundsSize.height * scale / size.height);
+    CGFloat widthRatio = boundsSize.width * scale / size.width;
+    CGFloat heightRatio = boundsSize.height * scale / size.height;
+    CGFloat ratio = [self isAspectFit] ? MIN(widthRatio, heightRatio)
+                                       : MAX(widthRatio, heightRatio);
     if (ratio < 1.0) {
       size = CGSizeMake(ceil(size.width * ratio), ceil(size.height * ratio));
     }
