@@ -386,8 +386,9 @@ std::unique_ptr<Call> PeerConnectionFactory::CreateCall_w(
                                               DataRate::KilobitsPerSec(30));
   FieldTrialParameter<DataRate> start_bandwidth("start",
                                                 DataRate::KilobitsPerSec(300));
-  FieldTrialParameter<DataRate> max_bandwidth("max",
-                                              DataRate::KilobitsPerSec(2000));
+  // No max until negotiation sets one. No media is sent before that, so a max
+  // here would only clamp a start bitrate set through SetBitrate() beforehand.
+  FieldTrialParameter<DataRate> max_bandwidth("max", DataRate::Infinity());
   ParseFieldTrial({&min_bandwidth, &start_bandwidth, &max_bandwidth},
                   env.field_trials().Lookup("WebRTC-PcFactoryDefaultBitrates"));
 
@@ -396,7 +397,8 @@ std::unique_ptr<Call> PeerConnectionFactory::CreateCall_w(
   call_config.bitrate_config.start_bitrate_bps =
       saturated_cast<int>(start_bandwidth->bps());
   call_config.bitrate_config.max_bitrate_bps =
-      saturated_cast<int>(max_bandwidth->bps());
+      max_bandwidth->IsFinite() ? saturated_cast<int>(max_bandwidth->bps())
+                                : -1;
 
   call_config.fec_controller_factory = fec_controller_factory_.get();
   call_config.network_state_predictor_factory =

@@ -18,6 +18,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/strings/string_view.h"
 #include "api/audio/audio_device.h"
 #include "api/audio_codecs/builtin_audio_decoder_factory.h"
 #include "api/audio_codecs/builtin_audio_encoder_factory.h"
@@ -38,6 +39,7 @@
 #include "api/rtp_parameters.h"
 #include "api/scoped_refptr.h"
 #include "api/test/mock_packet_socket_factory.h"
+#include "api/transport/bitrate_settings.h"
 #include "api/units/time_delta.h"
 #include "api/units/timestamp.h"
 #include "api/video_codecs/scalability_mode.h"
@@ -51,13 +53,17 @@
 #include "api/video_codecs/video_encoder_factory_template_libvpx_vp8_adapter.h"
 #include "api/video_codecs/video_encoder_factory_template_libvpx_vp9_adapter.h"
 #include "api/video_codecs/video_encoder_factory_template_open_h264_adapter.h"
+#include "call/call.h"
+#include "call/call_config.h"
 #include "media/base/fake_frame_source.h"
 #include "media/base/media_constants.h"
+#include "media/base/media_engine.h"
 #include "modules/audio_processing/include/mock_audio_processing.h"
 #include "p2p/base/port.h"
 #include "p2p/base/port_allocator.h"
 #include "p2p/test/fake_port_allocator.h"
 #include "pc/connection_context.h"
+#include "pc/media_factory.h"
 #include "pc/test/fake_audio_capture_module.h"
 #include "pc/test/fake_video_track_source.h"
 #include "rtc_base/event.h"
@@ -797,6 +803,72 @@ TEST(PeerConnectionFactoryDependenciesTest, RepeatMediaEngineInitialization) {
     EXPECT_TRUE(adm->Initialized());
   }
   EXPECT_FALSE(adm->Initialized());
+}
+
+// Records the bitrate config of each Call the wrapped media factory creates.
+class BitrateConfigRecordingMediaFactory : public MediaFactory {
+ public:
+  BitrateConfigRecordingMediaFactory(
+      std::unique_ptr<MediaFactory> media_factory,
+      std::vector<BitrateConstraints>* configs)
+      : media_factory_(std::move(media_factory)), configs_(configs) {}
+
+  std::unique_ptr<Call> CreateCall(CallConfig config) override {
+    configs_->push_back(config.bitrate_config);
+    return media_factory_->CreateCall(std::move(config));
+  }
+
+  std::unique_ptr<MediaEngineInterface> CreateMediaEngine(
+      const Environment& env,
+      PeerConnectionFactoryDependencies& dependencies) override {
+    return media_factory_->CreateMediaEngine(env, dependencies);
+  }
+
+ private:
+  const std::unique_ptr<MediaFactory> media_factory_;
+  std::vector<BitrateConstraints>* const configs_;
+};
+
+std::vector<BitrateConstraints> CallBitrateConfigs(
+    absl::string_view field_trials) {
+  std::vector<BitrateConstraints> configs;
+  {
+    std::unique_ptr<FieldTrialsView> trials = FieldTrials::Create(field_trials);
+    EXPECT_THAT(trials, NotNull());
+
+    PeerConnectionFactoryDependencies pcf_dependencies;
+    pcf_dependencies.env = CreateEnvironment(std::move(trials));
+    pcf_dependencies.adm = FakeAudioCaptureModule::Create();
+    EnableMediaWithDefaults(pcf_dependencies);
+    pcf_dependencies.media_factory =
+        std::make_unique<BitrateConfigRecordingMediaFactory>(
+            std::move(pcf_dependencies.media_factory), &configs);
+
+    scoped_refptr<PeerConnectionFactoryInterface> pcf =
+        CreateModularPeerConnectionFactory(std::move(pcf_dependencies));
+    NullPeerConnectionObserver observer;
+    auto pc = pcf->CreatePeerConnectionOrError(
+        PeerConnectionInterface::RTCConfiguration(),
+        PeerConnectionDependencies(&observer));
+    EXPECT_TRUE(pc.ok());
+  }
+  return configs;
+}
+
+TEST(PeerConnectionFactoryDependenciesTest, LeavesTheDefaultMaxBitrateUnset) {
+  std::vector<BitrateConstraints> configs = CallBitrateConfigs("");
+  ASSERT_EQ(configs.size(), 1u);
+  EXPECT_EQ(configs[0].min_bitrate_bps, 30'000);
+  EXPECT_EQ(configs[0].start_bitrate_bps, 300'000);
+  EXPECT_EQ(configs[0].max_bitrate_bps, -1);
+}
+
+TEST(PeerConnectionFactoryDependenciesTest,
+     SetsTheDefaultMaxBitrateFromFieldTrial) {
+  std::vector<BitrateConstraints> configs =
+      CallBitrateConfigs("WebRTC-PcFactoryDefaultBitrates/max:2000kbps/");
+  ASSERT_EQ(configs.size(), 1u);
+  EXPECT_EQ(configs[0].max_bitrate_bps, 2'000'000);
 }
 
 }  // namespace
