@@ -358,10 +358,23 @@
 
 #pragma mark - Cross platform
 
+// The drawable size depends on the screen scale, which can change without a
+// change of bounds, for example when the window moves to another display.
+
 #if TARGET_OS_IPHONE
 - (void)layoutSubviews {
   [super layoutSubviews];
   [self performLayout];
+}
+
+- (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+  [super traitCollectionDidChange:previousTraitCollection];
+#pragma clang diagnostic pop
+  if (previousTraitCollection.displayScale != self.traitCollection.displayScale) {
+    [self setNeedsLayout];
+  }
 }
 #elif TARGET_OS_OSX
 - (void)layout {
@@ -371,6 +384,11 @@
 
 - (void)setNeedsLayout {
   self.needsLayout = YES;
+}
+
+- (void)viewDidChangeBackingProperties {
+  [super viewDidChangeBackingProperties];
+  [self setNeedsLayout];
 }
 #endif
 
