@@ -15,6 +15,7 @@
 // do NOT add it here, but instead add it to the file
 // slow_peer_connection_integrationtest.cc
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -5139,6 +5140,50 @@ TEST_P(PeerConnectionIntegrationTest, DtlsPqcFieldTrial) {
   }
   EXPECT_EQ(caller()->dtls_transport_information().ssl_group_id(), expected);
   EXPECT_EQ(caller()->dtls_transport_information().ssl_group_id(), expected);
+}
+
+TEST_P(PeerConnectionIntegrationTest,
+       SpedWireTriggerStartsDtlsWithoutRemoteDescription) {
+  if (!SSLStreamAdapter::IsBoringSsl()) {
+    GTEST_SKIP() << "DTLS-in-STUN requires BoringSSL.";
+  }
+  SetFieldTrials("WebRTC-IceHandshakeDtls/Enabled/");
+  ASSERT_TRUE(CreatePeerConnectionWrappers());
+  ConnectFakeSignaling();
+  // Suppress SetRemoteDescription and ICE candidates from callee.
+  caller()->SetReceivedSdpMunger(
+      [](std::unique_ptr<SessionDescriptionInterface>& desc) { desc.reset(); });
+  callee()->set_signal_ice_candidates(false);
+
+  caller()->CreateDataChannel();
+  caller()->CreateAndSetAndSignalOffer();
+
+  ASSERT_THAT(
+      WaitUntil(
+          [&] {
+            const auto& history = caller()->peer_connection_state_history();
+            return std::find(history.begin(), history.end(),
+                             PeerConnectionInterface::PeerConnectionState::
+                                 kConnecting) != history.end();
+          },
+          IsTrue()),
+      IsRtcOk());
+}
+
+TEST_P(PeerConnectionIntegrationTest, NoEarlyDtlsStartWhenSpedNotInAnswer) {
+  if (!SSLStreamAdapter::IsBoringSsl()) {
+    GTEST_SKIP() << "DTLS-in-STUN requires BoringSSL.";
+  }
+  SetFieldTrials(kCallerName, "WebRTC-IceHandshakeDtls/Enabled/");
+  ASSERT_TRUE(CreatePeerConnectionWrappers());
+  ConnectFakeSignalingForSdpOnly();
+  caller()->CreateDataChannel();
+  caller()->CreateAndSetAndSignalOffer();
+  ASSERT_THAT(WaitUntil([&] { return SignalingStateStable(); }, IsTrue()),
+              IsRtcOk());
+  EXPECT_THAT(caller()->peer_connection_state_history(),
+              ::testing::Not(::testing::Contains(
+                  PeerConnectionInterface::PeerConnectionState::kConnecting)));
 }
 
 #endif  // WEBRTC_HAVE_SCTP

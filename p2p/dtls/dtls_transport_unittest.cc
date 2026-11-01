@@ -1093,15 +1093,18 @@ class DtlsTransportInternalImplVersionTest
     client2_.dtls_transport()->SetDtlsRole(
         config2.ssl_role.value_or(SSL_SERVER));
 
+    // No SDP exchange in this fixture; stand in for JsepTransport's call.
     if (config1.dtls_in_stun) {
       auto config = client1_.fake_ice_transport()->config();
       config.dtls_handshake_in_stun = true;
       client1_.fake_ice_transport()->SetIceConfig(config);
+      client1_.dtls_transport()->MaybeStartDtlsInStun();
     }
     if (config2.dtls_in_stun) {
       auto config = client2_.fake_ice_transport()->config();
       config.dtls_handshake_in_stun = true;
       client2_.fake_ice_transport()->SetIceConfig(config);
+      client2_.dtls_transport()->MaybeStartDtlsInStun();
     }
 
     SetRemoteFingerprintFromCert(client1_.dtls_transport(),
@@ -1596,6 +1599,59 @@ TEST_F(DtlsTransportInternalImplTest, TestImplicitRoleDetection) {
           IsTrue(),
           {.timeout = TimeDelta::Millis(kTimeout), .clock = &time_controller_}),
       IsRtcOk());
+}
+
+TEST_F(DtlsTransportInternalImplTest,
+       NoEarlyDtlsInStunStartWithoutPeerSupport) {
+  if (!SSLStreamAdapter::IsBoringSsl()) {
+    GTEST_SKIP() << "DTLS-in-STUN requires BoringSSL.";
+  }
+  PrepareDtls(KT_DEFAULT);
+
+  client1_.SetupTransports(env_, ICEROLE_CONTROLLING);
+
+  auto ice_config = client1_.fake_ice_transport()->config();
+  ice_config.dtls_handshake_in_stun = true;
+  client1_.fake_ice_transport()->SetIceConfig(ice_config);
+  ASSERT_FALSE(client1_.fake_ice_transport()->writable());
+
+  client1_.dtls_transport()->SetDtlsRole(SSL_SERVER);
+  SetRemoteFingerprintFromCert(client1_.dtls_transport(),
+                               client2_.certificate());
+
+  // Without DTLS-in-STUN, DTLS starts after ICE becomes writable.
+  EXPECT_EQ(client1_.dtls_transport()->dtls_state(), DtlsTransportState::kNew);
+
+  client1_.fake_ice_transport()->SetWritable(true);
+  EXPECT_EQ(client1_.dtls_transport()->dtls_state(),
+            DtlsTransportState::kConnecting);
+}
+
+// MaybeStartDtlsInStun() confirms peer support; DTLS starts before ICE is
+// writable.
+TEST_F(DtlsTransportInternalImplTest,
+       EarlyDtlsInStunStartAfterPeerSupportConfirmed) {
+  if (!SSLStreamAdapter::IsBoringSsl()) {
+    GTEST_SKIP() << "DTLS-in-STUN requires BoringSSL.";
+  }
+  PrepareDtls(KT_DEFAULT);
+
+  client1_.SetupTransports(env_, ICEROLE_CONTROLLING);
+
+  auto ice_config = client1_.fake_ice_transport()->config();
+  ice_config.dtls_handshake_in_stun = true;
+  client1_.fake_ice_transport()->SetIceConfig(ice_config);
+  ASSERT_FALSE(client1_.fake_ice_transport()->writable());
+
+  client1_.dtls_transport()->MaybeStartDtlsInStun();
+
+  client1_.dtls_transport()->SetDtlsRole(SSL_SERVER);
+  SetRemoteFingerprintFromCert(client1_.dtls_transport(),
+                               client2_.certificate());
+
+  // With DTLS-in-STUN, DTLS starts immediately.
+  EXPECT_EQ(client1_.dtls_transport()->dtls_state(),
+            DtlsTransportState::kConnecting);
 }
 
 // Test that packets are retransmitted according to the expected schedule.
