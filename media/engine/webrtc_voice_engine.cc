@@ -636,7 +636,7 @@ AudioProcessingOptionsResult WebRtcVoiceEngine::ApplyOptions(const AudioOptions 
   // receive channel (see WebRtcVoiceReceiveChannel's constructor and
   // SetOptions).
 
-  AudioProcessingApplyResult apply_result = ApplyAudioProcessingOptions(apm(), adm(), options);
+  AudioProcessingApplyResult apply_result = ApplyAudioProcessingOptions(apm_.get(), adm(), options);
   if (!apply_result.result.ok()) {
     RTC_LOG(LS_WARNING) << "Audio processing options were not fully applied: " << apply_result.result.message;
   }
@@ -650,7 +650,7 @@ AudioProcessingOptionsResult WebRtcVoiceEngine::ApplyOptions(const AudioOptions 
 
 AudioProcessingState WebRtcVoiceEngine::GetAudioProcessingState() {
   RTC_DCHECK_RUN_ON(&worker_thread_checker_);
-  return webrtc::GetAudioProcessingState(apm(), adm(), last_requested_audio_processing_options_,
+  return webrtc::GetAudioProcessingState(apm_.get(), adm(), last_requested_audio_processing_options_,
                                                 last_resolved_audio_processing_options_);
 }
 
@@ -687,23 +687,21 @@ bool WebRtcVoiceEngine::StartAecDump(FileWrapper file, int64_t max_size_bytes) {
   RTC_DCHECK_RUN_ON(&worker_thread_checker_);
   RTC_DCHECK(file.is_open());
 
-  AudioProcessing* ap = apm();
-  if (!ap) {
+  if (!apm_) {
     RTC_LOG(LS_WARNING)
         << "Attempting to start aecdump when no audio processing module is "
            "present, hence no aecdump is started.";
     return false;
   }
 
-  return ap->CreateAndAttachAecDump(file.Release(), max_size_bytes,
-                                    low_priority_worker_queue_.get());
+  return apm_->CreateAndAttachAecDump(file.Release(), max_size_bytes,
+                                      low_priority_worker_queue_.get());
 }
 
 void WebRtcVoiceEngine::StopAecDump() {
   RTC_DCHECK_RUN_ON(&worker_thread_checker_);
-  AudioProcessing* ap = apm();
-  if (ap) {
-    ap->DetachAecDump();
+  if (apm_) {
+    apm_->DetachAecDump();
   } else {
     RTC_LOG(LS_WARNING) << "Attempting to stop aecdump when no audio "
                            "processing module is present";
@@ -720,11 +718,6 @@ AudioDeviceModule* WebRtcVoiceEngine::adm() {
   RTC_DCHECK_RUN_ON(&worker_thread_checker_);
   RTC_DCHECK(adm_);
   return adm_.get();
-}
-
-AudioProcessing* WebRtcVoiceEngine::apm() const {
-  RTC_DCHECK_RUN_ON(&worker_thread_checker_);
-  return apm_.get();
 }
 
 AudioState* WebRtcVoiceEngine::audio_state() {
@@ -748,8 +741,7 @@ void WebRtcVoiceEngine::UnregisterSendChannel(WebRtcVoiceSendChannel* channel) {
 
 void WebRtcVoiceEngine::OnChannelMuteStateChange() {
   RTC_DCHECK_RUN_ON(&worker_thread_checker_);
-  AudioProcessing* ap = apm();
-  if (!ap) {
+  if (!apm_) {
     return;
   }
   std::optional<bool> muted;
@@ -765,7 +757,7 @@ void WebRtcVoiceEngine::OnChannelMuteStateChange() {
   }
   if (muted.has_value() && output_will_be_muted_ != muted) {
     output_will_be_muted_ = muted;
-    ap->set_output_will_be_muted(*muted);
+    apm_->set_output_will_be_muted(*muted);
   }
 }
 
@@ -1245,7 +1237,7 @@ WebRtcVoiceSendChannel::~WebRtcVoiceSendChannel() {
     delete stream;
   }
   send_streams_.clear();
-  engine()->UnregisterSendChannel(this);
+  engine_->UnregisterSendChannel(this);
   SetSend(false);
 }
 
@@ -1258,7 +1250,7 @@ bool WebRtcVoiceSendChannel::SetOptions(const AudioOptions& options) {
   // they go back to the engine default.
   AudioOptions updated_options = options_;
   updated_options.SetAll(options);
-  AudioProcessingOptionsResult result = engine()->ApplyOptions(updated_options);
+  AudioProcessingOptionsResult result = engine_->ApplyOptions(updated_options);
   if (!result.ok()) {
     RTC_LOG(LS_WARNING) << "Rejected voice channel options: " << result.message;
     return false;
@@ -1431,7 +1423,7 @@ bool WebRtcVoiceSendChannel::SetSendCodecs(
       SdpAudioFormat format(voice_codec.name, voice_codec.clockrate,
                             voice_codec.channels, voice_codec.params);
 
-      voice_codec_info = engine()->encoder_factory()->QueryAudioEncoder(format);
+      voice_codec_info = engine_->encoder_factory()->QueryAudioEncoder(format);
       if (!voice_codec_info) {
         RTC_LOG(LS_WARNING) << "Unknown codec " << ToString(voice_codec);
         send_codec_position++;
@@ -1527,15 +1519,15 @@ bool WebRtcVoiceSendChannel::SetSend(bool send) {
 
   // Apply channel specific options.
   if (send) {
-    engine()->ApplyOptions(options_);
+    engine_->ApplyOptions(options_);
 
     // Initialize the ADM for recording (this may take time on some platforms,
     // e.g. Android).
     if (options_.init_recording_on_send.value_or(true) &&
         // InitRecording() may return an error if the ADM is already recording.
-        !engine()->adm()->RecordingIsInitialized() &&
-        !engine()->adm()->Recording()) {
-      if (engine()->adm()->InitRecording() != 0) {
+        !engine_->adm()->RecordingIsInitialized() &&
+        !engine_->adm()->Recording()) {
+      if (engine_->adm()->InitRecording() != 0) {
         RTC_LOG(LS_WARNING) << "Failed to initialize recording";
       }
     }
@@ -1588,9 +1580,9 @@ bool WebRtcVoiceSendChannel::AddSendStream(const StreamParams& sp) {
       env_, ssrc, mid_, sp.cname, sp.id, send_codec_spec_, ExtmapAllowMixed(),
       send_rtp_extensions_, rtcp_cc_ack_type_, max_send_bitrate_bps_,
       audio_config_.rtcp_report_interval_ms, audio_network_adaptor_config,
-      call_, transport(), engine()->encoder_factory(), crypto_options_);
+      call_, transport(), engine_->encoder_factory(), crypto_options_);
   if (send_streams_.empty()) {
-    engine()->RegisterSendChannel(this);
+    engine_->RegisterSendChannel(this);
   }
   send_streams_.insert(std::make_pair(ssrc, stream));
   if (ssrc_list_changed_callback_) {
@@ -1624,7 +1616,7 @@ bool WebRtcVoiceSendChannel::RemoveSendStream(uint32_t ssrc) {
   if (send_streams_.empty()) {
     SetSend(false);
   }
-  engine()->OnChannelMuteStateChange();
+  engine_->OnChannelMuteStateChange();
   return true;
 }
 
@@ -1747,7 +1739,7 @@ bool WebRtcVoiceSendChannel::MuteStream(uint32_t ssrc, bool muted) {
   }
   it->second->SetMuted(muted);
 
-  engine()->OnChannelMuteStateChange();
+  engine_->OnChannelMuteStateChange();
 
   if (send_streams_.size() > 0) {
     // This will be true if MuteStream is called from
@@ -1762,7 +1754,7 @@ bool WebRtcVoiceSendChannel::MuteStream(uint32_t ssrc, bool muted) {
 
     if (!is_all_no_source) {
       // We don't mute when ClearSend() is called.
-      webrtc::AudioDeviceModule* adm = engine()->adm();
+      webrtc::AudioDeviceModule* adm = engine_->adm();
       if (adm) {
         RTC_LOG(LS_INFO) << "WebRtcVoiceSendChannel::MuteStream: ADM:"
                          << is_all_muted;
@@ -2275,7 +2267,7 @@ bool WebRtcVoiceReceiveChannel::SetOptions(const AudioOptions& options) {
   // they go back to the engine default.
   AudioOptions updated_options = options_;
   updated_options.SetAll(options);
-  AudioProcessingOptionsResult result = engine()->ApplyOptions(updated_options);
+  AudioProcessingOptionsResult result = engine_->ApplyOptions(updated_options);
   if (!result.ok()) {
     RTC_LOG(LS_WARNING) << "Rejected voice channel options: " << result.message;
     return false;
@@ -2335,7 +2327,7 @@ bool WebRtcVoiceReceiveChannel::SetRecvCodecs(
     auto format = AudioCodecToSdpAudioFormat(codec);
     if (!IsCodec(codec, kCnCodecName) && !IsCodec(codec, kDtmfCodecName) &&
         !IsCodec(codec, kRedCodecName) &&
-        !engine()->decoder_factory()->IsSupportedDecoder(format)) {
+        !engine_->decoder_factory()->IsSupportedDecoder(format)) {
       RTC_LOG(LS_ERROR) << "Unsupported codec: " << absl::StrCat(format);
       return false;
     }
@@ -2471,7 +2463,7 @@ bool WebRtcVoiceReceiveChannel::AddRecvStream(const StreamParams& sp) {
   // Create a new channel for receiving audio data.
   AudioReceiveStreamInterface::Config config = BuildReceiveStreamConfig(
       ssrc, recv_nack_enabled_, enable_non_sender_rtt_, recv_rtcp_mode_,
-      sp.stream_ids(), transport(), engine()->decoder_factory(), decoder_map_,
+      sp.stream_ids(), transport(), engine_->decoder_factory(), decoder_map_,
       audio_config_.audio_jitter_buffer_max_packets,
       audio_config_.audio_jitter_buffer_fast_accelerate,
       options_.audio_jitter_buffer_min_delay_ms.value_or(0),
