@@ -173,9 +173,12 @@ class SifTransformTest : public ::testing::Test {
 
   // Feeds `payload + trailer` as an incoming video frame; returns the bytes the
   // transformer wrote back with SetData, if any.
-  std::vector<uint8_t> Transform(std::vector<uint8_t> payload) {
+  std::vector<uint8_t> Transform(std::vector<uint8_t> payload,
+                                 bool with_sif_trailer = true) {
     data_ = payload;
-    data_.insert(data_.end(), trailer_.begin(), trailer_.end());
+    if (with_sif_trailer) {
+      data_.insert(data_.end(), trailer_.begin(), trailer_.end());
+    }
     auto frame = std::make_unique<NiceMock<MockTransformableVideoFrame>>();
     ON_CALL(*frame, GetDirection())
         .WillByDefault(Return(TransformableFrameInterface::Direction::kReceiver));
@@ -220,6 +223,26 @@ TEST_F(SifTransformTest, DropsForeignPayloadCarryingTrailerWithoutKey) {
 TEST_F(SifTransformTest, DropsForeignPayloadCarryingTrailerWithKey) {
   key_provider_->SetSharedKey(0, std::vector<uint8_t>(16, 0x42));
   Transform(std::vector<uint8_t>(500, 0x7a));
+  ASSERT_TRUE(observer_->event.Wait(TimeDelta::Seconds(5)));
+  EXPECT_EQ(observer_->last, FrameCryptionState::kDecryptionFailed);
+  EXPECT_FALSE(sink_->event.Wait(TimeDelta::Millis(200)));
+  EXPECT_EQ(sink_->count, 0);
+}
+
+// An encrypted frame shorter than IV + frame trailer + AES-GCM tag must be
+// dropped before the transformer computes offsets from its size.
+TEST_F(SifTransformTest, DropsEncryptedFrameTooShortForIvTrailerAndTag) {
+  key_provider_->SetSharedKey(0, std::vector<uint8_t>(16, 0x42));
+  constexpr size_t kIvLength = 12;
+  constexpr size_t kMinEncryptedSize = kIvLength + 2 + 16;
+  for (size_t size = 1; size < kMinEncryptedSize; ++size) {
+    std::vector<uint8_t> frame(size, 0x00);
+    // A valid frame trailer: IV length, then key index 0.
+    if (size >= 2) {
+      frame[size - 2] = kIvLength;
+    }
+    Transform(frame, /*with_sif_trailer=*/false);
+  }
   ASSERT_TRUE(observer_->event.Wait(TimeDelta::Seconds(5)));
   EXPECT_EQ(observer_->last, FrameCryptionState::kDecryptionFailed);
   EXPECT_FALSE(sink_->event.Wait(TimeDelta::Millis(200)));
