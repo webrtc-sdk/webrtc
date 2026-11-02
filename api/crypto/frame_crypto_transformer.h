@@ -17,6 +17,8 @@
 #ifndef WEBRTC_FRAME_CRYPTOR_TRANSFORMER_H_
 #define WEBRTC_FRAME_CRYPTOR_TRANSFORMER_H_
 
+#include <optional>
+#include <span>
 #include <unordered_map>
 
 #include "api/frame_transformer_interface.h"
@@ -403,6 +405,13 @@ class FrameCryptorTransformerObserver : public webrtc::RefCountInterface {
 // Whether a frame (server-injected-frame trailer already stripped) is one of
 // the blank frames the LiveKit SFU injects; nothing else may skip decryption.
 RTC_EXPORT bool IsKnownSifPayload(std::span<const uint8_t> payload);
+
+// Reads pic_parameter_set_id from an H.264 IDR slice NALU (bytes from the NALU
+// header on), the way a WebRTC receiver does before its decrypt transform runs.
+// Returns nullopt if `nalu` is not an IDR slice or ends inside the field.
+// Must stay in step with client-sdk-js parseH264IdrPpsId.
+RTC_EXPORT std::optional<uint32_t> ParseH264IdrPpsId(
+    std::span<const uint8_t> nalu);
 
 class RTC_EXPORT FrameCryptorTransformer
     : public webrtc::RefCountedObject<webrtc::FrameTransformerInterface> {
