@@ -374,6 +374,8 @@ int ParticipantKeyHandler::DoKeyDerivation(const std::vector<uint8_t>& key,
 
 namespace {
 
+constexpr size_t kAesGcmTagLengthBytes = 16;
+
 // Blank frames the LiveKit SFU injects on mute and track close, byte-for-byte
 // from livekit-server pkg/sfu/downtrack.go (client-sdk-js: sifPayload.ts).
 constexpr uint8_t kSifVp8KeyFrame8x8[] = {
@@ -679,6 +681,20 @@ void FrameCryptorTransformer::decryptFrame(
 
   uint8_t unencrypted_bytes = get_unencrypted_bytes(frame.get(), type_);
 
+  // The frame comes from the network: make sure that it can hold the header,
+  // the IV, the trailer and the AES-GCM tag before any offset is computed.
+  if (data_in.size() <
+      unencrypted_bytes + getIvSize() + 2 + kAesGcmTagLengthBytes) {
+    RTC_LOG(LS_WARNING) << "FrameCryptorTransformer::decryptFrame() frame "
+                           "too short, size "
+                        << data_in.size();
+    if (last_dec_error_ != FrameCryptionState::kDecryptionFailed) {
+      last_dec_error_ = FrameCryptionState::kDecryptionFailed;
+      onFrameCryptionStateChanged(last_dec_error_);
+    }
+    return;
+  }
+
   webrtc::Buffer frame_header =
       webrtc::Buffer::CreateUninitializedWithSize(unencrypted_bytes);
   for (size_t i = 0; i < unencrypted_bytes; i++) {
@@ -748,6 +764,18 @@ void FrameCryptorTransformer::decryptFrame(
     encrypted_buffer.SetData(
         H265::ParseRbsp(encrypted_buffer.data(), encrypted_buffer.size()));
 #endif // RTC_ENABLE_H265
+  }
+
+  // RBSP unescaping can make the buffer shorter than the check above allowed.
+  if (encrypted_buffer.size() < ivLength + 2 + kAesGcmTagLengthBytes) {
+    RTC_LOG(LS_WARNING) << "FrameCryptorTransformer::decryptFrame() frame "
+                           "too short after RBSP unescaping, size "
+                        << encrypted_buffer.size();
+    if (last_dec_error_ != FrameCryptionState::kDecryptionFailed) {
+      last_dec_error_ = FrameCryptionState::kDecryptionFailed;
+      onFrameCryptionStateChanged(last_dec_error_);
+    }
+    return;
   }
 
   webrtc::Buffer encrypted_payload =
