@@ -76,7 +76,8 @@ public class RtpParameters {
    * no effect unless FEC was negotiated, and only applies to video senders.
    */
   public static class FecProtection {
-    public FecProtectionMode mode = FecProtectionMode.ADAPTIVE;
+    /** Protection mode. A null value is treated as {@link FecProtectionMode#ADAPTIVE}. */
+    @Nullable public FecProtectionMode mode = FecProtectionMode.ADAPTIVE;
     /**
      * Number of FEC packets relative to the number of media packets, in [0.0, 1.0]. Used by
      * {@link FecProtectionMode#FIXED} and {@link FecProtectionMode#MINIMUM}.
@@ -87,7 +88,7 @@ public class RtpParameters {
     /** Maximum number of frames covered by one FEC block, in [1, 6]. */
     @Nullable public Integer maxFecFrames;
 
-    public FecProtection(FecProtectionMode mode, double protectionFactor) {
+    public FecProtection(@Nullable FecProtectionMode mode, double protectionFactor) {
       this.mode = mode;
       this.protectionFactor = protectionFactor;
     }
@@ -103,7 +104,10 @@ public class RtpParameters {
 
     @CalledByNative
     int getModeNativeIndex() {
-      return mode.ordinal();
+      // `mode` is a public field that may have been set to null; fall back to
+      // ADAPTIVE (as the ObjC binding does for unknown modes) instead of
+      // throwing from native code.
+      return (mode != null ? mode : FecProtectionMode.ADAPTIVE).ordinal();
     }
 
     @CalledByNative

@@ -118,4 +118,19 @@ public class RtpSenderTest {
     assertTrue(sender.setParameters(parameters));
     assertNull(sender.getParameters().fecProtection);
   }
+
+  /** Test checking that a null FecProtection mode is treated as ADAPTIVE instead of crashing. */
+  @Test
+  @SmallTest
+  public void testSetFecProtectionWithNullMode() throws Exception {
+    RtpTransceiver transceiver = pc.addTransceiver(MediaStreamTrack.MediaType.MEDIA_TYPE_VIDEO);
+    RtpSender sender = transceiver.getSender();
+
+    RtpParameters parameters = sender.getParameters();
+    parameters.fecProtection = new FecProtection(null, 0.25);
+    assertTrue(sender.setParameters(parameters));
+    parameters = sender.getParameters();
+    assertNotNull(parameters.fecProtection);
+    assertEquals(FecProtectionMode.ADAPTIVE, parameters.fecProtection.mode);
+  }
 }
