@@ -1108,6 +1108,7 @@ if (rtc_include_tests) {
         "base/video_adapter_unittest.cc",
         "base/video_broadcaster_unittest.cc",
         "base/video_common_unittest.cc",
+        "engine/audio_processing_controller_unittest.cc",
         "engine/internal_decoder_factory_unittest.cc",
         "engine/internal_encoder_factory_unittest.cc",
         "engine/simulcast_encoder_adapter_unittest.cc",
