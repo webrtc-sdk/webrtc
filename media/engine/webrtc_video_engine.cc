@@ -2229,6 +2229,8 @@ RTCError WebRtcVideoSendChannel::WebRtcVideoSendStream::SetRtpParameters(
   bool new_csrcs =
       (new_parameters.encodings[0].csrcs.has_value() &&
        new_parameters.encodings[0].csrcs != rtp_parameters_.encodings[0].csrcs);
+  bool new_fec_protection =
+      new_parameters.fec_protection != rtp_parameters_.fec_protection;
 
   rtp_parameters_ = new_parameters;
   // Codecs are currently handled at the WebRtcVideoSendChannel level.
@@ -2245,6 +2247,11 @@ RTCError WebRtcVideoSendChannel::WebRtcVideoSendStream::SetRtpParameters(
   }
   if (stream_ && new_csrcs) {
     stream_->SetCsrcs(rtp_parameters_.encodings[0].csrcs.value());
+  }
+  // FEC protection is applied directly to the RTP sender; neither the encoder
+  // nor the stream needs to be reconfigured.
+  if (stream_ && new_fec_protection) {
+    stream_->SetFecProtection(rtp_parameters_.fec_protection);
   }
   // Check if a key frame was requested via setParameters.
   std::vector<std::string> key_frames_requested_by_rid;
@@ -2793,6 +2800,9 @@ void WebRtcVideoSendChannel::WebRtcVideoSendStream::RecreateWebRtcStream() {
   if (!rtp_parameters_.encodings.empty() &&
       rtp_parameters_.encodings[0].csrcs.has_value()) {
     stream_->SetCsrcs(rtp_parameters_.encodings[0].csrcs.value());
+  }
+  if (rtp_parameters_.fec_protection) {
+    stream_->SetFecProtection(rtp_parameters_.fec_protection);
   }
 
   parameters_.encoder_config.encoder_specific_settings = nullptr;

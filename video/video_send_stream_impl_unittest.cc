@@ -136,6 +136,10 @@ class MockRtpVideoSender : public RtpVideoSenderInterface {
               (uint32_t ssrc, std::span<const uint16_t> sequence_numbers),
               (const, override));
 
+  MOCK_METHOD(void,
+              SetFecProtection,
+              (std::optional<RtpFecProtection>),
+              (override));
   MOCK_METHOD(void, SetFecAllowed, (bool fec_allowed), (override));
 };
 
@@ -1268,6 +1272,18 @@ TEST_F(VideoSendStreamImplTest, ForwardsCsrcsToRtpVideoSender) {
   std::vector<uint32_t> csrcs = {1, 2, 3};
   EXPECT_CALL(rtp_video_sender_, SetCsrcs(ElementsAreArray(csrcs)));
   vss_impl->SetCsrcs(csrcs);
+}
+
+TEST_F(VideoSendStreamImplTest, ForwardsFecProtectionToRtpVideoSender) {
+  auto vss_impl = CreateVideoSendStreamImpl(TestVideoEncoderConfig());
+  RtpFecProtection fec_protection;
+  fec_protection.mode = RtpFecProtection::Mode::kFixed;
+  fec_protection.protection_factor = 0.25;
+  EXPECT_CALL(rtp_video_sender_,
+              SetFecProtection(Eq(std::optional(fec_protection))));
+  vss_impl->SetFecProtection(fec_protection);
+  EXPECT_CALL(rtp_video_sender_, SetFecProtection(Eq(std::nullopt)));
+  vss_impl->SetFecProtection(std::nullopt);
 }
 
 TEST_F(VideoSendStreamImplTest, DisablesPaddingOnPausedEncoder) {

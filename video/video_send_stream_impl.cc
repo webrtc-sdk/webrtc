@@ -647,6 +647,12 @@ void VideoSendStreamImpl::SetCsrcs(std::span<const uint32_t> csrcs) {
   RTC_DCHECK_RUN_ON(&thread_checker_);
   rtp_video_sender_->SetCsrcs(csrcs);
 }
+
+void VideoSendStreamImpl::SetFecProtection(
+    std::optional<RtpFecProtection> fec_protection) {
+  RTC_DCHECK_RUN_ON(&thread_checker_);
+  rtp_video_sender_->SetFecProtection(std::move(fec_protection));
+}
 void VideoSendStreamImpl::StopPermanentlyAndGetRtpStates(
     VideoSendStreamImpl::RtpStateMap* rtp_state_map,
     VideoSendStreamImpl::RtpPayloadStateMap* payload_state_map) {

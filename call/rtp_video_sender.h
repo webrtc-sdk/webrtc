@@ -15,6 +15,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <optional>
 #include <span>
 #include <vector>
 
@@ -25,6 +26,7 @@
 #include "api/environment/environment.h"
 #include "api/fec_controller.h"
 #include "api/frame_transformer_interface.h"
+#include "api/rtp_parameters.h"
 #include "api/scoped_refptr.h"
 #include "api/sequence_checker.h"
 #include "api/task_queue/pending_task_safety_flag.h"
@@ -154,6 +156,8 @@ class RtpVideoSender : public RtpVideoSenderInterface,
   uint32_t GetProtectionBitrateBps() const RTC_LOCKS_EXCLUDED(mutex_) override;
   void SetEncodingData(size_t width, size_t height, size_t num_temporal_layers)
       RTC_LOCKS_EXCLUDED(mutex_) override;
+  void SetFecProtection(
+      std::optional<RtpFecProtection> fec_protection) override;
 
   // Sets the list of CSRCs to be included in every packet. If more than
   // kRtpCsrcSize CSRCs are provided, only the first kRtpCsrcSize elements are

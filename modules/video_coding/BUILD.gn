@@ -216,6 +216,7 @@ rtc_library("video_coding") {
     "../../api:fec_controller_api",
     "../../api:field_trials_view",
     "../../api:rtp_packet_info",
+    "../../api:rtp_parameters",
     "../../api:scoped_refptr",
     "../../api:sequence_checker",
     "../../api/environment",

@@ -1033,6 +1033,12 @@ void RtpVideoSender::SetEncodingData(size_t width,
                                    rtp_config_.max_packet_size);
 }
 
+void RtpVideoSender::SetFecProtection(
+    std::optional<RtpFecProtection> fec_protection) {
+  // `fec_controller_` is thread safe, so `mutex_` is not needed.
+  fec_controller_->SetProtectionOverride(std::move(fec_protection));
+}
+
 void RtpVideoSender::SetCsrcs(std::span<const uint32_t> csrcs) {
   MutexLock lock(&mutex_);
   csrcs_.assign(csrcs.begin(),
