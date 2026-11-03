@@ -132,6 +132,18 @@
 #include "video/config/video_encoder_config.h"
 
 namespace webrtc {
+
+// Call may report an undemuxable packet while a configured stream is being
+// recreated. Exercise that callback without replacing the receive channel.
+class WebRtcVideoReceiveChannelTestPeer {
+ public:
+  static bool HandleUndemuxablePacket(WebRtcVideoReceiveChannel* channel,
+                                      const RtpPacketReceived& packet)
+      RTC_NO_THREAD_SAFETY_ANALYSIS {
+    return channel->MaybeCreateDefaultReceiveStream(packet);
+  }
+};
+
 namespace {
 
 using ::testing::_;
@@ -2850,6 +2862,59 @@ class WebRtcVideoChannelTest : public WebRtcVideoEngineTest {
   }
 
  protected:
+  void TestUndemuxableSignaledSsrcPreservesSink(bool install_default_sink) {
+    ASSERT_TRUE(receive_channel_->SetReceiverParameters(recv_parameters_));
+    constexpr uint32_t kSignaledSsrc = 12345;
+    FakeVideoReceiveStream* stream =
+        AddRecvStream(StreamParams::CreateLegacy(kSignaledSsrc));
+    FakeVideoRenderer renderer;
+    FakeVideoRenderer default_renderer;
+    ASSERT_TRUE(receive_channel_->SetSink(kSignaledSsrc, &renderer));
+    if (install_default_sink) {
+      receive_channel_->SetDefaultSink(&default_renderer);
+    }
+
+    // Simulate a receive stream recreation when codecs change during an SDP
+    // renegotiation. Its configured sink must survive a temporarily
+    // undemuxable packet for the same SSRC.
+    recv_parameters_.codecs = {GetEngineCodec("VP8")};
+    ASSERT_TRUE(receive_channel_->SetReceiverParameters(recv_parameters_));
+    stream = fake_call_->GetVideoReceiveStreams()[0];
+    const int created_streams = fake_call_->GetNumCreatedReceiveStreams();
+    const VideoFrame frame =
+        VideoFrame::Builder()
+            .set_video_frame_buffer(CreateBlackFrameBuffer(4, 4))
+            .set_rtp_timestamp(100)
+            .set_timestamp_us(0)
+            .set_rotation(kVideoRotation_0)
+            .build();
+    stream->InjectFrame(frame);
+    ASSERT_EQ(1, renderer.num_rendered_frames());
+
+    RtpPacketReceived packet;
+    packet.SetSsrc(kSignaledSsrc);
+    // This is Call's undemuxable-packet callback, not a newly signaled stream.
+    auto* channel =
+        static_cast<WebRtcVideoReceiveChannel*>(receive_channel_.get());
+    EXPECT_TRUE(WebRtcVideoReceiveChannelTestPeer::HandleUndemuxablePacket(
+        channel, packet));
+    EXPECT_EQ(created_streams, fake_call_->GetNumCreatedReceiveStreams());
+    EXPECT_TRUE(channel->GetUnsignaledSsrcs().empty());
+    stream->InjectFrame(frame);
+    EXPECT_EQ(2, renderer.num_rendered_frames());
+    EXPECT_EQ(0, default_renderer.num_rendered_frames());
+
+    // A collision must not consume the creation cooldown for a genuinely new
+    // SSRC received immediately afterwards.
+    packet.SetSsrc(kSignaledSsrc + 1);
+    EXPECT_TRUE(WebRtcVideoReceiveChannelTestPeer::HandleUndemuxablePacket(
+        channel, packet));
+    EXPECT_THAT(channel->GetUnsignaledSsrcs(),
+                testing::ElementsAre(kSignaledSsrc + 1));
+    stream->InjectFrame(frame);
+    EXPECT_EQ(3, renderer.num_rendered_frames());
+  }
+
   FakeVideoSendStream* AddSendStream() {
     return AddSendStream(StreamParams::CreateLegacy(++last_ssrc_));
   }
@@ -7192,6 +7257,16 @@ TEST_F(WebRtcVideoChannelTest,
           .build();
   recv_stream->InjectFrame(video_frame);
   EXPECT_EQ(1, renderer.num_rendered_frames());
+}
+
+TEST_F(WebRtcVideoChannelTest,
+       UndemuxableSignaledSsrcPreservesSinkWithoutDefaultSink) {
+  TestUndemuxableSignaledSsrcPreservesSink(false);
+}
+
+TEST_F(WebRtcVideoChannelTest,
+       UndemuxableSignaledSsrcPreservesSinkWithDefaultSink) {
+  TestUndemuxableSignaledSsrcPreservesSink(true);
 }
 
 TEST_F(WebRtcVideoChannelTest,
