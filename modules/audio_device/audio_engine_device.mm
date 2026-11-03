@@ -2186,9 +2186,16 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   // --------------------------------------------------------------------------------------------
   // Step: Stop AVAudioEngine
   //
+  // An engine started during an interruption is still set up as running when
+  // the interruption ends. If the session was deactivated meanwhile, the engine
+  // stopped without this step, so run it before the start below.
+  const bool engine_stopped_during_interruption = state.DidEndInterruption() &&
+                                                  configuration_observer_ != nullptr &&
+                                                  !engine_device_.running;
   if (state.prev.IsAnyRunning() &&
       (!state.next.IsAnyRunning() || state.IsEngineRestartRequired() ||
-       state.DidBeginInterruption() || state.IsEngineRecreateRequired())) {
+       state.DidBeginInterruption() || engine_stopped_during_interruption ||
+       state.IsEngineRecreateRequired())) {
     LOGI() << "Stopping AVAudioEngine...";
 
     if (configuration_observer_ != nullptr) {
@@ -2964,7 +2971,11 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
   // Step: Start engine
   //
   if (state.next.IsAnyRunning()) {
-    if (!state.prev.IsAnyRunning() || state.DidEndInterruption() ||
+    // An engine started during the interruption may still be running at its
+    // end. Starting it again would register a second configuration observer.
+    const bool resume_after_interruption =
+        state.DidEndInterruption() && !engine_device_.running;
+    if (!state.prev.IsAnyRunning() || resume_after_interruption ||
         state.IsEngineRestartRequired() || state.IsEngineRecreateRequired()) {
       if (observer_ != nullptr) {
         int32_t result = observer_->OnEngineWillStart(engine_device_, state.next.IsOutputEnabled(),
