@@ -6654,6 +6654,14 @@ TEST_F(WebRtcVideoChannelTest,
   EXPECT_EQ(16, send_info.senders[1].packets_sent);
   EXPECT_EQ(20u, send_info.senders[1].retransmitted_bytes_sent);
   EXPECT_EQ(4u, send_info.senders[1].retransmitted_packets_sent);
+
+  // Only the stream protected by FlexFEC reports FEC stats.
+  EXPECT_FALSE(send_info.senders[0].fec_ssrc.has_value());
+  EXPECT_FALSE(send_info.senders[0].fec_packets_sent.has_value());
+  EXPECT_FALSE(send_info.senders[0].fec_bytes_sent.has_value());
+  EXPECT_EQ(send_info.senders[1].fec_ssrc, 301u);
+  EXPECT_EQ(send_info.senders[1].fec_packets_sent, 5u);
+  EXPECT_EQ(send_info.senders[1].fec_bytes_sent, 17u);
 }
 
 TEST_F(WebRtcVideoChannelTest,

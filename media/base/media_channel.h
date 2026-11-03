@@ -593,6 +593,11 @@ struct VideoSenderInfo : public MediaSenderInfo {
   ~VideoSenderInfo();
   std::optional<size_t> encoding_index;
   std::vector<SsrcGroup> ssrc_groups;
+  // Non-standard. Only present for the stream protected by a negotiated
+  // FlexFEC stream. The FEC packets are also included in `packets_sent`.
+  std::optional<uint32_t> fec_ssrc;
+  std::optional<uint64_t> fec_packets_sent;
+  std::optional<uint64_t> fec_bytes_sent;
   std::optional<std::string> encoder_implementation_name;
   int firs_received = 0;
   int plis_received = 0;
