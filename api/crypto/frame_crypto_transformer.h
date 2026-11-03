@@ -56,13 +56,14 @@ struct KeyProviderOptions {
   // Length in bits of the AES frame key derived from the key material:
   // 128 (default, unchanged behaviour) or 256. Every participant in a call
   // must use the same value. Any other value is treated as 128.
-  int key_size_bits = 128;
+  int key_size;
   KeyProviderOptions()
       : shared_key(false),
         ratchet_window_size(0),
         failure_tolerance(-1),
         key_ring_size(DEFAULT_KEYRING_SIZE),
-        key_derivation_algorithm(kPBKDF2) {}
+        key_derivation_algorithm(kPBKDF2),
+        key_size(128) {}
   KeyProviderOptions(KeyProviderOptions& copy)
       : shared_key(copy.shared_key),
         ratchet_salt(copy.ratchet_salt),
@@ -73,10 +74,10 @@ struct KeyProviderOptions {
         discard_frame_when_cryptor_not_ready(
             copy.discard_frame_when_cryptor_not_ready),
         key_derivation_algorithm(copy.key_derivation_algorithm),
-        key_size_bits(copy.key_size_bits) {}
+        key_size(copy.key_size) {}
   // The frame key length in bits that key derivation uses.
   unsigned int frame_key_bits() const {
-    return key_size_bits == 256 ? 256u : 128u;
+    return key_size == 256 ? 256u : 128u;
   }
 };
 
