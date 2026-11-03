@@ -22,6 +22,7 @@ import java.util.Arrays;
 import org.junit.Before;
 import org.junit.Test;
 import org.webrtc.RtpParameters.DegradationPreference;
+import org.webrtc.RtpParameters.FecProtection;
 
 /** Unit-tests for {@link RtpSender}. */
 public class RtpSenderTest {
@@ -83,4 +84,34 @@ public class RtpSenderTest {
                 DegradationPreference.MAINTAIN_FRAMERATE_AND_RESOLUTION,
                 parameters.degradationPreference);
     }
+
+  /** Test checking that FecProtection round-trips through the native layer. */
+  @Test
+  @SmallTest
+  public void testSetFecProtection() throws Exception {
+    RtpTransceiver transceiver = pc.addTransceiver(MediaStreamTrack.MediaType.MEDIA_TYPE_VIDEO);
+    RtpSender sender = transceiver.getSender();
+
+    RtpParameters parameters = sender.getParameters();
+    assertNotNull(parameters);
+    assertNull(parameters.fecProtection);
+
+    for (FecProtection.Mode mode : FecProtection.Mode.values()) {
+      FecProtection fecProtection = new FecProtection(mode, 0.25);
+      fecProtection.keyFrameProtectionFactor = 0.5;
+      fecProtection.maxFecFrames = 2;
+      parameters.fecProtection = fecProtection;
+      assertTrue(sender.setParameters(parameters));
+      parameters = sender.getParameters();
+      assertNotNull(parameters.fecProtection);
+      assertEquals(mode, parameters.fecProtection.mode);
+      assertEquals(0.25, parameters.fecProtection.protectionFactor, 0.0);
+      assertEquals(Double.valueOf(0.5), parameters.fecProtection.keyFrameProtectionFactor);
+      assertEquals(Integer.valueOf(2), parameters.fecProtection.maxFecFrames);
+    }
+
+    parameters.fecProtection = null;
+    assertTrue(sender.setParameters(parameters));
+    assertNull(sender.getParameters().fecProtection);
+  }
 }

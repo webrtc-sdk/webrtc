@@ -53,6 +53,33 @@ DegradationPreference JavaToNativeDegradationPreference(
   return DegradationPreference::MAINTAIN_FRAMERATE_AND_RESOLUTION;
 }
 
+RtpFecProtection JavaToNativeRtpFecProtection(
+    JNIEnv* jni,
+    const JavaRef<jobject>& j_fec_protection) {
+  RtpFecProtection fec_protection;
+  fec_protection.mode = static_cast<RtpFecProtection::Mode>(
+      Java_FecProtection_getModeNativeIndex(jni, j_fec_protection));
+  fec_protection.protection_factor =
+      Java_FecProtection_getProtectionFactor(jni, j_fec_protection);
+  fec_protection.key_frame_protection_factor = JavaToNativeOptionalDouble(
+      jni,
+      Java_FecProtection_getKeyFrameProtectionFactor(jni, j_fec_protection));
+  fec_protection.max_fec_frames = JavaToNativeOptionalInt(
+      jni, Java_FecProtection_getMaxFecFrames(jni, j_fec_protection));
+  return fec_protection;
+}
+
+ScopedJavaLocalRef<jobject> NativeToJavaRtpFecProtection(
+    JNIEnv* env,
+    const RtpFecProtection& fec_protection) {
+  return Java_FecProtection_Constructor(
+      env,
+      Java_Mode_fromNativeIndex(env, static_cast<int>(fec_protection.mode)),
+      fec_protection.protection_factor,
+      NativeToJavaDouble(env, fec_protection.key_frame_protection_factor),
+      NativeToJavaInteger(env, fec_protection.max_fec_frames));
+}
+
 ScopedJavaLocalRef<jobject> NativeToJavaRtpEncodingParameter(
     JNIEnv* env,
     const RtpEncodingParameters& encoding) {
@@ -157,6 +184,13 @@ RtpParameters JavaToNativeRtpParameters(JNIEnv* jni,
         JavaToNativeDegradationPreference(jni, j_degradation_preference);
   }
 
+  ScopedJavaLocalRef<jobject> j_fec_protection =
+      Java_RtpParameters_getFecProtection(jni, j_parameters);
+  if (!IsNull(jni, j_fec_protection)) {
+    parameters.fec_protection =
+        JavaToNativeRtpFecProtection(jni, j_fec_protection);
+  }
+
   ScopedJavaLocalRef<jobject> j_rtcp =
       Java_RtpParameters_getRtcp(jni, j_parameters);
   ScopedJavaLocalRef<jstring> j_rtcp_cname = Java_Rtcp_getCname(jni, j_rtcp);
@@ -216,6 +250,9 @@ ScopedJavaLocalRef<jobject> NativeToJavaRtpParameters(
       parameters.degradation_preference.has_value()
           ? Java_DegradationPreference_fromNativeIndex(
                 env, static_cast<int>(*parameters.degradation_preference))
+          : nullptr,
+      parameters.fec_protection
+          ? NativeToJavaRtpFecProtection(env, *parameters.fec_protection)
           : nullptr,
       NativeToJavaRtpRtcpParameters(env, parameters.rtcp),
       NativeToJavaList(env, parameters.header_extensions,
