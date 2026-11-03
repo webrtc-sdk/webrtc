@@ -25,6 +25,12 @@ typedef NS_ENUM(NSUInteger, RTC_OBJC_TYPE(RTCKeyDerivationAlgorithm)) {
   RTC_OBJC_TYPE(RTCKeyDerivationAlgorithmHKDF),
 };
 
+/** AES-GCM key size used for frame and data packet encryption. */
+typedef NS_ENUM(NSInteger, RTC_OBJC_TYPE(RTCFrameCryptorKeySize)) {
+  RTC_OBJC_TYPE(RTCFrameCryptorKeySizeAES128) = 128,
+  RTC_OBJC_TYPE(RTCFrameCryptorKeySizeAES256) = 256,
+};
+
 RTC_OBJC_EXPORT
 @interface RTC_OBJC_TYPE (RTCFrameCryptorKeyProvider) : NSObject
 
@@ -71,7 +77,7 @@ RTC_OBJC_EXPORT
     discardFrameWhenCryptorNotReady:(BOOL)discardFrameWhenCryptorNotReady
              keyDerivationAlgorithm:(RTC_OBJC_TYPE(RTCKeyDerivationAlgorithm))keyDerivationAlgorithm;
 
-/** keySize is the frame key length in bits: 128 (the default of every other initializer) or 256. */
+/** Every participant must use the same key size. Other initializers default to AES-128. */
 - (instancetype)initWithRatchetSalt:(NSData *)salt
                   ratchetWindowSize:(int)windowSize
                       sharedKeyMode:(BOOL)sharedKey
@@ -80,7 +86,7 @@ RTC_OBJC_EXPORT
                         keyRingSize:(int)keyRingSize
     discardFrameWhenCryptorNotReady:(BOOL)discardFrameWhenCryptorNotReady
              keyDerivationAlgorithm:(RTC_OBJC_TYPE(RTCKeyDerivationAlgorithm))keyDerivationAlgorithm
-                            keySize:(int)keySize;
+                            keySize:(RTC_OBJC_TYPE(RTCFrameCryptorKeySize))keySize;
 
 @end
 

@@ -206,7 +206,7 @@ JNI_FrameCryptorFactory_CreateFrameCryptorKeyProvider(
   options.key_ring_size = j_keyRingSize;
   options.discard_frame_when_cryptor_not_ready = j_discardFrameWhenCryptorNotReady;
   options.key_derivation_algorithm = KeyDerivationAlgorithmFromIndex(j_keyDerivationAlgorithmIndex);
-  options.key_size = j_keySize;
+  options.key_size_bits = j_keySize;
   return NativeToJavaFrameCryptorKeyProvider(
       env, webrtc::make_ref_counted<webrtc::DefaultKeyProviderImpl>(options));
 }

@@ -55,7 +55,7 @@ TEST(FrameCryptor, KeyProvider) {
 
 TEST(FrameCryptor, KeySizeDefaultsTo128) {
   auto key_options = KeyProviderOptions();
-  EXPECT_EQ(key_options.key_size, 128);
+  EXPECT_EQ(key_options.key_size_bits, 128);
   EXPECT_EQ(key_options.frame_key_bits(), 128u);
   key_options.ratchet_salt =
       std::vector<uint8_t>({0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07});
@@ -74,14 +74,14 @@ TEST(FrameCryptor, KeySizeDefaultsTo128) {
 
 TEST(FrameCryptor, KeySize256DerivesA32ByteKey) {
   auto key_options = KeyProviderOptions();
-  key_options.key_size = 256;
+  key_options.key_size_bits = 256;
   EXPECT_EQ(key_options.frame_key_bits(), 256u);
   key_options.ratchet_salt =
       std::vector<uint8_t>({0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07});
 
-  // The copy constructor carries key_size.
+  // The copy constructor carries key_size_bits.
   KeyProviderOptions copied(key_options);
-  EXPECT_EQ(copied.key_size, 256);
+  EXPECT_EQ(copied.key_size_bits, 256);
 
   auto key_provider =
       webrtc::make_ref_counted<DefaultKeyProviderImpl>(key_options);
@@ -103,7 +103,7 @@ TEST(FrameCryptor, KeySize256DerivesA32ByteKey) {
 
 TEST(FrameCryptor, InvalidKeySizeBehavesAs128) {
   auto key_options = KeyProviderOptions();
-  key_options.key_size = 192;
+  key_options.key_size_bits = 192;
   EXPECT_EQ(key_options.frame_key_bits(), 128u);
   key_options.ratchet_salt =
       std::vector<uint8_t>({0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07});
@@ -116,6 +116,80 @@ TEST(FrameCryptor, InvalidKeySizeBehavesAs128) {
   ASSERT_NE(keyset, nullptr);
   EXPECT_EQ(keyset->encryption_key.size(), 16u);
 }
+
+TEST(FrameCryptor, CopiesKeyProviderOptions) {
+  KeyProviderOptions options;
+  EXPECT_FALSE(options.discard_frame_when_cryptor_not_ready);
+  options.discard_frame_when_cryptor_not_ready = true;
+  options.key_size_bits = 256;
+
+  KeyProviderOptions copied(options);
+  EXPECT_TRUE(copied.discard_frame_when_cryptor_not_ready);
+  EXPECT_EQ(copied.key_size_bits, 256);
+
+  auto key_provider = make_ref_counted<DefaultKeyProviderImpl>(options);
+  EXPECT_TRUE(key_provider->options().discard_frame_when_cryptor_not_ready);
+  EXPECT_EQ(key_provider->options().key_size_bits, 256);
+}
+
+class DataPacketCryptorKeySizeTest
+    : public ::testing::TestWithParam<KeyDerivationAlgorithm> {
+ protected:
+  scoped_refptr<DefaultKeyProviderImpl> CreateKeyProvider(int key_size_bits) {
+    KeyProviderOptions options;
+    options.shared_key = true;
+    options.ratchet_salt = {0, 1, 2, 3, 4, 5, 6, 7};
+    options.ratchet_window_size = 4;
+    options.key_derivation_algorithm = GetParam();
+    options.key_size_bits = key_size_bits;
+    auto provider = make_ref_counted<DefaultKeyProviderImpl>(options);
+    provider->SetSharedKey(0, std::vector<uint8_t>(32, 7));
+    return provider;
+  }
+};
+
+TEST_P(DataPacketCryptorKeySizeTest, Aes256RoundTripAndRatchet) {
+  auto sender_provider = CreateKeyProvider(256);
+  auto receiver_provider = CreateKeyProvider(256);
+  auto sender = make_ref_counted<DataPacketCryptor>(
+      FrameCryptorTransformer::Algorithm::kAesGcm, sender_provider);
+  auto receiver = make_ref_counted<DataPacketCryptor>(
+      FrameCryptorTransformer::Algorithm::kAesGcm, receiver_provider);
+  const std::vector<uint8_t> plaintext{0, 1, 2, 3, 4, 5, 6, 7};
+
+  auto encrypted = sender->Encrypt("participant_1", 0, plaintext);
+  ASSERT_TRUE(encrypted.ok());
+  auto decrypted = receiver->Decrypt("participant_1", encrypted.value());
+  ASSERT_TRUE(decrypted.ok());
+  EXPECT_EQ(decrypted.value(), plaintext);
+
+  sender_provider->RatchetSharedKey(0);
+  auto ratcheted = sender->Encrypt("participant_1", 0, plaintext);
+  ASSERT_TRUE(ratcheted.ok());
+  auto decrypted_ratcheted =
+      receiver->Decrypt("participant_1", ratcheted.value());
+  ASSERT_TRUE(decrypted_ratcheted.ok());
+  EXPECT_EQ(decrypted_ratcheted.value(), plaintext);
+  EXPECT_EQ(receiver_provider->GetSharedKey("participant_1")
+                ->GetKeySet(0)
+                ->encryption_key.size(),
+            32u);
+}
+
+TEST_P(DataPacketCryptorKeySizeTest, Aes128SenderFailsWithAes256Receiver) {
+  auto sender = make_ref_counted<DataPacketCryptor>(
+      FrameCryptorTransformer::Algorithm::kAesGcm, CreateKeyProvider(128));
+  auto receiver = make_ref_counted<DataPacketCryptor>(
+      FrameCryptorTransformer::Algorithm::kAesGcm, CreateKeyProvider(256));
+  auto encrypted =
+      sender->Encrypt("participant_1", 0, {0, 1, 2, 3, 4, 5, 6, 7});
+  ASSERT_TRUE(encrypted.ok());
+  EXPECT_FALSE(receiver->Decrypt("participant_1", encrypted.value()).ok());
+}
+
+INSTANTIATE_TEST_SUITE_P(KeyDerivationAlgorithms,
+                         DataPacketCryptorKeySizeTest,
+                         ::testing::Values(kPBKDF2, kHKDF));
 
 TEST(DataPacketCryptor, BasicTest) {
   auto key_options = KeyProviderOptions();

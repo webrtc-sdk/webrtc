@@ -90,7 +90,7 @@
                         keyRingSize:keyRingSize
     discardFrameWhenCryptorNotReady:discardFrameWhenCryptorNotReady
              keyDerivationAlgorithm:keyDerivationAlgorithm
-                            keySize:128];
+                            keySize:RTC_OBJC_TYPE(RTCFrameCryptorKeySizeAES128)];
 }
 
 - (instancetype)initWithRatchetSalt:(NSData *)salt
@@ -101,7 +101,7 @@
                         keyRingSize:(int)keyRingSize
     discardFrameWhenCryptorNotReady:(BOOL)discardFrameWhenCryptorNotReady
              keyDerivationAlgorithm:(RTC_OBJC_TYPE(RTCKeyDerivationAlgorithm))keyDerivationAlgorithm
-                            keySize:(int)keySize {
+                            keySize:(RTC_OBJC_TYPE(RTCFrameCryptorKeySize))keySize {
   self = [super init];
   if (self) {
     webrtc::KeyProviderOptions options;
@@ -117,7 +117,7 @@
                                                           ((const uint8_t *)uncryptedMagicBytes.bytes) + uncryptedMagicBytes.length);
     }
     options.key_derivation_algorithm = (webrtc::KeyDerivationAlgorithm)keyDerivationAlgorithm;
-    options.key_size = keySize;
+    options.key_size_bits = static_cast<int>(keySize);
     _nativeKeyProvider = webrtc::make_ref_counted<webrtc::DefaultKeyProviderImpl>(options);
   }
   return self;
