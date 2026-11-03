@@ -52,31 +52,34 @@ public class RtpParameters {
   }
 
   /**
+   * Java version of webrtc::RtpFecProtection::Mode - the ordering must be kept in sync. This is a
+   * direct member of RtpParameters because JNI generation does not support deeper nesting.
+   */
+  public enum FecProtectionMode {
+    /** Protection is derived from the observed loss and RTT. */
+    ADAPTIVE,
+    /** {@code protectionFactor} is used regardless of loss and RTT. */
+    FIXED,
+    /** Adaptive, but never below {@code protectionFactor}. */
+    MINIMUM,
+    /** No FEC packets are generated even if FEC was negotiated. */
+    DISABLED;
+
+    @CalledByNative
+    static FecProtectionMode fromNativeIndex(int nativeIndex) {
+      return values()[nativeIndex];
+    }
+  }
+
+  /**
    * Non-standard sender-wide FEC protection policy. Java version of webrtc::RtpFecProtection. Has
    * no effect unless FEC was negotiated, and only applies to video senders.
    */
   public static class FecProtection {
-    /** Java version of webrtc::RtpFecProtection::Mode - the ordering must be kept in sync. */
-    public enum Mode {
-      /** Protection is derived from the observed loss and RTT. */
-      ADAPTIVE,
-      /** {@code protectionFactor} is used regardless of loss and RTT. */
-      FIXED,
-      /** Adaptive, but never below {@code protectionFactor}. */
-      MINIMUM,
-      /** No FEC packets are generated even if FEC was negotiated. */
-      DISABLED;
-
-      @CalledByNative
-      static Mode fromNativeIndex(int nativeIndex) {
-        return values()[nativeIndex];
-      }
-    }
-
-    public Mode mode = Mode.ADAPTIVE;
+    public FecProtectionMode mode = FecProtectionMode.ADAPTIVE;
     /**
      * Number of FEC packets relative to the number of media packets, in [0.0, 1.0]. Used by
-     * {@link Mode#FIXED} and {@link Mode#MINIMUM}.
+     * {@link FecProtectionMode#FIXED} and {@link FecProtectionMode#MINIMUM}.
      */
     public double protectionFactor;
     /** Protection factor for key frames. If null, {@code protectionFactor} is used. */
@@ -84,14 +87,14 @@ public class RtpParameters {
     /** Maximum number of frames covered by one FEC block, in [1, 6]. */
     @Nullable public Integer maxFecFrames;
 
-    public FecProtection(Mode mode, double protectionFactor) {
+    public FecProtection(FecProtectionMode mode, double protectionFactor) {
       this.mode = mode;
       this.protectionFactor = protectionFactor;
     }
 
     @CalledByNative
-    FecProtection(Mode mode, double protectionFactor, @Nullable Double keyFrameProtectionFactor,
-        @Nullable Integer maxFecFrames) {
+    FecProtection(FecProtectionMode mode, double protectionFactor,
+        @Nullable Double keyFrameProtectionFactor, @Nullable Integer maxFecFrames) {
       this.mode = mode;
       this.protectionFactor = protectionFactor;
       this.keyFrameProtectionFactor = keyFrameProtectionFactor;

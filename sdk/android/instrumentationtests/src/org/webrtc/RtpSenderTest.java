@@ -23,6 +23,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.webrtc.RtpParameters.DegradationPreference;
 import org.webrtc.RtpParameters.FecProtection;
+import org.webrtc.RtpParameters.FecProtectionMode;
 
 /** Unit-tests for {@link RtpSender}. */
 public class RtpSenderTest {
@@ -85,7 +86,10 @@ public class RtpSenderTest {
                 parameters.degradationPreference);
     }
 
-  /** Test checking that FecProtection round-trips through the native layer. */
+  /**
+   * Test checking that a non-null FecProtection round-trips through the native layer for every
+   * mode, which requires JNI to resolve RtpParameters$FecProtectionMode.
+   */
   @Test
   @SmallTest
   public void testSetFecProtection() throws Exception {
@@ -96,7 +100,7 @@ public class RtpSenderTest {
     assertNotNull(parameters);
     assertNull(parameters.fecProtection);
 
-    for (FecProtection.Mode mode : FecProtection.Mode.values()) {
+    for (FecProtectionMode mode : FecProtectionMode.values()) {
       FecProtection fecProtection = new FecProtection(mode, 0.25);
       fecProtection.keyFrameProtectionFactor = 0.5;
       fecProtection.maxFecFrames = 2;

@@ -74,7 +74,8 @@ ScopedJavaLocalRef<jobject> NativeToJavaRtpFecProtection(
     const RtpFecProtection& fec_protection) {
   return Java_FecProtection_Constructor(
       env,
-      Java_Mode_fromNativeIndex(env, static_cast<int>(fec_protection.mode)),
+      Java_FecProtectionMode_fromNativeIndex(
+          env, static_cast<int>(fec_protection.mode)),
       fec_protection.protection_factor,
       NativeToJavaDouble(env, fec_protection.key_frame_protection_factor),
       NativeToJavaInteger(env, fec_protection.max_fec_frames));
