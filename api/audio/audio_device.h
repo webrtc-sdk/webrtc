@@ -296,7 +296,15 @@ class AudioDeviceObserver {
   virtual void OnDevicesUpdated() {}
   virtual void OnSpeechActivityEvent(AudioDeviceModule::SpeechActivityEvent event) {}
 
-  // AVAudioEngine lifecycle
+  // AVAudioEngine lifecycle.
+  //
+  // Setup hooks (OnEngineDidCreate, OnEngineWillEnable, OnEngineWillStart and
+  // the connect hooks below) can fail the operation. A non-zero result rolls
+  // it back, and the caller gets the error.
+  //
+  // Teardown hooks (OnEngineDidStop, OnEngineDidDisable and OnEngineWillRelease)
+  // run once the engine has stopped, which cannot be undone. A non-zero result
+  // is only logged, and the operation completes.
   virtual int32_t OnEngineDidCreate(AVAudioEngine* engine) { return 0; }
 
   // `voice_processing_enabled` reports the resolved Apple Voice Processing I/O
@@ -320,11 +328,21 @@ class AudioDeviceObserver {
     return 0;
   }
 
+  // `playout_enabled` and `recording_enabled` describe the state the engine is
+  // left in. Also called when an enable operation fails after a successful
+  // OnEngineWillEnable, with the state from before that operation, so the
+  // observer can release what it acquired in OnEngineWillEnable. No call
+  // follows an OnEngineWillEnable that returns an error, so an observer must
+  // not hold anything for that operation when it fails.
   virtual int32_t OnEngineDidDisable(AVAudioEngine* engine, bool playout_enabled,
                                      bool recording_enabled) {
     return 0;
   }
 
+  // Also called when an operation that created `engine` fails after a
+  // successful OnEngineDidCreate, right before the engine is dropped, so the
+  // observer can tear down what it set up in OnEngineDidCreate. No call follows
+  // an OnEngineDidCreate that returns an error.
   virtual int32_t OnEngineWillRelease(AVAudioEngine* engine) { return 0; }
 
   // Override the input node configuration with a custom implementation.

@@ -1832,8 +1832,8 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
       int32_t result = observer_->OnEngineDidStop(
           engine_manual_input_, state.next.IsOutputEnabled(), state.next.IsInputEnabled());
       if (result != 0) {
+        // Teardown hooks cannot fail the operation, see AudioDeviceObserver.
         LOGE() << "Call to OnEngineDidStop returned error: " << result;
-        return rollback(result);
       }
     }
   }
@@ -1884,6 +1884,22 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
         LOGE() << "Call to OnEngineDidCreate returned error: " << result;
         return rollback(result);
       }
+      rollback_actions.push_back([this]() {
+        RTC_DCHECK_RUN_ON(thread_);
+        // An observer may set up per-engine state in OnEngineDidCreate, such as
+        // attaching its own nodes, and only tear it down in OnEngineWillRelease.
+        // If a later step fails, the create rollback drops this engine, so tell
+        // the observer first. The engine is still valid here because this runs
+        // before the create rollback. The result is only logged since the
+        // rollback itself cannot be aborted.
+        if (observer_ != nullptr) {
+          LOGW() << "Create rolled back after OnEngineDidCreate, notifying observer (Manual)";
+          int32_t result = observer_->OnEngineWillRelease(engine_manual_input_);
+          if (result != 0) {
+            LOGE() << "Call to OnEngineWillRelease returned error during rollback: " << result;
+          }
+        }
+      });
     }
   }
 
@@ -1900,6 +1916,24 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
       LOGE() << "Call to OnEngineWillEnable returned error: " << result;
       return rollback(result);
     }
+    rollback_actions.push_back([this, state]() {
+      RTC_DCHECK_RUN_ON(thread_);
+      // Compensate the observer if a later step of this enable operation fails.
+      // It may have configured and activated the audio session for the enable
+      // that will now never happen, and without this call it is never told the
+      // engine rolled back. Reuses OnEngineDidDisable with the previous state so
+      // existing observers release what they acquired without adopting a new
+      // callback. The result is only logged since the rollback itself cannot be
+      // aborted.
+      if (observer_ != nullptr) {
+        LOGW() << "Enable rolled back after OnEngineWillEnable, notifying observer (Manual)";
+        int32_t result = observer_->OnEngineDidDisable(
+            engine_manual_input_, state.prev.IsOutputEnabled(), state.prev.IsInputEnabled());
+        if (result != 0) {
+          LOGE() << "Call to OnEngineDidDisable returned error during rollback: " << result;
+        }
+      }
+    });
   }
 
   if (state.next.IsOutputEnabled() && !state.prev.IsOutputEnabled()) {
@@ -1966,8 +2000,8 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
     int32_t result = observer_->OnEngineDidDisable(
         engine_manual_input_, state.next.IsOutputEnabled(), state.next.IsInputEnabled());
     if (result != 0) {
+      // Teardown hooks cannot fail the operation, see AudioDeviceObserver.
       LOGE() << "Call to OnEngineDidDisable returned error: " << result;
-      return rollback(result);
     }
   }
 
@@ -2087,8 +2121,8 @@ int32_t AudioEngineDevice::ApplyManualEngineState(EngineStateUpdate state) {
     if (observer_ != nullptr) {
       int32_t result = observer_->OnEngineWillRelease(engine_manual_input_);
       if (result != 0) {
+        // Teardown hooks cannot fail the operation, see AudioDeviceObserver.
         LOGE() << "Call to OnEngineWillRelease returned error: " << result;
-        return rollback(result);
       }
     }
     LOGI() << "Releasing AVAudioEngine (Manual)...";
@@ -2206,8 +2240,8 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
         int32_t result = observer_->OnEngineDidStop(engine_device_, state.next.IsOutputEnabled(),
                                                     state.next.IsInputEnabled());
         if (result != 0) {
+          // Teardown hooks cannot fail the operation, see AudioDeviceObserver.
           LOGE() << "Call to OnEngineDidStop returned error: " << result;
-          return rollback(result);
         }
       }
     }
@@ -2252,8 +2286,8 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     if (observer_ != nullptr && engine_device_ != nil) {
       int32_t result = observer_->OnEngineWillRelease(engine_device_);
       if (result != 0) {
+        // Teardown hooks cannot fail the operation, see AudioDeviceObserver.
         LOGE() << "Call to OnEngineWillRelease returned error: " << result;
-        return rollback(result);
       }
     }
 
@@ -2286,6 +2320,22 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
         LOGE() << "Call to OnEngineDidCreate returned error: " << result;
         return rollback(result);
       }
+      rollback_actions.push_back([this]() {
+        RTC_DCHECK_RUN_ON(thread_);
+        // An observer may set up per-engine state in OnEngineDidCreate, such as
+        // attaching its own nodes, and only tear it down in OnEngineWillRelease.
+        // If a later step fails, the create rollback drops this engine, so tell
+        // the observer first. The engine is still valid here because this runs
+        // before the create rollback. The result is only logged since the
+        // rollback itself cannot be aborted.
+        if (observer_ != nullptr) {
+          LOGW() << "Create rolled back after OnEngineDidCreate, notifying observer";
+          int32_t result = observer_->OnEngineWillRelease(engine_device_);
+          if (result != 0) {
+            LOGE() << "Call to OnEngineWillRelease returned error during rollback: " << result;
+          }
+        }
+      });
     }
   }
 
@@ -2312,6 +2362,24 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
       LOGE() << "Call to OnEngineWillEnable returned error: " << result;
       return rollback(result);
     }
+    rollback_actions.push_back([this, state]() {
+      RTC_DCHECK_RUN_ON(thread_);
+      // Compensate the observer if a later step of this enable operation fails.
+      // It may have configured and activated the audio session for the enable
+      // that will now never happen, and without this call it is never told the
+      // engine rolled back. Reuses OnEngineDidDisable with the previous state so
+      // existing observers release what they acquired without adopting a new
+      // callback. The result is only logged since the rollback itself cannot be
+      // aborted.
+      if (observer_ != nullptr) {
+        LOGW() << "Enable rolled back after OnEngineWillEnable, notifying observer";
+        int32_t result = observer_->OnEngineDidDisable(engine_device_, state.prev.IsOutputEnabled(),
+                                                       state.prev.IsInputEnabled());
+        if (result != 0) {
+          LOGE() << "Call to OnEngineDidDisable returned error during rollback: " << result;
+        }
+      }
+    });
   }
 
   // --------------------------------------------------------------------------------------------
@@ -2790,8 +2858,8 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     int32_t result = observer_->OnEngineDidDisable(engine_device_, state.next.IsOutputEnabled(),
                                                    state.next.IsInputEnabled());
     if (result != 0) {
+      // Teardown hooks cannot fail the operation, see AudioDeviceObserver.
       LOGE() << "Call to OnEngineDidDisable returned error: " << result;
-      return rollback(result);
     }
   }
 
@@ -3075,8 +3143,8 @@ int32_t AudioEngineDevice::ApplyDeviceEngineState(EngineStateUpdate state) {
     if (observer_ != nullptr) {
       int32_t result = observer_->OnEngineWillRelease(engine_device_);
       if (result != 0) {
+        // Teardown hooks cannot fail the operation, see AudioDeviceObserver.
         LOGE() << "Call to OnEngineWillRelease returned error: " << result;
-        return rollback(result);
       }
     }
 
