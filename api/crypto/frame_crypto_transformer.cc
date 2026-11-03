@@ -34,6 +34,7 @@
 #include "absl/types/variant.h"
 #include "api/array_view.h"
 #include "common_video/h264/h264_common.h"
+#include "common_video/h264/pps_parser.h"
 #ifdef RTC_ENABLE_H265
 #include "common_video/h265/h265_common.h"
 #endif // RTC_ENABLE_H265
@@ -50,6 +51,11 @@ enum class EncryptOrDecrypt { kEncrypt = 0, kDecrypt };
 #define OperationError -2
 #define ErrorDataTooSmall -3
 #define ErrorInvalidAesGcmTagLength -4
+
+// With one bit of the PPS id encrypted, each attempt matches with probability
+// 1/2, so 16 attempts all miss with probability 2^-16. After the last attempt
+// the frame goes out as it is.
+constexpr int kMaxPpsIdEncryptAttempts = 16;
 
 webrtc::VideoCodecType get_video_codec_type(
     webrtc::TransformableFrameInterface* frame) {
@@ -432,6 +438,22 @@ bool IsKnownSifPayload(std::span<const uint8_t> payload) {
          });
 }
 
+std::optional<uint32_t> ParseH264IdrPpsId(std::span<const uint8_t> nalu) {
+  if (nalu.size() < 2 ||
+      webrtc::H264::ParseNaluType(nalu[0]) != webrtc::H264::NaluType::kIdr) {
+    return std::nullopt;
+  }
+  // first_mb_in_slice, slice_type and pic_parameter_set_id are the first three
+  // ue(v) fields. 16 bytes hold all three.
+  std::optional<PpsParser::SliceHeader> slice_header =
+      PpsParser::ParseSliceHeader(
+          nalu.subspan(1, std::min<size_t>(16, nalu.size() - 1)));
+  if (!slice_header) {
+    return std::nullopt;
+  }
+  return slice_header->pic_parameter_set_id;
+}
+
 FrameCryptorTransformer::FrameCryptorTransformer(
     webrtc::Thread* signaling_thread,
     const std::string participant_id,
@@ -559,10 +581,39 @@ void FrameCryptorTransformer::encryptFrame(
     payload[i - unencrypted_bytes] = data_in[i];
   }
 
+  // A receiver reads pic_parameter_set_id from an H.264 IDR slice before the
+  // decrypt transform, and drops the keyframe if the id names an unknown PPS.
+  // Some encoders (Intel Quick Sync) put the id past the unencrypted bytes, so
+  // encrypt again with a fresh IV until the sent bits still read as the true
+  // id. The receiver takes the IV from the trailer, so it needs no change.
+  std::optional<uint32_t> pps_id;
+  if (FrameIsH264(frame.get(), type_) && unencrypted_bytes >= 2) {
+    pps_id = ParseH264IdrPpsId(data_in.subspan(unencrypted_bytes - 2));
+  }
+
   std::vector<uint8_t> buffer;
-  if (AesEncryptDecrypt(EncryptOrDecrypt::kEncrypt, algorithm_,
-                        key_set->encryption_key, iv, frame_header, payload,
-                        &buffer) == Success) {
+  int result = Success;
+  for (int attempt = 1;; attempt++) {
+    result = AesEncryptDecrypt(EncryptOrDecrypt::kEncrypt, algorithm_,
+                               key_set->encryption_key, iv, frame_header,
+                               payload, &buffer);
+    if (result != Success || !pps_id || attempt == kMaxPpsIdEncryptAttempts) {
+      break;
+    }
+    // The slice as the receiver sees it: its 2 unencrypted bytes, then the
+    // escaped ciphertext. WriteRbsp works byte by byte, so escaping the first
+    // 16 bytes gives the start of the escaped frame, and a retry costs only
+    // the encryption. The GCM tag makes the output at least 16 bytes.
+    webrtc::Buffer sent_slice(&data_in[unencrypted_bytes - 2], 2);
+    H264::WriteRbsp(buffer.data(), std::min<size_t>(16, buffer.size()),
+                    &sent_slice);
+    if (ParseH264IdrPpsId(sent_slice) == pps_id) {
+      break;
+    }
+    iv = makeIv(frame->GetSsrc(), frame->GetTimestamp());
+  }
+
+  if (result == Success) {
     webrtc::Buffer encrypted_payload(buffer.data(), buffer.size());
     webrtc::Buffer tag(std::span<const uint8_t>(encrypted_payload).last(16));
     webrtc::Buffer data_without_header;
