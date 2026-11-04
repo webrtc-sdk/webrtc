@@ -4224,6 +4224,7 @@ TEST_F(P2PTransportChannelPingTest, TestPingOnSwitch) {
   PrepareChannel(&ch);
   ch.SetIceConfig(ch.config());
   ch.SetIceRole(ICEROLE_CONTROLLING);
+  ch.SetRemoteIceMode(ICEMODE_LITE);
   ch.MaybeStartGathering();
   ch.AddRemoteCandidate(
       CreateUdpCandidate(IceCandidateType::kHost, "1.1.1.1", 1, 1));
@@ -4254,6 +4255,7 @@ TEST_F(P2PTransportChannelPingTest, TestPingOnSwitch) {
 
   // And the additional ping should have been sent directly.
   EXPECT_EQ(conn2->num_pings_sent(), before + 1);
+  EXPECT_TRUE(conn2->use_candidate_attr());
 }
 
 // Test the field trial send_ping_on_switch_ice_controlling
@@ -4269,6 +4271,7 @@ TEST_F(P2PTransportChannelPingTest, TestPingOnSelected) {
   PrepareChannel(&ch);
   ch.SetIceConfig(ch.config());
   ch.SetIceRole(ICEROLE_CONTROLLING);
+  ch.SetRemoteIceMode(ICEMODE_LITE);
   ch.MaybeStartGathering();
   ch.AddRemoteCandidate(
       CreateUdpCandidate(IceCandidateType::kHost, "1.1.1.1", 1, 1));
@@ -4286,6 +4289,7 @@ TEST_F(P2PTransportChannelPingTest, TestPingOnSelected) {
 
   // And the additional ping should have been sent directly.
   EXPECT_EQ(conn1->num_pings_sent(), before + 1);
+  EXPECT_TRUE(conn1->use_candidate_attr());
 }
 
 // The controlled side will select a connection as the "selected connection"
