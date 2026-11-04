@@ -1265,6 +1265,17 @@ void AudioRtpSender::SetSend() {
   if (stopped_) {
     return;
   }
+
+  // Forward the source type from the track's source to the sink adapter so
+  // the voice engine knows whether to keep ADM audio out of this stream.
+  // Assigned unconditionally (a sourceless track uses the ADM path) so track
+  // replacement in either direction updates the type. can_send_track() above
+  // guarantees a track.
+  AudioSourceInterface* track_source = audio_track()->GetSource();
+  sink_adapter_->set_source_type(
+      track_source ? track_source->source_type()
+                   : AudioSourceInterface::SourceType::kAudioDeviceModule);
+
   AudioOptions options;
   const bool track_enabled = track_->enabled();
   std::optional<AudioOptions> track_source_options;

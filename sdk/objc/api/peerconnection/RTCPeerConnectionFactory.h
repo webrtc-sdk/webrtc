@@ -19,6 +19,7 @@ NS_ASSUME_NONNULL_BEGIN
 @class RTC_OBJC_TYPE(RTCRtpCapabilities);
 @class RTC_OBJC_TYPE(RTCAudioSource);
 @class RTC_OBJC_TYPE(RTCAudioTrack);
+@class RTC_OBJC_TYPE(RTCCustomAudioSource);
 @class RTC_OBJC_TYPE(RTCConfiguration);
 @class RTC_OBJC_TYPE(RTCMediaConstraints);
 @class RTC_OBJC_TYPE(RTCMediaStream);
@@ -94,6 +95,19 @@ RTC_OBJC_EXPORT
 /** Initialize an RTCAudioSource with constraints. */
 - (RTC_OBJC_TYPE(RTCAudioSource) *)audioSourceWithConstraints:
     (nullable RTC_OBJC_TYPE(RTCMediaConstraints) *)constraints;
+
+/**
+ * Initialize an RTCCustomAudioSource the application pushes PCM frames
+ * into, independent of the device capture path. Pushed frames must be
+ * interleaved int16 at the given sample rate and channel count.
+ * queueSizeMs must be a non-negative multiple of 10: 0 selects synchronous
+ * mode (exact 10 ms frames delivered on the calling thread), larger values
+ * buffer pushed audio and pace 10 ms deliveries internally.
+ * Returns nil for invalid arguments.
+ */
+- (nullable RTC_OBJC_TYPE(RTCCustomAudioSource) *)customAudioSourceWithSampleRate:(int)sampleRate
+                                                                        channels:(NSUInteger)channels
+                                                                     queueSizeMs:(int)queueSizeMs;
 
 /** Initialize an RTCAudioTrack with an id. Convenience ctor to use an audio source
  * with no constraints.
