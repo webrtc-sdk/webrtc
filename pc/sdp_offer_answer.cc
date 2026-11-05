@@ -2563,14 +2563,26 @@ void SdpOfferAnswerHandler::ApplyRemoteDescriptionUpdateTransceiverState(
 
       RTC_LOG(LS_INFO) << "Processing the MSIDs for MID=" << content->mid()
                        << " (" << GetStreamIdsString(stream_ids) << ").";
+      std::vector<std::string> previous_stream_ids =
+          transceiver->receiver()->stream_ids();
       SetAssociatedRemoteStreams(transceiver->receiver_internal(), stream_ids,
                                  &added_streams, &removed_streams);
-      // From the WebRTC specification, steps 2.2.8.5/6 of section 4.4.1.6
-      // "Set the RTCSessionDescription: If direction is sendrecv or recvonly,
-      // and transceiver's current direction is neither sendrecv nor recvonly,
-      // process the addition of a remote track for the media description.
+      // `added_streams` only holds streams new to the PeerConnection, while the
+      // spec's addList is per receiver, so diff the receiver's stream IDs. Use
+      // the receiver's IDs rather than `stream_ids` so that the stream
+      // generated for a missing a=msid is included.
+      bool receiver_gained_stream = absl::c_any_of(
+          transceiver->receiver()->stream_ids(), [&](const std::string& id) {
+            return !absl::c_linear_search(previous_stream_ids, id);
+          });
+      // From the WebRTC specification, "process remote tracks": If direction
+      // is sendrecv or recvonly, and transceiver's [[FiredDirection]] is
+      // neither sendrecv nor recvonly, or the previous step increased the
+      // length of addList, process the addition of a remote track.
+      // https://w3c.github.io/webrtc-pc/#process-remote-tracks
       if (!transceiver->fired_direction() ||
-          !RtpTransceiverDirectionHasRecv(*transceiver->fired_direction())) {
+          !RtpTransceiverDirectionHasRecv(*transceiver->fired_direction()) ||
+          receiver_gained_stream) {
         RTC_LOG(LS_INFO) << "Processing the addition of a remote track for MID="
                          << content->mid() << ".";
         // Since the transceiver is passed to the user in an

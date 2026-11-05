@@ -117,6 +117,21 @@ TEST(FrameCryptor, InvalidKeySizeBehavesAs128) {
   EXPECT_EQ(keyset->encryption_key.size(), 16u);
 }
 
+TEST(FrameCryptor, CopiesKeyProviderOptions) {
+  KeyProviderOptions options;
+  EXPECT_FALSE(options.discard_frame_when_cryptor_not_ready);
+  options.discard_frame_when_cryptor_not_ready = true;
+  options.key_size = 256;
+
+  KeyProviderOptions copied(options);
+  EXPECT_TRUE(copied.discard_frame_when_cryptor_not_ready);
+  EXPECT_EQ(copied.key_size, 256);
+
+  auto key_provider = make_ref_counted<DefaultKeyProviderImpl>(options);
+  EXPECT_TRUE(key_provider->options().discard_frame_when_cryptor_not_ready);
+  EXPECT_EQ(key_provider->options().key_size, 256);
+}
+
 TEST(DataPacketCryptor, BasicTest) {
   auto key_options = KeyProviderOptions();
   key_options.ratchet_salt =
