@@ -383,8 +383,9 @@ class RTC_EXPORT RTCOutboundRtpStreamStats final
   std::optional<uint32_t> rtx_ssrc;
 
   // Non-standard counterparts of the inbound-rtp FEC stats. Only present for
-  // the stream protected by a negotiated FlexFEC stream. FEC packets and bytes
-  // are also included in `packets_sent` and `bytes_sent`.
+  // the stream protected by a negotiated FlexFEC stream, once the first FEC
+  // packet has been sent. FEC packets and bytes are also included in
+  // `packets_sent` and `bytes_sent`.
   std::optional<uint64_t> fec_packets_sent;
   std::optional<uint64_t> fec_bytes_sent;
   std::optional<uint32_t> fec_ssrc;
