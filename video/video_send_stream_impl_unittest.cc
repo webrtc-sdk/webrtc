@@ -1286,6 +1286,31 @@ TEST_F(VideoSendStreamImplTest, ForwardsFecProtectionToRtpVideoSender) {
   vss_impl->SetFecProtection(std::nullopt);
 }
 
+TEST_F(VideoSendStreamImplTest,
+       FecProtectionChangeRecomputesAllocationWhenRunning) {
+  auto vss_impl = CreateVideoSendStreamImpl(TestVideoEncoderConfig());
+  // Not running: nothing to recompute.
+  EXPECT_CALL(bitrate_allocator_, AddObserver(vss_impl.get(), _)).Times(0);
+  vss_impl->SetFecProtection(std::nullopt);
+  testing::Mock::VerifyAndClearExpectations(&bitrate_allocator_);
+
+  EXPECT_CALL(bitrate_allocator_, AddObserver(vss_impl.get(), _));
+  vss_impl->Start();
+  time_controller_.AdvanceTime(TimeDelta::Zero());
+  testing::Mock::VerifyAndClearExpectations(&bitrate_allocator_);
+
+  // Running: the allocation is recomputed so that the FEC controller applies
+  // the new policy without waiting for the next bandwidth estimate.
+  RtpFecProtection fec_protection;
+  fec_protection.mode = RtpFecProtection::Mode::kDisabled;
+  EXPECT_CALL(bitrate_allocator_, AddObserver(vss_impl.get(), _));
+  vss_impl->SetFecProtection(fec_protection);
+  testing::Mock::VerifyAndClearExpectations(&bitrate_allocator_);
+
+  EXPECT_CALL(bitrate_allocator_, RemoveObserver(vss_impl.get()));
+  vss_impl->Stop();
+}
+
 TEST_F(VideoSendStreamImplTest, DisablesPaddingOnPausedEncoder) {
   int padding_bitrate = 0;
   auto vss_impl = CreateVideoSendStreamImpl(TestVideoEncoderConfig());

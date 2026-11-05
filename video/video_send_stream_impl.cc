@@ -652,6 +652,13 @@ void VideoSendStreamImpl::SetFecProtection(
     std::optional<RtpFecProtection> fec_protection) {
   RTC_DCHECK_RUN_ON(&thread_checker_);
   rtp_video_sender_->SetFecProtection(std::move(fec_protection));
+  // The FEC controller only applies the policy when the bitrate is updated,
+  // which may not happen for a long time on a stable network. Re-run the
+  // allocation with the last estimate so the policy, and the resulting change
+  // in the encoder target rate, take effect right away.
+  if (IsRunning()) {
+    bitrate_allocator_->AddObserver(this, GetAllocationConfig());
+  }
 }
 void VideoSendStreamImpl::StopPermanentlyAndGetRtpStates(
     VideoSendStreamImpl::RtpStateMap* rtp_state_map,
