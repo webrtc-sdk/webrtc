@@ -388,7 +388,7 @@ int AudioDeviceIOS::GetRecordAudioParameters(AudioParameters* params) const {
   return 0;
 }
 
-void AudioDeviceIOS::OnInterruptionBegin() {
+void AudioDeviceIOS::OnInterruptionBegin(uint32_t reason) {
   RTC_DCHECK(thread_);
   LOGI() << "OnInterruptionBegin";
   thread_->PostTask(SafeTask(safety_, [this] { HandleInterruptionBegin(); }));

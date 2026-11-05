@@ -38,6 +38,18 @@ RTC_OBJC_EXPORT
 - (void)audioSessionDidBeginInterruption:
     (RTC_OBJC_TYPE(RTCAudioSession) *)session;
 
+/** Called on a system notification thread when AVAudioSession starts an
+ *  interruption event, with the notification's
+ *  AVAudioSessionInterruptionReasonKey value. The reason is
+ *  AVAudioSessionInterruptionReasonDefault when the notification has none.
+ *  A delegate that implements this method does not also receive
+ *  audioSessionDidBeginInterruption:.
+ */
+- (void)audioSessionDidBeginInterruption:
+            (RTC_OBJC_TYPE(RTCAudioSession) *)session
+                                  reason:
+                                      (AVAudioSessionInterruptionReason)reason;
+
 /** Called on a system notification thread when AVAudioSession ends an
  *  interruption event.
  */

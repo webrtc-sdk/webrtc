@@ -71,6 +71,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 // Properties and methods for tests.
 - (void)notifyDidBeginInterruption;
+- (void)notifyDidBeginInterruptionWithReason:
+    (AVAudioSessionInterruptionReason)reason;
 - (void)notifyDidEndInterruptionWithShouldResumeSession:
     (BOOL)shouldResumeSession;
 - (void)notifyDidChangeRouteWithReason:(AVAudioSessionRouteChangeReason)reason
