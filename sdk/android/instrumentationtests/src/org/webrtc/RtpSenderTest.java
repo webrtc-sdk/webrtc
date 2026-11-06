@@ -132,5 +132,9 @@ public class RtpSenderTest {
     parameters = sender.getParameters();
     assertNotNull(parameters.fecProtection);
     assertEquals(FecProtectionMode.ADAPTIVE, parameters.fecProtection.mode);
+    assertEquals(0.25, parameters.fecProtection.protectionFactor, 0.0);
+    // Unset optional fields must round-trip as null, not as 0.
+    assertNull(parameters.fecProtection.keyFrameProtectionFactor);
+    assertNull(parameters.fecProtection.maxFecFrames);
   }
 }
