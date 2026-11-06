@@ -2588,13 +2588,16 @@ WebRtcVideoSendChannel::WebRtcVideoSendStream::GetPerLayerVideoSenderInfos(
     encoding_index_by_ssrc[parameters_.config.rtp.ssrcs[i]] = i;
   }
   // FlexFEC substreams by the media SSRC they protect.
-  std::map<uint32_t, std::pair<uint32_t, const StreamDataCounters*>>
-      flexfec_by_media_ssrc;
+  struct FlexfecSubstream {
+    uint32_t ssrc;
+    const StreamDataCounters* rtp_stats;
+  };
+  std::map<uint32_t, FlexfecSubstream> flexfec_by_media_ssrc;
   for (const auto& [fec_ssrc, substream] : stats.substreams) {
     if (substream.type == VideoSendStream::StreamStats::StreamType::kFlexfec &&
         substream.referenced_media_ssrc.has_value()) {
       flexfec_by_media_ssrc[*substream.referenced_media_ssrc] = {
-          fec_ssrc, &substream.rtp_stats};
+          .ssrc = fec_ssrc, .rtp_stats = &substream.rtp_stats};
     }
   }
   for (const auto& pair : outbound_rtp_substreams) {
@@ -2645,10 +2648,10 @@ WebRtcVideoSendChannel::WebRtcVideoSendStream::GetPerLayerVideoSenderInfos(
         stream_stats.rtp_stats.retransmitted.packets;
     if (auto it = flexfec_by_media_ssrc.find(ssrc);
         it != flexfec_by_media_ssrc.end()) {
-      const auto& [fec_ssrc, fec_rtp_stats] = it->second;
-      info.fec_ssrc = fec_ssrc;
-      info.fec_packets_sent = fec_rtp_stats->transmitted.packets;
-      info.fec_bytes_sent = fec_rtp_stats->transmitted.payload_bytes;
+      const FlexfecSubstream& flexfec = it->second;
+      info.fec_ssrc = flexfec.ssrc;
+      info.fec_packets_sent = flexfec.rtp_stats->transmitted.packets;
+      info.fec_bytes_sent = flexfec.rtp_stats->transmitted.payload_bytes;
     }
     info.firs_received = stream_stats.rtcp_packet_type_counts.fir_packets;
     info.nacks_received = stream_stats.rtcp_packet_type_counts.nack_packets;
