@@ -656,7 +656,12 @@ void VideoSendStreamImpl::SetFecProtection(
   // which may not happen for a long time on a stable network. Re-run the
   // allocation with the last estimate so the policy, and the resulting change
   // in the encoder target rate, take effect right away.
-  if (IsRunning()) {
+  //
+  // Not after an encoder timeout: `SignalEncoderTimedOut()` removed this stream
+  // from the allocator, and re-adding it would reserve bandwidth for an idle
+  // sender until encoding resumes. The stored policy then applies when
+  // `SignalEncoderActive()` re-registers the stream.
+  if (IsRunning() && !timed_out_) {
     bitrate_allocator_->AddObserver(this, GetAllocationConfig());
   }
 }
