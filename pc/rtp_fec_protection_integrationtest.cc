@@ -298,8 +298,9 @@ TEST_F(RtpFecProtectionIntegrationTest, InvalidValuesAreRejected) {
   EXPECT_FALSE(sender->GetParameters().fec_protection.has_value());
 }
 
+// Rejected in RtpSenderBase::ValidateAndMaybeUpdateInitParameters, before FEC
+// negotiation matters, so no FlexFEC field trials are needed.
 TEST_F(RtpFecProtectionIntegrationTest, RejectedForAudioSender) {
-  SetFieldTrials(kFlexFecFieldTrials);
   ASSERT_TRUE(CreatePeerConnectionWrappers());
   ConnectFakeSignaling();
   scoped_refptr<RtpSenderInterface> sender = caller()->AddAudioTrack();
