@@ -127,6 +127,8 @@ class VideoSendStreamImpl : public webrtc::VideoSendStream,
   void SetStats(const Stats& stats) override;
 
   void SetCsrcs(std::span<const uint32_t> csrcs) override;
+  void SetFecProtection(
+      std::optional<RtpFecProtection> fec_protection) override;
 
   void StopPermanentlyAndGetRtpStates(RtpStateMap* rtp_state_map,
                                       RtpPayloadStateMap* payload_state_map);

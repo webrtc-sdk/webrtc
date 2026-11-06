@@ -51,6 +51,83 @@ public class RtpParameters {
     }
   }
 
+  /**
+   * Java version of webrtc::RtpFecProtection::Mode - the ordering must be kept in sync. This is a
+   * direct member of RtpParameters because JNI generation does not support deeper nesting.
+   */
+  public enum FecProtectionMode {
+    /** Protection is derived from the observed loss and RTT. */
+    ADAPTIVE,
+    /** {@code protectionFactor} is used regardless of loss and RTT. */
+    FIXED,
+    /** Adaptive, but never below {@code protectionFactor}. */
+    MINIMUM,
+    /** No FEC packets are generated even if FEC was negotiated. */
+    DISABLED;
+
+    @CalledByNative
+    static FecProtectionMode fromNativeIndex(int nativeIndex) {
+      return values()[nativeIndex];
+    }
+  }
+
+  /**
+   * Non-standard sender-wide FEC protection policy. Java version of webrtc::RtpFecProtection. Has
+   * no effect unless FEC was negotiated, and only applies to video senders.
+   */
+  public static class FecProtection {
+    /** Protection mode. A null value is treated as {@link FecProtectionMode#ADAPTIVE}. */
+    @Nullable public FecProtectionMode mode = FecProtectionMode.ADAPTIVE;
+    /**
+     * Number of FEC packets relative to the number of media packets, in [0.0, 1.0]. Used by
+     * {@link FecProtectionMode#FIXED} and {@link FecProtectionMode#MINIMUM}.
+     */
+    public double protectionFactor;
+    /** Protection factor for key frames. If null, {@code protectionFactor} is used. */
+    @Nullable public Double keyFrameProtectionFactor;
+    /** Maximum number of frames covered by one FEC block, in [1, 6]. */
+    @Nullable public Integer maxFecFrames;
+
+    public FecProtection(@Nullable FecProtectionMode mode, double protectionFactor) {
+      this.mode = mode;
+      this.protectionFactor = protectionFactor;
+    }
+
+    @CalledByNative
+    FecProtection(FecProtectionMode mode, double protectionFactor,
+        @Nullable Double keyFrameProtectionFactor, @Nullable Integer maxFecFrames) {
+      this.mode = mode;
+      this.protectionFactor = protectionFactor;
+      this.keyFrameProtectionFactor = keyFrameProtectionFactor;
+      this.maxFecFrames = maxFecFrames;
+    }
+
+    @CalledByNative
+    int getModeNativeIndex() {
+      // `mode` is a public field that may have been set to null; fall back to
+      // ADAPTIVE (as the ObjC binding does for unknown modes) instead of
+      // throwing from native code.
+      return (mode != null ? mode : FecProtectionMode.ADAPTIVE).ordinal();
+    }
+
+    @CalledByNative
+    double getProtectionFactor() {
+      return protectionFactor;
+    }
+
+    @Nullable
+    @CalledByNative
+    Double getKeyFrameProtectionFactor() {
+      return keyFrameProtectionFactor;
+    }
+
+    @Nullable
+    @CalledByNative
+    Integer getMaxFecFrames() {
+      return maxFecFrames;
+    }
+  }
+
   public static class Encoding {
     // If non-null, this represents the RID that identifies this encoding layer.
     // RIDs are used to identify layers in simulcast.
@@ -306,6 +383,9 @@ public class RtpParameters {
    */
   @Nullable public DegradationPreference degradationPreference;
 
+  /** Non-standard FEC protection policy. If null, protection is adaptive. Only for video. */
+  @Nullable public FecProtection fecProtection;
+
   private final Rtcp rtcp;
 
   private final List<HeaderExtension> headerExtensions;
@@ -315,10 +395,12 @@ public class RtpParameters {
   public final List<Codec> codecs;
 
   @CalledByNative
-  RtpParameters(String transactionId, DegradationPreference degradationPreference, Rtcp rtcp,
-      List<HeaderExtension> headerExtensions, List<Encoding> encodings, List<Codec> codecs) {
+  RtpParameters(String transactionId, DegradationPreference degradationPreference,
+      @Nullable FecProtection fecProtection, Rtcp rtcp, List<HeaderExtension> headerExtensions,
+      List<Encoding> encodings, List<Codec> codecs) {
     this.transactionId = transactionId;
     this.degradationPreference = degradationPreference;
+    this.fecProtection = fecProtection;
     this.rtcp = rtcp;
     this.headerExtensions = headerExtensions;
     this.encodings = encodings;
@@ -333,6 +415,12 @@ public class RtpParameters {
   @CalledByNative
   DegradationPreference getDegradationPreference() {
     return degradationPreference;
+  }
+
+  @Nullable
+  @CalledByNative
+  FecProtection getFecProtection() {
+    return fecProtection;
   }
 
   @CalledByNative

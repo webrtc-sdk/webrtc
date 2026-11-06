@@ -2893,6 +2893,7 @@ TEST_P(RTCStatsCollectorTest, CollectRTCOutboundRtpStreamStats_Video) {
   // `expected_video.psnr_sum` should be undefined.
   // `expected_video.psnr_measurements` should be undefined.
   // `expected_video.encoder_implementation` should be undefined.
+  // `expected_video.fec_*` should be undefined.
   ASSERT_TRUE(report->Get(expected_video.id()));
 
   EXPECT_EQ(
@@ -2928,6 +2929,12 @@ TEST_P(RTCStatsCollectorTest, CollectRTCOutboundRtpStreamStats_Video) {
   expected_video.encoder_implementation = "libfooencoder";
   video_media_info.senders[0].power_efficient_encoder = true;
   expected_video.power_efficient_encoder = true;
+  video_media_info.senders[0].fec_ssrc = 5505;
+  video_media_info.senders[0].fec_packets_sent = 7;
+  video_media_info.senders[0].fec_bytes_sent = 700;
+  expected_video.fec_ssrc = 5505;
+  expected_video.fec_packets_sent = 7;
+  expected_video.fec_bytes_sent = 700;
   video_media_channels.first->SetStats(video_media_info);
   video_media_channels.second->SetStats(video_media_info);
 

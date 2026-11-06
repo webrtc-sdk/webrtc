@@ -647,6 +647,25 @@ void VideoSendStreamImpl::SetCsrcs(std::span<const uint32_t> csrcs) {
   RTC_DCHECK_RUN_ON(&thread_checker_);
   rtp_video_sender_->SetCsrcs(csrcs);
 }
+
+void VideoSendStreamImpl::SetFecProtection(
+    std::optional<RtpFecProtection> fec_protection) {
+  RTC_DCHECK_RUN_ON(&thread_checker_);
+  rtp_video_sender_->SetFecProtection(std::move(fec_protection));
+  // The FEC controller only applies the policy when the bitrate is updated,
+  // which may not happen for a long time on a stable network. Re-run the
+  // allocation with the last estimate so the policy, and the resulting change
+  // in the encoder target rate, take effect right away.
+  //
+  // Not after an encoder timeout: `SignalEncoderTimedOut()` removed this stream
+  // from the allocator, and re-adding it would reserve bandwidth for an idle
+  // sender until encoding resumes. The stored policy then applies when
+  // `SignalEncoderActive()` re-registers the stream.
+  if (IsRunning() && !timed_out_) {
+    bitrate_allocator_->AddObserver(this, GetAllocationConfig());
+  }
+}
+
 void VideoSendStreamImpl::StopPermanentlyAndGetRtpStates(
     VideoSendStreamImpl::RtpStateMap* rtp_state_map,
     VideoSendStreamImpl::RtpPayloadStateMap* payload_state_map) {

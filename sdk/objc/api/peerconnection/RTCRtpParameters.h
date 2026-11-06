@@ -13,6 +13,7 @@
 #import "RTCRtcpParameters.h"
 #import "RTCRtpCodecParameters.h"
 #import "RTCRtpEncodingParameters.h"
+#import "RTCRtpFecProtection.h"
 #import "RTCRtpHeaderExtension.h"
 #import "sdk/objc/base/RTCMacros.h"
 
@@ -55,6 +56,13 @@ RTC_OBJC_EXPORT
  * If nil, implementation default degradation preference will be used.
  */
 @property(nonatomic, copy, nullable) NSNumber *degradationPreference;
+
+/**
+ * Non-standard FEC protection policy for this sender. If nil, protection is
+ * adaptive. Only for video senders.
+ */
+@property(nonatomic, strong, nullable) RTC_OBJC_TYPE(RTCRtpFecProtection) *
+    fecProtection;
 
 - (instancetype)init;
 

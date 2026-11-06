@@ -14,11 +14,13 @@
 #include <cstddef>
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <span>
 #include <vector>
 
 #include "api/call/bitrate_allocation.h"
 #include "api/fec_controller_override.h"
+#include "api/rtp_parameters.h"
 #include "api/video/video_layers_allocation.h"
 #include "api/video_codecs/video_encoder.h"
 #include "call/rtp_config.h"
@@ -59,6 +61,9 @@ class RtpVideoSenderInterface : public EncodedImageCallback,
   virtual std::vector<RtpSequenceNumberMap::Info> GetSentRtpPacketInfos(
       uint32_t ssrc,
       std::span<const uint16_t> sequence_numbers) const = 0;
+  // Overrides the FEC protection computed by the FEC controller.
+  virtual void SetFecProtection(
+      std::optional<RtpFecProtection> fec_protection) = 0;
 
   // Implements FecControllerOverride.
   void SetFecAllowed(bool fec_allowed) override = 0;
