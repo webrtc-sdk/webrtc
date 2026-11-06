@@ -1491,7 +1491,8 @@ bool WebRtcVoiceSendChannel::SetSend(bool send) {
 
     // Initialize the ADM for recording (this may take time on some platforms,
     // e.g. Android).
-    if (options_.init_recording_on_send.value_or(true) &&
+    if (engine()->GetAudioState()->recording_enabled() &&
+        options_.init_recording_on_send.value_or(true) &&
         // InitRecording() may return an error if the ADM is already recording.
         !engine()->adm()->RecordingIsInitialized() &&
         !engine()->adm()->Recording()) {
@@ -1714,7 +1715,7 @@ bool WebRtcVoiceSendChannel::MuteStream(uint32_t ssrc, bool muted) {
       ap->set_output_will_be_muted(v);
     }
 
-    if (!is_all_no_source) {
+    if (!is_all_no_source && engine()->GetAudioState()->recording_enabled()) {
       // We don't mute when ClearSend() is called.
       webrtc::AudioDeviceModule* adm = engine()->adm();
       if (adm) {
