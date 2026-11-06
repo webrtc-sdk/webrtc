@@ -77,36 +77,50 @@ class RtpFecProtectionIntegrationTest
     return sender;
   }
 
+  // The fixture sends a single video stream; fails the test if the caller
+  // reports any other number of video outbound-rtp stats.
   SendCounters GetCallerVideoCounters() {
     SendCounters counters;
-    scoped_refptr<const RTCStatsReport> report = caller()->NewGetStats();
+    scoped_refptr<const RTCStatsReport> report =
+        caller()->NewGetStats(run_loop());
     if (!report) {
       return counters;
     }
+    int num_video_streams = 0;
     for (const RTCOutboundRtpStreamStats* outbound :
          report->GetStatsOfType<RTCOutboundRtpStreamStats>()) {
       if (outbound->kind != "video") {
         continue;
       }
+      ++num_video_streams;
       counters.packets_sent = outbound->packets_sent.value_or(0);
       counters.fec_packets_sent = outbound->fec_packets_sent.value_or(0);
       counters.fec_ssrc = outbound->fec_ssrc;
     }
+    EXPECT_EQ(num_video_streams, 1);
     return counters;
   }
 
+  // Same single-stream assumption as `GetCallerVideoCounters`, for the
+  // callee's video inbound-rtp.
   uint64_t GetCalleeFecPacketsReceived() {
-    scoped_refptr<const RTCStatsReport> report = callee()->NewGetStats();
+    scoped_refptr<const RTCStatsReport> report =
+        callee()->NewGetStats(run_loop());
     if (!report) {
       return 0;
     }
+    int num_video_streams = 0;
+    uint64_t fec_packets_received = 0;
     for (const RTCInboundRtpStreamStats* inbound :
          report->GetStatsOfType<RTCInboundRtpStreamStats>()) {
-      if (inbound->kind == "video") {
-        return inbound->fec_packets_received.value_or(0);
+      if (inbound->kind != "video") {
+        continue;
       }
+      ++num_video_streams;
+      fec_packets_received = inbound->fec_packets_received.value_or(0);
     }
-    return 0;
+    EXPECT_EQ(num_video_streams, 1);
+    return fec_packets_received;
   }
 
   // Lets `settle` pass so the new policy is applied by the FEC controller and
