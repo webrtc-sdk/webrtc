@@ -93,6 +93,12 @@ class FecController {
   // Sets an application-provided policy that overrides the computed FEC
   // protection, see `RtpFecProtection`. `std::nullopt` restores the default
   // behavior. Takes effect on the next `UpdateFecRates` call.
+  //
+  // Compatibility: the default implementation ignores the policy. An
+  // application-supplied controller that does not override this method keeps
+  // accepting `RtpParameters::fec_protection`, and `GetParameters()` keeps
+  // returning it, but it has no effect on the FEC that is generated. Such
+  // controllers must implement this method for the policy to apply.
   virtual void SetProtectionOverride(
       std::optional<RtpFecProtection> /* protection */) {}
 };
