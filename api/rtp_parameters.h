@@ -867,9 +867,20 @@ struct RTC_EXPORT RtpFecProtection {
   std::optional<double> key_frame_protection_factor;
   // Maximum number of frames covered by one FEC block, in
   // [1, kMaxFecFrames]. If unset, 1 is used by `kFixed` and the adaptive value
-  // by `kMinimum`.
+  // by `kMinimum`. This is an upper bound: the FEC generator may close a block
+  // earlier once it holds enough media packets for the requested rate.
+  //
+  // A larger value spreads FEC over more frames, so the same
+  // `protection_factor` yields fewer FEC packets and lower overhead (blocks are
+  // less affected by the one-packet floor, see `Mode::kFixed`). The cost is
+  // recovery delay: a lost packet can only be repaired once its block is
+  // complete, i.e. up to `max_fec_frames` frames later. A smaller value is the
+  // reverse.
   std::optional<int> max_fec_frames;
 
+  // Same as the limit on frames per FEC block in the adaptive path,
+  // `VCMNackFecMethod::kUpperLimitFramesFec` in
+  // modules/video_coding/media_opt_util.h, which checks that they match.
   static constexpr int kMaxFecFrames = 6;
 
   static const char* ModeToString(Mode mode);
