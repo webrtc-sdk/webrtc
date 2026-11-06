@@ -833,12 +833,19 @@ struct RTC_EXPORT RtpFecProtection {
     // Protection is derived from the observed loss and RTT. This is the
     // behavior when `RtpParameters::fec_protection` is unset.
     kAdaptive,
-    // The adaptive protection is replaced by `protection_factor`, so FEC
-    // overhead stays constant regardless of loss and RTT. This also bypasses
-    // the adaptive rules that turn FEC off, i.e. low RTT with NACK enabled and
-    // a bitrate too low for FEC. If `max_fec_frames` is unset, each frame is
-    // protected on its own (lowest recovery delay). Suited for a predictable
-    // overhead, or when the application computes the protection itself.
+    // The adaptive protection is replaced by `protection_factor`, so the
+    // requested protection rate stays fixed regardless of loss and RTT. This
+    // also bypasses the adaptive rules that turn FEC off, i.e. low RTT with
+    // NACK enabled and a bitrate too low for FEC. If `max_fec_frames` is
+    // unset, each frame is protected on its own (lowest recovery delay).
+    // Suited for when the application computes the protection itself.
+    //
+    // The rate is a request, not a cap on the resulting overhead: the number
+    // of FEC packets per block is rounded to whole packets, with at least one
+    // FEC packet for any nonzero factor. For example, a factor of 0.1 gives
+    // 100%, 50% and 10% packet overhead for blocks of 1, 2 and 10 media
+    // packets. With one frame per block, small frames stay in the high
+    // overhead regime; a larger `max_fec_frames` lets blocks grow.
     kFixed,
     // The protection is max(adaptive, `protection_factor`): it rises with
     // observed loss but never drops below `protection_factor`, including when
@@ -852,8 +859,9 @@ struct RTC_EXPORT RtpFecProtection {
   };
 
   Mode mode = Mode::kAdaptive;
-  // Number of FEC packets relative to the number of media packets, in
-  // [0.0, 1.0]. Used by `kFixed` and `kMinimum`.
+  // Requested number of FEC packets relative to the number of media packets,
+  // in [0.0, 1.0]. Used by `kFixed` and `kMinimum`. The actual ratio differs
+  // because FEC packets are rounded per block, see `Mode::kFixed`.
   double protection_factor = 0.0;
   // Protection factor for key frames. If unset, `protection_factor` is used.
   std::optional<double> key_frame_protection_factor;
