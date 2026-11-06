@@ -665,6 +665,7 @@ void VideoSendStreamImpl::SetFecProtection(
     bitrate_allocator_->AddObserver(this, GetAllocationConfig());
   }
 }
+
 void VideoSendStreamImpl::StopPermanentlyAndGetRtpStates(
     VideoSendStreamImpl::RtpStateMap* rtp_state_map,
     VideoSendStreamImpl::RtpPayloadStateMap* payload_state_map) {
