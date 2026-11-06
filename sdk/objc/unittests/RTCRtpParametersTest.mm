@@ -11,8 +11,6 @@
 #import <Foundation/Foundation.h>
 #import <XCTest/XCTest.h>
 
-#include "test/gtest.h"
-
 #import "api/peerconnection/RTCRtpFecProtection+Private.h"
 #import "api/peerconnection/RTCRtpParameters+Private.h"
 
@@ -25,7 +23,7 @@
   RTC_OBJC_TYPE(RTCRtpParameters) *parameters =
       [[RTC_OBJC_TYPE(RTCRtpParameters) alloc] init];
   XCTAssertNil(parameters.fecProtection);
-  EXPECT_FALSE(parameters.nativeParameters.fec_protection.has_value());
+  XCTAssertFalse(parameters.nativeParameters.fec_protection.has_value());
 }
 
 - (void)testFecProtectionToNative {
@@ -44,11 +42,12 @@
   if (!nativeParameters.fec_protection.has_value()) {
     return;
   }
-  EXPECT_EQ(webrtc::RtpFecProtection::Mode::kMinimum,
-            nativeParameters.fec_protection->mode);
-  EXPECT_EQ(0.25, nativeParameters.fec_protection->protection_factor);
-  EXPECT_EQ(0.5, nativeParameters.fec_protection->key_frame_protection_factor);
-  EXPECT_EQ(3, nativeParameters.fec_protection->max_fec_frames);
+  XCTAssertTrue(nativeParameters.fec_protection->mode ==
+                webrtc::RtpFecProtection::Mode::kMinimum);
+  XCTAssertEqual(0.25, nativeParameters.fec_protection->protection_factor);
+  XCTAssertTrue(nativeParameters.fec_protection->key_frame_protection_factor ==
+                0.5);
+  XCTAssertTrue(nativeParameters.fec_protection->max_fec_frames == 3);
 }
 
 - (void)testFecProtectionFromNative {
@@ -67,8 +66,8 @@
   XCTAssertEqual(0.1, parameters.fecProtection.protectionFactor);
   XCTAssertNil(parameters.fecProtection.keyFrameProtectionFactor);
   XCTAssertNil(parameters.fecProtection.maxFecFrames);
-  EXPECT_EQ(nativeParameters.fec_protection,
-            parameters.nativeParameters.fec_protection);
+  XCTAssertTrue(nativeParameters.fec_protection ==
+                parameters.nativeParameters.fec_protection);
 }
 
 @end
