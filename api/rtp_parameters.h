@@ -819,9 +819,15 @@ struct RtcpParameters final {
 
 // Sender-wide policy for how much FEC (FlexFEC or ULPFEC) protection is
 // generated. This is a non-standard extension; it has no effect unless FEC was
-// negotiated for the sender. Only applies to video senders. With simulcast,
-// only the stream protected by the negotiated FEC stream (the first one) is
-// affected.
+// negotiated for the sender. Only applies to video senders.
+//
+// Which streams are affected depends on the FEC scheme:
+// - ULPFEC is generated per stream, so with simulcast the same policy applies
+//   to every simulcast layer.
+// - FlexFEC protects a single media stream. libwebrtc does not allocate a
+//   FlexFEC SSRC for simulcast senders, so FlexFEC, and with it this policy,
+//   normally only takes effect without simulcast. If a FlexFEC stream is
+//   negotiated anyway, only the one media stream it protects is affected.
 struct RTC_EXPORT RtpFecProtection {
   enum class Mode {
     // Protection is derived from the observed loss and RTT. This is the
