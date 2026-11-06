@@ -40,7 +40,10 @@
   parameters.fecProtection = fecProtection;
 
   webrtc::RtpParameters nativeParameters = parameters.nativeParameters;
-  ASSERT_TRUE(nativeParameters.fec_protection.has_value());
+  XCTAssertTrue(nativeParameters.fec_protection.has_value());
+  if (!nativeParameters.fec_protection.has_value()) {
+    return;
+  }
   EXPECT_EQ(webrtc::RtpFecProtection::Mode::kMinimum,
             nativeParameters.fec_protection->mode);
   EXPECT_EQ(0.25, nativeParameters.fec_protection->protection_factor);
