@@ -237,7 +237,9 @@ TEST_F(RtpFecProtectionIntegrationTest, HigherFixedFactorSendsMoreFec) {
                    << "), at 0.9: " << high_ratio << " ("
                    << high.fec_packets_sent << "/" << high.packets_sent << ")";
   EXPECT_GT(high.fec_packets_sent, 0u);
-  EXPECT_GT(high_ratio, low_ratio);
+  // Require a clear margin rather than any difference, so the test fails if
+  // the factor has no real effect instead of passing on noise.
+  EXPECT_GT(high_ratio, 2 * low_ratio);
 }
 
 // A policy set before negotiation (stored as init parameters while the sender
