@@ -3325,6 +3325,14 @@ bool WebRtcVideoReceiveChannel::MaybeCreateDefaultReceiveStream(
     return false;
   }
 
+  // A packet can be temporarily undemuxable while an existing receive stream
+  // is recreated during renegotiation. It is not an unsignaled SSRC. Let Call
+  // retry delivery without replacing its sink or consuming the creation
+  // cooldown for a genuinely new SSRC.
+  if (receive_ssrcs_.find(packet.Ssrc()) != receive_ssrcs_.end()) {
+    return true;
+  }
+
   // See if this payload_type is registered as one that usually gets its
   // own SSRC (RTX) or at least is safe to drop either way (FEC). If it
   // is, and it wasn't handled above by DeliverPacket, that means we don't
@@ -3373,12 +3381,14 @@ bool WebRtcVideoReceiveChannel::MaybeCreateDefaultReceiveStream(
   }
 
   // RTX SSRC not yet known.
-  ReCreateDefaultReceiveStream(packet.Ssrc(), std::nullopt);
+  if (!ReCreateDefaultReceiveStream(packet.Ssrc(), std::nullopt)) {
+    return false;
+  }
   last_unsignalled_ssrc_creation_time_ms_ = env_.clock().TimeInMilliseconds();
   return true;
 }
 
-void WebRtcVideoReceiveChannel::ReCreateDefaultReceiveStream(
+bool WebRtcVideoReceiveChannel::ReCreateDefaultReceiveStream(
     uint32_t ssrc,
     std::optional<uint32_t> rtx_ssrc) {
   RTC_DCHECK_RUN_ON(&thread_checker_);
@@ -3399,6 +3409,7 @@ void WebRtcVideoReceiveChannel::ReCreateDefaultReceiveStream(
                    << ".";
   if (!AddRecvStream(sp, /*default_stream=*/true)) {
     RTC_LOG(LS_WARNING) << "Could not create default receive stream.";
+    return false;
   }
 
   // SSRC 0 returns default_recv_base_minimum_delay_ms.
@@ -3409,6 +3420,7 @@ void WebRtcVideoReceiveChannel::ReCreateDefaultReceiveStream(
   // stream.
   SetBaseMinimumPlayoutDelayMs(ssrc, default_recv_base_minimum_delay_ms);
   SetSink(ssrc, default_sink_);
+  return true;
 }
 
 void WebRtcVideoReceiveChannel::SetInterface(
