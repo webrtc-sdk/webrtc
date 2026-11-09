@@ -15,6 +15,7 @@
  */
 #include "sdk/android/src/jni/pc/frame_cryptor.h"
 
+#include "api/media_types.h"
 #include "api/rtp_receiver_interface.h"
 #include "api/rtp_sender_interface.h"
 #include "rtc_base/ref_counted_object.h"
@@ -73,6 +74,13 @@ static void JNI_FrameCryptor_SetKeyIndex(JNIEnv* jni,
                                          jint j_index) {
   reinterpret_cast<FrameCryptorTransformer*>(j_frame_cryptor_pointer)
       ->SetKeyIndex(j_index);
+}
+
+static jlong JNI_FrameCryptor_GetFrameTransformer(
+    JNIEnv* jni,
+    jlong j_frame_cryptor_pointer) {
+  return jlongFromPointer(static_cast<FrameTransformerInterface*>(
+      reinterpret_cast<FrameCryptorTransformer*>(j_frame_cryptor_pointer)));
 }
 
 static jint JNI_FrameCryptor_GetKeyIndex(JNIEnv* jni,
@@ -138,6 +146,64 @@ JNI_FrameCryptorFactory_CreateFrameCryptorForRtpReceiver(
   frame_crypto_transformer->SetEnabled(false);
 
   return NativeToJavaFrameCryptor(env, frame_crypto_transformer);
+}
+
+namespace {
+
+ScopedJavaLocalRef<jobject> CreateUninstalledFrameCryptor(
+    JNIEnv* env,
+    jlong native_factory,
+    MediaType media_type,
+    const JavaParamRef<jstring>& j_participant_id,
+    jint j_algorithm_index,
+    jlong j_key_provider) {
+  OwnedFactoryAndThreads* factory =
+      reinterpret_cast<OwnedFactoryAndThreads*>(native_factory);
+  auto frame_crypto_transformer =
+      webrtc::scoped_refptr<webrtc::FrameCryptorTransformer>(
+          new webrtc::FrameCryptorTransformer(
+              factory->signaling_thread(),
+              JavaToStdString(env, j_participant_id),
+              media_type == MediaType::AUDIO
+                  ? webrtc::FrameCryptorTransformer::MediaType::kAudioFrame
+                  : webrtc::FrameCryptorTransformer::MediaType::kVideoFrame,
+              AlgorithmFromIndex(j_algorithm_index),
+              webrtc::scoped_refptr<webrtc::KeyProvider>(
+                  reinterpret_cast<webrtc::DefaultKeyProviderImpl*>(
+                      j_key_provider))));
+  frame_crypto_transformer->SetEnabled(false);
+  return NativeToJavaFrameCryptor(env, frame_crypto_transformer);
+}
+
+}  // namespace
+
+static ScopedJavaLocalRef<jobject>
+JNI_FrameCryptorFactory_CreateUninstalledFrameCryptorForRtpSender(
+    JNIEnv* env,
+    jlong native_factory,
+    jlong j_rtp_sender_pointer,
+    const JavaParamRef<jstring>& j_participant_id,
+    jint j_algorithm_index,
+    jlong j_key_provider) {
+  return CreateUninstalledFrameCryptor(
+      env, native_factory,
+      reinterpret_cast<RtpSenderInterface*>(j_rtp_sender_pointer)->media_type(),
+      j_participant_id, j_algorithm_index, j_key_provider);
+}
+
+static ScopedJavaLocalRef<jobject>
+JNI_FrameCryptorFactory_CreateUninstalledFrameCryptorForRtpReceiver(
+    JNIEnv* env,
+    jlong native_factory,
+    jlong j_rtp_receiver_pointer,
+    const JavaParamRef<jstring>& j_participant_id,
+    jint j_algorithm_index,
+    jlong j_key_provider) {
+  return CreateUninstalledFrameCryptor(
+      env, native_factory,
+      reinterpret_cast<RtpReceiverInterface*>(j_rtp_receiver_pointer)
+          ->media_type(),
+      j_participant_id, j_algorithm_index, j_key_provider);
 }
 
 static ScopedJavaLocalRef<jobject>

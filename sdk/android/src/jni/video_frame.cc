@@ -13,7 +13,9 @@
 #include <jni.h>
 
 #include <cstdint>
+#include <vector>
 
+#include "api/frame_metadata/frame_metadata_transformer.h"
 #include "api/make_ref_counted.h"
 #include "api/scoped_refptr.h"
 #include "api/video/video_frame.h"
@@ -21,7 +23,9 @@
 #include "api/video/video_rotation.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/time_utils.h"
+#include "sdk/android/generated_video_jni/FrameMetadata_jni.h"
 #include "sdk/android/generated_video_jni/VideoFrame_jni.h"
+#include "sdk/android/native_api/jni/java_types.h"
 #include "sdk/android/native_api/jni/scoped_java_ref.h"
 #include "sdk/android/src/jni/jvm.h"
 #include "sdk/android/src/jni/wrapped_native_i420_buffer.h"
@@ -309,7 +313,8 @@ ScopedJavaLocalRef<jobject> NativeToJavaVideoFrame(JNIEnv* jni,
     Java_Buffer_retain(jni, j_video_frame_buffer);
     return Java_VideoFrame_Constructor(
         jni, j_video_frame_buffer, static_cast<jint>(frame.rotation()),
-        static_cast<jlong>(frame.timestamp_us() * kNumNanosecsPerMicrosec));
+        static_cast<jlong>(frame.timestamp_us() * kNumNanosecsPerMicrosec),
+        static_cast<jlong>(frame.rtp_timestamp()));
   } else {
     auto i420_buffer = buffer->ToI420();
     if (!i420_buffer) {
@@ -318,8 +323,41 @@ ScopedJavaLocalRef<jobject> NativeToJavaVideoFrame(JNIEnv* jni,
     return Java_VideoFrame_Constructor(
         jni, WrapI420Buffer(jni, i420_buffer),
         static_cast<jint>(frame.rotation()),
-        static_cast<jlong>(frame.timestamp_us() * kNumNanosecsPerMicrosec));
+        static_cast<jlong>(frame.timestamp_us() * kNumNanosecsPerMicrosec),
+        static_cast<jlong>(frame.rtp_timestamp()));
   }
+}
+
+FrameMetadata JavaToNativeFrameMetadata(
+    JNIEnv* jni,
+    const JavaRef<jobject>& j_frame_metadata) {
+  FrameMetadata metadata;
+  metadata.user_timestamp_us = static_cast<uint64_t>(
+      Java_FrameMetadata_getUserTimestampUs(jni, j_frame_metadata));
+  metadata.frame_id = static_cast<uint32_t>(
+      Java_FrameMetadata_getFrameId(jni, j_frame_metadata));
+  ScopedJavaLocalRef<jbyteArray> j_user_data =
+      Java_FrameMetadata_getUserData(jni, j_frame_metadata);
+  if (!IsNull(jni, j_user_data)) {
+    const std::vector<int8_t> user_data =
+        JavaToNativeByteArray(jni, j_user_data);
+    metadata.user_data.assign(user_data.begin(), user_data.end());
+  }
+  return metadata;
+}
+
+ScopedJavaLocalRef<jobject> NativeToJavaFrameMetadata(
+    JNIEnv* jni,
+    const FrameMetadata& metadata) {
+  ScopedJavaLocalRef<jbyteArray> j_user_data;
+  if (!metadata.user_data.empty()) {
+    std::vector<int8_t> user_data(metadata.user_data.begin(),
+                                  metadata.user_data.end());
+    j_user_data = NativeToJavaByteArray(jni, user_data);
+  }
+  return Java_FrameMetadata_Constructor(
+      jni, static_cast<jlong>(metadata.user_timestamp_us),
+      static_cast<jlong>(metadata.frame_id), j_user_data);
 }
 
 void ReleaseJavaVideoFrame(JNIEnv* jni, const JavaRef<jobject>& j_video_frame) {

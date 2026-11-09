@@ -40,6 +40,35 @@ public class FrameCryptorFactory {
         algorithm.getValue(), keyProvider.getNativeKeyProvider());
   }
 
+  /**
+   * Creates a cryptor for this sender without installing it. Install it, alone or inside a
+   * FrameTransformerChain, with RtpSender.setFrameTransformer().
+   */
+  public static FrameCryptor createUninstalledFrameCryptor(PeerConnectionFactory factory,
+      RtpSender rtpSender, String participantId, FrameCryptorAlgorithm algorithm,
+      FrameCryptorKeyProvider keyProvider) {
+    return nativeCreateUninstalledFrameCryptorForRtpSender(
+        factory.getNativeOwnedFactoryAndThreads(), rtpSender.getNativeRtpSender(), participantId,
+        algorithm.getValue(), keyProvider.getNativeKeyProvider());
+  }
+
+  /**
+   * Creates a cryptor for this receiver without installing it. Install it, alone or inside a
+   * FrameTransformerChain, with RtpReceiver.setFrameTransformer().
+   */
+  public static FrameCryptor createUninstalledFrameCryptor(PeerConnectionFactory factory,
+      RtpReceiver rtpReceiver, String participantId, FrameCryptorAlgorithm algorithm,
+      FrameCryptorKeyProvider keyProvider) {
+    return nativeCreateUninstalledFrameCryptorForRtpReceiver(
+        factory.getNativeOwnedFactoryAndThreads(), rtpReceiver.getNativeRtpReceiver(),
+        participantId, algorithm.getValue(), keyProvider.getNativeKeyProvider());
+  }
+
+  private static native FrameCryptor nativeCreateUninstalledFrameCryptorForRtpSender(long factory,
+      long rtpSender, String participantId, int algorithm, long nativeFrameCryptorKeyProvider);
+  private static native FrameCryptor nativeCreateUninstalledFrameCryptorForRtpReceiver(long factory,
+      long rtpReceiver, String participantId, int algorithm, long nativeFrameCryptorKeyProvider);
+
   private static native FrameCryptor nativeCreateFrameCryptorForRtpSender(long factory,
       long rtpSender, String participantId, int algorithm, long nativeFrameCryptorKeyProvider);
   private static native FrameCryptor nativeCreateFrameCryptorForRtpReceiver(long factory,

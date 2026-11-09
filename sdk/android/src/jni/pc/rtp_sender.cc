@@ -15,6 +15,7 @@
 #include <string>
 
 #include "api/crypto/frame_encryptor_interface.h"
+#include "api/frame_transformer_interface.h"
 #include "api/media_stream_interface.h"
 #include "api/rtp_parameters.h"
 #include "api/rtp_sender_interface.h"
@@ -117,6 +118,16 @@ static void JNI_RtpSender_SetFrameEncryptor(JNIEnv* jni,
       ->SetFrameEncryptor(scoped_refptr<FrameEncryptorInterface>(
           reinterpret_cast<FrameEncryptorInterface*>(
               j_frame_encryptor_pointer)));
+}
+
+static void JNI_RtpSender_SetFrameTransformer(
+    JNIEnv* jni,
+    jlong j_rtp_sender_pointer,
+    jlong j_frame_transformer_pointer) {
+  reinterpret_cast<RtpSenderInterface*>(j_rtp_sender_pointer)
+      ->SetFrameTransformer(scoped_refptr<FrameTransformerInterface>(
+          reinterpret_cast<FrameTransformerInterface*>(
+              j_frame_transformer_pointer)));
 }
 
 static jni_zero::ScopedJavaLocalRef<jstring> JNI_RtpSender_GetMediaType(

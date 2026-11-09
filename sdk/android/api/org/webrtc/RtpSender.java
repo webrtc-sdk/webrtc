@@ -103,6 +103,19 @@ public class RtpSender {
     nativeSetFrameEncryptor(nativeRtpSender, frameEncryptor.getNativeFrameEncryptor());
   }
 
+  /**
+   * Installs a transformer on this sender, replacing any installed one. It can't be uninstalled.
+   * With end-to-end encryption, install the cryptor and metadata transformer as one chain, so that
+   * unencrypted frames can't go out in between.
+   */
+  public void setFrameTransformer(FrameTransformer frameTransformer) {
+    checkRtpSenderExists();
+    if (frameTransformer == null) {
+      throw new IllegalArgumentException("frameTransformer must not be null.");
+    }
+    nativeSetFrameTransformer(nativeRtpSender, frameTransformer.getNativeFrameTransformer());
+  }
+
   public void dispose() {
     checkRtpSenderExists();
     if (dtmfSender != null) {
@@ -128,6 +141,8 @@ public class RtpSender {
   }
 
   private static native boolean nativeSetTrack(long rtpSender, long nativeTrack);
+
+  private static native void nativeSetFrameTransformer(long rtpSender, long nativeFrameTransformer);
 
   // This should increment the reference count of the track.
   // Will be released in dispose() or setTrack().

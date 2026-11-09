@@ -15,12 +15,16 @@
 
 #include <atomic>
 #include <optional>
+#include <vector>
 
 #include "api/environment/environment.h"
+#include "api/frame_metadata/frame_metadata_transformer.h"
 #include "api/scoped_refptr.h"
 #include "api/task_queue/pending_task_safety_flag.h"
 #include "media/base/adapted_video_track_source.h"
+#include "rtc_base/synchronization/mutex.h"
 #include "rtc_base/thread.h"
+#include "rtc_base/thread_annotations.h"
 #include "rtc_base/timestamp_aligner.h"
 #include "sdk/android/native_api/jni/scoped_java_ref.h"
 #include "system_wrappers/include/clock.h"
@@ -79,7 +83,13 @@ class AndroidVideoTrackSource : public AdaptedVideoTrackSource {
   void OnFrameCaptured(JNIEnv* env,
                        jint j_rotation,
                        jlong j_timestamp_ns,
-                       const JavaRef<jobject>& j_video_frame_buffer);
+                       const JavaRef<jobject>& j_video_frame_buffer,
+                       const JavaRef<jobject>& j_frame_metadata);
+
+  // Links a send transformer to this source. The FrameMetadata on frames
+  // delivered to OnFrameCaptured() is stored in every linked transformer.
+  void AddFrameMetadataTransformer(JNIEnv* env, jlong j_transformer);
+  void RemoveFrameMetadataTransformer(JNIEnv* env, jlong j_transformer);
 
   void SetState(JNIEnv* env, jboolean j_is_live);
 
@@ -103,6 +113,9 @@ class AndroidVideoTrackSource : public AdaptedVideoTrackSource {
   TimestampAligner timestamp_aligner_;
   const bool align_timestamps_;
   scoped_refptr<PendingTaskSafetyFlag> safety_;
+  Mutex frame_metadata_mutex_;
+  std::vector<scoped_refptr<FrameMetadataTransformer>>
+      frame_metadata_transformers_ RTC_GUARDED_BY(frame_metadata_mutex_);
 };
 
 }  // namespace jni

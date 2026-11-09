@@ -18,7 +18,7 @@ package org.webrtc;
 
 import androidx.annotation.Nullable;
 
-public class FrameCryptor {
+public class FrameCryptor implements FrameTransformer {
   public enum FrameCryptionState {
     NEW,
     OK,
@@ -83,6 +83,12 @@ public class FrameCryptor {
     }
   }
 
+  @Override
+  public long getNativeFrameTransformer() {
+    checkFrameCryptorExists();
+    return nativeGetFrameTransformer(nativeFrameCryptor);
+  }
+
   public void setObserver(@Nullable Observer observer) {
     checkFrameCryptorExists();
     long newPtr = nativeSetObserver(nativeFrameCryptor, observer);
@@ -105,4 +111,5 @@ public class FrameCryptor {
   private static native int nativeGetKeyIndex(long frameCryptorPointer);
   private static native long nativeSetObserver(long frameCryptorPointer, Observer observer);
   private static native void nativeUnSetObserver(long frameCryptorPointer);
+  private static native long nativeGetFrameTransformer(long frameCryptorPointer);
 }
