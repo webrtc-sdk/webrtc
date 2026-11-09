@@ -90,7 +90,7 @@ public class FrameCryptor {
       JniCommon.nativeReleaseRef(observerPtr);
       observerPtr = 0;
     }
-    newPtr = observerPtr;
+    observerPtr = newPtr;
   }
 
   private void checkFrameCryptorExists() {
