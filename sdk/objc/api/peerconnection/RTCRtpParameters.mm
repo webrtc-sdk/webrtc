@@ -13,6 +13,7 @@
 #import "RTCRtcpParameters+Private.h"
 #import "RTCRtpCodecParameters+Private.h"
 #import "RTCRtpEncodingParameters+Private.h"
+#import "RTCRtpFecProtection+Private.h"
 #import "RTCRtpHeaderExtension+Private.h"
 #import "helpers/NSString+StdString.h"
 
@@ -24,6 +25,7 @@
 @synthesize encodings = _encodings;
 @synthesize codecs = _codecs;
 @synthesize degradationPreference = _degradationPreference;
+@synthesize fecProtection = _fecProtection;
 
 - (instancetype)init {
   webrtc::RtpParameters nativeParameters;
@@ -64,6 +66,10 @@
     _degradationPreference = [RTC_OBJC_TYPE(RTCRtpParameters)
         degradationPreferenceFromNativeDegradationPreference:
             nativeParameters.degradation_preference];
+    if (nativeParameters.fec_protection) {
+      _fecProtection = [[RTC_OBJC_TYPE(RTCRtpFecProtection) alloc]
+          initWithNativeFecProtection:*nativeParameters.fec_protection];
+    }
   }
   return self;
 }
@@ -86,6 +92,9 @@
     parameters.degradation_preference = [RTC_OBJC_TYPE(RTCRtpParameters)
         nativeDegradationPreferenceFromDegradationPreference:(RTC_OBJC_TYPE(RTCDegradationPreference))
                                                                  _degradationPreference.intValue];
+  }
+  if (_fecProtection) {
+    parameters.fec_protection = _fecProtection.nativeFecProtection;
   }
   return parameters;
 }

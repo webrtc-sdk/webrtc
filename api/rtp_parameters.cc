@@ -84,6 +84,20 @@ const char* DegradationPreferenceToString(
 
 const double kDefaultBitratePriority = 1.0;
 
+const char* RtpFecProtection::ModeToString(Mode mode) {
+  switch (mode) {
+    case Mode::kAdaptive:
+      return "adaptive";
+    case Mode::kFixed:
+      return "fixed";
+    case Mode::kMinimum:
+      return "minimum";
+    case Mode::kDisabled:
+      return "disabled";
+  }
+  RTC_CHECK_NOTREACHED();
+}
+
 bool WriteFmtpParameters(const CodecParameterMap& parameters,
                          StringBuilder& os) {
   bool empty = true;

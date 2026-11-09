@@ -443,6 +443,10 @@ std::optional<RTCError> RtpSenderBase::ValidateAndMaybeUpdateInitParameters(
                          << "Attempted to set an unimplemented parameter of "
                             "RtpParameters.");
   }
+  if (media_type_ != MediaType::VIDEO && parameters.fec_protection) {
+    return RTC_LOG_ERROR(RTCError(RTCErrorType::INVALID_PARAMETER)
+                         << "fec_protection is only supported for video.");
+  }
   if (ssrc_ == 0) {
     auto result = CheckRtpParametersInvalidModificationAndValues(
         init_parameters_, parameters, send_codecs_, std::nullopt,
@@ -776,7 +780,8 @@ void RtpSenderBase::SetSsrc(uint32_t ssrc) {
   worker_thread_->BlockingCall([&, ssrc = ssrc_] {
     RTC_DCHECK_RUN_ON(worker_thread_);
     if (!init_parameters_.encodings.empty() ||
-        init_parameters_.degradation_preference.has_value()) {
+        init_parameters_.degradation_preference.has_value() ||
+        init_parameters_.fec_protection.has_value()) {
       if (ssrc != 0) {
         RTC_DCHECK(media_channel_);
         // Get the current parameters, which are constructed from the SDP. The
@@ -798,6 +803,7 @@ void RtpSenderBase::SetSsrc(uint32_t ssrc) {
         }
         current_parameters.degradation_preference =
             init_parameters_.degradation_preference;
+        current_parameters.fec_protection = init_parameters_.fec_protection;
         params_modified =
             media_channel_
                 ->SetRtpSendParameters(ssrc, current_parameters, nullptr)
@@ -814,6 +820,7 @@ void RtpSenderBase::SetSsrc(uint32_t ssrc) {
       // https://issues.webrtc.org/issues/500993975 for details.
       init_parameters_.encodings.clear();
       init_parameters_.degradation_preference = std::nullopt;
+      init_parameters_.fec_protection = std::nullopt;
     }
 
     // While we're on the worker thread, attach the frame decryptor, transformer
@@ -866,7 +873,8 @@ ScopedOperationsBatcher::BatchTaskWithFinalizer RtpSenderBase::SetSsrcTask(
     bool params_modified = false;
 
     if (!init_parameters_.encodings.empty() ||
-        init_parameters_.degradation_preference.has_value()) {
+        init_parameters_.degradation_preference.has_value() ||
+        init_parameters_.fec_protection.has_value()) {
       if (ssrc != 0) {
         RTC_DCHECK(media_channel_);
         // Get the current parameters, which are constructed from the SDP. The
@@ -888,6 +896,7 @@ ScopedOperationsBatcher::BatchTaskWithFinalizer RtpSenderBase::SetSsrcTask(
         }
         current_parameters.degradation_preference =
             init_parameters_.degradation_preference;
+        current_parameters.fec_protection = init_parameters_.fec_protection;
         params_modified =
             media_channel_
                 ->SetRtpSendParameters(ssrc, current_parameters, nullptr)
@@ -904,6 +913,7 @@ ScopedOperationsBatcher::BatchTaskWithFinalizer RtpSenderBase::SetSsrcTask(
       // https://issues.webrtc.org/issues/500993975 for details.
       init_parameters_.encodings.clear();
       init_parameters_.degradation_preference = std::nullopt;
+      init_parameters_.fec_protection = std::nullopt;
     }
 
     // While we're on the worker thread, attach the frame decryptor, transformer

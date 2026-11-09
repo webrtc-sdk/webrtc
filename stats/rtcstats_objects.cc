@@ -333,6 +333,9 @@ WEBRTC_RTCSTATS_IMPL(
     AttributeInit("powerEfficientEncoder", &power_efficient_encoder),
     AttributeInit("scalabilityMode", &scalability_mode),
     AttributeInit("rtxSsrc", &rtx_ssrc),
+    AttributeInit("fecPacketsSent", &fec_packets_sent),
+    AttributeInit("fecBytesSent", &fec_bytes_sent),
+    AttributeInit("fecSsrc", &fec_ssrc),
     AttributeInit("packetsSentWithEct1", &packets_sent_with_ect1))
 // clang-format on
 

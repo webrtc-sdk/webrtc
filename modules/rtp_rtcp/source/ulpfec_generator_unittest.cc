@@ -13,6 +13,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "api/environment/environment.h"
@@ -278,6 +279,41 @@ TEST_F(UlpfecGeneratorTest, UpdatesProtectionParameters) {
   add_frame(true);
   EXPECT_EQ(ulpfec_generator_.CurrentParams().max_fec_frames, 2);
   EXPECT_FALSE(ulpfec_generator_.GetFecPackets().empty());
+}
+
+// Pins the FEC packet count that a fixed protection rate actually yields, as
+// documented for `RtpFecProtection::Mode::kFixed`: the count is rounded to
+// whole packets with a floor of one, so a 10% rate is only a 10% overhead for
+// large enough blocks.
+TEST_F(UlpfecGeneratorTest, FixedRateIsQuantizedWithOneFecPacketFloor) {
+  // RtpFecProtection::protection_factor 0.1 maps to this Q8 rate.
+  constexpr int kTenPercentFecRate = 26;
+  // One frame per block, the kFixed default.
+  FecProtectionParams params = {.fec_rate = kTenPercentFecRate,
+                                .max_fec_frames = 1,
+                                .fec_mask_type = kFecMaskRandom};
+  ulpfec_generator_.SetProtectionParameters(params, params);
+
+  struct Case {
+    size_t media_packets;
+    size_t expected_fec_packets;
+  };
+  // 100%, 50%, 10% and 10% overhead.
+  for (const Case& c : {Case{1, 1}, Case{2, 1}, Case{10, 1}, Case{20, 2}}) {
+    SCOPED_TRACE(c.media_packets);
+    packet_generator_.NewFrame(c.media_packets);
+    std::vector<std::unique_ptr<RtpPacketToSend>> fec_packets;
+    for (size_t i = 0; i < c.media_packets; ++i) {
+      ulpfec_generator_.AddPacketAndGenerateFec(
+          packet_generator_.NextPacket<RtpPacketToSend>(i, 10));
+      std::vector<std::unique_ptr<RtpPacketToSend>> generated =
+          ulpfec_generator_.GetFecPackets();
+      for (auto& packet : generated) {
+        fec_packets.push_back(std::move(packet));
+      }
+    }
+    EXPECT_EQ(fec_packets.size(), c.expected_fec_packets);
+  }
 }
 
 }  // namespace webrtc

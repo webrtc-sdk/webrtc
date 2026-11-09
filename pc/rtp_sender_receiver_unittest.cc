@@ -1204,6 +1204,17 @@ TEST_F(RtpSenderReceiverTest, AudioSenderSetParametersOldValueFail) {
   DestroyAudioRtpSender();
 }
 
+TEST_F(RtpSenderReceiverTest, AudioSenderCantSetFecProtection) {
+  CreateAudioRtpSender();
+
+  RtpParameters params = audio_rtp_sender_->GetParameters();
+  params.fec_protection = RtpFecProtection();
+  EXPECT_EQ(RTCErrorType::INVALID_PARAMETER,
+            audio_rtp_sender_->SetParameters(params).type());
+
+  DestroyAudioRtpSender();
+}
+
 TEST_F(RtpSenderReceiverTest, AudioSenderCantSetUnimplementedRtpParameters) {
   CreateAudioRtpSender();
   RtpParameters params = audio_rtp_sender_->GetParameters();
@@ -1363,6 +1374,46 @@ TEST_F(RtpSenderReceiverTest, VideoSenderInitParametersMovedAfterNegotiation) {
   ASSERT_EQ(2u, params.encodings.size());
   EXPECT_EQ(params.encodings[0].max_bitrate_bps, 60000);
   EXPECT_EQ(params.encodings[1].max_bitrate_bps, 900000);
+
+  DestroyVideoRtpSender();
+}
+
+TEST_F(RtpSenderReceiverTest, VideoSenderFecProtectionMovedAfterNegotiation) {
+  AddVideoTrack(false);
+
+  std::unique_ptr<MockSetStreamsObserver> set_streams_observer =
+      std::make_unique<MockSetStreamsObserver>();
+  video_rtp_sender_ = VideoRtpSender::Create(
+      CreateTestEnvironment(), signaling_thread_, worker_thread_.get(),
+      video_track_->id(), set_streams_observer.get(),
+      /*enable_sframe_at_owner=*/nullptr, nullptr,
+      /*init_send_encodings=*/{}, /*simulcast_rejected=*/false,
+      /*initial_simulcast_layers=*/{});
+  ASSERT_TRUE(video_rtp_sender_->SetTrack(video_track_.get()));
+  EXPECT_CALL(*set_streams_observer, OnSetStreams());
+  video_rtp_sender_->SetStreams({local_stream_->id()});
+
+  RtpFecProtection fec_protection;
+  fec_protection.mode = RtpFecProtection::Mode::kFixed;
+  fec_protection.protection_factor = 0.25;
+  RtpParameters params = video_rtp_sender_->GetParameters();
+  params.fec_protection = fec_protection;
+  EXPECT_TRUE(video_rtp_sender_->SetParameters(params).ok());
+  EXPECT_EQ(video_rtp_sender_->GetParameters().fec_protection, fec_protection);
+
+  // Simulate the setLocalDescription call. The fixture already added the
+  // `kVideoSsrc` send stream.
+  worker_thread_->BlockingCall([&] {
+    video_rtp_sender_->SetMediaChannel(
+        video_media_send_channel()->AsVideoSendChannel());
+  });
+  SetSsrc(kVideoSsrc, *video_rtp_sender_);
+
+  EXPECT_EQ(video_rtp_sender_->GetParameters().fec_protection, fec_protection);
+  EXPECT_EQ(video_media_send_channel()
+                ->GetRtpSendParameters(kVideoSsrc)
+                .fec_protection,
+            fec_protection);
 
   DestroyVideoRtpSender();
 }

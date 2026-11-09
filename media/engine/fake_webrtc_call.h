@@ -207,6 +207,15 @@ class FakeVideoSendStream final : public VideoSendStream,
   int64_t GetLastTimestamp() const;
   void SetStats(const VideoSendStream::Stats& stats) override;
   void SetCsrcs(std::span<const uint32_t> csrcs) override;
+  void SetFecProtection(
+      std::optional<RtpFecProtection> fec_protection) override {
+    fec_protection_ = std::move(fec_protection);
+    ++num_fec_protection_updates_;
+  }
+  const std::optional<RtpFecProtection>& fec_protection() const {
+    return fec_protection_;
+  }
+  int num_fec_protection_updates() const { return num_fec_protection_updates_; }
   int num_encoder_reconfigurations() const {
     return num_encoder_reconfigurations_;
   }
@@ -257,6 +266,8 @@ class FakeVideoSendStream final : public VideoSendStream,
   } codec_specific_settings_;
   bool resolution_scaling_enabled_;
   bool framerate_scaling_enabled_;
+  std::optional<RtpFecProtection> fec_protection_;
+  int num_fec_protection_updates_ = 0;
   VideoSourceInterface<VideoFrame>* source_;
   int num_swapped_frames_;
   std::optional<VideoFrame> last_frame_;

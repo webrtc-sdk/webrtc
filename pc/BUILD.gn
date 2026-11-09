@@ -3817,6 +3817,25 @@ if (rtc_include_tests && !build_with_chromium) {
     ]
   }
 
+  rtc_cc_test("rtp_fec_protection_integrationtest") {
+    sources = [ "rtp_fec_protection_integrationtest.cc" ]
+    deps = [
+      ":integration_test_helpers",
+      "../api:peer_connection_interface",
+      "../api:rtc_error",
+      "../api:rtc_error_matchers",
+      "../api:rtc_stats_api",
+      "../api:rtp_parameters",
+      "../api:rtp_sender_interface",
+      "../api:scoped_refptr",
+      "../api/units:time_delta",
+      "../rtc_base:logging",
+      "../test:test_support",
+      "../test:wait_until",
+      "//third_party/abseil-cpp/absl/functional:any_invocable",
+    ]
+  }
+
   rtc_cc_test("data_channel_integrationtest") {
     sources = [ "data_channel_integrationtest.cc" ]
     deps = [
@@ -4170,6 +4189,7 @@ if (rtc_include_tests && !build_with_chromium) {
       ":peer_connection_svc_integrationtest",
       ":pranswer_switch_integrationtest",
       ":rtc_stats_integrationtest",
+      ":rtp_fec_protection_integrationtest",
       ":peer_connection_field_trial_tests",
     ]
     if (is_android) {

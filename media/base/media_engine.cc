@@ -238,6 +238,29 @@ RTCError CheckRtpParametersValues(const RtpParameters& rtp_parameters,
     }
   }
 
+  if (rtp_parameters.fec_protection) {
+    const RtpFecProtection& fec_protection = *rtp_parameters.fec_protection;
+    auto is_valid_factor = [](double factor) {
+      return factor >= 0.0 && factor <= 1.0;
+    };
+    if (!is_valid_factor(fec_protection.protection_factor) ||
+        (fec_protection.key_frame_protection_factor &&
+         !is_valid_factor(*fec_protection.key_frame_protection_factor))) {
+      return RTC_LOG_ERROR(
+          RTCError(RTCErrorType::INVALID_RANGE)
+          << "Attempted to set RtpParameters fec_protection protection factor "
+             "to an invalid value. It must be in [0.0, 1.0].");
+    }
+    if (fec_protection.max_fec_frames &&
+        (*fec_protection.max_fec_frames < 1 ||
+         *fec_protection.max_fec_frames > RtpFecProtection::kMaxFecFrames)) {
+      return RTC_LOG_ERROR(
+          RTCError(RTCErrorType::INVALID_RANGE)
+          << "Attempted to set RtpParameters fec_protection max_fec_frames to "
+             "an invalid value.");
+    }
+  }
+
   if (has_scale_resolution_down_to &&
       absl::c_any_of(rtp_parameters.encodings,
                      [](const RtpEncodingParameters& encoding) {

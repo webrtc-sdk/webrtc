@@ -897,6 +897,11 @@ CreateOutboundRTPStreamStatsFromVideoSenderInfo(
       outbound_video->rtx_ssrc = ssrc_group.ssrcs[1];
     }
   }
+  if (video_sender_info.fec_ssrc.has_value()) {
+    outbound_video->fec_ssrc = *video_sender_info.fec_ssrc;
+    outbound_video->fec_packets_sent = video_sender_info.fec_packets_sent;
+    outbound_video->fec_bytes_sent = video_sender_info.fec_bytes_sent;
+  }
   return outbound_video;
 }
 

@@ -18,6 +18,7 @@
 
 #include "api/environment/environment.h"
 #include "api/field_trials_view.h"
+#include "api/rtp_parameters.h"
 #include "modules/video_coding/fec_rate_table.h"
 #include "modules/video_coding/internal_defines.h"
 #include "modules/video_coding/utility/simulcast_rate_allocator.h"
@@ -161,6 +162,9 @@ int VCMNackFecMethod::ComputeMaxFramesFec(
       1);
   // `kUpperLimitFramesFec` is the upper limit on how many frames we
   // allow any FEC to be based on.
+  static_assert(kUpperLimitFramesFec == RtpFecProtection::kMaxFecFrames,
+                "RtpFecProtection::kMaxFecFrames must match the adaptive "
+                "limit on frames per FEC block.");
   if (max_frames_fec > kUpperLimitFramesFec) {
     max_frames_fec = kUpperLimitFramesFec;
   }
