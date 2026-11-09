@@ -582,11 +582,15 @@ int32_t AudioEngineDevice::StopRecording() {
 // ----------------------------------------------------------------------------------------------------
 // AudioSessionObserver
 
-void AudioEngineDevice::OnInterruptionBegin() {
-  LOGI() << "OnInterruptionBegin";
+void AudioEngineDevice::OnInterruptionBegin(uint32_t reason) {
+  LOGI() << "OnInterruptionBegin reason: " << reason;
 
   RTC_DCHECK(thread_);
-  thread_->PostTask(SafeTask(safety_, [this] {
+  thread_->PostTask(SafeTask(safety_, [this, reason] {
+    RTC_DCHECK_RUN_ON(thread_);
+    if (observer_ != nullptr) {
+      observer_->OnAudioSessionInterruptionBegan(reason);
+    }
     int32_t result = this->ModifyEngineState([](EngineState state) -> EngineState {
       state.is_interrupted = true;
       return state;
@@ -601,7 +605,11 @@ void AudioEngineDevice::OnInterruptionEnd(bool should_resume) {
   LOGI() << "OnInterruptionEnd should_resume: " << should_resume;
 
   RTC_DCHECK(thread_);
-  thread_->PostTask(SafeTask(safety_, [this] {
+  thread_->PostTask(SafeTask(safety_, [this, should_resume] {
+    RTC_DCHECK_RUN_ON(thread_);
+    if (observer_ != nullptr) {
+      observer_->OnAudioSessionInterruptionEnded(should_resume);
+    }
     int32_t result = this->ModifyEngineState([](EngineState state) -> EngineState {
       state.is_interrupted = false;
       return state;
@@ -625,6 +633,18 @@ void AudioEngineDevice::OnCanPlayOrRecordChange(bool can_play_or_record) {
 void AudioEngineDevice::OnChangedOutputVolume() {
   LOGI() << "OnChangedOutputVolume";
   RTC_DCHECK(thread_);
+}
+
+void AudioEngineDevice::OnMediaServicesReset() {
+  LOGI() << "OnMediaServicesReset";
+
+  RTC_DCHECK(thread_);
+  thread_->PostTask(SafeTask(safety_, [this] {
+    RTC_DCHECK_RUN_ON(thread_);
+    if (observer_ != nullptr) {
+      observer_->OnAudioSessionMediaServicesReset();
+    }
+  }));
 }
 
 // ----------------------------------------------------------------------------------------------------

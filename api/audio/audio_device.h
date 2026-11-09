@@ -327,6 +327,69 @@ class AudioDeviceObserver {
 
   virtual int32_t OnEngineWillRelease(AVAudioEngine* engine) { return 0; }
 
+  // Audio session events (iOS).
+  //
+  // Each event runs synchronously on the ADM's worker thread, the thread that
+  // runs every engine operation and the rest of WebRTC's worker thread work.
+  // The callback blocks that thread until it returns: the engine does not
+  // react to the event and no other ADM call runs in the meantime. Return
+  // quickly and move slow work, such as activating the audio session, to
+  // another queue.
+  //
+  // OnAudioSessionInterruptionBegan fires before the engine reacts, which stops
+  // it if it is running. `reason` is the raw AVAudioSessionInterruptionReason
+  // value from the notification:
+  //   0 Default: another audio session was activated, for example by a phone
+  //     call. Also used when the notification has no reason.
+  //   1 AppWasSuspended: the system suspended the app. Not sent since iOS 16.
+  //   2 BuiltInMicMuted: the built-in mic was muted, for example by closing
+  //     an iPad Smart Folio.
+  //   3 SceneWasBackgrounded: the app's scene went to the background. visionOS
+  //     only.
+  //   4 RouteDisconnected: the audio route was disconnected. Sent only when the
+  //     app opted in with setPrefersInterruptionOnRouteDisconnect: (iOS 17).
+  //   5 DeviceUnauthenticated: the device was taken off or locked. Defined only
+  //     in the visionOS SDK.
+  // Later OS versions may add values.
+  //
+  // OnAudioSessionInterruptionEnded fires before the engine reacts, for every
+  // interruption end RTCAudioSession reports. Besides the system's own end,
+  // RTCAudioSession sends one each time the app becomes active, each time the
+  // app reports a CallKit activation to it, and when the session is activated
+  // through it while interrupted. So an end can arrive without a matching
+  // begin. By then RTCAudioSession has already activated or deactivated the
+  // session according to its activation count.
+  // `should_resume` is the system's AVAudioSessionInterruptionOptionShouldResume
+  // hint. True means the app may resume audio now, for example after a phone
+  // call ends. False means the system leaves resuming to the user, for example
+  // after the user started music in another app. The ends RTCAudioSession sends
+  // on its own always pass true. The ADM restarts the engine whatever the
+  // value.
+  virtual void OnAudioSessionInterruptionBegan(uint32_t reason) {}
+  virtual void OnAudioSessionInterruptionEnded(bool should_resume) {}
+
+  // OnAudioSessionMediaServicesReset fires after the system has restarted its
+  // media services daemon (AVAudioSessionMediaServicesWereResetNotification),
+  // on the worker thread as described above. This is rare in the field. To
+  // trigger it on a device, use Settings > Developer > Reset Media Services.
+  //
+  // State when it fires:
+  // - Every audio object created before the reset no longer works, including
+  //   the engine and its nodes.
+  // - The audio session lost its category, mode and options. RTCAudioSession
+  //   has already activated the session if its activation count is above 0,
+  //   and deactivated it otherwise, but has not restored the configuration.
+  // - The ADM does not react to the reset. Its state still says the engine is
+  //   running as before, so audio stays dead until something rebuilds the
+  //   engine.
+  //
+  // To recover, configure and activate the audio session again, then rebuild
+  // the engine, for example by turning engine availability off and back on,
+  // which releases the engine and creates a new one. Do this off the worker
+  // thread. There is no separate event for the media services being lost,
+  // because the reset always follows.
+  virtual void OnAudioSessionMediaServicesReset() {}
+
   // Override the input node configuration with a custom implementation.
   virtual int32_t OnEngineWillConnectInput(AVAudioEngine* engine, AVAudioNode* src,
                                            AVAudioNode* dst, AVAudioFormat* format,

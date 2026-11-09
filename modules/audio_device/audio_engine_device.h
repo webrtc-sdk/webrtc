@@ -351,11 +351,12 @@ class AudioEngineDevice : public AudioDeviceModule, public AudioSessionObserver 
   int32_t EnableBuiltInNS(bool enable) override;
 
   // AudioSessionObserver methods. May be called from any thread.
-  void OnInterruptionBegin() override;
+  void OnInterruptionBegin(uint32_t reason) override;
   void OnInterruptionEnd(bool should_resume) override;
   void OnValidRouteChange() override;
   void OnCanPlayOrRecordChange(bool can_play_or_record) override;
   void OnChangedOutputVolume() override;
+  void OnMediaServicesReset() override;
 
   bool IsInterrupted();
 
