@@ -110,7 +110,17 @@ PeerConnectionFactory::PeerConnectionFactory(
           std::move(dependencies->network_controller_factory)),
       neteq_factory_(std::move(dependencies->neteq_factory)),
       decode_metronome_(std::move(dependencies->decode_metronome)),
-      encode_metronome_(std::move(dependencies->encode_metronome)) {}
+      encode_metronome_(std::move(dependencies->encode_metronome)) {
+  // Deliberately diverge from upstream CL 410860: LiveKit SDKs use the ADM as a
+  // connection-independent capture source.
+  if (context_->is_configured_for_media()) {
+    worker_thread()->BlockingCall([this] {
+      RTC_DCHECK_RUN_ON(worker_thread());
+      factory_media_engine_ref_ =
+          std::make_unique<ConnectionContext::MediaEngineReference>(context_);
+    });
+  }
+}
 
 PeerConnectionFactory::PeerConnectionFactory(
     PeerConnectionFactoryDependencies dependencies)
@@ -125,6 +135,7 @@ PeerConnectionFactory::~PeerConnectionFactory() {
     decode_metronome_ = nullptr;
     encode_metronome_ = nullptr;
     StopAecDump();
+    factory_media_engine_ref_.reset();
   });
 }
 
