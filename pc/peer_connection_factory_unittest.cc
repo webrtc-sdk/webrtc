@@ -775,7 +775,8 @@ TEST(PeerConnectionFactoryDependenciesTest,
   test::RemoveFile(temp_filename);
 }
 
-TEST(PeerConnectionFactoryDependenciesTest, RepeatMediaEngineInitialization) {
+TEST(PeerConnectionFactoryDependenciesTest,
+     MediaEngineInitializedForFactoryLifetime) {
   scoped_refptr<AudioDeviceModule> adm = FakeAudioCaptureModule::Create();
   PeerConnectionFactoryDependencies pcf_dependencies;
   pcf_dependencies.adm = adm;
@@ -787,8 +788,11 @@ TEST(PeerConnectionFactoryDependenciesTest, RepeatMediaEngineInitialization) {
   scoped_refptr<PeerConnectionFactoryInterface> pcf =
       CreateModularPeerConnectionFactory(std::move(pcf_dependencies));
 
+  ASSERT_TRUE(pcf);
+  EXPECT_TRUE(adm->Initialized());
+
   for (int i = 0; i < 10; ++i) {
-    EXPECT_FALSE(adm->Initialized());
+    EXPECT_TRUE(adm->Initialized());
     PeerConnectionInterface::RTCConfiguration config;
     NullPeerConnectionObserver observer;
     auto pc = pcf->CreatePeerConnectionOrError(
@@ -796,6 +800,8 @@ TEST(PeerConnectionFactoryDependenciesTest, RepeatMediaEngineInitialization) {
     ASSERT_TRUE(pc.ok());
     EXPECT_TRUE(adm->Initialized());
   }
+  EXPECT_TRUE(adm->Initialized());
+  pcf = nullptr;
   EXPECT_FALSE(adm->Initialized());
 }
 
