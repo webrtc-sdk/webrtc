@@ -184,6 +184,7 @@ rtc_library("ice_transport") {
   deps = [
     "../api:ice_transport_interface",
     "../api:sequence_checker",
+    "../p2p:ice_transport_internal",
     "../rtc_base:checks",
     "../rtc_base:macromagic",
     "../rtc_base:threading",
@@ -3650,6 +3651,7 @@ if (rtc_include_tests && !build_with_chromium) {
       "../p2p:p2p_constants",
       "../p2p:transport_description",
       "../rtc_base:rtc_event",
+      "../rtc_base:ssl_adapter",
       "../rtc_base:stringutils",
       "../rtc_base:threading",
       "../system_wrappers:metrics",
@@ -3695,6 +3697,7 @@ if (rtc_include_tests && !build_with_chromium) {
       "../media:codec",
       "../media:media_constants",
       "../media:stream_params",
+      "../rtc_base:ssl_adapter",
       "../rtc_base:threading",
       "../system_wrappers:metrics",
       "../test:create_test_field_trials",

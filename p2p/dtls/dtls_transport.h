@@ -33,7 +33,7 @@
 #include "api/units/timestamp.h"
 #include "p2p/base/ice_transport_internal.h"
 #include "p2p/base/packet_transport_internal.h"
-#include "p2p/dtls/dtls_stun_piggyback_controller.h"
+#include "p2p/dtls/dtls_stun_piggyback_controller_interface.h"
 #include "p2p/dtls/dtls_transport_internal.h"
 #include "p2p/dtls/dtls_utils.h"
 #include "rtc_base/async_packet_socket.h"
@@ -69,7 +69,7 @@ class StreamInterfaceChannel : public StreamInterface {
   explicit StreamInterfaceChannel(IceTransportInternal* ice_transport);
 
   void SetDtlsStunPiggybackController(
-      DtlsStunPiggybackController* dtls_stun_piggyback_controller);
+      DtlsStunPiggybackControllerInterface* dtls_stun_piggyback_controller);
 
   StreamInterfaceChannel(const StreamInterfaceChannel&) = delete;
   StreamInterfaceChannel& operator=(const StreamInterfaceChannel&) = delete;
@@ -98,7 +98,7 @@ class StreamInterfaceChannel : public StreamInterface {
 
  private:
   IceTransportInternal* const ice_transport_;  // owned by DtlsTransport
-  DtlsStunPiggybackController* dtls_stun_piggyback_controller_ =
+  DtlsStunPiggybackControllerInterface* dtls_stun_piggyback_controller_ =
       nullptr;  // owned by DtlsTransport
   StreamState state_ RTC_GUARDED_BY(callback_sequence_);
   BufferQueue packets_ RTC_GUARDED_BY(callback_sequence_);
@@ -240,6 +240,11 @@ class DtlsTransportInternalImpl : public DtlsTransportInternal {
   bool AppendSrtpKeyingMaterial(
       ZeroOnFreeBuffer<uint8_t>& keying_material) override;
 
+  // Disable DTLS-in-STUN.
+  void DisableDtlsInStun() override;
+
+  void MaybeStartDtlsInStun() override;
+
   IceTransportInternal* ice_transport() override;
 
   // For informational purposes. Tells if the DTLS handshake has finished.
@@ -356,12 +361,17 @@ class DtlsTransportInternalImpl : public DtlsTransportInternal {
   // (so that we return PIGGYBACK_ACK to client if we get STUN_BINDING_REQUEST
   // directly). Maybe disabled in SetupDtls has been called.
   bool dtls_in_stun_ = false;
+  bool peer_supports_dtls_in_stun_ = false;
+  // Set when the remote description did not signal support; makes the
+  // decision survive SetupDtls() re-reading the ICE config.
+  bool dtls_in_stun_disabled_ = false;
   // Has DtlsInStun Complete been run?
   // This variable is used to prevent reinitializing after dtls-restart.
   bool dtls_in_stun_complete_ = false;
 
   // A controller for piggybacking DTLS in STUN.
-  DtlsStunPiggybackController dtls_stun_piggyback_controller_;
+  std::unique_ptr<DtlsStunPiggybackControllerInterface>
+      dtls_stun_piggyback_controller_;
 
   absl::AnyInvocable<void(PacketTransportInternal*, const ReceivedIpPacket&)>
       piggybacked_dtls_callback_;

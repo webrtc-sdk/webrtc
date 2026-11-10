@@ -4743,12 +4743,14 @@ void SdpOfferAnswerHandler::GetOptionsForOffer(
     RTC_ALLOW_PLAN_B_DEPRECATION_END();
   }
 
-  // Apply ICE restart flag and renomination flag.
+  // Apply ICE restart flag and renomination and dtls-in-stun ICE options.
   bool ice_restart = offer_answer_options.ice_restart || HasNewIceCredentials();
   for (auto& options : session_options->media_description_options) {
     options.transport_options.ice_restart = ice_restart;
     options.transport_options.enable_ice_renomination =
         pc_->configuration()->enable_ice_renomination;
+    options.transport_options.dtls_handshake_in_stun =
+        pc_->CanAttemptDtlsStunPiggybacking();
   }
 
   session_options->rtcp_cname = rtcp_cname_;
@@ -5038,10 +5040,12 @@ void SdpOfferAnswerHandler::GetOptionsForAnswer(
     RTC_ALLOW_PLAN_B_DEPRECATION_END();
   }
 
-  // Apply ICE renomination flag.
+  // Apply renomination and dtls-in-stun ICE options.
   for (auto& options : session_options->media_description_options) {
     options.transport_options.enable_ice_renomination =
         pc_->configuration()->enable_ice_renomination;
+    options.transport_options.dtls_handshake_in_stun =
+        pc_->CanAttemptDtlsStunPiggybacking();
   }
 
   session_options->rtcp_cname = rtcp_cname_;
