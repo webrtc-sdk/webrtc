@@ -111,7 +111,7 @@ PeerConnectionFactory::PeerConnectionFactory(
       neteq_factory_(std::move(dependencies->neteq_factory)),
       decode_metronome_(std::move(dependencies->decode_metronome)),
       encode_metronome_(std::move(dependencies->encode_metronome)) {
-  // Deliberately diverge from upstream: LiveKit SDKs use the ADM as a
+  // Deliberately diverge from upstream CL 410860: LiveKit SDKs use the ADM as a
   // connection-independent capture source.
   if (context_->is_configured_for_media()) {
     worker_thread()->BlockingCall([this] {
