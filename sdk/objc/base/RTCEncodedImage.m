@@ -18,6 +18,8 @@
 @synthesize timeStamp = _timeStamp;
 @synthesize captureTimeMs = _captureTimeMs;
 @synthesize ntpTimeMs = _ntpTimeMs;
+@synthesize receiveStartMs = _receiveStartMs;
+@synthesize receiveFinishMs = _receiveFinishMs;
 @synthesize flags = _flags;
 @synthesize encodeStartMs = _encodeStartMs;
 @synthesize encodeFinishMs = _encodeFinishMs;
@@ -25,5 +27,14 @@
 @synthesize rotation = _rotation;
 @synthesize qp = _qp;
 @synthesize contentType = _contentType;
+
+- (instancetype)init {
+  self = [super init];
+  if (self) {
+    _receiveStartMs = -1;
+    _receiveFinishMs = -1;
+  }
+  return self;
+}
 
 @end
