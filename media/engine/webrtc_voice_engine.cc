@@ -923,6 +923,19 @@ class WebRtcVoiceSendChannel::WebRtcAudioSendStream : public AudioSource::Sink {
   void SetSource(AudioSource* source) {
     RTC_DCHECK_RUN_ON(&worker_thread_checker_);
     RTC_DCHECK(source);
+    // If the source type changed (a custom source replacing an ADM-fed
+    // source or vice versa), update the config so AudioState registration
+    // matches. Evaluated before the early return below because on track
+    // replacement the adapter object stays the same while the underlying
+    // source type may change. The stream is stopped across the flip so that
+    // its AudioState registration is always added and removed under the same
+    // type, then restarted under the new one.
+    if (source->source_type() != config_.source_type) {
+      stream_->Stop();
+      config_.source_type = source->source_type();
+      ReconfigureAudioSendStream(nullptr);
+      UpdateSendState();
+    }
     if (source_) {
       RTC_DCHECK(source_ == source);
       return;
