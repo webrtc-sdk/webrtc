@@ -735,15 +735,12 @@ void WebRtcVoiceEngine::RegisterSendChannel(WebRtcVoiceSendChannel* channel) {
 void WebRtcVoiceEngine::UnregisterSendChannel(WebRtcVoiceSendChannel* channel) {
   RTC_DCHECK_RUN_ON(&worker_thread_checker_);
   if (send_channels_.erase(channel) > 0) {
-    OnChannelMuteStateChange();
+    OnChannelMuteStateChange(/*may_start_recording=*/false);
   }
 }
 
-void WebRtcVoiceEngine::OnChannelMuteStateChange() {
+void WebRtcVoiceEngine::OnChannelMuteStateChange(bool may_start_recording) {
   RTC_DCHECK_RUN_ON(&worker_thread_checker_);
-  if (!apm_) {
-    return;
-  }
   std::optional<bool> muted;
   for (const WebRtcVoiceSendChannel* channel : send_channels_) {
     std::optional<bool> channel_muted = channel->muted();
@@ -755,9 +752,86 @@ void WebRtcVoiceEngine::OnChannelMuteStateChange() {
       muted = true;
     }
   }
-  if (muted.has_value() && output_will_be_muted_ != muted) {
+  if (apm_ && muted.has_value() && output_will_be_muted_ != muted) {
+    RTC_LOG(LS_INFO) << "WebRtcVoiceEngine::OnChannelMuteStateChange: APM:"
+                     << *muted;
     output_will_be_muted_ = muted;
     apm_->set_output_will_be_muted(*muted);
+  }
+
+  const bool has_source = absl::c_any_of(
+      send_channels_, [](const auto* channel) { return channel->HasSource(); });
+  // The engine assumes that the ADM mute mode does not change at runtime. A
+  // switch to stop-on-mute releases the engine microphone mute below, but a
+  // switch away from it does not restart recording that this path stopped.
+  if (adm_->IsStopOnMuteModeEnabled()) {
+    // This mode does not use the microphone mute. Release a mute that this
+    // engine wrote before the ADM switched modes.
+    if (microphone_muted_) {
+      SetMicrophoneMute(false);
+    }
+    // Decide from the real recording state: AudioState and the app can also
+    // start and stop recording.
+    if (!has_source || !muted.has_value()) {
+      return;
+    }
+    if (*muted) {
+      if (adm_->Recording()) {
+        const int32_t result = adm_->StopRecording();
+        RTC_LOG(LS_INFO) << "WebRtcVoiceEngine::OnChannelMuteStateChange: "
+                            "ADM StopRecording: "
+                         << result;
+      }
+      return;
+    }
+    // Removal and destruction never start recording: AudioState or the app
+    // may have stopped it, and the aggregate did not become unmuted.
+    if (!may_start_recording || adm_->Recording()) {
+      return;
+    }
+    if (!adm_->RecordingIsInitialized()) {
+      const int32_t result = adm_->InitRecording();
+      RTC_LOG(LS_INFO) << "WebRtcVoiceEngine::OnChannelMuteStateChange: "
+                          "ADM InitRecording: "
+                       << result;
+      if (result != 0) {
+        return;
+      }
+    }
+    const int32_t result = adm_->StartRecording();
+    RTC_LOG(LS_INFO) << "WebRtcVoiceEngine::OnChannelMuteStateChange: "
+                        "ADM StartRecording: "
+                     << result;
+    return;
+  }
+  // Without an attached source, only release a mute that this engine wrote.
+  // ClearSend is cleanup, not a request to mute the microphone.
+  if (!has_source && !microphone_muted_) {
+    return;
+  }
+  const bool mute_microphone = has_source && muted == true;
+  // Decide from the real device state: the ADM can clear the mute itself, for
+  // example when it starts recording.
+  bool device_muted = microphone_muted_;
+  if (adm_->MicrophoneMute(&device_muted) != 0) {
+    device_muted = microphone_muted_;
+  }
+  if (device_muted == mute_microphone) {
+    if (!device_muted) {
+      microphone_muted_ = false;
+    }
+    return;
+  }
+  SetMicrophoneMute(mute_microphone);
+}
+
+void WebRtcVoiceEngine::SetMicrophoneMute(bool mute) {
+  RTC_DCHECK_RUN_ON(&worker_thread_checker_);
+  const int32_t result = adm_->SetMicrophoneMute(mute);
+  RTC_LOG(LS_INFO) << "WebRtcVoiceEngine::OnChannelMuteStateChange: ADM:"
+                   << mute << " result: " << result;
+  if (result == 0) {
+    microphone_muted_ = mute;
   }
 }
 
@@ -937,7 +1011,7 @@ class WebRtcVoiceSendChannel::WebRtcAudioSendStream : public AudioSource::Sink {
 
   std::optional<bool> muted() const {
     RTC_DCHECK_RUN_ON(&worker_thread_checker_);
-    return muted_;
+    return source_ ? muted_ : std::nullopt;
   }
 
   AudioSendStream::Stats GetStats(bool has_remote_tracks) const {
@@ -1016,6 +1090,16 @@ class WebRtcVoiceSendChannel::WebRtcAudioSendStream : public AudioSource::Sink {
     // the source.
     source_ = nullptr;
     UpdateSendState();
+    // The destructor uses ClearSource(), which does not get here, so the
+    // channel destructor never recomputes the mute state mid-deletion.
+    if (on_source_closed_) {
+      on_source_closed_();
+    }
+  }
+
+  void SetSourceClosedCallback(absl::AnyInvocable<void()> callback) {
+    RTC_DCHECK_RUN_ON(&worker_thread_checker_);
+    on_source_closed_ = std::move(callback);
   }
 
   const RtpParameters& rtp_parameters() const { return rtp_parameters_; }
@@ -1196,6 +1280,7 @@ class WebRtcVoiceSendChannel::WebRtcAudioSendStream : public AudioSource::Sink {
   // PeerConnection will make sure invalidating the pointer before the object
   // goes away.
   AudioSource* source_ = nullptr;
+  absl::AnyInvocable<void()> on_source_closed_;
   bool send_ = false;
   // True if muted, false if unmuted, or std::nullopt if unset.
   std::optional<bool> muted_;
@@ -1581,6 +1666,9 @@ bool WebRtcVoiceSendChannel::AddSendStream(const StreamParams& sp) {
       send_rtp_extensions_, rtcp_cc_ack_type_, max_send_bitrate_bps_,
       audio_config_.rtcp_report_interval_ms, audio_network_adaptor_config,
       call_, transport(), engine_->encoder_factory(), crypto_options_);
+  stream->SetSourceClosedCallback([this] {
+    engine_->OnChannelMuteStateChange(/*may_start_recording=*/false);
+  });
   if (send_streams_.empty()) {
     engine_->RegisterSendChannel(this);
   }
@@ -1616,7 +1704,7 @@ bool WebRtcVoiceSendChannel::RemoveSendStream(uint32_t ssrc) {
   if (send_streams_.empty()) {
     SetSend(false);
   }
-  engine_->OnChannelMuteStateChange();
+  engine_->OnChannelMuteStateChange(/*may_start_recording=*/false);
   return true;
 }
 
@@ -1716,6 +1804,12 @@ void WebRtcVoiceSendChannel::OnNetworkRouteChanged(
       }));
 }
 
+bool WebRtcVoiceSendChannel::HasSource() const {
+  RTC_DCHECK_RUN_ON(worker_thread_);
+  return absl::c_any_of(send_streams_,
+                        [](const auto& kv) { return kv.second->HasSource(); });
+}
+
 std::optional<bool> WebRtcVoiceSendChannel::muted() const {
   RTC_DCHECK_RUN_ON(worker_thread_);
   std::optional<bool> muted;
@@ -1739,40 +1833,9 @@ bool WebRtcVoiceSendChannel::MuteStream(uint32_t ssrc, bool muted) {
   }
   it->second->SetMuted(muted);
 
-  engine_->OnChannelMuteStateChange();
-
-  if (send_streams_.size() > 0) {
-    // This will be true if MuteStream is called from
-    // AudioRtpSender::ClearSend().
-    bool is_all_no_source =
-        std::none_of(send_streams_.begin(), send_streams_.end(),
-                     [](const auto& kv) { return kv.second->HasSource(); });
-
-    bool is_all_muted =
-        std::all_of(send_streams_.begin(), send_streams_.end(),
-                    [](const auto& kv) { return kv.second->muted() == true; });
-
-    if (!is_all_no_source) {
-      // We don't mute when ClearSend() is called.
-      webrtc::AudioDeviceModule* adm = engine_->adm();
-      if (adm) {
-        RTC_LOG(LS_INFO) << "WebRtcVoiceSendChannel::MuteStream: ADM:"
-                         << is_all_muted;
-
-        if (adm->IsStopOnMuteModeEnabled()) {
-          if (!is_all_muted && !adm->Recording()) {
-            if (adm->InitRecording() == 0) {
-              adm->StartRecording();
-            }
-          } else if (is_all_muted && adm->Recording()) {
-            adm->StopRecording();
-          }
-        } else {
-          adm->SetMicrophoneMute(is_all_muted);
-        }
-      }
-    }
-  }
+  // ClearSend detaches the source; like a removal, it never starts recording.
+  engine_->OnChannelMuteStateChange(
+      /*may_start_recording=*/it->second->HasSource());
 
   return true;
 }

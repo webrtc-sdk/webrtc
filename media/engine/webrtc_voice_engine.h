@@ -139,8 +139,11 @@ class WebRtcVoiceEngine final : public VoiceEngineInterface {
 
   // Recomputes aggregate mute state across `send_channels_` and updates
   // AudioProcessing::set_output_will_be_muted() if the effective boolean mute
-  // state changed.
-  void OnChannelMuteStateChange();
+  // state changed. Also applies the aggregate to the ADM, either as a
+  // microphone mute or as stop-on-mute recording. Stream removal, a detached or
+  // closed source and channel destruction pass `may_start_recording` false:
+  // they may stop recording but never start it.
+  void OnChannelMuteStateChange(bool may_start_recording);
 
   std::vector<RtpHeaderExtensionCapability> GetRtpHeaderExtensions(
       const FieldTrialsView* field_trials) const override;
@@ -166,6 +169,9 @@ class WebRtcVoiceEngine final : public VoiceEngineInterface {
   AudioProcessingOptionsResult ApplyOptions(const AudioOptions &options);
 
  private:
+  // Writes the microphone mute to the ADM and records a successful write.
+  void SetMicrophoneMute(bool mute);
+
   const Environment env_;
   std::unique_ptr<TaskQueueBase, TaskQueueDeleter> low_priority_worker_queue_;
 
@@ -197,6 +203,11 @@ class WebRtcVoiceEngine final : public VoiceEngineInterface {
   // Last boolean mute value forwarded to `apm_->set_output_will_be_muted()`.
   std::optional<bool> output_will_be_muted_
       RTC_GUARDED_BY(worker_thread_checker_);
+  // True if the last successful SetMicrophoneMute() write of this engine was a
+  // mute. It records the last engine write, not app ownership. Mute decisions
+  // read the real ADM state. This flag only lets the engine release its own
+  // mute when no attached source remains.
+  bool microphone_muted_ RTC_GUARDED_BY(worker_thread_checker_) = false;
   bool initialized_ RTC_GUARDED_BY(worker_thread_checker_) = false;
   std::optional<AudioOptions> last_requested_audio_processing_options_ RTC_GUARDED_BY(worker_thread_checker_);
   std::optional<AudioOptions> last_resolved_audio_processing_options_ RTC_GUARDED_BY(worker_thread_checker_);
@@ -297,6 +308,7 @@ class WebRtcVoiceSendChannel final : public MediaChannelUtil,
   // Mute state of the channel: true if muted, false if unmuted, or std::nullopt
   // if unset.
   std::optional<bool> muted() const;
+  bool HasSource() const;
 
  private:
   bool SetSendCodecs(const std::vector<Codec>& codecs,
