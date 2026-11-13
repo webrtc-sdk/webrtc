@@ -752,11 +752,15 @@ void WebRtcVoiceEngine::OnChannelMuteStateChange(bool may_start_recording) {
       muted = true;
     }
   }
-  if (apm_ && muted.has_value() && output_will_be_muted_ != muted) {
+  // With no attached, configured stream left, release a mute that this engine
+  // wrote, so that local capture processing does not stay bypassed.
+  const std::optional<bool> apm_muted =
+      muted.has_value() || output_will_be_muted_ != true ? muted : false;
+  if (apm_ && apm_muted.has_value() && output_will_be_muted_ != apm_muted) {
     RTC_LOG(LS_INFO) << "WebRtcVoiceEngine::OnChannelMuteStateChange: APM:"
-                     << *muted;
-    output_will_be_muted_ = muted;
-    apm_->set_output_will_be_muted(*muted);
+                     << *apm_muted;
+    output_will_be_muted_ = apm_muted;
+    apm_->set_output_will_be_muted(*apm_muted);
   }
 
   const bool has_source = absl::c_any_of(

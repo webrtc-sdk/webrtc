@@ -3287,12 +3287,20 @@ TEST_P(WebRtcVoiceEngineTestFake,
   send_channel2.reset();
 
   // Destroying the last remaining (muted) channel leaves no registered
-  // channels, and subsequently creating a new channel with an unmuted stream
-  // transitions AudioProcessing back to unmuted.
-  // Destroying it also releases the engine's microphone mute.
+  // channels, so the engine releases its AudioProcessing and microphone mutes.
+  if (!use_null_apm_) {
+    EXPECT_CALL(*apm_, set_output_will_be_muted(false));
+  }
   EXPECT_CALL(*adm_, SetMicrophoneMute(false)).WillOnce(Return(0));
   send_channel_.reset();
-  EXPECT_TRUE(SetupSendStream());
+  // A new channel with an unmuted stream then needs no update.
+  if (!use_null_apm_) {
+    EXPECT_CALL(*apm_, set_output_will_be_muted(_)).Times(0);
+  }
+  EXPECT_TRUE(SetupChannel());
+  EXPECT_TRUE(send_channel_->AddSendStream(StreamParams::CreateLegacy(kSsrcX)));
+  EXPECT_TRUE(
+      send_channel_->SetAudioSend(kSsrcX, true, nullptr, &fake_source_));
 }
 
 // Test that a send stream added via AddSendStream without SetAudioSend (e.g. a
@@ -3399,8 +3407,11 @@ TEST_P(WebRtcVoiceEngineTestFake,
       send_channel2->SetAudioSend(kSsrcY, false, nullptr, &fake_source_));
   EXPECT_TRUE(GetSendStream(kSsrcY).muted());
 
-  // Destroying the last channel releases the engine's microphone mute.
+  // Destroying the last channel releases the engine's mutes.
   EXPECT_CALL(*adm_, SetMicrophoneMute(false)).WillOnce(Return(0));
+  if (!use_null_apm_) {
+    EXPECT_CALL(*apm_, set_output_will_be_muted(false));
+  }
   send_channel2.reset();
 }
 
@@ -3428,8 +3439,11 @@ TEST_P(WebRtcVoiceEngineTestFake, MuteOneChannelKeepsOtherChannelCaptureUsed) {
     EXPECT_CALL(*apm_, set_output_will_be_muted(true));
   }
   other_channel.reset();
-  // Destroying the last channel clears the mute that the engine wrote.
+  // Destroying the last channel clears the mutes that the engine wrote.
   EXPECT_CALL(*adm_, SetMicrophoneMute(false)).WillOnce(Return(0));
+  if (apm_) {
+    EXPECT_CALL(*apm_, set_output_will_be_muted(false));
+  }
   send_channel_.reset();
 }
 
@@ -3465,9 +3479,8 @@ TEST_P(WebRtcVoiceEngineTestFake, MuteAggregateTracksRemovalAndEmptyCapture) {
     EXPECT_TRUE(apm_muted);
   EXPECT_TRUE(adm_muted);
   ASSERT_TRUE(send_channel_->RemoveSendStream(kSsrcX));
-  // Upstream retains the last APM state when no configured streams remain.
-  if (apm_)
-    EXPECT_TRUE(apm_muted);
+  // The engine releases its mutes when no configured streams remain.
+  EXPECT_FALSE(apm_muted);
   EXPECT_FALSE(adm_muted);
   other.reset();
   send_channel_.reset();
@@ -3572,12 +3585,13 @@ TEST_P(WebRtcVoiceEngineTestFake,
   other.reset();
   EXPECT_CALL(*adm_, SetMicrophoneMute(false)).WillOnce(Return(0));
   send_channel_.reset();
-  EXPECT_CALL(*processor_ptr, Process(_)).Times(0);
+  // With no configured stream left, local capture processing resumes.
+  EXPECT_CALL(*processor_ptr, Process(_)).Times(1);
   EXPECT_EQ(real_apm->ProcessStream(samples, config, config, samples), 0);
   Mock::VerifyAndClearExpectations(processor_ptr);
   ASSERT_TRUE(SetupChannel());
   ASSERT_TRUE(send_channel_->AddSendStream(StreamParams::CreateLegacy(kSsrcX)));
-  EXPECT_CALL(*processor_ptr, Process(_)).Times(0);
+  EXPECT_CALL(*processor_ptr, Process(_)).Times(1);
   EXPECT_EQ(real_apm->ProcessStream(samples, config, config, samples), 0);
   Mock::VerifyAndClearExpectations(processor_ptr);
   ASSERT_TRUE(
@@ -3619,6 +3633,9 @@ TEST_P(WebRtcVoiceEngineTestFake,
   ASSERT_TRUE(
       send_channel_->SetAudioSend(kSsrcX, false, nullptr, &fake_source_));
   EXPECT_CALL(*adm_, SetMicrophoneMute(false)).Times(1).WillOnce(Return(0));
+  if (apm_) {
+    EXPECT_CALL(*apm_, set_output_will_be_muted(false)).Times(1);
+  }
   ASSERT_TRUE(send_channel_->RemoveSendStream(kSsrcX));
   send_channel_.reset();
 }
@@ -3651,7 +3668,8 @@ TEST_P(WebRtcVoiceEngineTestFake, TwoChannelStopOnMuteUsesEngineAggregate) {
       .RetiresOnSaturation();
   if (apm_) {
     EXPECT_CALL(*apm_, set_output_will_be_muted(true)).Times(2);
-    EXPECT_CALL(*apm_, set_output_will_be_muted(false)).Times(1);
+    // Unmute, then the last removal releases the mute.
+    EXPECT_CALL(*apm_, set_output_will_be_muted(false)).Times(2);
   }
   ASSERT_TRUE(
       send_channel_->SetAudioSend(kSsrcX, false, nullptr, &fake_source_));
@@ -3748,6 +3766,9 @@ TEST_P(WebRtcVoiceEngineTestFake,
   ASSERT_TRUE(other->SetAudioSend(kSsrcY, false, nullptr, &other_source));
   EXPECT_FALSE(*recording);
   other.reset();
+  if (apm_) {
+    EXPECT_CALL(*apm_, set_output_will_be_muted(false));
+  }
   send_channel_.reset();
 }
 
@@ -3771,6 +3792,9 @@ TEST_P(WebRtcVoiceEngineTestFake, MicrophoneMuteClearedOutsideIsRestored) {
   EXPECT_TRUE(device()->microphone_muted);
   EXPECT_CALL(*adm_, SetMicrophoneMute(false)).WillOnce(Return(0));
   other.reset();
+  if (apm_) {
+    EXPECT_CALL(*apm_, set_output_will_be_muted(false));
+  }
   send_channel_.reset();
 }
 
@@ -3815,6 +3839,9 @@ TEST_P(WebRtcVoiceEngineTestFake,
   ASSERT_TRUE(
       send_channel_->SetAudioSend(kSsrcX, false, nullptr, &fake_source_));
   EXPECT_FALSE(device()->microphone_muted);
+  if (apm_) {
+    EXPECT_CALL(*apm_, set_output_will_be_muted(false));
+  }
   send_channel_.reset();
 }
 
@@ -3862,6 +3889,9 @@ TEST_P(WebRtcVoiceEngineTestFake, ClosingSourceAfterMuteReleasesEngineMute) {
   }
   ASSERT_TRUE(send_channel_->SetAudioSend(kSsrcX, false, nullptr, &source));
   EXPECT_CALL(*adm_, SetMicrophoneMute(false)).WillOnce(Return(0));
+  if (apm_) {
+    EXPECT_CALL(*apm_, set_output_will_be_muted(false));
+  }
   source.Close();
   EXPECT_EQ(SendImpl()->muted(), std::nullopt);
   EXPECT_FALSE(device()->microphone_muted);
@@ -3897,6 +3927,75 @@ TEST_P(WebRtcVoiceEngineTestFake, UnpublishingLastTrackKeepsCaptureProcessing) {
       Mock::VerifyAndClearExpectations(processor_ptr);
     }
   }
+  send_channel_.reset();
+}
+
+TEST_P(WebRtcVoiceEngineTestFake, ClearSendAfterMuteRunsCapturePostProcessor) {
+  if (use_null_apm_) {
+    GTEST_SKIP() << "Requires APM";
+  }
+  auto processor =
+      std::make_unique<::testing::NiceMock<test::MockCustomProcessing>>();
+  auto* processor_ptr = processor.get();
+  auto real_apm = BuiltinAudioProcessingBuilder()
+                      .SetCapturePostProcessing(std::move(processor))
+                      .Build(env_);
+  ASSERT_TRUE(SetupSendStream());
+  EXPECT_CALL(*apm_, set_output_will_be_muted(_))
+      .WillRepeatedly([real_apm](bool muted) {
+        real_apm->set_output_will_be_muted(muted);
+      });
+  EXPECT_CALL(*adm_, SetMicrophoneMute(true)).WillOnce(Return(0));
+  ASSERT_TRUE(
+      send_channel_->SetAudioSend(kSsrcX, false, nullptr, &fake_source_));
+  EXPECT_CALL(*adm_, SetMicrophoneMute(false)).WillOnce(Return(0));
+  ASSERT_TRUE(send_channel_->SetAudioSend(kSsrcX, false, nullptr, nullptr));
+  int16_t samples[160] = {};
+  const StreamConfig config(16000, 1);
+  EXPECT_CALL(*processor_ptr, Process(_)).Times(1);
+  EXPECT_EQ(real_apm->ProcessStream(samples, config, config, samples), 0);
+  Mock::VerifyAndClearExpectations(processor_ptr);
+  send_channel_.reset();
+}
+
+// A call ends muted, then the app unmutes APM directly, as AudioManager does
+// before it starts local recording. A new call that starts muted must mute APM.
+TEST_P(WebRtcVoiceEngineTestFake,
+       NewMutedStreamMutesApmAfterExternalUnmuteBetweenCalls) {
+  if (use_null_apm_) {
+    GTEST_SKIP() << "Requires APM";
+  }
+  auto processor =
+      std::make_unique<::testing::NiceMock<test::MockCustomProcessing>>();
+  auto* processor_ptr = processor.get();
+  auto real_apm = BuiltinAudioProcessingBuilder()
+                      .SetCapturePostProcessing(std::move(processor))
+                      .Build(env_);
+  ASSERT_TRUE(SetupSendStream());
+  EXPECT_CALL(*apm_, set_output_will_be_muted(_))
+      .WillRepeatedly([real_apm](bool muted) {
+        real_apm->set_output_will_be_muted(muted);
+      });
+  EXPECT_CALL(*adm_, SetMicrophoneMute(true))
+      .Times(2)
+      .WillRepeatedly(Return(0));
+  ASSERT_TRUE(
+      send_channel_->SetAudioSend(kSsrcX, false, nullptr, &fake_source_));
+  EXPECT_CALL(*adm_, SetMicrophoneMute(false)).WillOnce(Return(0));
+  send_channel_.reset();
+
+  real_apm->set_output_will_be_muted(false);
+
+  ASSERT_TRUE(SetupChannel());
+  ASSERT_TRUE(send_channel_->AddSendStream(StreamParams::CreateLegacy(kSsrcX)));
+  ASSERT_TRUE(
+      send_channel_->SetAudioSend(kSsrcX, false, nullptr, &fake_source_));
+  int16_t samples[160] = {};
+  const StreamConfig config(16000, 1);
+  EXPECT_CALL(*processor_ptr, Process(_)).Times(0);
+  EXPECT_EQ(real_apm->ProcessStream(samples, config, config, samples), 0);
+  Mock::VerifyAndClearExpectations(processor_ptr);
+  EXPECT_CALL(*adm_, SetMicrophoneMute(false)).WillOnce(Return(0));
   send_channel_.reset();
 }
 
