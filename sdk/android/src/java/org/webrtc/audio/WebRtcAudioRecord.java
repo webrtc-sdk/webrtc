@@ -536,7 +536,11 @@ class WebRtcAudioRecord {
       }
   
       if (audioRecord == null){
-        return initRecordingImpl(sampleRate, channels, true);
+        int framesPerBuffer = initRecordingImpl(sampleRate, channels, true);
+        if (framesPerBuffer < 0) {
+          nativeCalledInitRecording.set(false);
+        }
+        return framesPerBuffer;
       }
 
       // initRecording was already called previously by client.
