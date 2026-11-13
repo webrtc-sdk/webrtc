@@ -68,6 +68,43 @@ std::unique_ptr<webrtc::VideoDecoder> GetObjCDecoder(
 
 @implementation ObjCVideoDecoderFactoryTests
 
+- (void)testCreatePassesRequestedFormat {
+  id factory =
+      OCMProtocolMock(@protocol(RTC_OBJC_TYPE(RTCVideoDecoderFactory)));
+  RTC_OBJC_TYPE(RTCVideoCodecInfo) *high = [[RTC_OBJC_TYPE(RTCVideoCodecInfo)
+      alloc] initWithName:@"H264"
+               parameters:@{@"profile-level-id" : @"640c1f"}];
+  RTC_OBJC_TYPE(RTCVideoCodecInfo) *baseline =
+      [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc]
+          initWithName:@"H264"
+            parameters:@{@"profile-level-id" : @"42e01f"}];
+  OCMStub([factory supportedCodecs]).andReturn((@[ high, baseline ]));
+  __block RTC_OBJC_TYPE(RTCVideoCodecInfo) *received = nil;
+  OCMStub([factory createDecoder:[OCMArg any]])
+      .andDo(^(NSInvocation *invocation) {
+        __unsafe_unretained RTC_OBJC_TYPE(RTCVideoCodecInfo) * info;
+        [invocation getArgument:&info atIndex:2];
+        received = info;
+      });
+
+  webrtc::ObjCVideoDecoderFactory decoderFactory(factory);
+  decoderFactory.Create(
+      webrtc::CreateEnvironment(),
+      webrtc::SdpVideoFormat("H264",
+                             {{"profile-level-id", "42e01f"},
+                              {"packetization-mode", "1"},
+                              {"level-asymmetry-allowed", "1"},
+                              {"x-test-param", "TR_test"}}));
+
+  XCTAssertEqualObjects(received.name, @"H264");
+  XCTAssertEqualObjects(received.parameters, (@{
+                          @"profile-level-id" : @"42e01f",
+                          @"packetization-mode" : @"1",
+                          @"level-asymmetry-allowed" : @"1",
+                          @"x-test-param" : @"TR_test"
+                        }));
+}
+
 - (void)testConfigureReturnsTrueOnSuccess {
   std::unique_ptr<webrtc::VideoDecoder> decoder =
       GetObjCDecoder(CreateOKDecoderFactory());
