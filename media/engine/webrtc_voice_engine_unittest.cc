@@ -142,7 +142,7 @@ constexpr uint32_t kSsrcs4[] = {11, 200, 30, 44};
 constexpr int kRtpHistoryMs = 5000;
 
 constexpr AudioProcessing::Config::GainController1::Mode kDefaultAgcMode =
-#if defined(WEBRTC_IOS) || defined(WEBRTC_ANDROID)
+#if defined(WEBRTC_IOS) || defined(WEBRTC_MAC) || defined(WEBRTC_ANDROID)
     AudioProcessing::Config::GainController1::kFixedDigital;
 #else
     AudioProcessing::Config::GainController1::kAdaptiveAnalog;
@@ -372,6 +372,7 @@ TEST(AudioProcessingOptionsResolverTest, CoupledAgcOnlyKeepsActivePath) {
 TEST(AudioProcessingControllerValidationTest, RejectsCoupledPlatformEchoWithDisabledNoise) {
   webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>> adm =
       webrtc::make_ref_counted<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
+  EXPECT_CALL(*adm, PlatformVoiceProcessingPathIsAvailable()).WillRepeatedly(Return(false));
   webrtc::AudioOptions options;
   options.echo_cancellation = true;
   options.echo_cancellation_mode = webrtc::AudioProcessingMode::kPlatform;
@@ -386,6 +387,7 @@ TEST(AudioProcessingControllerValidationTest, RejectsCoupledPlatformEchoWithDisa
 TEST(AudioProcessingControllerValidationTest, RejectsCoupledPlatformNoiseWithDisabledEcho) {
   webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>> adm =
       webrtc::make_ref_counted<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
+  EXPECT_CALL(*adm, PlatformVoiceProcessingPathIsAvailable()).WillRepeatedly(Return(false));
   webrtc::AudioOptions options;
   options.echo_cancellation = false;
   options.echo_cancellation_mode = webrtc::AudioProcessingMode::kAutomatic;
@@ -400,6 +402,7 @@ TEST(AudioProcessingControllerValidationTest, RejectsCoupledPlatformNoiseWithDis
 TEST(AudioProcessingControllerValidationTest, RejectsCoupledPlatformEchoWithSoftwareNoise) {
   webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>> adm =
       webrtc::make_ref_counted<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
+  EXPECT_CALL(*adm, PlatformVoiceProcessingPathIsAvailable()).WillRepeatedly(Return(false));
   webrtc::AudioOptions options;
   options.echo_cancellation = true;
   options.echo_cancellation_mode = webrtc::AudioProcessingMode::kPlatform;
@@ -414,6 +417,7 @@ TEST(AudioProcessingControllerValidationTest, RejectsCoupledPlatformEchoWithSoft
 TEST(AudioProcessingControllerValidationTest, RejectsCoupledPlatformAgcWithoutEchoNoisePath) {
   webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>> adm =
       webrtc::make_ref_counted<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
+  EXPECT_CALL(*adm, PlatformVoiceProcessingPathIsAvailable()).WillRepeatedly(Return(false));
   webrtc::AudioOptions options;
   options.echo_cancellation = false;
   options.noise_suppression = false;
@@ -869,6 +873,7 @@ TEST(AudioProcessingControllerTest, CoupledEchoPlatformResolvesDisabledWhenPathU
 TEST(AudioProcessingControllerTest, CoupledAgcPlatformOnlyResolvesDisabledWithoutPath) {
   webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>> adm =
       webrtc::make_ref_counted<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
+  EXPECT_CALL(*adm, PlatformVoiceProcessingPathIsAvailable()).WillRepeatedly(Return(false));
   webrtc::AudioOptions options;
   options.auto_gain_control = true;
   options.auto_gain_control_mode = webrtc::AudioProcessingMode::kPlatform;
@@ -936,6 +941,7 @@ TEST(AudioProcessingControllerTest, CoupledNoisePlatformWithEchoDisabledResolves
 TEST(AudioProcessingControllerTest, CoupledAgcOnlyDoesNotEnablePath) {
   webrtc::scoped_refptr<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>> adm =
       webrtc::make_ref_counted<StrictMock<CoupledAudioProcessingMockAudioDeviceModule>>();
+  EXPECT_CALL(*adm, PlatformVoiceProcessingPathIsAvailable()).WillRepeatedly(Return(false));
   webrtc::AudioOptions options;
   options.auto_gain_control = true;
   options.auto_gain_control_mode = webrtc::AudioProcessingMode::kAutomatic;
@@ -957,6 +963,7 @@ TEST(AudioProcessingControllerTest, CoupledAgcOnlyAutomaticUsesActiveSharedPath)
   adm->state.is_echo_cancellation_active = true;
   adm->state.is_noise_suppression_active = true;
 
+  EXPECT_CALL(*adm, PlatformVoiceProcessingPathIsAvailable()).WillRepeatedly(Return(false));
   webrtc::AudioOptions options;
   options.auto_gain_control = true;
   options.auto_gain_control_mode = webrtc::AudioProcessingMode::kAutomatic;
@@ -977,13 +984,20 @@ class FakeAudioSource : public AudioSource {
   void SetSink(Sink* /* sink */) override {}
 };
 
+// Match AudioEngineDevice's microphone-mute path rather than stop-on-mute.
+class MicrophoneMuteAudioDevice : public test::MockAudioDeviceModule {
+ public:
+  bool IsStopOnMuteModeEnabled() const override { return stop_on_mute; }
+  bool stop_on_mute = false;
+};
+
 class WebRtcVoiceEngineTestFake : public ::testing::TestWithParam<bool> {
  public:
   explicit WebRtcVoiceEngineTestFake(absl::string_view field_trials_string = "")
       : use_null_apm_(GetParam()),
         field_trials_(CreateTestFieldTrials(field_trials_string)),
         env_(CreateEnvironment(&field_trials_)),
-        adm_(test::MockAudioDeviceModule::CreateStrict()),
+        adm_(make_ref_counted<StrictMock<MicrophoneMuteAudioDevice>>()),
         apm_(use_null_apm_
                  ? nullptr
                  : make_ref_counted<StrictMock<test::MockAudioProcessing>>()),
@@ -1054,6 +1068,7 @@ class WebRtcVoiceEngineTestFake : public ::testing::TestWithParam<bool> {
     if (!use_null_apm_) {
       EXPECT_CALL(*apm_, set_output_will_be_muted(false));
     }
+    EXPECT_CALL(*adm_, SetMicrophoneMute(false)).WillOnce(Return(0));
     return send_channel_->SetAudioSend(kSsrcX, true, nullptr, &fake_source_);
   }
 
@@ -1136,6 +1151,9 @@ class WebRtcVoiceEngineTestFake : public ::testing::TestWithParam<bool> {
     ASSERT_TRUE(send_channel_);
     if (!use_null_apm_) {
       EXPECT_CALL(*apm_, set_output_will_be_muted(!enable));
+    }
+    if (source) {
+      EXPECT_CALL(*adm_, SetMicrophoneMute(!enable)).WillOnce(Return(0));
     }
     EXPECT_TRUE(send_channel_->SetAudioSend(ssrc, enable, options, source));
   }
@@ -3113,9 +3131,9 @@ TEST_P(WebRtcVoiceEngineTestFake, SendStateMuteUnmute) {
   EXPECT_TRUE(SetupSendStream());
   SetSenderParameters(send_parameters_);
   EXPECT_FALSE(GetSendStream(kSsrcX).muted());
-  SetAudioSend(kSsrcX, true, nullptr);
+  SetAudioSend(kSsrcX, true, &fake_source_);
   EXPECT_FALSE(GetSendStream(kSsrcX).muted());
-  SetAudioSend(kSsrcX, false, nullptr);
+  SetAudioSend(kSsrcX, false, &fake_source_);
   EXPECT_TRUE(GetSendStream(kSsrcX).muted());
 }
 
