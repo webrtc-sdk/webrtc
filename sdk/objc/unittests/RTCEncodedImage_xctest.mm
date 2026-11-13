@@ -30,6 +30,38 @@
                  encoded_data);
 }
 
+- (void)testReceiveTimesRoundTripWithoutTimingFlags {
+  webrtc::EncodedImage native;
+  native.SetEncodedData(webrtc::EncodedImageBuffer::Create(1));
+  native.timing_.receive_start_ms = 1234;
+  native.timing_.receive_finish_ms = 1256;
+  RTC_OBJC_TYPE(RTCEncodedImage) *image = [[RTC_OBJC_TYPE(RTCEncodedImage)
+      alloc] initWithNativeEncodedImage:native];
+  XCTAssertEqual(image.flags, webrtc::VideoSendTiming::kInvalid);
+  XCTAssertEqual(image.receiveStartMs, 1234);
+  XCTAssertEqual(image.receiveFinishMs, 1256);
+  image.receiveStartMs = 2345;
+  image.receiveFinishMs = 2378;
+  auto roundTrip = [image nativeEncodedImage];
+  XCTAssertEqual(roundTrip.timing_.receive_start_ms, 2345);
+  XCTAssertEqual(roundTrip.timing_.receive_finish_ms, 2378);
+}
+
+- (void)testUnknownReceiveTimes {
+  RTC_OBJC_TYPE(RTCEncodedImage) *image =
+      [[RTC_OBJC_TYPE(RTCEncodedImage) alloc] init];
+  XCTAssertEqual(image.receiveStartMs, -1);
+  XCTAssertEqual(image.receiveFinishMs, -1);
+  auto native = [image nativeEncodedImage];
+  XCTAssertEqual(native.timing_.receive_start_ms, -1);
+  XCTAssertEqual(native.timing_.receive_finish_ms, -1);
+  native.SetEncodedData(webrtc::EncodedImageBuffer::Create());
+  image = [[RTC_OBJC_TYPE(RTCEncodedImage) alloc]
+      initWithNativeEncodedImage:native];
+  XCTAssertEqual(image.receiveStartMs, -1);
+  XCTAssertEqual(image.receiveFinishMs, -1);
+}
+
 - (void)testInitWithNSData {
   NSData *bufferData = [NSData data];
   RTC_OBJC_TYPE(RTCEncodedImage) *encodedImage =

@@ -101,8 +101,9 @@ std::unique_ptr<VideoDecoder> ObjCVideoDecoderFactory::Create(
   for (RTC_OBJC_TYPE(RTCVideoCodecInfo) *
        codecInfo in decoder_factory_.supportedCodecs) {
     if ([codecName isEqualToString:codecInfo.name]) {
-      id<RTC_OBJC_TYPE(RTCVideoDecoder)> decoder =
-          [decoder_factory_ createDecoder:codecInfo];
+      id<RTC_OBJC_TYPE(RTCVideoDecoder)> decoder = [decoder_factory_
+          createDecoder:[[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc]
+                            initWithNativeSdpVideoFormat:format]];
 
       if (decoder == nil) {
         // A nil decoder would still be wrapped below and silently drop every

@@ -39,6 +39,18 @@ RTC_OBJC_EXPORT
 @property(nonatomic, assign) uint32_t timeStamp;
 @property(nonatomic, assign) int64_t captureTimeMs;
 @property(nonatomic, assign) int64_t ntpTimeMs;
+/** First packet receive time in milliseconds, or -1 if unknown.
+ * Uses the same timebase as CACurrentMediaTime() * 1000. Comparable with a
+ * valid renderTimeMs passed to RTCVideoDecoder, but not its 0 (low latency) or
+ * -1 sentinel values, nor ntpTimeMs. For combined spatial layers, this is the
+ * first layer's receive start time.
+ */
+@property(nonatomic, assign) int64_t receiveStartMs;
+/** Last packet receive time in the same clock as receiveStartMs, or -1 if
+ * unknown. For combined spatial layers, this is the last layer's receive finish
+ * time.
+ */
+@property(nonatomic, assign) int64_t receiveFinishMs;
 @property(nonatomic, assign) uint8_t flags;
 @property(nonatomic, assign) int64_t encodeStartMs;
 @property(nonatomic, assign) int64_t encodeFinishMs;
