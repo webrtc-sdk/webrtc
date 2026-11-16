@@ -38,6 +38,7 @@ static const char kTestIpv6Address2[] = "2a00:8a00:a000:1190:0000:0002:000:253";
 
 static const char kTestIfName1[] = "testlan0";
 static const char kTestIfName1V4[] = "v4-testlan0";
+static const char kTestIfName1P2p[] = "p2p-testlan0-0";
 static const char kTestIfName2[] = "testnet0";
 
 jni::NetworkInformation CreateNetworkInformation(
@@ -178,6 +179,32 @@ TEST_F(AndroidNetworkMonitorTest, TestFindNetworkHandleUsingIfName) {
   ASSERT_FALSE(network_handle1.has_value());
   ASSERT_TRUE(network_handle2.has_value());
   EXPECT_EQ(ipv6_handle, *network_handle2);
+}
+
+// A Wi-Fi Direct group interface is named after the Wi-Fi interface it was
+// created from, but it is not part of that network.
+TEST_F(AndroidNetworkMonitorTest, TestWifiDirectGroupIfNameIsNotMatched) {
+  // Start() updates the states introduced by the field trial.
+  network_monitor_->Start();
+  jni::NetworkHandle ipv4_handle = 100;
+  webrtc::IPAddress ipv4_address(kTestIpv4Address);
+  jni::NetworkInformation net_info =
+      CreateNetworkInformation(kTestIfName1, ipv4_handle, ipv4_address);
+  network_monitor_->OnNetworkConnected_n(net_info);
+
+  webrtc::IPAddress p2p_address(0xC0A83101);  // 192.168.49.1
+  EXPECT_FALSE(
+      network_monitor_
+          ->FindNetworkHandleFromAddressOrName(p2p_address, kTestIfName1P2p)
+          .has_value());
+  EXPECT_FALSE(network_monitor_->GetInterfaceInfo(kTestIfName1P2p).available);
+  EXPECT_EQ(network_monitor_->GetInterfaceInfo(kTestIfName1P2p).adapter_type,
+            webrtc::ADAPTER_TYPE_UNKNOWN);
+
+  // The stacked CLAT interface is still matched.
+  EXPECT_TRUE(network_monitor_->GetInterfaceInfo(kTestIfName1V4).available);
+  EXPECT_EQ(network_monitor_->GetInterfaceInfo(kTestIfName1V4).adapter_type,
+            webrtc::ADAPTER_TYPE_WIFI);
 }
 
 TEST_F(AndroidNetworkMonitorTest, TestUnderlyingVpnType) {
