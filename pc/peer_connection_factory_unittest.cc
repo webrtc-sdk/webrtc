@@ -775,28 +775,76 @@ TEST(PeerConnectionFactoryDependenciesTest,
   test::RemoveFile(temp_filename);
 }
 
-TEST(PeerConnectionFactoryDependenciesTest, RepeatMediaEngineInitialization) {
-  scoped_refptr<AudioDeviceModule> adm = FakeAudioCaptureModule::Create();
+TEST(PeerConnectionFactoryDependenciesTest,
+     MediaEngineInitializedForFactoryLifetime) {
+  auto worker = Thread::Create();
+  ASSERT_TRUE(worker->Start());
+  auto adm = FakeAudioCaptureModule::Create();
+  ASSERT_TRUE(adm);
+  EXPECT_FALSE(adm->HasAudioCallback());
   PeerConnectionFactoryDependencies pcf_dependencies;
   pcf_dependencies.adm = adm;
   pcf_dependencies.signaling_thread = Thread::Current();
-  pcf_dependencies.worker_thread = Thread::Current();
+  pcf_dependencies.worker_thread = worker.get();
   pcf_dependencies.network_thread = Thread::Current();
   EnableMediaWithDefaults(pcf_dependencies);
 
   scoped_refptr<PeerConnectionFactoryInterface> pcf =
       CreateModularPeerConnectionFactory(std::move(pcf_dependencies));
 
+  ASSERT_TRUE(pcf);
+  EXPECT_TRUE(adm->Initialized());
+  EXPECT_TRUE(adm->HasAudioCallback());
+
   for (int i = 0; i < 10; ++i) {
-    EXPECT_FALSE(adm->Initialized());
+    EXPECT_TRUE(adm->Initialized());
+    EXPECT_TRUE(adm->HasAudioCallback());
     PeerConnectionInterface::RTCConfiguration config;
     NullPeerConnectionObserver observer;
     auto pc = pcf->CreatePeerConnectionOrError(
         config, PeerConnectionDependencies(&observer));
     ASSERT_TRUE(pc.ok());
     EXPECT_TRUE(adm->Initialized());
+    EXPECT_TRUE(adm->HasAudioCallback());
   }
+  EXPECT_TRUE(adm->Initialized());
+  EXPECT_TRUE(adm->HasAudioCallback());
+  pcf = nullptr;
   EXPECT_FALSE(adm->Initialized());
+  EXPECT_FALSE(adm->HasAudioCallback());
+}
+
+TEST(PeerConnectionFactoryDependenciesTest,
+     MediaEngineReferencesRetainFactoryInitialization) {
+  test::RunLoop main_thread;
+  auto adm = FakeAudioCaptureModule::Create();
+  ASSERT_TRUE(adm);
+  PeerConnectionFactoryDependencies dependencies;
+  dependencies.adm = adm;
+  dependencies.signaling_thread = Thread::Current();
+  dependencies.worker_thread = Thread::Current();
+  dependencies.network_thread = Thread::Current();
+  EnableMediaWithDefaults(dependencies);
+  auto env = CreateTestEnvironment();
+  auto context = ConnectionContext::Create(env, &dependencies);
+  ASSERT_TRUE(context);
+  auto pcf =
+      make_ref_counted<PeerConnectionFactory>(env, context, &dependencies);
+
+  for (int i = 0; i < 10; ++i) {
+    EXPECT_TRUE(adm->Initialized());
+    EXPECT_TRUE(adm->HasAudioCallback());
+    {
+      ConnectionContext::MediaEngineReference ref(context);
+      EXPECT_TRUE(adm->Initialized());
+      EXPECT_TRUE(adm->HasAudioCallback());
+    }
+    EXPECT_TRUE(adm->Initialized());
+    EXPECT_TRUE(adm->HasAudioCallback());
+  }
+  pcf = nullptr;
+  EXPECT_FALSE(adm->Initialized());
+  EXPECT_FALSE(adm->HasAudioCallback());
 }
 
 }  // namespace
