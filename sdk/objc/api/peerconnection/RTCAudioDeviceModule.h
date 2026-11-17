@@ -216,8 +216,10 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
 // the meantime. Return quickly and dispatch slow work, such as activating the
 // audio session, to another queue.
 //
-// `audioDeviceModule:didBeginInterruptionWithReason:` fires before the engine
-// reacts, which stops it if it is running. `reason` is the notification's
+// `audioDeviceModule:didBeginInterruptionWithReason:` fires before the module
+// runs its stop step. For a real interruption the system has already stopped
+// the engine by the time the notification arrives, so the engine is usually no
+// longer running when this fires. `reason` is the notification's
 // AVAudioSessionInterruptionReason:
 //   - Default: another audio session was activated, for example by a phone
 //     call. Also used when the notification has no reason.
@@ -267,6 +269,12 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
 //   - The module does not react to the reset. Its state still says the engine
 //     is running as before, so audio stays dead until something rebuilds the
 //     engine.
+//   - Nothing else rebuilds it. The system posts no engine configuration
+//     change for the reset, and the interruption end RTCAudioSession sends
+//     when the app becomes active does not restart it, because the module
+//     still believes the engine is running.
+//   - An app in the background whose audio died is usually suspended, so it
+//     receives the reset only after it returns to the foreground.
 //
 // To recover, configure and activate the audio session again, then rebuild the
 // engine, for example by setting engine availability off and back on, which

@@ -336,8 +336,10 @@ class AudioDeviceObserver {
   // quickly and move slow work, such as activating the audio session, to
   // another queue.
   //
-  // OnAudioSessionInterruptionBegan fires before the engine reacts, which stops
-  // it if it is running. `reason` is the raw AVAudioSessionInterruptionReason
+  // OnAudioSessionInterruptionBegan fires before the ADM runs its stop step.
+  // For a real interruption the system has already stopped the engine by the
+  // time the notification arrives, so the engine is usually no longer running
+  // when this fires. `reason` is the raw AVAudioSessionInterruptionReason
   // value from the notification:
   //   0 Default: another audio session was activated, for example by a phone
   //     call. Also used when the notification has no reason.
@@ -382,6 +384,12 @@ class AudioDeviceObserver {
   // - The ADM does not react to the reset. Its state still says the engine is
   //   running as before, so audio stays dead until something rebuilds the
   //   engine.
+  // - Nothing else rebuilds it. The system posts no engine configuration
+  //   change for the reset, and the interruption end RTCAudioSession sends
+  //   when the app becomes active does not restart it, because the ADM still
+  //   believes the engine is running.
+  // - An app in the background whose audio died is usually suspended, so it
+  //   receives the reset only after it returns to the foreground.
   //
   // To recover, configure and activate the audio session again, then rebuild
   // the engine, for example by turning engine availability off and back on,
