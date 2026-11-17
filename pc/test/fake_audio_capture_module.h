@@ -62,6 +62,8 @@ class FakeAudioCaptureModule : public webrtc::AudioDeviceModule {
   int32_t RegisterAudioCallback(webrtc::AudioTransport* audio_callback) override
       RTC_LOCKS_EXCLUDED(mutex_);
 
+  bool HasAudioCallback() const RTC_LOCKS_EXCLUDED(mutex_);
+
   int32_t Init() override;
   int32_t Terminate() override;
   bool Initialized() const override;

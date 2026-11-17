@@ -296,7 +296,15 @@ class AudioDeviceObserver {
   virtual void OnDevicesUpdated() {}
   virtual void OnSpeechActivityEvent(AudioDeviceModule::SpeechActivityEvent event) {}
 
-  // AVAudioEngine lifecycle
+  // AVAudioEngine lifecycle.
+  //
+  // Setup hooks (OnEngineDidCreate, OnEngineWillEnable, OnEngineWillStart and
+  // the connect hooks below) can fail the operation. A non-zero result rolls
+  // it back, and the caller gets the error.
+  //
+  // Teardown hooks (OnEngineDidStop, OnEngineDidDisable and OnEngineWillRelease)
+  // run once the engine has stopped, which cannot be undone. A non-zero result
+  // is only logged, and the operation completes.
   virtual int32_t OnEngineDidCreate(AVAudioEngine* engine) { return 0; }
 
   // `voice_processing_enabled` reports the resolved Apple Voice Processing I/O
@@ -320,12 +328,93 @@ class AudioDeviceObserver {
     return 0;
   }
 
+  // `playout_enabled` and `recording_enabled` describe the state the engine is
+  // left in. Also called when an enable operation fails after a successful
+  // OnEngineWillEnable, with the state from before that operation, so the
+  // observer can release what it acquired in OnEngineWillEnable. No call
+  // follows an OnEngineWillEnable that returns an error, so an observer must
+  // not hold anything for that operation when it fails.
   virtual int32_t OnEngineDidDisable(AVAudioEngine* engine, bool playout_enabled,
                                      bool recording_enabled) {
     return 0;
   }
 
+  // Also called when an operation that created `engine` fails after a
+  // successful OnEngineDidCreate, right before the engine is dropped, so the
+  // observer can tear down what it set up in OnEngineDidCreate. No call follows
+  // an OnEngineDidCreate that returns an error.
   virtual int32_t OnEngineWillRelease(AVAudioEngine* engine) { return 0; }
+
+  // Audio session events (iOS).
+  //
+  // Each event runs synchronously on the ADM's worker thread, the thread that
+  // runs every engine operation and the rest of WebRTC's worker thread work.
+  // The callback blocks that thread until it returns: the engine does not
+  // react to the event and no other ADM call runs in the meantime. Return
+  // quickly and move slow work, such as activating the audio session, to
+  // another queue.
+  //
+  // OnAudioSessionInterruptionBegan fires before the ADM runs its stop step.
+  // For a real interruption the system has already stopped the engine by the
+  // time the notification arrives, so the engine is usually no longer running
+  // when this fires. `reason` is the raw AVAudioSessionInterruptionReason
+  // value from the notification:
+  //   0 Default: another audio session was activated, for example by a phone
+  //     call. Also used when the notification has no reason.
+  //   1 AppWasSuspended: the system suspended the app. Not sent since iOS 16.
+  //   2 BuiltInMicMuted: the built-in mic was muted, for example by closing
+  //     an iPad Smart Folio.
+  //   3 SceneWasBackgrounded: the app's scene went to the background. visionOS
+  //     only.
+  //   4 RouteDisconnected: the audio route was disconnected. Sent only when the
+  //     app opted in with setPrefersInterruptionOnRouteDisconnect: (iOS 17).
+  //   5 DeviceUnauthenticated: the device was taken off or locked. Defined only
+  //     in the visionOS SDK.
+  // Later OS versions may add values.
+  //
+  // OnAudioSessionInterruptionEnded fires before the engine reacts, for every
+  // interruption end RTCAudioSession reports. Besides the system's own end,
+  // RTCAudioSession sends one each time the app becomes active, each time the
+  // app reports a CallKit activation to it, and when the session is activated
+  // through it while interrupted. So an end can arrive without a matching
+  // begin. By then RTCAudioSession has already activated or deactivated the
+  // session according to its activation count.
+  // `should_resume` is the system's AVAudioSessionInterruptionOptionShouldResume
+  // hint. True means the app may resume audio now, for example after a phone
+  // call ends. False means the system leaves resuming to the user, for example
+  // after the user started music in another app. The ends RTCAudioSession sends
+  // on its own always pass true. The ADM restarts the engine whatever the
+  // value.
+  virtual void OnAudioSessionInterruptionBegan(uint32_t reason) {}
+  virtual void OnAudioSessionInterruptionEnded(bool should_resume) {}
+
+  // OnAudioSessionMediaServicesReset fires after the system has restarted its
+  // media services daemon (AVAudioSessionMediaServicesWereResetNotification),
+  // on the worker thread as described above. This is rare in the field. To
+  // trigger it on a device, use Settings > Developer > Reset Media Services.
+  //
+  // State when it fires:
+  // - Every audio object created before the reset no longer works, including
+  //   the engine and its nodes.
+  // - The audio session lost its category, mode and options. RTCAudioSession
+  //   has already activated the session if its activation count is above 0,
+  //   and deactivated it otherwise, but has not restored the configuration.
+  // - The ADM does not react to the reset. Its state still says the engine is
+  //   running as before, so audio stays dead until something rebuilds the
+  //   engine.
+  // - Nothing else rebuilds it. The system posts no engine configuration
+  //   change for the reset, and the interruption end RTCAudioSession sends
+  //   when the app becomes active does not restart it, because the ADM still
+  //   believes the engine is running.
+  // - An app in the background whose audio died is usually suspended, so it
+  //   receives the reset only after it returns to the foreground.
+  //
+  // To recover, configure and activate the audio session again, then rebuild
+  // the engine, for example by turning engine availability off and back on,
+  // which releases the engine and creates a new one. Do this off the worker
+  // thread. There is no separate event for the media services being lost,
+  // because the reset always follows.
+  virtual void OnAudioSessionMediaServicesReset() {}
 
   // Override the input node configuration with a custom implementation.
   virtual int32_t OnEngineWillConnectInput(AVAudioEngine* engine, AVAudioNode* src,
