@@ -554,6 +554,49 @@ TEST_F(PeerConnectionRtpTestUnifiedPlan, ChangeMsidWhileReceiving) {
   ASSERT_TRUE(callee->SetRemoteDescription(caller->CreateOfferAndSetAsLocal()));
   ASSERT_EQ(1u, transceiver->receiver()->streams().size());
   EXPECT_EQ("stream2", transceiver->receiver()->streams()[0]->id());
+
+  // The receiver gained "stream2", so OnTrack fires again.
+  ASSERT_EQ(2u, callee->observer()->on_track_transceivers_.size());
+  EXPECT_EQ(transceiver, callee->observer()->on_track_transceivers_[1]);
+}
+
+// Emulates an SFU that answers an offered recvonly transceiver with a sendonly
+// media section carrying no stream, then later reuses that media section for a
+// track by signaling its stream ID. The direction never changes, so OnTrack
+// must fire again because the receiver gained a stream.
+TEST_F(PeerConnectionRtpTestUnifiedPlan,
+       ReceiverGainingStreamInAnswerCallsOnTrackAgain) {
+  auto caller = CreatePeerConnection();
+  auto callee = CreatePeerConnection();
+
+  RtpTransceiverInit init;
+  init.direction = RtpTransceiverDirection::kRecvOnly;
+  caller->AddTransceiver(MediaType::AUDIO, init);
+
+  ASSERT_TRUE(callee->SetRemoteDescription(caller->CreateOfferAndSetAsLocal()));
+  auto callee_transceiver = callee->pc()->GetTransceivers()[0];
+  ASSERT_TRUE(callee_transceiver
+                  ->SetDirectionWithError(RtpTransceiverDirection::kSendOnly)
+                  .ok());
+  ASSERT_TRUE(
+      caller->SetRemoteDescription(callee->CreateAnswerAndSetAsLocal()));
+
+  const auto& add_track_events = caller->observer()->add_track_events_;
+  ASSERT_EQ(1u, add_track_events.size());
+  EXPECT_EQ(0u, add_track_events[0].streams.size());
+
+  // Reuse the media section for a track by signaling a stream ID.
+  callee_transceiver->sender()->SetStreams({"stream1"});
+  ASSERT_TRUE(caller->ExchangeOfferAnswerWith(callee.get()));
+
+  ASSERT_EQ(2u, add_track_events.size());
+  EXPECT_EQ(add_track_events[0].receiver, add_track_events[1].receiver);
+  ASSERT_EQ(1u, add_track_events[1].streams.size());
+  EXPECT_EQ("stream1", add_track_events[1].streams[0]->id());
+
+  // Renegotiating without a stream change does not fire OnTrack again.
+  ASSERT_TRUE(caller->ExchangeOfferAnswerWith(callee.get()));
+  EXPECT_EQ(2u, add_track_events.size());
 }
 
 // These tests examine the state of the peer connection as a result of
@@ -1108,6 +1151,53 @@ TEST_F(PeerConnectionRtpTestUnifiedPlan,
 
   auto result = caller->pc()->AddTransceiver(MediaType::DATA);
   EXPECT_EQ(RTCErrorType::INVALID_PARAMETER, result.error().type());
+}
+
+TEST_F(PeerConnectionRtpTestUnifiedPlan,
+       AddTransceiverWithAudioTrackErrorIfClosed) {
+  auto caller = CreatePeerConnection();
+
+  auto audio_track = caller->CreateAudioTrack("a");
+  caller->pc()->Close();
+
+  caller->observer()->clear_legacy_renegotiation_needed();
+  caller->observer()->clear_latest_negotiation_needed_event();
+  auto result = caller->pc()->AddTransceiver(audio_track);
+  ASSERT_FALSE(result.ok());
+  EXPECT_EQ(RTCErrorType::INVALID_STATE, result.error().type());
+  EXPECT_FALSE(caller->observer()->legacy_renegotiation_needed());
+  EXPECT_FALSE(caller->observer()->has_negotiation_needed_event());
+}
+
+TEST_F(PeerConnectionRtpTestUnifiedPlan,
+       AddTransceiverWithVideoTrackErrorIfClosed) {
+  auto caller = CreatePeerConnection();
+
+  auto video_track = caller->CreateVideoTrack("v");
+  caller->pc()->Close();
+
+  caller->observer()->clear_legacy_renegotiation_needed();
+  caller->observer()->clear_latest_negotiation_needed_event();
+  auto result = caller->pc()->AddTransceiver(video_track);
+  ASSERT_FALSE(result.ok());
+  EXPECT_EQ(RTCErrorType::INVALID_STATE, result.error().type());
+  EXPECT_FALSE(caller->observer()->legacy_renegotiation_needed());
+  EXPECT_FALSE(caller->observer()->has_negotiation_needed_event());
+}
+
+TEST_F(PeerConnectionRtpTestUnifiedPlan,
+       AddTransceiverWithMediaTypeErrorIfClosed) {
+  auto caller = CreatePeerConnection();
+
+  caller->pc()->Close();
+
+  caller->observer()->clear_legacy_renegotiation_needed();
+  caller->observer()->clear_latest_negotiation_needed_event();
+  auto result = caller->pc()->AddTransceiver(MediaType::AUDIO);
+  ASSERT_FALSE(result.ok());
+  EXPECT_EQ(RTCErrorType::INVALID_STATE, result.error().type());
+  EXPECT_FALSE(caller->observer()->legacy_renegotiation_needed());
+  EXPECT_FALSE(caller->observer()->has_negotiation_needed_event());
 }
 
 TEST_F(PeerConnectionRtpTestUnifiedPlan,

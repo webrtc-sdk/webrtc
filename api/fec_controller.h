@@ -14,9 +14,11 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "api/environment/environment.h"
+#include "api/rtp_parameters.h"
 #include "api/video/video_frame_type.h"
 #include "modules/include/module_fec_types.h"
 
@@ -87,6 +89,18 @@ class FecController {
 
   // Returns whether this FEC Controller needs Loss Vector Mask as input.
   virtual bool UseLossVectorMask() = 0;
+
+  // Sets an application-provided policy that overrides the computed FEC
+  // protection, see `RtpFecProtection`. `std::nullopt` restores the default
+  // behavior. Takes effect on the next `UpdateFecRates` call.
+  //
+  // Compatibility: the default implementation ignores the policy. An
+  // application-supplied controller that does not override this method keeps
+  // accepting `RtpParameters::fec_protection`, and `GetParameters()` keeps
+  // returning it, but it has no effect on the FEC that is generated. Such
+  // controllers must implement this method for the policy to apply.
+  virtual void SetProtectionOverride(
+      std::optional<RtpFecProtection> /* protection */) {}
 };
 
 class FecControllerFactoryInterface {

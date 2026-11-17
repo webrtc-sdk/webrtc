@@ -17,6 +17,8 @@
 #ifndef WEBRTC_FRAME_CRYPTOR_TRANSFORMER_H_
 #define WEBRTC_FRAME_CRYPTOR_TRANSFORMER_H_
 
+#include <optional>
+#include <span>
 #include <unordered_map>
 
 #include "api/frame_transformer_interface.h"
@@ -49,15 +51,19 @@ struct KeyProviderOptions {
   int failure_tolerance;
   // key ring size should be between 1 and 255
   int key_ring_size;
-  bool discard_frame_when_cryptor_not_ready;
+  bool discard_frame_when_cryptor_not_ready = false;
   KeyDerivationAlgorithm key_derivation_algorithm;
+  // Length in bits of the AES frame key derived from the key material:
+  // 128 (default, unchanged behaviour) or 256. Every participant in a call
+  // must use the same value. Any other value is treated as 128.
+  int key_size;
   KeyProviderOptions()
       : shared_key(false),
         ratchet_window_size(0),
         failure_tolerance(-1),
         key_ring_size(DEFAULT_KEYRING_SIZE),
-        discard_frame_when_cryptor_not_ready(false),
-        key_derivation_algorithm(kPBKDF2) {}
+        key_derivation_algorithm(kPBKDF2),
+        key_size(128) {}
   KeyProviderOptions(KeyProviderOptions& copy)
       : shared_key(copy.shared_key),
         ratchet_salt(copy.ratchet_salt),
@@ -65,7 +71,14 @@ struct KeyProviderOptions {
         ratchet_window_size(copy.ratchet_window_size),
         failure_tolerance(copy.failure_tolerance),
         key_ring_size(copy.key_ring_size),
-        key_derivation_algorithm(copy.key_derivation_algorithm) {}
+        discard_frame_when_cryptor_not_ready(
+            copy.discard_frame_when_cryptor_not_ready),
+        key_derivation_algorithm(copy.key_derivation_algorithm),
+        key_size(copy.key_size) {}
+  // The frame key length in bits that key derivation uses.
+  unsigned int frame_key_bits() const {
+    return key_size == 256 ? 256u : 128u;
+  }
 };
 
 class KeyProvider : public webrtc::RefCountInterface {
@@ -204,7 +217,8 @@ class ParticipantKeyHandler : public webrtc::RefCountInterface {
       current_key_index_ = key_index % crypto_key_ring_.size();
     }
     crypto_key_ring_[current_key_index_] =
-        DeriveKeys(password, key_provider_->options().ratchet_salt, 128);
+        DeriveKeys(password, key_provider_->options().ratchet_salt,
+                   key_provider_->options().frame_key_bits());
   }
 
   bool DecryptionFailure() {
@@ -388,6 +402,17 @@ class FrameCryptorTransformerObserver : public webrtc::RefCountInterface {
  protected:
   virtual ~FrameCryptorTransformerObserver() {}
 };
+
+// Whether a frame (server-injected-frame trailer already stripped) is one of
+// the blank frames the LiveKit SFU injects; nothing else may skip decryption.
+RTC_EXPORT bool IsKnownSifPayload(std::span<const uint8_t> payload);
+
+// Reads pic_parameter_set_id from an H.264 IDR slice NALU (bytes from the NALU
+// header on), the way a WebRTC receiver does before its decrypt transform runs.
+// Returns nullopt if `nalu` is not an IDR slice or ends inside the field.
+// Must stay in step with client-sdk-js parseH264IdrPpsId.
+RTC_EXPORT std::optional<uint32_t> ParseH264IdrPpsId(
+    std::span<const uint8_t> nalu);
 
 class RTC_EXPORT FrameCryptorTransformer
     : public webrtc::RefCountedObject<webrtc::FrameTransformerInterface> {

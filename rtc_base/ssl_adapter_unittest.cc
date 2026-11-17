@@ -58,6 +58,14 @@ class MockCertVerifier : public SSLCertificateVerifier {
   MOCK_METHOD(bool, Verify, (const SSLCertificate&), (override));
 };
 
+class MockHostCertVerifier : public SSLCertificateVerifier {
+ public:
+  MOCK_METHOD(bool,
+              VerifyChain,
+              (const SSLCertChain&, absl::string_view),
+              (override));
+};
+
 // TODO(benwright) - Move to using INSTANTIATE_TEST_SUITE_P instead of using
 // duplicate test cases for simple parameter changes.
 class SSLAdapterTestDummy {
@@ -324,6 +332,31 @@ TEST_F(SSLAdapterTestTLS_RSA, TestTLSConnectCustomCertVerifierSucceeds) {
 // Test that handshake fails with a custom verifier that returns false. RSA.
 TEST_F(SSLAdapterTestTLS_RSA, TestTLSConnectCustomCertVerifierFails) {
   SetMockCertVerifier(/*return_value=*/false);
+  TestHandshake(/*expect_success=*/false);
+}
+
+TEST_F(SSLAdapterTestTLS_RSA, TestTLSVerifierReceivesConnectionHostname) {
+  auto verifier = std::make_unique<MockHostCertVerifier>();
+  EXPECT_CALL(*verifier, VerifyChain(_, "example.com"))
+      .Times(::testing::AtLeast(1))
+      .WillRepeatedly([](const SSLCertChain& chain, absl::string_view) {
+        EXPECT_EQ(chain.GetSize(), 1u);
+        return true;
+      });
+  cert_verifier_ = std::move(verifier);
+  SetCertVerifier(cert_verifier_.get());
+  SetIgnoreBadCert(false);
+  TestHandshake(/*expect_success=*/true);
+}
+
+TEST_F(SSLAdapterTestTLS_RSA, TestTLSHostPolicyRefusalFailsHandshake) {
+  auto verifier = std::make_unique<MockHostCertVerifier>();
+  EXPECT_CALL(*verifier, VerifyChain(_, "example.com"))
+      .Times(::testing::AtLeast(1))
+      .WillRepeatedly(Return(false));
+  cert_verifier_ = std::move(verifier);
+  SetCertVerifier(cert_verifier_.get());
+  SetIgnoreBadCert(false);
   TestHandshake(/*expect_success=*/false);
 }
 

@@ -24,9 +24,9 @@
 #include <openssl/pem.h>
 #include <openssl/rand.h>
 
-#include <iomanip>
+#include <algorithm>
+#include <array>
 #include <iostream>
-#include <sstream>
 #include <string>
 
 #include "absl/container/inlined_vector.h"
@@ -34,6 +34,7 @@
 #include "absl/types/variant.h"
 #include "api/array_view.h"
 #include "common_video/h264/h264_common.h"
+#include "common_video/h264/pps_parser.h"
 #ifdef RTC_ENABLE_H265
 #include "common_video/h265/h265_common.h"
 #endif // RTC_ENABLE_H265
@@ -50,6 +51,11 @@ enum class EncryptOrDecrypt { kEncrypt = 0, kDecrypt };
 #define OperationError -2
 #define ErrorDataTooSmall -3
 #define ErrorInvalidAesGcmTagLength -4
+
+// With one bit of the PPS id encrypted, each attempt matches with probability
+// 1/2, so 16 attempts all miss with probability 2^-16. After the last attempt
+// the frame goes out as it is.
+constexpr int kMaxPpsIdEncryptAttempts = 16;
 
 webrtc::VideoCodecType get_video_codec_type(
     webrtc::TransformableFrameInterface* frame) {
@@ -149,25 +155,6 @@ inline bool NeedsRbspUnescaping(std::span<const uint8_t> frame) {
   return false;
 }
 
-std::string to_uint8_list(std::span<const uint8_t> data) {
-  std::stringstream ss;
-  ss << "[";
-  for (uint8_t b : data) {
-    ss << static_cast<unsigned>(b) << ",";
-  }
-  ss << "]";
-  return ss.str();
-}
-
-std::string to_hex(std::span<const uint8_t> data) {
-  std::stringstream ss;
-  ss << std::uppercase << std::hex << std::setfill('0');
-  for (uint8_t b : data) {
-    ss << std::setw(2) << static_cast<unsigned>(b);
-  }
-  return ss.str();
-}
-
 uint8_t get_unencrypted_bytes(webrtc::TransformableFrameInterface* frame,
                               webrtc::FrameCryptorTransformer::MediaType type) {
   uint8_t unencrypted_bytes = 0;
@@ -261,12 +248,10 @@ int DeriveHkdfSha256FromSecret(const std::vector<uint8_t>& secret,
     return ErrorUnexpected;
   }
 
-  RTC_LOG(LS_INFO) << "secret " << to_uint8_list(secret)
-                   << " len " << secret.size() << " slat << "
-                   << to_uint8_list(salt) << " len "
-                   << salt.size() << "\n derived_key "
-                   << to_uint8_list(derived_key)
-                   << " len " << derived_key.size();
+  // Never log key material: only sizes.
+  RTC_LOG(LS_VERBOSE) << "Derived HKDF-SHA256 key, secret len "
+                      << secret.size() << ", salt len " << salt.size()
+                      << ", derived key len " << derived_key.size();
 
   return Success;
 }
@@ -285,13 +270,10 @@ int DerivePBKDF2KeyFromRawKey(const std::vector<uint8_t> raw_key,
     return ErrorUnexpected;
   }
 
-  RTC_LOG(LS_INFO) << "raw_key "
-                   << to_uint8_list(raw_key) << " len "
-                   << raw_key.size() << " slat << "
-                   << to_uint8_list(salt) << " len "
-                   << salt.size() << "\n derived_key "
-                   << to_uint8_list(derived_key)
-                   << " len " << derived_key.size();
+  // Never log key material: only sizes.
+  RTC_LOG(LS_VERBOSE) << "Derived PBKDF2 key, raw key len " << raw_key.size()
+                      << ", salt len " << salt.size()
+                      << ", derived key len " << derived_key.size();
 
   return Success;
 }
@@ -394,6 +376,82 @@ int ParticipantKeyHandler::DoKeyDerivation(const std::vector<uint8_t>& key,
   RTC_LOG(LS_ERROR) << "Invalid key derivation algorithm !";
 
   return OperationError;
+}
+
+namespace {
+
+constexpr size_t kAesGcmTagLengthBytes = 16;
+
+// Blank frames the LiveKit SFU injects on mute and track close, byte-for-byte
+// from livekit-server pkg/sfu/downtrack.go (client-sdk-js: sifPayload.ts).
+constexpr uint8_t kSifVp8KeyFrame8x8[] = {
+    0x10, 0x02, 0x00, 0x9d, 0x01, 0x2a, 0x08, 0x00, 0x08, 0x00, 0x00,
+    0x47, 0x08, 0x85, 0x85, 0x88, 0x85, 0x84, 0x88, 0x02, 0x02, 0x00,
+    0x0c, 0x0d, 0x60, 0x00, 0xfe, 0xff, 0xab, 0x50, 0x80};
+constexpr uint8_t kSifH264Sps[] = {0x67, 0x42, 0xc0, 0x1f, 0x0f, 0xd9,
+                                   0x1f, 0x88, 0x88, 0x84, 0x00, 0x00,
+                                   0x03, 0x00, 0x04, 0x00, 0x00, 0x03,
+                                   0x00, 0xc8, 0x3c, 0x60, 0xc9, 0x20};
+constexpr uint8_t kSifH264Pps[] = {0x68, 0x87, 0xcb, 0x83, 0xcb, 0x20};
+constexpr uint8_t kSifH264Idr[] = {0x65, 0x88, 0x84, 0x0a, 0xf2,
+                                   0x62, 0x80, 0x00, 0xa7, 0xbe};
+constexpr auto kSifOpusSilence = [] {
+  std::array<uint8_t, 80> a{0xf8, 0xff, 0xfe};
+  return a;
+}();
+constexpr auto kSifPcmuSilence = [] {
+  std::array<uint8_t, 160> a{};
+  a.fill(0xff);
+  return a;
+}();
+constexpr auto kSifPcmaSilence = [] {
+  std::array<uint8_t, 160> a{};
+  a.fill(0xd5);
+  return a;
+}();
+
+bool IsSifH264Nalu(std::span<const uint8_t> nalu) {
+  return std::ranges::equal(nalu, kSifH264Sps) ||
+         std::ranges::equal(nalu, kSifH264Pps) ||
+         std::ranges::equal(nalu, kSifH264Idr);
+}
+
+}  // namespace
+
+bool IsKnownSifPayload(std::span<const uint8_t> payload) {
+  using std::ranges::equal;
+  if (equal(payload, kSifVp8KeyFrame8x8) || equal(payload, kSifOpusSilence) ||
+      equal(payload, kSifPcmuSilence) || equal(payload, kSifPcmaSilence)) {
+    return true;
+  }
+  // opus/red: one primary block header byte (F bit clear) then the silence.
+  if (payload.size() == kSifOpusSilence.size() + 1 && !(payload[0] & 0x80) &&
+      equal(payload.subspan(1), kSifOpusSilence)) {
+    return true;
+  }
+  // H264 arrives as Annex B; every NALU has to be one of the blank key frame's.
+  auto nalus = webrtc::H264::FindNaluIndices(payload);
+  return !nalus.empty() &&
+         std::ranges::all_of(nalus, [&](const webrtc::H264::NaluIndex& n) {
+           return IsSifH264Nalu(
+               payload.subspan(n.payload_start_offset, n.payload_size));
+         });
+}
+
+std::optional<uint32_t> ParseH264IdrPpsId(std::span<const uint8_t> nalu) {
+  if (nalu.size() < 2 ||
+      webrtc::H264::ParseNaluType(nalu[0]) != webrtc::H264::NaluType::kIdr) {
+    return std::nullopt;
+  }
+  // first_mb_in_slice, slice_type and pic_parameter_set_id are the first three
+  // ue(v) fields. 16 bytes hold all three.
+  std::optional<PpsParser::SliceHeader> slice_header =
+      PpsParser::ParseSliceHeader(
+          nalu.subspan(1, std::min<size_t>(16, nalu.size() - 1)));
+  if (!slice_header) {
+    return std::nullopt;
+  }
+  return slice_header->pic_parameter_set_id;
 }
 
 FrameCryptorTransformer::FrameCryptorTransformer(
@@ -523,10 +581,39 @@ void FrameCryptorTransformer::encryptFrame(
     payload[i - unencrypted_bytes] = data_in[i];
   }
 
+  // A receiver reads pic_parameter_set_id from an H.264 IDR slice before the
+  // decrypt transform, and drops the keyframe if the id names an unknown PPS.
+  // Some encoders (Intel Quick Sync) put the id past the unencrypted bytes, so
+  // encrypt again with a fresh IV until the sent bits still read as the true
+  // id. The receiver takes the IV from the trailer, so it needs no change.
+  std::optional<uint32_t> pps_id;
+  if (FrameIsH264(frame.get(), type_) && unencrypted_bytes >= 2) {
+    pps_id = ParseH264IdrPpsId(data_in.subspan(unencrypted_bytes - 2));
+  }
+
   std::vector<uint8_t> buffer;
-  if (AesEncryptDecrypt(EncryptOrDecrypt::kEncrypt, algorithm_,
-                        key_set->encryption_key, iv, frame_header, payload,
-                        &buffer) == Success) {
+  int result = Success;
+  for (int attempt = 1;; attempt++) {
+    result = AesEncryptDecrypt(EncryptOrDecrypt::kEncrypt, algorithm_,
+                               key_set->encryption_key, iv, frame_header,
+                               payload, &buffer);
+    if (result != Success || !pps_id || attempt == kMaxPpsIdEncryptAttempts) {
+      break;
+    }
+    // The slice as the receiver sees it: its 2 unencrypted bytes, then the
+    // escaped ciphertext. WriteRbsp works byte by byte, so escaping the first
+    // 16 bytes gives the start of the escaped frame, and a retry costs only
+    // the encryption. The GCM tag makes the output at least 16 bytes.
+    webrtc::Buffer sent_slice(&data_in[unencrypted_bytes - 2], 2);
+    H264::WriteRbsp(buffer.data(), std::min<size_t>(16, buffer.size()),
+                    &sent_slice);
+    if (ParseH264IdrPpsId(sent_slice) == pps_id) {
+      break;
+    }
+    iv = makeIv(frame->GetSsrc(), frame->GetTimestamp());
+  }
+
+  if (result == Success) {
     webrtc::Buffer encrypted_payload(buffer.data(), buffer.size());
     webrtc::Buffer tag(std::span<const uint8_t>(encrypted_payload).last(16));
     webrtc::Buffer data_without_header;
@@ -617,17 +704,26 @@ void FrameCryptorTransformer::decryptFrame(
                                uncrypted_magic_bytes.size());
     auto data = std::vector<uint8_t>(tmp.begin(), tmp.end());
     if (uncrypted_magic_bytes == data) {
-      RTC_CHECK_EQ(tmp.size(), uncrypted_magic_bytes.size());
-      RTC_LOG(LS_INFO) << "FrameCryptorTransformer::uncrypted_magic_bytes( tmp "
-                       << to_hex(tmp) << ", magic bytes "
-                       << to_hex(uncrypted_magic_bytes)
-                       << ")";
-
-      // magic bytes detected, this is a non-encrypted frame, skip frame
-      // decryption.
+      auto payload =
+          data_in.subspan(0, data_in.size() - uncrypted_magic_bytes.size());
+      // The trailer only marks a frame as the SFU's; the SFU only ever injects
+      // known blank frames, so anything else is not allowed to skip decryption.
+      if (!IsKnownSifPayload(payload)) {
+        RTC_LOG(LS_WARNING) << "FrameCryptorTransformer::decryptFrame() "
+                               "dropping frame with SIF trailer but unexpected "
+                               "payload, size "
+                            << payload.size();
+        if (last_dec_error_ != FrameCryptionState::kDecryptionFailed) {
+          last_dec_error_ = FrameCryptionState::kDecryptionFailed;
+          onFrameCryptionStateChanged(last_dec_error_);
+        }
+        return;
+      }
+      RTC_LOG(LS_INFO) << "FrameCryptorTransformer::decryptFrame() forwarding "
+                          "server injected frame, size "
+                       << payload.size();
       webrtc::Buffer data_out;
-      data_out.AppendData(
-          data_in.subspan(0, data_in.size() - uncrypted_magic_bytes.size()));
+      data_out.AppendData(payload);
       frame->SetData(data_out);
       sink_callback->OnTransformedFrame(std::move(frame));
       return;
@@ -635,6 +731,20 @@ void FrameCryptorTransformer::decryptFrame(
   }
 
   uint8_t unencrypted_bytes = get_unencrypted_bytes(frame.get(), type_);
+
+  // The frame comes from the network: make sure that it can hold the header,
+  // the IV, the trailer and the AES-GCM tag before any offset is computed.
+  if (data_in.size() <
+      unencrypted_bytes + getIvSize() + 2 + kAesGcmTagLengthBytes) {
+    RTC_LOG(LS_WARNING) << "FrameCryptorTransformer::decryptFrame() frame "
+                           "too short, size "
+                        << data_in.size();
+    if (last_dec_error_ != FrameCryptionState::kDecryptionFailed) {
+      last_dec_error_ = FrameCryptionState::kDecryptionFailed;
+      onFrameCryptionStateChanged(last_dec_error_);
+    }
+    return;
+  }
 
   webrtc::Buffer frame_header =
       webrtc::Buffer::CreateUninitializedWithSize(unencrypted_bytes);
@@ -707,6 +817,18 @@ void FrameCryptorTransformer::decryptFrame(
 #endif // RTC_ENABLE_H265
   }
 
+  // RBSP unescaping can make the buffer shorter than the check above allowed.
+  if (encrypted_buffer.size() < ivLength + 2 + kAesGcmTagLengthBytes) {
+    RTC_LOG(LS_WARNING) << "FrameCryptorTransformer::decryptFrame() frame "
+                           "too short after RBSP unescaping, size "
+                        << encrypted_buffer.size();
+    if (last_dec_error_ != FrameCryptionState::kDecryptionFailed) {
+      last_dec_error_ = FrameCryptionState::kDecryptionFailed;
+      onFrameCryptionStateChanged(last_dec_error_);
+    }
+    return;
+  }
+
   webrtc::Buffer encrypted_payload =
       webrtc::Buffer::CreateUninitializedWithSize(encrypted_buffer.size() - ivLength - 2);
   for (size_t i = 0; i < encrypted_payload.size(); i++) {
@@ -736,7 +858,8 @@ void FrameCryptorTransformer::decryptFrame(
 
         auto new_material = key_handler->RatchetKeyMaterial(currentKeyMaterial);
         ratcheted_key_set = key_handler->DeriveKeys(
-            new_material, key_provider_->options().ratchet_salt, 128);
+            new_material, key_provider_->options().ratchet_salt,
+            key_provider_->options().frame_key_bits());
 
         if (AesEncryptDecrypt(EncryptOrDecrypt::kDecrypt, algorithm_,
                               ratcheted_key_set->encryption_key, iv,
@@ -930,7 +1053,8 @@ RTCErrorOr<std::vector<uint8_t>> DataPacketCryptor::Decrypt(
 
         auto new_material = key_handler->RatchetKeyMaterial(currentKeyMaterial);
         ratcheted_key_set = key_handler->DeriveKeys(
-            new_material, key_provider_->options().ratchet_salt, 128);
+            new_material, key_provider_->options().ratchet_salt,
+            key_provider_->options().frame_key_bits());
 
         if (AesEncryptDecrypt(EncryptOrDecrypt::kDecrypt, algorithm_,
                               ratcheted_key_set->encryption_key, iv,

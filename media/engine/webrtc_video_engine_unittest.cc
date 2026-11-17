@@ -6654,6 +6654,14 @@ TEST_F(WebRtcVideoChannelTest,
   EXPECT_EQ(16, send_info.senders[1].packets_sent);
   EXPECT_EQ(20u, send_info.senders[1].retransmitted_bytes_sent);
   EXPECT_EQ(4u, send_info.senders[1].retransmitted_packets_sent);
+
+  // Only the stream protected by FlexFEC reports FEC stats.
+  EXPECT_FALSE(send_info.senders[0].fec_ssrc.has_value());
+  EXPECT_FALSE(send_info.senders[0].fec_packets_sent.has_value());
+  EXPECT_FALSE(send_info.senders[0].fec_bytes_sent.has_value());
+  EXPECT_EQ(send_info.senders[1].fec_ssrc, 301u);
+  EXPECT_EQ(send_info.senders[1].fec_packets_sent, 5u);
+  EXPECT_EQ(send_info.senders[1].fec_bytes_sent, 17u);
 }
 
 TEST_F(WebRtcVideoChannelTest,
@@ -8009,6 +8017,68 @@ TEST_F(WebRtcVideoChannelTest, SetRtpSendParametersInvalidBitratePriority) {
   parameters.encodings[0].bitrate_priority = -2;
   EXPECT_FALSE(
       send_channel_->SetRtpSendParameters(last_ssrc_, parameters).ok());
+}
+
+// Tests that RtpParameters.fec_protection is forwarded to the send stream
+// without reconfiguring the encoder or recreating the stream.
+TEST_F(WebRtcVideoChannelTest, SetRtpSendParametersFecProtection) {
+  FakeVideoSendStream* stream = AddSendStream();
+  const int reconfigurations = stream->num_encoder_reconfigurations();
+  RtpParameters parameters = send_channel_->GetRtpSendParameters(last_ssrc_);
+  EXPECT_FALSE(parameters.fec_protection.has_value());
+
+  RtpFecProtection fec_protection;
+  fec_protection.mode = RtpFecProtection::Mode::kFixed;
+  fec_protection.protection_factor = 0.25;
+  parameters.fec_protection = fec_protection;
+  EXPECT_TRUE(send_channel_->SetRtpSendParameters(last_ssrc_, parameters).ok());
+  EXPECT_EQ(send_channel_->GetRtpSendParameters(last_ssrc_).fec_protection,
+            fec_protection);
+
+  std::vector<FakeVideoSendStream*> streams = fake_call_->GetVideoSendStreams();
+  ASSERT_EQ(1UL, streams.size());
+  EXPECT_EQ(stream, streams[0]);
+  EXPECT_EQ(stream->fec_protection(), fec_protection);
+  EXPECT_EQ(1, stream->num_fec_protection_updates());
+  EXPECT_EQ(reconfigurations, stream->num_encoder_reconfigurations());
+
+  // Setting the same value again is a no-op.
+  EXPECT_TRUE(send_channel_->SetRtpSendParameters(last_ssrc_, parameters).ok());
+  EXPECT_EQ(1, stream->num_fec_protection_updates());
+
+  parameters.fec_protection = std::nullopt;
+  EXPECT_TRUE(send_channel_->SetRtpSendParameters(last_ssrc_, parameters).ok());
+  EXPECT_FALSE(stream->fec_protection().has_value());
+  EXPECT_EQ(2, stream->num_fec_protection_updates());
+}
+
+TEST_F(WebRtcVideoChannelTest, SetRtpSendParametersInvalidFecProtection) {
+  AddSendStream();
+  RtpParameters parameters = send_channel_->GetRtpSendParameters(last_ssrc_);
+  RtpFecProtection fec_protection;
+  fec_protection.mode = RtpFecProtection::Mode::kFixed;
+
+  fec_protection.protection_factor = 1.5;
+  parameters.fec_protection = fec_protection;
+  EXPECT_EQ(send_channel_->SetRtpSendParameters(last_ssrc_, parameters).type(),
+            RTCErrorType::INVALID_RANGE);
+
+  fec_protection.protection_factor = 0.5;
+  fec_protection.key_frame_protection_factor = -0.1;
+  parameters.fec_protection = fec_protection;
+  EXPECT_EQ(send_channel_->SetRtpSendParameters(last_ssrc_, parameters).type(),
+            RTCErrorType::INVALID_RANGE);
+
+  fec_protection.key_frame_protection_factor = std::nullopt;
+  fec_protection.max_fec_frames = RtpFecProtection::kMaxFecFrames + 1;
+  parameters.fec_protection = fec_protection;
+  EXPECT_EQ(send_channel_->SetRtpSendParameters(last_ssrc_, parameters).type(),
+            RTCErrorType::INVALID_RANGE);
+
+  fec_protection.max_fec_frames = 0;
+  parameters.fec_protection = fec_protection;
+  EXPECT_EQ(send_channel_->SetRtpSendParameters(last_ssrc_, parameters).type(),
+            RTCErrorType::INVALID_RANGE);
 }
 
 // Tests when the the RTCRtpEncodingParameters.bitrate_priority gets set

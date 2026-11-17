@@ -1693,6 +1693,33 @@ if (is_android) {
   ################
 
   if (rtc_include_tests) {
+    android_resources("platform_certificate_verifier_test_resources") {
+      testonly = true
+      sources = [
+        "instrumentationtests/certificateverifier/res/raw/test_ca.pem",
+        "instrumentationtests/certificateverifier/res/raw/test_server.pem",
+        "instrumentationtests/certificateverifier/res/xml/network_security_config.xml",
+      ]
+      custom_package = "org.webrtc.certificateverifiertest"
+    }
+
+    rtc_instrumentation_test_apk(
+        "platform_certificate_verifier_instrumentation_test_apk") {
+      apk_name = "platform_certificate_verifier_instrumentation_test_apk"
+      android_manifest =
+          "instrumentationtests/certificateverifier/AndroidManifest.xml"
+      min_sdk_version = 24
+      target_sdk_version = 24
+      sources = [ "instrumentationtests/src/org/webrtc/PlatformCertificateVerifierNscTest.java" ]
+      deps = [
+        ":peerconnection_java",
+        ":platform_certificate_verifier_test_resources",
+        "//third_party/androidx:androidx_test_monitor_java",
+        "//third_party/androidx:androidx_test_runner_java",
+        "//third_party/junit",
+      ]
+    }
+
     rtc_instrumentation_test_apk("android_instrumentation_test_apk") {
       apk_name = "android_instrumentation_test_apk"
       android_manifest = "instrumentationtests/AndroidManifest.xml"
@@ -1954,6 +1981,7 @@ if (is_android) {
       "tests/src/org/webrtc/GlGenericDrawerTest.java",
       "tests/src/org/webrtc/HardwareVideoEncoderTest.java",
       "tests/src/org/webrtc/IceCandidateTest.java",
+      "tests/src/org/webrtc/PlatformCertificateVerifierTest.java",
       "tests/src/org/webrtc/RefCountDelegateTest.java",
       "tests/src/org/webrtc/RenderSynchronizerTest.java",
       "tests/src/org/webrtc/ScalingSettingsTest.java",
