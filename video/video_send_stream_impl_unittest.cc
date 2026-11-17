@@ -136,6 +136,10 @@ class MockRtpVideoSender : public RtpVideoSenderInterface {
               (uint32_t ssrc, std::span<const uint16_t> sequence_numbers),
               (const, override));
 
+  MOCK_METHOD(void,
+              SetFecProtection,
+              (std::optional<RtpFecProtection>),
+              (override));
   MOCK_METHOD(void, SetFecAllowed, (bool fec_allowed), (override));
 };
 
@@ -1268,6 +1272,102 @@ TEST_F(VideoSendStreamImplTest, ForwardsCsrcsToRtpVideoSender) {
   std::vector<uint32_t> csrcs = {1, 2, 3};
   EXPECT_CALL(rtp_video_sender_, SetCsrcs(ElementsAreArray(csrcs)));
   vss_impl->SetCsrcs(csrcs);
+}
+
+TEST_F(VideoSendStreamImplTest, ForwardsFecProtectionToRtpVideoSender) {
+  auto vss_impl = CreateVideoSendStreamImpl(TestVideoEncoderConfig());
+  RtpFecProtection fec_protection;
+  fec_protection.mode = RtpFecProtection::Mode::kFixed;
+  fec_protection.protection_factor = 0.25;
+  EXPECT_CALL(rtp_video_sender_,
+              SetFecProtection(Eq(std::optional(fec_protection))));
+  vss_impl->SetFecProtection(fec_protection);
+  EXPECT_CALL(rtp_video_sender_, SetFecProtection(Eq(std::nullopt)));
+  vss_impl->SetFecProtection(std::nullopt);
+}
+
+TEST_F(VideoSendStreamImplTest,
+       FecProtectionChangeRecomputesAllocationWhenRunning) {
+  auto vss_impl = CreateVideoSendStreamImpl(TestVideoEncoderConfig());
+  // Not running: nothing to recompute.
+  EXPECT_CALL(bitrate_allocator_, AddObserver(vss_impl.get(), _)).Times(0);
+  vss_impl->SetFecProtection(std::nullopt);
+  testing::Mock::VerifyAndClearExpectations(&bitrate_allocator_);
+
+  EXPECT_CALL(bitrate_allocator_, AddObserver(vss_impl.get(), _));
+  vss_impl->Start();
+  time_controller_.AdvanceTime(TimeDelta::Zero());
+  testing::Mock::VerifyAndClearExpectations(&bitrate_allocator_);
+
+  // Running: the allocation is recomputed so that the FEC controller applies
+  // the new policy without waiting for the next bandwidth estimate.
+  RtpFecProtection fec_protection;
+  fec_protection.mode = RtpFecProtection::Mode::kDisabled;
+  EXPECT_CALL(bitrate_allocator_, AddObserver(vss_impl.get(), _));
+  vss_impl->SetFecProtection(fec_protection);
+  testing::Mock::VerifyAndClearExpectations(&bitrate_allocator_);
+
+  EXPECT_CALL(bitrate_allocator_, RemoveObserver(vss_impl.get()));
+  vss_impl->Stop();
+}
+
+TEST_F(VideoSendStreamImplTest,
+       FecProtectionChangeDoesNotReRegisterTimedOutSender) {
+  auto vss_impl = CreateVideoSendStreamImpl(TestVideoEncoderConfig());
+  EXPECT_CALL(bitrate_allocator_, AddObserver(vss_impl.get(), _));
+  vss_impl->Start();
+  time_controller_.AdvanceTime(TimeDelta::Zero());
+
+  // A nonzero encoder target rate is required for the encoder timeout to
+  // remove the stream from the allocator; without it the observer would never
+  // be removed and this test would pass regardless of the fix.
+  const uint32_t kBitrateBps = 100000;
+  ON_CALL(rtp_video_sender_, GetPayloadBitrateBps())
+      .WillByDefault(Return(kBitrateBps));
+  static_cast<BitrateAllocatorObserver*>(vss_impl.get())
+      ->OnBitrateUpdated(CreateAllocation(kBitrateBps));
+  Mock::VerifyAndClearExpectations(&bitrate_allocator_);
+
+  // No encoded frames: the activity check times the encoder out and removes
+  // the stream from the allocator.
+  EXPECT_CALL(bitrate_allocator_, RemoveObserver(vss_impl.get()));
+  time_controller_.AdvanceTime(TimeDelta::Seconds(5));
+  Mock::VerifyAndClearExpectations(&bitrate_allocator_);
+
+  // Changing the policy while timed out must not re-register the idle sender.
+  RtpFecProtection fec_protection;
+  fec_protection.mode = RtpFecProtection::Mode::kFixed;
+  fec_protection.protection_factor = 0.5;
+  EXPECT_CALL(rtp_video_sender_,
+              SetFecProtection(Eq(std::optional(fec_protection))));
+  EXPECT_CALL(bitrate_allocator_, AddObserver(vss_impl.get(), _)).Times(0);
+  vss_impl->SetFecProtection(fec_protection);
+  time_controller_.AdvanceTime(TimeDelta::Zero());
+  Mock::VerifyAndClearExpectations(&bitrate_allocator_);
+
+  // Once encoding resumes, the activity check re-registers the stream.
+  EXPECT_CALL(rtp_video_sender_, OnEncodedImage)
+      .WillRepeatedly(Return(
+          EncodedImageCallback::Result(EncodedImageCallback::Result::OK)));
+  EXPECT_CALL(bitrate_allocator_, AddObserver(vss_impl.get(), _))
+      .Times(testing::AtLeast(1));
+  EncodedImage encoded_image;
+  CodecSpecificInfo codec_specific;
+  encoder_queue_->PostTask([&] {
+    static_cast<EncodedImageCallback*>(vss_impl.get())
+        ->OnEncodedImage(encoded_image, &codec_specific);
+  });
+  time_controller_.AdvanceTime(TimeDelta::Seconds(2));
+  Mock::VerifyAndClearExpectations(&bitrate_allocator_);
+
+  // Active again: a policy change recomputes the allocation right away.
+  EXPECT_CALL(rtp_video_sender_, SetFecProtection(Eq(std::nullopt)));
+  EXPECT_CALL(bitrate_allocator_, AddObserver(vss_impl.get(), _));
+  vss_impl->SetFecProtection(std::nullopt);
+  Mock::VerifyAndClearExpectations(&bitrate_allocator_);
+
+  EXPECT_CALL(bitrate_allocator_, RemoveObserver(vss_impl.get()));
+  vss_impl->Stop();
 }
 
 TEST_F(VideoSendStreamImplTest, DisablesPaddingOnPausedEncoder) {

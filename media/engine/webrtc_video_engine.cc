@@ -2229,6 +2229,8 @@ RTCError WebRtcVideoSendChannel::WebRtcVideoSendStream::SetRtpParameters(
   bool new_csrcs =
       (new_parameters.encodings[0].csrcs.has_value() &&
        new_parameters.encodings[0].csrcs != rtp_parameters_.encodings[0].csrcs);
+  bool new_fec_protection =
+      new_parameters.fec_protection != rtp_parameters_.fec_protection;
 
   rtp_parameters_ = new_parameters;
   // Codecs are currently handled at the WebRtcVideoSendChannel level.
@@ -2245,6 +2247,11 @@ RTCError WebRtcVideoSendChannel::WebRtcVideoSendStream::SetRtpParameters(
   }
   if (stream_ && new_csrcs) {
     stream_->SetCsrcs(rtp_parameters_.encodings[0].csrcs.value());
+  }
+  // FEC protection is applied directly to the RTP sender; neither the encoder
+  // nor the stream needs to be reconfigured.
+  if (stream_ && new_fec_protection) {
+    stream_->SetFecProtection(rtp_parameters_.fec_protection);
   }
   // Check if a key frame was requested via setParameters.
   std::vector<std::string> key_frames_requested_by_rid;
@@ -2580,6 +2587,19 @@ WebRtcVideoSendChannel::WebRtcVideoSendStream::GetPerLayerVideoSenderInfos(
   for (size_t i = 0; i < parameters_.config.rtp.ssrcs.size(); ++i) {
     encoding_index_by_ssrc[parameters_.config.rtp.ssrcs[i]] = i;
   }
+  // FlexFEC substreams by the media SSRC they protect.
+  struct FlexfecSubstream {
+    uint32_t ssrc;
+    const StreamDataCounters* rtp_stats;
+  };
+  std::map<uint32_t, FlexfecSubstream> flexfec_by_media_ssrc;
+  for (const auto& [fec_ssrc, substream] : stats.substreams) {
+    if (substream.type == VideoSendStream::StreamStats::StreamType::kFlexfec &&
+        substream.referenced_media_ssrc.has_value()) {
+      flexfec_by_media_ssrc[*substream.referenced_media_ssrc] = {
+          .ssrc = fec_ssrc, .rtp_stats = &substream.rtp_stats};
+    }
+  }
   for (const auto& pair : outbound_rtp_substreams) {
     auto info = common_info;
     uint32_t ssrc = pair.first;
@@ -2626,6 +2646,13 @@ WebRtcVideoSendChannel::WebRtcVideoSendStream::GetPerLayerVideoSenderInfos(
         stream_stats.rtp_stats.retransmitted.payload_bytes;
     info.retransmitted_packets_sent =
         stream_stats.rtp_stats.retransmitted.packets;
+    if (auto it = flexfec_by_media_ssrc.find(ssrc);
+        it != flexfec_by_media_ssrc.end()) {
+      const FlexfecSubstream& flexfec = it->second;
+      info.fec_ssrc = flexfec.ssrc;
+      info.fec_packets_sent = flexfec.rtp_stats->transmitted.packets;
+      info.fec_bytes_sent = flexfec.rtp_stats->transmitted.payload_bytes;
+    }
     info.firs_received = stream_stats.rtcp_packet_type_counts.fir_packets;
     info.nacks_received = stream_stats.rtcp_packet_type_counts.nack_packets;
     info.plis_received = stream_stats.rtcp_packet_type_counts.pli_packets;
@@ -2673,6 +2700,12 @@ WebRtcVideoSendChannel::WebRtcVideoSendStream::GetAggregatedVideoSenderInfo(
     info.total_packet_send_delay += infos[i].total_packet_send_delay;
     info.retransmitted_bytes_sent += infos[i].retransmitted_bytes_sent;
     info.retransmitted_packets_sent += infos[i].retransmitted_packets_sent;
+    if (infos[i].fec_ssrc) {
+      // Only one stream is protected by FlexFEC.
+      info.fec_ssrc = infos[i].fec_ssrc;
+      info.fec_packets_sent = infos[i].fec_packets_sent;
+      info.fec_bytes_sent = infos[i].fec_bytes_sent;
+    }
     info.packets_lost += infos[i].packets_lost;
     if (infos[i].send_frame_width > info.send_frame_width)
       info.send_frame_width = infos[i].send_frame_width;
@@ -2793,6 +2826,9 @@ void WebRtcVideoSendChannel::WebRtcVideoSendStream::RecreateWebRtcStream() {
   if (!rtp_parameters_.encodings.empty() &&
       rtp_parameters_.encodings[0].csrcs.has_value()) {
     stream_->SetCsrcs(rtp_parameters_.encodings[0].csrcs.value());
+  }
+  if (rtp_parameters_.fec_protection) {
+    stream_->SetFecProtection(rtp_parameters_.fec_protection);
   }
 
   parameters_.encoder_config.encoder_specific_settings = nullptr;

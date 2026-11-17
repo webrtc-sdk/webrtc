@@ -266,6 +266,11 @@ class VideoSendStream {
   // Sets the list of CSRCs to be included in every packet.
   virtual void SetCsrcs(std::span<const uint32_t> csrcs) = 0;
 
+  // Overrides the FEC protection policy, see `RtpFecProtection`. Takes effect
+  // without reconfiguring the encoder.
+  virtual void SetFecProtection(
+      std::optional<RtpFecProtection> /* fec_protection */) {}
+
   virtual void GenerateKeyFrame(const std::vector<std::string>& rids) = 0;
 
  protected:
