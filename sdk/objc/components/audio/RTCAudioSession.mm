@@ -523,12 +523,19 @@ ABSL_CONST_INIT thread_local bool mutex_locked = false;
   AVAudioSessionInterruptionType type =
       (AVAudioSessionInterruptionType)typeNumber.unsignedIntegerValue;
   switch (type) {
-    case AVAudioSessionInterruptionTypeBegan:
-      RTCLog(@"Audio session interruption began.");
+    case AVAudioSessionInterruptionTypeBegan: {
+      // A missing reason key reads as AVAudioSessionInterruptionReasonDefault.
+      NSNumber *reasonNumber =
+          notification.userInfo[AVAudioSessionInterruptionReasonKey];
+      AVAudioSessionInterruptionReason reason =
+          (AVAudioSessionInterruptionReason)reasonNumber.unsignedIntegerValue;
+      RTCLog(@"Audio session interruption began, reason: %lu.",
+             (unsigned long)reason);
       self.isActive = NO;
       self.isInterrupted = YES;
-      [self notifyDidBeginInterruption];
+      [self notifyDidBeginInterruptionWithReason:reason];
       break;
+    }
     case AVAudioSessionInterruptionTypeEnded: {
       RTCLog(@"Audio session interruption ended.");
       self.isInterrupted = NO;
@@ -905,9 +912,18 @@ ABSL_CONST_INIT thread_local bool mutex_locked = false;
 }
 
 - (void)notifyDidBeginInterruption {
+  [self notifyDidBeginInterruptionWithReason:
+            AVAudioSessionInterruptionReasonDefault];
+}
+
+- (void)notifyDidBeginInterruptionWithReason:
+    (AVAudioSessionInterruptionReason)reason {
   for (auto delegate : self.delegates) {
-    SEL sel = @selector(audioSessionDidBeginInterruption:);
-    if ([delegate respondsToSelector:sel]) {
+    if ([delegate respondsToSelector:@selector
+                  (audioSessionDidBeginInterruption:reason:)]) {
+      [delegate audioSessionDidBeginInterruption:self reason:reason];
+    } else if ([delegate respondsToSelector:@selector
+                         (audioSessionDidBeginInterruption:)]) {
       [delegate audioSessionDidBeginInterruption:self];
     }
   }
