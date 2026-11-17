@@ -93,6 +93,11 @@ int32_t FakeAudioCaptureModule::RegisterAudioCallback(
   return 0;
 }
 
+bool FakeAudioCaptureModule::HasAudioCallback() const {
+  webrtc::MutexLock lock(&mutex_);
+  return audio_callback_ != nullptr;
+}
+
 int32_t FakeAudioCaptureModule::Init() {
   // Initialize is called by the factory method.
   initialized_ = true;
