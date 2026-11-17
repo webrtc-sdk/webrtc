@@ -1105,12 +1105,11 @@ if (is_mac || is_ios) {
     bundle_data("privacy_manifest_bundle_data_$this_target_name") {
       deps = [ ":create_privacy_manifest_$this_target_name" ]
       sources = get_target_outputs(":create_privacy_manifest_$this_target_name")
-      if (is_mac || target_environment == "catalyst") {
-        privacy_manifest_out_path = "Versions/A/Resources/PrivacyInfo.xcprivacy"
-      } else {
-        privacy_manifest_out_path = "PrivacyInfo.xcprivacy"
-      }
-      outputs = [ "{{bundle_contents_dir}}/$privacy_manifest_out_path" ]
+      # {{bundle_resources_dir}} is Versions/A/Resources in a versioned (macOS,
+      # Mac Catalyst) framework and the framework's root otherwise. A path
+      # below {{bundle_contents_dir}}, which is already Versions/A there,
+      # put the manifest at Versions/A/Versions/A/Resources.
+      outputs = [ "{{bundle_resources_dir}}/PrivacyInfo.xcprivacy" ]
     }
 
     if (is_mac) {

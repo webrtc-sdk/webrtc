@@ -19,7 +19,13 @@ package org.webrtc;
 public class FrameCryptorFactory {
   public static FrameCryptorKeyProvider createFrameCryptorKeyProvider(
       boolean sharedKey, byte[] ratchetSalt, int ratchetWindowSize, byte[] uncryptedMagicBytes, int failureTolerance, int keyRingSize, boolean discardFrameWhenCryptorNotReady, FrameCryptorKeyDerivationAlgorithm keyDerivationAlgorithm) {
-    return nativeCreateFrameCryptorKeyProvider(sharedKey, ratchetSalt, ratchetWindowSize, uncryptedMagicBytes, failureTolerance, keyRingSize, discardFrameWhenCryptorNotReady, keyDerivationAlgorithm.getValue());
+    return createFrameCryptorKeyProvider(sharedKey, ratchetSalt, ratchetWindowSize, uncryptedMagicBytes, failureTolerance, keyRingSize, discardFrameWhenCryptorNotReady, keyDerivationAlgorithm, 128);
+  }
+
+  /** keySize is the frame key length in bits: 128 (the default of the overload above) or 256. */
+  public static FrameCryptorKeyProvider createFrameCryptorKeyProvider(
+      boolean sharedKey, byte[] ratchetSalt, int ratchetWindowSize, byte[] uncryptedMagicBytes, int failureTolerance, int keyRingSize, boolean discardFrameWhenCryptorNotReady, FrameCryptorKeyDerivationAlgorithm keyDerivationAlgorithm, int keySize) {
+    return nativeCreateFrameCryptorKeyProvider(sharedKey, ratchetSalt, ratchetWindowSize, uncryptedMagicBytes, failureTolerance, keyRingSize, discardFrameWhenCryptorNotReady, keyDerivationAlgorithm.getValue(), keySize);
   }
 
   public static FrameCryptor createFrameCryptorForRtpSender(PeerConnectionFactory factory, RtpSender rtpSender,
@@ -40,5 +46,5 @@ public class FrameCryptorFactory {
       long rtpReceiver, String participantId, int algorithm, long nativeFrameCryptorKeyProvider);
 
   private static native FrameCryptorKeyProvider nativeCreateFrameCryptorKeyProvider(
-      boolean sharedKey, byte[] ratchetSalt, int ratchetWindowSize, byte[] uncryptedMagicBytes, int failureTolerance, int keyRingSize, boolean discardFrameWhenCryptorNotReady, int keyDerivationAlgorithm);
+      boolean sharedKey, byte[] ratchetSalt, int ratchetWindowSize, byte[] uncryptedMagicBytes, int failureTolerance, int keyRingSize, boolean discardFrameWhenCryptorNotReady, int keyDerivationAlgorithm, int keySize);
 }

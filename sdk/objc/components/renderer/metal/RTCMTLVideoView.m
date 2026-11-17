@@ -104,6 +104,8 @@
 
 - (void)setVideoContentMode:(UIViewContentMode)mode {
   self.metalView.contentMode = mode;
+  // The drawable size depends on the content mode.
+  [self setNeedsLayout];
 }
 #endif
 
@@ -170,16 +172,18 @@
   return MAX(scale, 1.0);
 }
 
+- (BOOL)isAspectFit {
+#if TARGET_OS_IPHONE
+  return self.metalView.contentMode == UIViewContentModeScaleAspectFit;
+#elif TARGET_OS_OSX
+  return self.metalView.layerContentsPlacement ==
+      NSViewLayerContentsPlacementScaleProportionallyToFit;
+#endif
+}
+
 - (void)performLayout {
-  CGRect bounds = self.bounds;
-  self.metalView.frame = bounds;
-  if (!CGSizeEqualToSize(self.videoFrameSize, CGSizeZero)) {
-    self.metalView.drawableSize = [self drawableSize];
-  } else {
-    // Apply scale factor for default size as well (when videoFrameSize is zero)
-    CGFloat scale = [self currentScaleFactor];
-    self.metalView.drawableSize = CGSizeMake(bounds.size.width * scale, bounds.size.height * scale);
-  }
+  self.metalView.frame = self.bounds;
+  self.metalView.drawableSize = [self drawableSize];
 }
 
 #pragma mark - MTKViewDelegate methods
@@ -272,8 +276,16 @@
 }
 
 - (CGSize)drawableSize {
-  // Flip width/height if the rotations are not the same.
+  CGFloat scale = [self currentScaleFactor];
+  CGSize boundsSize = self.bounds.size;
   CGSize videoFrameSize = self.videoFrameSize;
+
+  // Until setSize: reports a video size, cover the pixels of the view.
+  if (CGSizeEqualToSize(videoFrameSize, CGSizeZero)) {
+    return CGSizeMake(boundsSize.width * scale, boundsSize.height * scale);
+  }
+
+  // Flip width/height if the rotations are not the same.
   RTC_OBJC_TYPE(RTCVideoRotation) videoRotation = [self videoRotation];
 
   BOOL useLandscape =
@@ -287,10 +299,24 @@
   } else {
     size = CGSizeMake(videoFrameSize.height, videoFrameSize.width);
   }
-  
-  // Apply scale factor for retina displays
-  CGFloat scale = [self currentScaleFactor];
-  return CGSizeMake(size.width * scale, size.height * scale);
+
+  // videoFrameSize is already in pixels. Shrink it to the pixels the view
+  // covers on screen, keeping the aspect ratio, so a large stream in a small
+  // view doesn't allocate full resolution drawables. Aspect fit shows the
+  // whole video, so the smaller ratio is what is displayed. Other modes keep
+  // the larger ratio so an aspect fill crop is not undersampled. Never
+  // upscale the video.
+  if (boundsSize.width > 0 && boundsSize.height > 0 && size.width > 0 &&
+      size.height > 0) {
+    CGFloat widthRatio = boundsSize.width * scale / size.width;
+    CGFloat heightRatio = boundsSize.height * scale / size.height;
+    CGFloat ratio = [self isAspectFit] ? MIN(widthRatio, heightRatio)
+                                       : MAX(widthRatio, heightRatio);
+    if (ratio < 1.0) {
+      size = CGSizeMake(ceil(size.width * ratio), ceil(size.height * ratio));
+    }
+  }
+  return size;
 }
 
 #pragma mark - RTC_OBJC_TYPE(RTCVideoRenderer)
@@ -332,10 +358,23 @@
 
 #pragma mark - Cross platform
 
+// The drawable size depends on the screen scale, which can change without a
+// change of bounds, for example when the window moves to another display.
+
 #if TARGET_OS_IPHONE
 - (void)layoutSubviews {
   [super layoutSubviews];
   [self performLayout];
+}
+
+- (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+  [super traitCollectionDidChange:previousTraitCollection];
+#pragma clang diagnostic pop
+  if (previousTraitCollection.displayScale != self.traitCollection.displayScale) {
+    [self setNeedsLayout];
+  }
 }
 #elif TARGET_OS_OSX
 - (void)layout {
@@ -345,6 +384,11 @@
 
 - (void)setNeedsLayout {
   self.needsLayout = YES;
+}
+
+- (void)viewDidChangeBackingProperties {
+  [super viewDidChangeBackingProperties];
+  [self setNeedsLayout];
 }
 #endif
 

@@ -22,6 +22,8 @@ import java.util.Arrays;
 import org.junit.Before;
 import org.junit.Test;
 import org.webrtc.RtpParameters.DegradationPreference;
+import org.webrtc.RtpParameters.FecProtection;
+import org.webrtc.RtpParameters.FecProtectionMode;
 
 /** Unit-tests for {@link RtpSender}. */
 public class RtpSenderTest {
@@ -83,4 +85,56 @@ public class RtpSenderTest {
                 DegradationPreference.MAINTAIN_FRAMERATE_AND_RESOLUTION,
                 parameters.degradationPreference);
     }
+
+  /**
+   * Test checking that a non-null FecProtection round-trips through the native layer for every
+   * mode, which requires JNI to resolve RtpParameters$FecProtectionMode.
+   */
+  @Test
+  @SmallTest
+  public void testSetFecProtection() throws Exception {
+    RtpTransceiver transceiver = pc.addTransceiver(MediaStreamTrack.MediaType.MEDIA_TYPE_VIDEO);
+    RtpSender sender = transceiver.getSender();
+
+    RtpParameters parameters = sender.getParameters();
+    assertNotNull(parameters);
+    assertNull(parameters.fecProtection);
+
+    for (FecProtectionMode mode : FecProtectionMode.values()) {
+      FecProtection fecProtection = new FecProtection(mode, 0.25);
+      fecProtection.keyFrameProtectionFactor = 0.5;
+      fecProtection.maxFecFrames = 2;
+      parameters.fecProtection = fecProtection;
+      assertTrue(sender.setParameters(parameters));
+      parameters = sender.getParameters();
+      assertNotNull(parameters.fecProtection);
+      assertEquals(mode, parameters.fecProtection.mode);
+      assertEquals(0.25, parameters.fecProtection.protectionFactor, 0.0);
+      assertEquals(Double.valueOf(0.5), parameters.fecProtection.keyFrameProtectionFactor);
+      assertEquals(Integer.valueOf(2), parameters.fecProtection.maxFecFrames);
+    }
+
+    parameters.fecProtection = null;
+    assertTrue(sender.setParameters(parameters));
+    assertNull(sender.getParameters().fecProtection);
+  }
+
+  /** Test checking that a null FecProtection mode is treated as ADAPTIVE instead of crashing. */
+  @Test
+  @SmallTest
+  public void testSetFecProtectionWithNullMode() throws Exception {
+    RtpTransceiver transceiver = pc.addTransceiver(MediaStreamTrack.MediaType.MEDIA_TYPE_VIDEO);
+    RtpSender sender = transceiver.getSender();
+
+    RtpParameters parameters = sender.getParameters();
+    parameters.fecProtection = new FecProtection(null, 0.25);
+    assertTrue(sender.setParameters(parameters));
+    parameters = sender.getParameters();
+    assertNotNull(parameters.fecProtection);
+    assertEquals(FecProtectionMode.ADAPTIVE, parameters.fecProtection.mode);
+    assertEquals(0.25, parameters.fecProtection.protectionFactor, 0.0);
+    // Unset optional fields must round-trip as null, not as 0.
+    assertNull(parameters.fecProtection.keyFrameProtectionFactor);
+    assertNull(parameters.fecProtection.maxFecFrames);
+  }
 }

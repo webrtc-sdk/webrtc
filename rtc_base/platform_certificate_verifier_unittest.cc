@@ -48,6 +48,39 @@ class AcceptAllVerifier final : public SSLCertificateVerifier {
   bool Verify(const SSLCertificate& /*certificate*/) override { return true; }
 };
 
+TEST(SSLCertificateVerifierTest, HostAwareCallPreservesLeafOnlyVerifier) {
+  std::unique_ptr<SSLCertificate> cert = SelfSignedCert("turn.invalid");
+  ASSERT_TRUE(cert != nullptr);
+  AcceptAllVerifier legacy;
+  SSLCertificateVerifier& verifier = legacy;
+  EXPECT_TRUE(
+      verifier.VerifyChain(SSLCertChain(cert->Clone()), "turn.invalid"));
+  SSLCertChain empty((std::vector<std::unique_ptr<SSLCertificate>>()));
+  EXPECT_FALSE(verifier.VerifyChain(empty, "turn.invalid"));
+}
+
+TEST(SSLCertificateVerifierTest, HostAwareCallPreservesWholeChainOverride) {
+  class ChainVerifier final : public SSLCertificateVerifier {
+   public:
+    bool Verify(const SSLCertificate&) override {
+      ADD_FAILURE() << "A chain-aware verifier must not fall back to the leaf";
+      return false;
+    }
+    bool VerifyChain(const SSLCertChain& chain) override {
+      return chain.GetSize() == 2;
+    }
+  } legacy;
+
+  std::unique_ptr<SSLCertificate> cert = SelfSignedCert("turn.invalid");
+  ASSERT_TRUE(cert != nullptr);
+  std::vector<std::unique_ptr<SSLCertificate>> certs;
+  certs.push_back(cert->Clone());
+  certs.push_back(cert->Clone());
+  SSLCertChain chain(std::move(certs));
+  SSLCertificateVerifier& verifier = legacy;
+  EXPECT_TRUE(verifier.VerifyChain(chain, "turn.invalid"));
+}
+
 std::unique_ptr<SSLCertificateVerifier> MakeAcceptAllVerifier() {
   return std::make_unique<AcceptAllVerifier>();
 }

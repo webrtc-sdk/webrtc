@@ -878,6 +878,11 @@ class RTCStatsReportVerifier {
                   outbound_stream.encoding_index.value() == 0);
       verifier.TestAttributeIsDefined(outbound_stream.scalability_mode);
       verifier.TestAttributeIsNonNegative<uint32_t>(outbound_stream.rtx_ssrc);
+      // FEC stats are only present when FlexFEC was negotiated, which is off
+      // by default.
+      verifier.TestAttributeIsUndefined(outbound_stream.fec_packets_sent);
+      verifier.TestAttributeIsUndefined(outbound_stream.fec_bytes_sent);
+      verifier.TestAttributeIsUndefined(outbound_stream.fec_ssrc);
     } else {
       verifier.TestAttributeIsUndefined(outbound_stream.frames_encoded);
       verifier.TestAttributeIsUndefined(outbound_stream.key_frames_encoded);
@@ -903,6 +908,9 @@ class RTCStatsReportVerifier {
       verifier.TestAttributeIsUndefined(outbound_stream.huge_frames_sent);
       verifier.TestAttributeIsUndefined(outbound_stream.scalability_mode);
       verifier.TestAttributeIsUndefined(outbound_stream.rtx_ssrc);
+      verifier.TestAttributeIsUndefined(outbound_stream.fec_packets_sent);
+      verifier.TestAttributeIsUndefined(outbound_stream.fec_bytes_sent);
+      verifier.TestAttributeIsUndefined(outbound_stream.fec_ssrc);
     }
     return verifier.ExpectAllAttributesSuccessfullyTested();
   }

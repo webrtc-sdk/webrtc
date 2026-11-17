@@ -34,6 +34,10 @@ class PlatformCertificateVerifier : public SSLCertificateVerifier {
 
   bool Verify(const SSLCertificate& certificate) override;
   bool VerifyChain(const SSLCertChain& chain) override;
+  // `hostname` selects the application's trust policy on the platform side;
+  // without one the hostname-free check applies, as before.
+  bool VerifyChain(const SSLCertChain& chain,
+                   absl::string_view hostname) override;
 };
 
 // Matches rtc_base's PlatformCertificateVerifierFactory signature so that
