@@ -15,10 +15,12 @@
 #include <stdint.h>
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "api/environment/environment.h"
 #include "api/fec_controller.h"
+#include "api/rtp_parameters.h"
 #include "api/video/video_frame_type.h"
 #include "modules/video_coding/media_opt_util.h"
 #include "rtc_base/synchronization/mutex.h"
@@ -52,6 +54,8 @@ class FecControllerDefault : public FecController {
   void UpdateWithEncodedData(size_t encoded_image_length,
                              VideoFrameType encoded_image_frametype) override;
   bool UseLossVectorMask() override;
+  void SetProtectionOverride(
+      std::optional<RtpFecProtection> protection) override;
   float GetProtectionOverheadRateThreshold();
 
  private:
@@ -62,6 +66,8 @@ class FecControllerDefault : public FecController {
   std::unique_ptr<media_optimization::VCMLossProtectionLogic> loss_prot_logic_
       RTC_GUARDED_BY(mutex_);
   size_t max_payload_size_ RTC_GUARDED_BY(mutex_);
+  bool fec_enabled_ RTC_GUARDED_BY(mutex_) = false;
+  std::optional<RtpFecProtection> protection_override_ RTC_GUARDED_BY(mutex_);
 
   const float overhead_threshold_;
 };

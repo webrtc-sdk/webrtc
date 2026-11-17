@@ -868,7 +868,7 @@ enum ssl_verify_result_t OpenSSLAdapter::SSLVerifyInternal(SSL* ssl,
   }
 
   SSLCertChain cert_chain(std::move(certs));
-  if (!ssl_cert_verifier_->VerifyChain(cert_chain)) {
+  if (!ssl_cert_verifier_->VerifyChain(cert_chain, ssl_host_name_)) {
     RTC_LOG(LS_WARNING)
         << "Failed to verify certificate chain using custom callback";
     return ssl_verify_invalid;
@@ -957,7 +957,7 @@ int OpenSSLAdapter::SSLVerifyInternal(int previous_status,
   }
 
   SSLCertChain cert_chain(std::move(certs));
-  if (!ssl_cert_verifier_->VerifyChain(cert_chain)) {
+  if (!ssl_cert_verifier_->VerifyChain(cert_chain, ssl_host_name_)) {
     RTC_LOG(LS_INFO)
         << "Failed to verify certificate chain using custom callback";
     return previous_status;

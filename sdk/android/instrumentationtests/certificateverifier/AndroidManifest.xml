@@ -1,0 +1,10 @@
+<!-- Copyright 2026 The WebRTC project authors. All Rights Reserved.
+     Use of this source code is governed by a BSD-style license that can be
+     found in the LICENSE file in the root of the source tree. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.webrtc.certificateverifiertest">
+    <application android:networkSecurityConfig="@xml/network_security_config" />
+    <instrumentation android:name="androidx.test.runner.AndroidJUnitRunner"
+        android:targetPackage="org.webrtc.certificateverifiertest"
+        android:label="WebRTC platform certificate verifier tests" />
+</manifest>

@@ -11,9 +11,11 @@
 #include "api/fec_controller.h"
 
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 #include "api/environment/environment_factory.h"
+#include "api/rtp_parameters.h"
 #include "modules/include/module_fec_types.h"
 #include "modules/video_coding/fec_controller_default.h"
 #include "system_wrappers/include/clock.h"
@@ -31,11 +33,13 @@ class ProtectionBitrateCalculatorTest : public ::testing::Test {
 
   class ProtectionCallback : public VCMProtectionCallback {
    public:
-    int ProtectionRequest(const FecProtectionParams* /* delta_params */,
-                          const FecProtectionParams* /* key_params */,
+    int ProtectionRequest(const FecProtectionParams* delta_params,
+                          const FecProtectionParams* key_params,
                           uint32_t* sent_video_rate_bps,
                           uint32_t* sent_nack_rate_bps,
                           uint32_t* sent_fec_rate_bps) override {
+      delta_params_ = *delta_params;
+      key_params_ = *key_params;
       *sent_video_rate_bps = kCodecBitrateBps;
       *sent_nack_rate_bps = nack_rate_bps_;
       *sent_fec_rate_bps = fec_rate_bps_;
@@ -45,7 +49,15 @@ class ProtectionBitrateCalculatorTest : public ::testing::Test {
 
     uint32_t fec_rate_bps_ = 0;
     uint32_t nack_rate_bps_ = 0;
+    FecProtectionParams delta_params_;
+    FecProtectionParams key_params_;
   };
+
+  void UpdateFecRates(uint8_t fraction_lost, int64_t round_trip_time_ms) {
+    fec_controller_.UpdateFecRates(kCodecBitrateBps, 30, fraction_lost,
+                                   std::vector<bool>(1, false),
+                                   round_trip_time_ms);
+  }
 
   // Note: simulated clock starts at 1 seconds, since parts of webrtc use 0 as
   // a special case (e.g. frame rate in media optimization).
@@ -111,6 +123,101 @@ TEST_F(ProtectionBitrateCalculatorTest, NoProtection) {
   uint32_t target_bitrate = fec_controller_.UpdateFecRates(
       kMaxBitrateBps, 30, 128, std::vector<bool>(1, false), 100);
   EXPECT_EQ(kMaxBitrateBps, target_bitrate);
+}
+
+TEST_F(ProtectionBitrateCalculatorTest, FixedProtectionIgnoresLowRtt) {
+  fec_controller_.SetProtectionMethod(true /*enable_fec*/,
+                                      true /* enable_nack */);
+  fec_controller_.SetEncodingData(640, 480, 1, 1000);
+
+  // With NACK and a low RTT, the adaptive logic turns delta frame FEC off.
+  UpdateFecRates(/*fraction_lost=*/0, /*round_trip_time_ms=*/0);
+  EXPECT_EQ(protection_callback_.delta_params_.fec_rate, 0);
+
+  RtpFecProtection protection;
+  protection.mode = RtpFecProtection::Mode::kFixed;
+  protection.protection_factor = 0.25;
+  protection.key_frame_protection_factor = 0.5;
+  fec_controller_.SetProtectionOverride(protection);
+  UpdateFecRates(/*fraction_lost=*/0, /*round_trip_time_ms=*/0);
+  EXPECT_EQ(protection_callback_.delta_params_.fec_rate, 64);
+  EXPECT_EQ(protection_callback_.key_params_.fec_rate, 128);
+  EXPECT_EQ(protection_callback_.delta_params_.max_fec_frames, 1);
+  EXPECT_EQ(protection_callback_.key_params_.max_fec_frames, 1);
+  EXPECT_EQ(protection_callback_.delta_params_.fec_mask_type, kFecMaskRandom);
+
+  protection.max_fec_frames = 3;
+  fec_controller_.SetProtectionOverride(protection);
+  UpdateFecRates(/*fraction_lost=*/0, /*round_trip_time_ms=*/0);
+  EXPECT_EQ(protection_callback_.delta_params_.max_fec_frames, 3);
+  EXPECT_EQ(protection_callback_.key_params_.max_fec_frames, 3);
+}
+
+TEST_F(ProtectionBitrateCalculatorTest, DisabledProtectionOverridesLoss) {
+  fec_controller_.SetProtectionMethod(true /*enable_fec*/,
+                                      false /* enable_nack */);
+  fec_controller_.SetEncodingData(640, 480, 1, 1000);
+
+  UpdateFecRates(/*fraction_lost=*/64, /*round_trip_time_ms=*/100);
+  EXPECT_GT(protection_callback_.delta_params_.fec_rate, 0);
+
+  RtpFecProtection protection;
+  protection.mode = RtpFecProtection::Mode::kDisabled;
+  fec_controller_.SetProtectionOverride(protection);
+  UpdateFecRates(/*fraction_lost=*/64, /*round_trip_time_ms=*/100);
+  EXPECT_EQ(protection_callback_.delta_params_.fec_rate, 0);
+  EXPECT_EQ(protection_callback_.key_params_.fec_rate, 0);
+}
+
+TEST_F(ProtectionBitrateCalculatorTest, MinimumProtectionKeepsHigherRate) {
+  fec_controller_.SetProtectionMethod(true /*enable_fec*/,
+                                      false /* enable_nack */);
+  fec_controller_.SetEncodingData(640, 480, 1, 1000);
+
+  RtpFecProtection protection;
+  protection.mode = RtpFecProtection::Mode::kMinimum;
+  protection.protection_factor = 0.1;
+  fec_controller_.SetProtectionOverride(protection);
+
+  // Without loss the floor applies.
+  UpdateFecRates(/*fraction_lost=*/0, /*round_trip_time_ms=*/100);
+  EXPECT_EQ(protection_callback_.delta_params_.fec_rate, 26);
+  EXPECT_EQ(protection_callback_.key_params_.fec_rate, 26);
+
+  // A higher adaptive rate is kept.
+  UpdateFecRates(/*fraction_lost=*/64, /*round_trip_time_ms=*/100);
+  EXPECT_GT(protection_callback_.delta_params_.fec_rate, 26);
+}
+
+TEST_F(ProtectionBitrateCalculatorTest, ResetProtectionRestoresAdaptive) {
+  fec_controller_.SetProtectionMethod(true /*enable_fec*/,
+                                      true /* enable_nack */);
+  fec_controller_.SetEncodingData(640, 480, 1, 1000);
+
+  RtpFecProtection protection;
+  protection.mode = RtpFecProtection::Mode::kFixed;
+  protection.protection_factor = 0.5;
+  fec_controller_.SetProtectionOverride(protection);
+  UpdateFecRates(/*fraction_lost=*/0, /*round_trip_time_ms=*/0);
+  EXPECT_EQ(protection_callback_.delta_params_.fec_rate, 128);
+
+  fec_controller_.SetProtectionOverride(std::nullopt);
+  UpdateFecRates(/*fraction_lost=*/0, /*round_trip_time_ms=*/0);
+  EXPECT_EQ(protection_callback_.delta_params_.fec_rate, 0);
+}
+
+TEST_F(ProtectionBitrateCalculatorTest, ProtectionOverrideRequiresFec) {
+  fec_controller_.SetProtectionMethod(false /*enable_fec*/,
+                                      true /* enable_nack */);
+  fec_controller_.SetEncodingData(640, 480, 1, 1000);
+
+  RtpFecProtection protection;
+  protection.mode = RtpFecProtection::Mode::kFixed;
+  protection.protection_factor = 0.5;
+  fec_controller_.SetProtectionOverride(protection);
+  UpdateFecRates(/*fraction_lost=*/0, /*round_trip_time_ms=*/0);
+  EXPECT_EQ(protection_callback_.delta_params_.fec_rate, 0);
+  EXPECT_EQ(protection_callback_.key_params_.fec_rate, 0);
 }
 
 }  // namespace webrtc

@@ -817,6 +817,96 @@ struct RtcpParameters final {
   }
 };
 
+// Sender-wide policy for how much FEC (FlexFEC or ULPFEC) protection is
+// generated. This is a non-standard extension; it has no effect unless FEC was
+// negotiated for the sender. Only applies to video senders.
+//
+// Which streams are affected depends on the FEC scheme:
+// - ULPFEC is generated per stream, so with simulcast the same policy applies
+//   to every simulcast layer.
+// - FlexFEC protects a single media stream. libwebrtc does not allocate a
+//   FlexFEC SSRC for simulcast senders, so FlexFEC, and with it this policy,
+//   normally only takes effect without simulcast. If a FlexFEC stream is
+//   negotiated anyway, only the one media stream it protects is affected.
+struct RTC_EXPORT RtpFecProtection {
+  enum class Mode {
+    // Protection is derived from the observed loss and RTT. This is the
+    // behavior when `RtpParameters::fec_protection` is unset.
+    kAdaptive,
+    // The adaptive protection is replaced by `protection_factor`, so the
+    // requested protection rate stays fixed regardless of loss and RTT. This
+    // also bypasses the adaptive rules that turn FEC off, i.e. low RTT with
+    // NACK enabled and a bitrate too low for FEC. If `max_fec_frames` is
+    // unset, each frame is protected on its own (lowest recovery delay).
+    // Suited for when the application computes the protection itself.
+    //
+    // The rate is a request, not a cap on the resulting overhead: the number
+    // of FEC packets per block is rounded to whole packets, with at least one
+    // FEC packet for any nonzero factor. For example, a factor of 0.1 gives
+    // 100%, 50% and 10% packet overhead for blocks of 1, 2 and 10 media
+    // packets. With one frame per block, small frames stay in the high
+    // overhead regime; a larger `max_fec_frames` lets blocks grow.
+    kFixed,
+    // The protection is max(adaptive, `protection_factor`): it rises with
+    // observed loss but never drops below `protection_factor`, including when
+    // the adaptive rules would turn FEC off. Since the adaptive loss is
+    // max-filtered over a window, protection decays to the floor with a delay
+    // after loss stops. If `max_fec_frames` is unset, the adaptive value is
+    // used.
+    kMinimum,
+    // No FEC packets are generated even if FEC was negotiated.
+    kDisabled,
+  };
+
+  Mode mode = Mode::kAdaptive;
+  // Requested number of FEC packets relative to the number of media packets,
+  // in [0.0, 1.0]. Used by `kFixed` and `kMinimum`. The actual ratio differs
+  // because FEC packets are rounded per block, see `Mode::kFixed`.
+  double protection_factor = 0.0;
+  // Protection factor for key frames. If unset, `protection_factor` is used.
+  std::optional<double> key_frame_protection_factor;
+  // Maximum number of frames covered by one FEC block, in
+  // [1, kMaxFecFrames]. If unset, 1 is used by `kFixed` and the adaptive value
+  // by `kMinimum`. This is an upper bound: the FEC generator may close a block
+  // earlier once it holds enough media packets for the requested rate.
+  //
+  // A larger value spreads FEC over more frames, so the same
+  // `protection_factor` yields fewer FEC packets and lower overhead (blocks are
+  // less affected by the one-packet floor, see `Mode::kFixed`). The cost is
+  // recovery delay: a lost packet can only be repaired once its block is
+  // complete, i.e. up to `max_fec_frames` frames later. A smaller value is the
+  // reverse.
+  std::optional<int> max_fec_frames;
+
+  // Same as the limit on frames per FEC block in the adaptive path,
+  // `VCMNackFecMethod::kUpperLimitFramesFec` in
+  // modules/video_coding/media_opt_util.h, which checks that they match.
+  static constexpr int kMaxFecFrames = 6;
+
+  static const char* ModeToString(Mode mode);
+
+  bool operator==(const RtpFecProtection& o) const {
+    return mode == o.mode && protection_factor == o.protection_factor &&
+           key_frame_protection_factor == o.key_frame_protection_factor &&
+           max_fec_frames == o.max_fec_frames;
+  }
+  bool operator!=(const RtpFecProtection& o) const { return !(*this == o); }
+
+  template <typename Sink>
+  friend void AbslStringify(Sink& sink, const RtpFecProtection& p) {
+    absl::Format(&sink, "{mode: %s, protection_factor: %v",
+                 ModeToString(p.mode), p.protection_factor);
+    if (p.key_frame_protection_factor) {
+      absl::Format(&sink, ", key_frame_protection_factor: %v",
+                   *p.key_frame_protection_factor);
+    }
+    if (p.max_fec_frames) {
+      absl::Format(&sink, ", max_fec_frames: %v", *p.max_fec_frames);
+    }
+    sink.Append("}");
+  }
+};
+
 struct RTC_EXPORT RtpParameters {
   RtpParameters();
   RtpParameters(const RtpParameters&);
@@ -844,11 +934,16 @@ struct RTC_EXPORT RtpParameters {
   // indicates which is preferred. Only for video tracks.
   std::optional<DegradationPreference> degradation_preference;
 
+  // Non-standard. FEC protection policy for this sender. Unset is equivalent
+  // to `RtpFecProtection::Mode::kAdaptive`. Only for video tracks.
+  std::optional<RtpFecProtection> fec_protection;
+
   bool operator==(const RtpParameters& o) const {
     return mid == o.mid && codecs == o.codecs &&
            header_extensions == o.header_extensions &&
            encodings == o.encodings && rtcp == o.rtcp &&
-           degradation_preference == o.degradation_preference;
+           degradation_preference == o.degradation_preference &&
+           fec_protection == o.fec_protection;
   }
   bool operator!=(const RtpParameters& o) const { return !(*this == o); }
 
@@ -871,6 +966,9 @@ struct RTC_EXPORT RtpParameters {
     if (p.degradation_preference) {
       absl::Format(&sink, ", degradation_preference: %s",
                    DegradationPreferenceToString(*p.degradation_preference));
+    }
+    if (p.fec_protection) {
+      absl::Format(&sink, ", fec_protection: %v", *p.fec_protection);
     }
     sink.Append("}");
   }
