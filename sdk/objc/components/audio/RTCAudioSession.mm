@@ -43,6 +43,27 @@ ABSL_CONST_INIT thread_local bool mutex_locked = false;
     std::vector<__weak id<RTC_OBJC_TYPE(RTCAudioSessionDelegate)> > delegates;
 @end
 
+namespace {
+
+// Reads the interruption reason from an interruption notification. A missing
+// reason reads as AVAudioSessionInterruptionReasonDefault.
+AVAudioSessionInterruptionReason InterruptionReasonFromNotification(
+    NSNotification *notification) {
+  NSNumber *reasonNumber = nil;
+#if TARGET_OS_TV
+  // AVAudioSessionInterruptionReasonKey is marked unavailable in the tvOS SDK,
+  // so the value is looked up by the name of the key.
+  reasonNumber = notification.userInfo[@"AVAudioSessionInterruptionReasonKey"];
+#else
+  if (@available(iOS 14.5, *)) {
+    reasonNumber = notification.userInfo[AVAudioSessionInterruptionReasonKey];
+  }
+#endif
+  return (AVAudioSessionInterruptionReason)reasonNumber.unsignedIntegerValue;
+}
+
+}  // namespace
+
 // This class needs to be thread-safe because it is accessed from many threads.
 // TODO(tkchin): Consider more granular locking. We're not expecting a lot of
 // lock contention so coarse locks should be fine for now.
@@ -524,19 +545,8 @@ ABSL_CONST_INIT thread_local bool mutex_locked = false;
       (AVAudioSessionInterruptionType)typeNumber.unsignedIntegerValue;
   switch (type) {
     case AVAudioSessionInterruptionTypeBegan: {
-      // The reason key needs iOS 14.5 and does not exist on tvOS. The reason
-      // stays AVAudioSessionInterruptionReasonDefault there, which is also how
-      // a missing key reads.
       AVAudioSessionInterruptionReason reason =
-          AVAudioSessionInterruptionReasonDefault;
-#if !TARGET_OS_TV
-      if (@available(iOS 14.5, *)) {
-        NSNumber *reasonNumber =
-            notification.userInfo[AVAudioSessionInterruptionReasonKey];
-        reason = (AVAudioSessionInterruptionReason)
-                     reasonNumber.unsignedIntegerValue;
-      }
-#endif
+          InterruptionReasonFromNotification(notification);
       RTCLog(@"Audio session interruption began, reason: %lu.",
              (unsigned long)reason);
       self.isActive = NO;
