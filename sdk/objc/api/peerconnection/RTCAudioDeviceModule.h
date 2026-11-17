@@ -135,7 +135,15 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
     : (RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule didReceiveSpeechActivityEvent
     : (RTC_OBJC_TYPE(RTCSpeechActivityEvent))speechActivityEvent NS_SWIFT_NAME(audioDeviceModule(_:didReceiveSpeechActivityEvent:));
 
-// Engine events
+// Engine events.
+//
+// Setup events (`didCreateEngine`, `willEnableEngine`, `willStartEngine` and the
+// configure methods) can fail the operation. A non-zero result rolls it back,
+// and the caller gets the error.
+//
+// Teardown events (`didStopEngine`, `didDisableEngine` and `willReleaseEngine`)
+// fire once the engine has stopped, which cannot be undone. A non-zero result
+// is only logged, and the operation completes.
 - (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
                didCreateEngine:(AVAudioEngine *)engine
     NS_SWIFT_NAME(audioDeviceModule(_:didCreateEngine:));
@@ -152,12 +160,22 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
             isRecordingEnabled:(BOOL)isRecordingEnabled
     NS_SWIFT_NAME(audioDeviceModule(_:didStopEngine:isPlayoutEnabled:isRecordingEnabled:));
 
+// `isPlayoutEnabled` and `isRecordingEnabled` describe the state the engine is
+// left in. Also called when an enable operation fails after a successful
+// `willEnableEngine`, with the state from before that operation, so the
+// delegate can release what it acquired there. No call follows a
+// `willEnableEngine` that returns an error, so a delegate must not hold
+// anything for that operation when it fails.
 - (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
               didDisableEngine:(AVAudioEngine *)engine
               isPlayoutEnabled:(BOOL)isPlayoutEnabled
             isRecordingEnabled:(BOOL)isRecordingEnabled
     NS_SWIFT_NAME(audioDeviceModule(_:didDisableEngine:isPlayoutEnabled:isRecordingEnabled:));
 
+// Also called when an operation that created `engine` fails after a
+// successful `didCreateEngine`, right before the engine is dropped, so the
+// delegate can tear down what it set up there. No call follows a
+// `didCreateEngine` that returns an error.
 - (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
              willReleaseEngine:(AVAudioEngine *)engine
     NS_SWIFT_NAME(audioDeviceModule(_:willReleaseEngine:));
