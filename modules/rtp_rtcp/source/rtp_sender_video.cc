@@ -212,7 +212,7 @@ RTPSenderVideo::RTPSenderVideo(const Config& config)
                     rtp_sender_->SSRC(),
                     rtp_sender_->Rid(),
                     config.task_queue_factory,
-                    config.field_trials->IsEnabled(
+                    !config.field_trials->IsDisabled(
                         "WebRTC-MediaTaskQueuePriorities")
                         ? TaskQueueFactory::Priority::kVideo
                         : TaskQueueFactory::Priority::kNormal)

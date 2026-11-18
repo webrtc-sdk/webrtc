@@ -277,7 +277,7 @@ VideoReceiveStream2::VideoReceiveStream2(
               : nullptr),
       decode_queue_(env_.task_queue_factory().CreateTaskQueue(
           "VideoDecoderQueue",
-          env_.field_trials().IsEnabled("WebRTC-MediaTaskQueuePriorities")
+          !env_.field_trials().IsDisabled("WebRTC-MediaTaskQueuePriorities")
               ? TaskQueueFactory::Priority::kVideo
               : TaskQueueFactory::Priority::kHigh)) {
   RTC_LOG(LS_INFO) << "VideoReceiveStream2: " << config_.ToString();
