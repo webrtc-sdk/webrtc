@@ -457,6 +457,16 @@ public class JavaAudioDeviceModule implements AudioDeviceModule {
     this.useStereoOutput = useStereoOutput;
   }
 
+  /** Returns whether the audio input is configured to capture stereo. */
+  public boolean useStereoInput() {
+    return useStereoInput;
+  }
+
+  /** Returns whether the audio output is configured to play out stereo. */
+  public boolean useStereoOutput() {
+    return useStereoOutput;
+  }
+
   @Override
   public long getNative(long webrtcEnvRef) {
     synchronized (nativeLock) {
