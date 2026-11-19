@@ -397,7 +397,7 @@ std::unique_ptr<VideoStreamEncoderInterface> CreateVideoStreamEncoder(
   std::unique_ptr<TaskQueueBase, TaskQueueDeleter> encoder_queue =
       env.task_queue_factory().CreateTaskQueue(
           "VideoEncoderQueue",
-          env.field_trials().IsEnabled("WebRTC-MediaTaskQueuePriorities")
+          !env.field_trials().IsDisabled("WebRTC-MediaTaskQueuePriorities")
               ? TaskQueueFactory::Priority::kVideo
               : TaskQueueFactory::Priority::kNormal);
   TaskQueueBase* encoder_queue_ptr = encoder_queue.get();

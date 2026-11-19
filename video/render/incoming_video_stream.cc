@@ -36,7 +36,7 @@ IncomingVideoStream::IncomingVideoStream(
       callback_(callback),
       incoming_render_queue_(env.task_queue_factory().CreateTaskQueue(
           "IncomingVideoStreamQueue",
-          env.field_trials().IsEnabled("WebRTC-MediaTaskQueuePriorities")
+          !env.field_trials().IsDisabled("WebRTC-MediaTaskQueuePriorities")
               ? TaskQueueFactory::Priority::kVideo
               : TaskQueueFactory::Priority::kHigh)) {}
 
