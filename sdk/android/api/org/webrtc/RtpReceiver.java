@@ -87,6 +87,17 @@ public class RtpReceiver {
     nativeSetFrameDecryptor(nativeRtpReceiver, frameDecryptor.getNativeFrameDecryptor());
   }
 
+  /**
+   * Installs a transformer on this receiver, replacing any installed one. It can't be uninstalled.
+   */
+  public void setFrameTransformer(FrameTransformer frameTransformer) {
+    checkRtpReceiverExists();
+    if (frameTransformer == null) {
+      throw new IllegalArgumentException("frameTransformer must not be null.");
+    }
+    nativeSetFrameTransformer(nativeRtpReceiver, frameTransformer.getNativeFrameTransformer());
+  }
+
   private void checkRtpReceiverExists() {
     if (nativeRtpReceiver == 0) {
       throw new IllegalStateException("RtpReceiver has been disposed.");
@@ -101,4 +112,6 @@ public class RtpReceiver {
   private static native long nativeSetObserver(long rtpReceiver, Observer observer);
   private static native void nativeUnsetObserver(long rtpReceiver, long nativeObserver);
   private static native void nativeSetFrameDecryptor(long rtpReceiver, long nativeFrameDecryptor);
+  private static native void nativeSetFrameTransformer(
+      long rtpReceiver, long nativeFrameTransformer);
 }

@@ -13,6 +13,7 @@
 #include <jni.h>
 
 #include "api/crypto/frame_decryptor_interface.h"
+#include "api/frame_transformer_interface.h"
 #include "api/media_types.h"
 #include "api/rtp_parameters.h"
 #include "api/rtp_receiver_interface.h"
@@ -129,6 +130,16 @@ static void JNI_RtpReceiver_UnsetObserver(JNIEnv* jni,
   if (observer) {
     delete observer;
   }
+}
+
+static void JNI_RtpReceiver_SetFrameTransformer(
+    JNIEnv* jni,
+    jlong j_rtp_receiver_pointer,
+    jlong j_frame_transformer_pointer) {
+  reinterpret_cast<RtpReceiverInterface*>(j_rtp_receiver_pointer)
+      ->SetFrameTransformer(scoped_refptr<FrameTransformerInterface>(
+          reinterpret_cast<FrameTransformerInterface*>(
+              j_frame_transformer_pointer)));
 }
 
 static void JNI_RtpReceiver_SetFrameDecryptor(JNIEnv* jni,

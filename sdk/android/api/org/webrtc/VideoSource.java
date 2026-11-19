@@ -149,6 +149,26 @@ public class VideoSource extends MediaSource {
     return capturerObserver;
   }
 
+  /**
+   * Links a send transformer to this source, so that it can write the FrameMetadata on frames from
+   * this source. A source can have more than one, one for each sender using it. Remove it before
+   * disposing it.
+   */
+  public void addFrameMetadataTransformer(FrameMetadataTransformer transformer) {
+    if (transformer.getDirection() != FrameMetadataTransformer.Direction.SEND) {
+      throw new IllegalArgumentException("Only send transformers can be added to a VideoSource.");
+    }
+    final long nativeTransformer = transformer.getNativeFrameMetadataTransformer();
+    runWithReference(
+        () -> nativeAndroidVideoTrackSource.addFrameMetadataTransformer(nativeTransformer));
+  }
+
+  public void removeFrameMetadataTransformer(FrameMetadataTransformer transformer) {
+    final long nativeTransformer = transformer.getNativeFrameMetadataTransformer();
+    runWithReference(
+        () -> nativeAndroidVideoTrackSource.removeFrameMetadataTransformer(nativeTransformer));
+  }
+
   /** Returns a pointer to webrtc::VideoTrackSourceInterface. */
   long getNativeVideoTrackSource() {
     return getNativeMediaSource();

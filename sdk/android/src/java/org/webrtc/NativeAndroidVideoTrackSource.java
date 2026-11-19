@@ -56,7 +56,15 @@ class NativeAndroidVideoTrackSource {
    */
   public void onFrameCaptured(VideoFrame frame) {
     nativeOnFrameCaptured(nativeAndroidVideoTrackSource, frame.getRotation(),
-        frame.getTimestampNs(), frame.getBuffer());
+        frame.getTimestampNs(), frame.getBuffer(), frame.getFrameMetadata());
+  }
+
+  public void addFrameMetadataTransformer(long frameMetadataTransformer) {
+    nativeAddFrameMetadataTransformer(nativeAndroidVideoTrackSource, frameMetadataTransformer);
+  }
+
+  public void removeFrameMetadataTransformer(long frameMetadataTransformer) {
+    nativeRemoveFrameMetadataTransformer(nativeAndroidVideoTrackSource, frameMetadataTransformer);
   }
 
   /**
@@ -95,5 +103,10 @@ class NativeAndroidVideoTrackSource {
   private static native VideoProcessor.FrameAdaptationParameters nativeAdaptFrame(
       long nativeAndroidVideoTrackSource, int width, int height, int rotation, long timestampNs);
   private static native void nativeOnFrameCaptured(
-      long nativeAndroidVideoTrackSource, int rotation, long timestampNs, VideoFrame.Buffer buffer);
+      long nativeAndroidVideoTrackSource, int rotation, long timestampNs, VideoFrame.Buffer buffer,
+      @Nullable FrameMetadata frameMetadata);
+  private static native void nativeAddFrameMetadataTransformer(
+      long nativeAndroidVideoTrackSource, long frameMetadataTransformer);
+  private static native void nativeRemoveFrameMetadataTransformer(
+      long nativeAndroidVideoTrackSource, long frameMetadataTransformer);
 }

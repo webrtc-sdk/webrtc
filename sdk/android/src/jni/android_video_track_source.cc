@@ -12,6 +12,7 @@
 
 #include <jni.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <optional>
 #include <utility>
@@ -180,7 +181,22 @@ void AndroidVideoTrackSource::OnFrameCaptured(
     JNIEnv* env,
     jint j_rotation,
     jlong j_timestamp_ns,
-    const JavaRef<jobject>& j_video_frame_buffer) {
+    const JavaRef<jobject>& j_video_frame_buffer,
+    const JavaRef<jobject>& j_frame_metadata) {
+  if (!IsNull(env, j_frame_metadata)) {
+    MutexLock lock(&frame_metadata_mutex_);
+    if (!frame_metadata_transformers_.empty()) {
+      const FrameMetadata metadata =
+          JavaToNativeFrameMetadata(env, j_frame_metadata);
+      // The transformer finds these by the encoded frame's capture time, which
+      // WebRTC truncates to milliseconds from the timestamp below.
+      const int64_t capture_time_ms = j_timestamp_ns / kNumNanosecsPerMillisec;
+      for (const auto& transformer : frame_metadata_transformers_) {
+        transformer->StoreFrameMetadata(capture_time_ms, metadata);
+      }
+    }
+  }
+
   scoped_refptr<VideoFrameBuffer> buffer =
       JavaToNativeFrameBuffer(env, j_video_frame_buffer);
   const VideoRotation rotation = jintToVideoRotation(j_rotation);
@@ -194,6 +210,29 @@ void AndroidVideoTrackSource::OnFrameCaptured(
               .set_rotation(rotation)
               .set_timestamp_us(j_timestamp_ns / kNumNanosecsPerMicrosec)
               .build());
+}
+
+void AndroidVideoTrackSource::AddFrameMetadataTransformer(JNIEnv* env,
+                                                          jlong j_transformer) {
+  auto* transformer =
+      reinterpret_cast<FrameMetadataTransformer*>(j_transformer);
+  MutexLock lock(&frame_metadata_mutex_);
+  if (std::find(frame_metadata_transformers_.begin(),
+                frame_metadata_transformers_.end(),
+                transformer) == frame_metadata_transformers_.end()) {
+    frame_metadata_transformers_.emplace_back(transformer);
+  }
+}
+
+void AndroidVideoTrackSource::RemoveFrameMetadataTransformer(
+    JNIEnv* env,
+    jlong j_transformer) {
+  auto* transformer =
+      reinterpret_cast<FrameMetadataTransformer*>(j_transformer);
+  MutexLock lock(&frame_metadata_mutex_);
+  std::erase_if(frame_metadata_transformers_, [transformer](const auto& item) {
+    return item.get() == transformer;
+  });
 }
 
 void AndroidVideoTrackSource::AdaptOutputFormat(

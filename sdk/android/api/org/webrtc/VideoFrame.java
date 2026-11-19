@@ -167,14 +167,40 @@ public class VideoFrame implements RefCounted {
   private final Buffer buffer;
   private final int rotation;
   private final long timestampNs;
+  private final long rtpTimestamp;
+  @Nullable private final FrameMetadata frameMetadata;
 
   /**
    * Constructs a new VideoFrame backed by the given {@code buffer}.
    *
    * @note Ownership of the buffer object is tranferred to the new VideoFrame.
    */
-  @CalledByNative
   public VideoFrame(Buffer buffer, int rotation, long timestampNs) {
+    this(buffer, rotation, timestampNs, /* rtpTimestamp= */ 0, /* frameMetadata= */ null);
+  }
+
+  /**
+   * Constructs a new VideoFrame with the RTP timestamp of a received frame.
+   *
+   * @note Ownership of the buffer object is tranferred to the new VideoFrame.
+   */
+  @CalledByNative
+  public VideoFrame(Buffer buffer, int rotation, long timestampNs, long rtpTimestamp) {
+    this(buffer, rotation, timestampNs, rtpTimestamp, /* frameMetadata= */ null);
+  }
+
+  /**
+   * Constructs a new VideoFrame carrying values to send in its packet trailer.
+   *
+   * @note Ownership of the buffer object is tranferred to the new VideoFrame.
+   */
+  public VideoFrame(
+      Buffer buffer, int rotation, long timestampNs, @Nullable FrameMetadata frameMetadata) {
+    this(buffer, rotation, timestampNs, /* rtpTimestamp= */ 0, frameMetadata);
+  }
+
+  private VideoFrame(Buffer buffer, int rotation, long timestampNs, long rtpTimestamp,
+      @Nullable FrameMetadata frameMetadata) {
     if (buffer == null) {
       throw new IllegalArgumentException("buffer not allowed to be null");
     }
@@ -184,6 +210,8 @@ public class VideoFrame implements RefCounted {
     this.buffer = buffer;
     this.rotation = rotation;
     this.timestampNs = timestampNs;
+    this.rtpTimestamp = rtpTimestamp;
+    this.frameMetadata = frameMetadata;
   }
 
   @CalledByNative
@@ -205,6 +233,24 @@ public class VideoFrame implements RefCounted {
   @CalledByNative
   public long getTimestampNs() {
     return timestampNs;
+  }
+
+  /**
+   * RTP timestamp of a received frame, which a sink can pass to
+   * FrameMetadataTransformer.lookup(). 0 on local frames, and lost whenever a new VideoFrame is
+   * built from a received one.
+   */
+  public long getRtpTimestamp() {
+    return rtpTimestamp;
+  }
+
+  /**
+   * Values to send in this frame's packet trailer, or null. Lost if a new VideoFrame is built from
+   * this one without copying them.
+   */
+  @Nullable
+  public FrameMetadata getFrameMetadata() {
+    return frameMetadata;
   }
 
   public int getRotatedWidth() {

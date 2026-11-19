@@ -71,6 +71,7 @@ public interface VideoProcessor extends CapturerObserver {
     final VideoFrame.Buffer adaptedBuffer =
         frame.getBuffer().cropAndScale(parameters.cropX, parameters.cropY, parameters.cropWidth,
             parameters.cropHeight, parameters.scaleWidth, parameters.scaleHeight);
-    return new VideoFrame(adaptedBuffer, frame.getRotation(), parameters.timestampNs);
+    return new VideoFrame(
+        adaptedBuffer, frame.getRotation(), parameters.timestampNs, frame.getFrameMetadata());
   }
 }

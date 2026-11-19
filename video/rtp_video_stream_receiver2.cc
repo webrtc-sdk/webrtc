@@ -1033,6 +1033,10 @@ void RtpVideoStreamReceiver2::SetFrameDecryptor(
 void RtpVideoStreamReceiver2::SetDepacketizerToDecoderFrameTransformer(
     scoped_refptr<FrameTransformerInterface> frame_transformer) {
   RTC_DCHECK_RUN_ON(&worker_task_checker_);
+  // Without this, the old delegate and transformer keep each other alive.
+  if (frame_transformer_delegate_) {
+    frame_transformer_delegate_->Reset();
+  }
   frame_transformer_delegate_ =
       make_ref_counted<RtpVideoStreamReceiverFrameTransformerDelegate>(
           this, &env_.clock(), std::move(frame_transformer),

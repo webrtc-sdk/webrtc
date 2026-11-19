@@ -1650,6 +1650,54 @@ TEST_F(RtpVideoStreamReceiver2Test, TransformFrame) {
   receiver = nullptr;
 }
 
+TEST_F(RtpVideoStreamReceiver2Test, ReplacingTransformerUnregistersTheOldOne) {
+  scoped_refptr<MockFrameTransformer> old_transformer =
+      make_ref_counted<testing::NiceMock<MockFrameTransformer>>();
+  scoped_refptr<MockFrameTransformer> new_transformer =
+      make_ref_counted<testing::NiceMock<MockFrameTransformer>>();
+  auto receiver = std::make_unique<RtpVideoStreamReceiver2>(
+      env_, TaskQueueBase::Current(), &mock_transport_, nullptr, nullptr,
+      &config_, rtp_receive_statistics_.get(), nullptr, nullptr,
+      &nack_periodic_processor_, &mock_on_complete_frame_callback_, nullptr,
+      old_transformer);
+
+  EXPECT_CALL(*old_transformer,
+              UnregisterTransformedFrameSinkCallback(config_.rtp.remote_ssrc));
+  EXPECT_CALL(*new_transformer,
+              RegisterTransformedFrameSinkCallback(_, config_.rtp.remote_ssrc));
+  receiver->SetDepacketizerToDecoderFrameTransformer(new_transformer);
+  testing::Mock::VerifyAndClearExpectations(old_transformer.get());
+  testing::Mock::VerifyAndClearExpectations(new_transformer.get());
+
+  EXPECT_CALL(*new_transformer,
+              UnregisterTransformedFrameSinkCallback(config_.rtp.remote_ssrc));
+  receiver = nullptr;
+}
+
+TEST_F(RtpVideoStreamReceiver2Test,
+       ReinstallingATransformerLeavesItRegistered) {
+  scoped_refptr<MockFrameTransformer> transformer =
+      make_ref_counted<testing::NiceMock<MockFrameTransformer>>();
+  auto receiver = std::make_unique<RtpVideoStreamReceiver2>(
+      env_, TaskQueueBase::Current(), &mock_transport_, nullptr, nullptr,
+      &config_, rtp_receive_statistics_.get(), nullptr, nullptr,
+      &nack_periodic_processor_, &mock_on_complete_frame_callback_, nullptr,
+      transformer);
+
+  // Registering before unregistering would remove the new callback.
+  {
+    testing::InSequence sequence;
+    EXPECT_CALL(*transformer, UnregisterTransformedFrameSinkCallback(
+                                  config_.rtp.remote_ssrc));
+    EXPECT_CALL(*transformer, RegisterTransformedFrameSinkCallback(
+                                  _, config_.rtp.remote_ssrc));
+  }
+  receiver->SetDepacketizerToDecoderFrameTransformer(transformer);
+  testing::Mock::VerifyAndClearExpectations(transformer.get());
+
+  receiver = nullptr;
+}
+
 TEST_F(RtpVideoStreamReceiver2Test, TransformFrameWithAbsoluteCaptureTime) {
   scoped_refptr<MockFrameTransformer> mock_frame_transformer =
       make_ref_counted<testing::NiceMock<MockFrameTransformer>>();

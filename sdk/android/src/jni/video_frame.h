@@ -15,6 +15,7 @@
 
 #include <cstdint>
 
+#include "api/frame_metadata/frame_metadata_transformer.h"
 #include "api/scoped_refptr.h"
 #include "api/video/video_frame.h"
 #include "api/video/video_frame_buffer.h"
@@ -36,6 +37,14 @@ VideoFrame JavaToNativeFrame(JNIEnv* jni,
 ScopedJavaLocalRef<jobject> NativeToJavaVideoFrame(JNIEnv* jni,
                                                    const VideoFrame& frame);
 void ReleaseJavaVideoFrame(JNIEnv* jni, const JavaRef<jobject>& j_video_frame);
+
+// Converts between org.webrtc.FrameMetadata and webrtc::FrameMetadata.
+FrameMetadata JavaToNativeFrameMetadata(
+    JNIEnv* jni,
+    const JavaRef<jobject>& j_frame_metadata);
+ScopedJavaLocalRef<jobject> NativeToJavaFrameMetadata(
+    JNIEnv* jni,
+    const FrameMetadata& metadata);
 
 int64_t GetJavaVideoFrameTimestampNs(JNIEnv* jni,
                                      const JavaRef<jobject>& j_video_frame);
