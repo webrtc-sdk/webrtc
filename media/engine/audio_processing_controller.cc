@@ -214,6 +214,16 @@ AudioProcessingApplyResult ApplyCoupledEchoNoiseProcessingOptions(AudioDeviceMod
   apply_result.resolved_options = options_in;
   AudioOptions &software_options = apply_result.resolved_options;
 
+  // Nothing below changes the shared path or resolves a software fallback
+  // unless AEC, NS or AGC was requested, so options without any of them need
+  // no platform state at all. Options are re-applied on every SDP exchange
+  // for every voice channel, and the state readback queries the live audio
+  // engine, so it should only run when something consumes the answer.
+  if (!options_in.echo_cancellation.has_value() && !options_in.noise_suppression.has_value() &&
+      !options_in.auto_gain_control.has_value()) {
+    return apply_result;
+  }
+
   CoupledAudioProcessingPathResolution path_resolution =
       ResolveCoupledAudioProcessingPath(options_in, [adm] { return CoupledEchoNoisePlatformPathIsActive(adm); });
   bool vpio_enabled = false;

@@ -135,7 +135,15 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
     : (RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule didReceiveSpeechActivityEvent
     : (RTC_OBJC_TYPE(RTCSpeechActivityEvent))speechActivityEvent NS_SWIFT_NAME(audioDeviceModule(_:didReceiveSpeechActivityEvent:));
 
-// Engine events
+// Engine events.
+//
+// Setup events (`didCreateEngine`, `willEnableEngine`, `willStartEngine` and the
+// configure methods) can fail the operation. A non-zero result rolls it back,
+// and the caller gets the error.
+//
+// Teardown events (`didStopEngine`, `didDisableEngine` and `willReleaseEngine`)
+// fire once the engine has stopped, which cannot be undone. A non-zero result
+// is only logged, and the operation completes.
 - (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
                didCreateEngine:(AVAudioEngine *)engine
     NS_SWIFT_NAME(audioDeviceModule(_:didCreateEngine:));
@@ -152,12 +160,22 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
             isRecordingEnabled:(BOOL)isRecordingEnabled
     NS_SWIFT_NAME(audioDeviceModule(_:didStopEngine:isPlayoutEnabled:isRecordingEnabled:));
 
+// `isPlayoutEnabled` and `isRecordingEnabled` describe the state the engine is
+// left in. Also called when an enable operation fails after a successful
+// `willEnableEngine`, with the state from before that operation, so the
+// delegate can release what it acquired there. No call follows a
+// `willEnableEngine` that returns an error, so a delegate must not hold
+// anything for that operation when it fails.
 - (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
               didDisableEngine:(AVAudioEngine *)engine
               isPlayoutEnabled:(BOOL)isPlayoutEnabled
             isRecordingEnabled:(BOOL)isRecordingEnabled
     NS_SWIFT_NAME(audioDeviceModule(_:didDisableEngine:isPlayoutEnabled:isRecordingEnabled:));
 
+// Also called when an operation that created `engine` fails after a
+// successful `didCreateEngine`, right before the engine is dropped, so the
+// delegate can tear down what it set up there. No call follows a
+// `didCreateEngine` that returns an error.
 - (NSInteger)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
              willReleaseEngine:(AVAudioEngine *)engine
     NS_SWIFT_NAME(audioDeviceModule(_:willReleaseEngine:));
@@ -206,6 +224,84 @@ RTC_OBJC_EXPORT @protocol RTC_OBJC_TYPE
             isRecordingEnabled:(BOOL)isRecordingEnabled
     NS_SWIFT_NAME(audioDeviceModule(_:willEnableEngine:isPlayoutEnabled:isRecordingEnabled:))
         __attribute__((deprecated("Use the isVoiceProcessingEnabled: variant.")));
+
+// Audio session events (iOS).
+//
+// Each event runs synchronously on the worker thread the module was created
+// with, the thread that runs every engine operation and the rest of WebRTC's
+// worker thread work. The method blocks that thread until it returns: the
+// engine does not react to the event and no other call on this module runs in
+// the meantime. Return quickly and dispatch slow work, such as activating the
+// audio session, to another queue.
+//
+// `audioDeviceModule:didBeginInterruptionWithReason:` fires before the module
+// runs its stop step. For a real interruption the system has already stopped
+// the engine by the time the notification arrives, so the engine is usually no
+// longer running when this fires. `reason` is the notification's
+// AVAudioSessionInterruptionReason:
+//   - Default: another audio session was activated, for example by a phone
+//     call. Also used when the notification has no reason.
+//   - AppWasSuspended: the system suspended the app. Not sent since iOS 16.
+//   - BuiltInMicMuted: the built-in mic was muted, for example by closing an
+//     iPad Smart Folio.
+//   - SceneWasBackgrounded: the app's scene went to the background. visionOS
+//     only.
+//   - RouteDisconnected: the audio route was disconnected. Sent only when the
+//     app opted in with setPrefersInterruptionOnRouteDisconnect: (iOS 17).
+//   - DeviceUnauthenticated: the device was taken off or locked. Defined only
+//     in the visionOS SDK.
+// Later OS versions may add values.
+//
+// `audioDeviceModule:didEndInterruptionWithShouldResume:` fires before the
+// engine reacts, for every interruption end RTCAudioSession reports. Besides
+// the system's own end, RTCAudioSession sends one each time the app becomes
+// active, each time the app reports a CallKit activation to it, and when the
+// session is activated through it while interrupted. So an end can arrive
+// without a matching begin. By then RTCAudioSession has already activated or
+// deactivated the session according to its activation count.
+// `shouldResume` is the system's AVAudioSessionInterruptionOptionShouldResume
+// hint. YES means the app may resume audio now, for example after a phone call
+// ends. NO means the system leaves resuming to the user, for example after the
+// user started music in another app. The ends RTCAudioSession sends on its own
+// always pass YES. The module restarts the engine whatever the value.
+- (void)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+    didBeginInterruptionWithReason:(AVAudioSessionInterruptionReason)reason
+    NS_SWIFT_NAME(audioDeviceModule(_:didBeginInterruptionWithReason:));
+
+- (void)audioDeviceModule:(RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+    didEndInterruptionWithShouldResume:(BOOL)shouldResume
+    NS_SWIFT_NAME(audioDeviceModule(_:didEndInterruptionWithShouldResume:));
+
+// `audioDeviceModuleMediaServicesWereReset:` fires after the system has
+// restarted its media services daemon
+// (AVAudioSessionMediaServicesWereResetNotification), on the worker thread as
+// described above. This is rare in the field. To trigger it on a device, use
+// Settings > Developer > Reset Media Services.
+//
+// State when it fires:
+//   - Every audio object created before the reset no longer works, including
+//     the engine and its nodes.
+//   - The audio session lost its category, mode and options. RTCAudioSession
+//     has already activated the session if its activation count is above 0,
+//     and deactivated it otherwise, but has not restored the configuration.
+//   - The module does not react to the reset. Its state still says the engine
+//     is running as before, so audio stays dead until something rebuilds the
+//     engine.
+//   - Nothing else rebuilds it. The system posts no engine configuration
+//     change for the reset, and the interruption end RTCAudioSession sends
+//     when the app becomes active does not restart it, because the module
+//     still believes the engine is running.
+//   - An app in the background whose audio died is usually suspended, so it
+//     receives the reset only after it returns to the foreground.
+//
+// To recover, configure and activate the audio session again, then rebuild the
+// engine, for example by setting engine availability off and back on, which
+// releases the engine and creates a new one. Do this off the worker thread.
+// There is no separate method for the media services being lost, because the
+// reset always follows.
+- (void)audioDeviceModuleMediaServicesWereReset:
+    (RTC_OBJC_TYPE(RTCAudioDeviceModule) *)audioDeviceModule
+    NS_SWIFT_NAME(audioDeviceModuleMediaServicesWereReset(_:));
 
 @end
 

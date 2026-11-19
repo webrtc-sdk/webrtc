@@ -11,14 +11,18 @@
 #include "modules/video_coding/fec_controller_default.h"  // NOLINT
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <cstdlib>
+#include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "api/environment/environment.h"
 #include "api/fec_controller.h"
 #include "api/field_trials_view.h"
+#include "api/rtp_parameters.h"
 #include "api/video/video_frame_type.h"
 #include "modules/include/module_fec_types.h"
 #include "modules/video_coding/media_opt_util.h"
@@ -29,6 +33,49 @@
 namespace webrtc {
 
 const float kProtectionOverheadRateThreshold = 0.5;
+
+namespace {
+
+// Converts a protection factor in [0, 1] to the Q8 FEC rate used by the RTP
+// module.
+int ToFecRate(double protection_factor) {
+  return static_cast<int>(
+      std::lround(std::clamp(protection_factor, 0.0, 1.0) * 255));
+}
+
+// Applies `protection` on top of the adaptive `delta_params` and
+// `key_params`.
+void ApplyProtectionOverride(const RtpFecProtection& protection,
+                             FecProtectionParams& delta_params,
+                             FecProtectionParams& key_params) {
+  const int delta_rate = ToFecRate(protection.protection_factor);
+  const int key_rate =
+      ToFecRate(protection.key_frame_protection_factor.value_or(
+          protection.protection_factor));
+  switch (protection.mode) {
+    case RtpFecProtection::Mode::kAdaptive:
+      return;
+    case RtpFecProtection::Mode::kFixed:
+      delta_params.fec_rate = delta_rate;
+      key_params.fec_rate = key_rate;
+      delta_params.max_fec_frames = protection.max_fec_frames.value_or(1);
+      break;
+    case RtpFecProtection::Mode::kMinimum:
+      delta_params.fec_rate = std::max(delta_params.fec_rate, delta_rate);
+      key_params.fec_rate = std::max(key_params.fec_rate, key_rate);
+      delta_params.max_fec_frames =
+          protection.max_fec_frames.value_or(delta_params.max_fec_frames);
+      break;
+    case RtpFecProtection::Mode::kDisabled:
+      delta_params.fec_rate = 0;
+      key_params.fec_rate = 0;
+      break;
+  }
+  // The RTP module requires the same `max_fec_frames` for key and delta frames.
+  key_params.max_fec_frames = delta_params.max_fec_frames;
+}
+
+}  // namespace
 
 FecControllerDefault::FecControllerDefault(
     const Environment& env,
@@ -134,6 +181,12 @@ uint32_t FecControllerDefault::UpdateFecRates(
         loss_prot_logic_->SelectedMethod()->MaxFramesFec();
     key_fec_params.max_fec_frames =
         loss_prot_logic_->SelectedMethod()->MaxFramesFec();
+    // The override only shapes FEC, so it has no effect unless FEC is
+    // negotiated.
+    if (fec_enabled_ && protection_override_) {
+      ApplyProtectionOverride(*protection_override_, delta_fec_params,
+                              key_fec_params);
+    }
   }
   // Set the FEC packet mask type. `kFecMaskBursty` is more effective for
   // consecutive losses and little/no packet re-ordering. As we currently
@@ -178,6 +231,7 @@ void FecControllerDefault::SetProtectionMethod(bool enable_fec,
     method = media_optimization::kFec;
   }
   MutexLock lock(&mutex_);
+  fec_enabled_ = enable_fec;
   loss_prot_logic_->SetMethod(method);
 }
 
@@ -208,6 +262,12 @@ void FecControllerDefault::UpdateWithEncodedData(
 
 bool FecControllerDefault::UseLossVectorMask() {
   return false;
+}
+
+void FecControllerDefault::SetProtectionOverride(
+    std::optional<RtpFecProtection> protection) {
+  MutexLock lock(&mutex_);
+  protection_override_ = std::move(protection);
 }
 
 }  // namespace webrtc
