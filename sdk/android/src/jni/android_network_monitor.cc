@@ -128,6 +128,21 @@ static NetworkType GetNetworkTypeFromJava(
   return NetworkType::NETWORK_UNKNOWN;
 }
 
+// Whether `if_name` is an interface stacked on `base_if_name`, such as the
+// CLAT interface "v4-wlan0" on "wlan0". Only a "<prefix>-<base>" name
+// matches: a plain substring match would also give "p2p-wlan0-0", a Wi-Fi
+// Direct group interface that is not part of the "wlan0" network, the
+// handle and adapter type of "wlan0".
+static bool IsStackedInterfaceOf(absl::string_view if_name,
+                                 absl::string_view base_if_name) {
+  if (base_if_name.empty() || if_name.size() <= base_if_name.size()) {
+    return false;
+  }
+  size_t prefix_size = if_name.size() - base_if_name.size();
+  return if_name.substr(prefix_size) == base_if_name &&
+         if_name[prefix_size - 1] == '-';
+}
+
 static AdapterType AdapterTypeFromNetworkType(NetworkType network_type,
                                               bool surface_cellular_types) {
   switch (network_type) {
@@ -514,9 +529,7 @@ std::optional<NetworkHandle> AndroidNetworkMonitor::FindNetworkHandleFromIfname(
 
   if (bind_using_ifname_) {
     for (auto const& c_iter : network_handle_by_if_name_) {
-      // Use substring match so that e.g if_name="v4-wlan0" is matched
-      // agains iter="wlan0"
-      if (if_name.find(c_iter.first) != absl::string_view::npos) {
+      if (IsStackedInterfaceOf(if_name, c_iter.first)) {
         return std::make_optional(c_iter.second);
       }
     }

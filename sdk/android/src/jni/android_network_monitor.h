@@ -153,9 +153,8 @@ class AndroidNetworkMonitor : public NetworkMonitorInterface {
   bool surface_cellular_types_ RTC_GUARDED_BY(network_thread_) = false;
 
   // NOTE: if bind_using_ifname_ is TRUE
-  // then the adapter name is used with substring matching as follows:
-  // An adapater name repored by android as 'wlan0'
-  // will be matched with 'v4-wlan0' ("v4-wlan0".find("wlan0") != npos).
+  // then an adapter name reported by android as 'wlan0' is also matched
+  // with interfaces stacked on it, named '<prefix>-wlan0' (e.g. 'v4-wlan0').
   // This applies to adapter_type_by_name_, vpn_underlying_adapter_type_by_name_
   // and FindNetworkHandleFromIfname.
   bool bind_using_ifname_ RTC_GUARDED_BY(network_thread_) = true;
