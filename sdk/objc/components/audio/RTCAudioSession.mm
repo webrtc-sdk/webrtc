@@ -524,11 +524,18 @@ ABSL_CONST_INIT thread_local bool mutex_locked = false;
       (AVAudioSessionInterruptionType)typeNumber.unsignedIntegerValue;
   switch (type) {
     case AVAudioSessionInterruptionTypeBegan: {
-      // A missing reason key reads as AVAudioSessionInterruptionReasonDefault.
-      NSNumber *reasonNumber =
-          notification.userInfo[AVAudioSessionInterruptionReasonKey];
+      // The reason key is unavailable on tvOS and requires iOS 14.5 on iOS.
+      // A missing reason value also reads as the default.
       AVAudioSessionInterruptionReason reason =
-          (AVAudioSessionInterruptionReason)reasonNumber.unsignedIntegerValue;
+          AVAudioSessionInterruptionReasonDefault;
+#if !TARGET_OS_TV
+      if (@available(iOS 14.5, *)) {
+        NSNumber *reasonNumber =
+            notification.userInfo[AVAudioSessionInterruptionReasonKey];
+        reason = (AVAudioSessionInterruptionReason)
+                     reasonNumber.unsignedIntegerValue;
+      }
+#endif
       RTCLog(@"Audio session interruption began, reason: %lu.",
              (unsigned long)reason);
       self.isActive = NO;
