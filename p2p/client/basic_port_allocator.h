@@ -411,6 +411,8 @@ class AllocationSequence {
 
   void OnPortDestroyed(PortInterface* port);
 
+  void ScheduleSharedSocketReleaseCheck();
+
   BasicPortAllocatorSession* session_;
   bool network_failed_ = false;
   const Network* network_;

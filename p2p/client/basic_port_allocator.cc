@@ -1391,6 +1391,7 @@ void AllocationSequence::Stop() {
     // Cause further Process calls in the previous epoch to be ignored.
     ++epoch_;
   }
+  ScheduleSharedSocketReleaseCheck();
 }
 
 void AllocationSequence::Process(int epoch) {
@@ -1433,6 +1434,8 @@ void AllocationSequence::Process(int epoch) {
     // are completed. Cause further Process calls in the previous epoch to be
     // ignored.
     ++epoch_;
+    // The callback can destroy this sequence. Schedule before invoking it.
+    ScheduleSharedSocketReleaseCheck();
     port_allocation_complete_callback_();
   }
 }
@@ -1700,16 +1703,31 @@ void AllocationSequence::OnReadPacket(AsyncPacketSocket* socket,
 void AllocationSequence::OnPortDestroyed(PortInterface* port) {
   if (udp_port_ == port) {
     udp_port_ = nullptr;
-    return;
-  }
-
-  auto it = absl::c_find(relay_ports_, port);
-  if (it != relay_ports_.end()) {
-    relay_ports_.erase(it);
   } else {
-    RTC_LOG(LS_ERROR) << "Unexpected OnPortDestroyed for nonexistent port.";
-    RTC_DCHECK_NOTREACHED();
+    auto it = absl::c_find(relay_ports_, port);
+    if (it != relay_ports_.end()) {
+      relay_ports_.erase(it);
+    } else {
+      RTC_LOG(LS_ERROR) << "Unexpected OnPortDestroyed for nonexistent port.";
+      RTC_DCHECK_NOTREACHED();
+    }
   }
+  ScheduleSharedSocketReleaseCheck();
+}
+
+void AllocationSequence::ScheduleSharedSocketReleaseCheck() {
+  // Port destruction is signaled before its destructor runs; a TURN destructor
+  // still sends through the shared socket. Defer until that stack has returned.
+  // SafeTask also covers session teardown deleting this sequence first.
+  session_->network_thread()->PostTask(SafeTask(safety_.flag(), [this] {
+    // An empty registration list while Running can precede a later Relay phase.
+    // Recheck at execution time and keep the conservative TURN registrations
+    // until those ports retire, even if they switched to independent sockets.
+    if ((state_ == kStopped || state_ == kCompleted) && !udp_port_ &&
+        relay_ports_.empty()) {
+      udp_socket_.reset();
+    }
+  }));
 }
 
 PortConfiguration::PortConfiguration(const ServerAddresses& stun_servers,
