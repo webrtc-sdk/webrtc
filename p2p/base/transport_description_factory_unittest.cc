@@ -454,6 +454,28 @@ TEST_F(
   EXPECT_FALSE(new_answer->HasOption(ICE_OPTION_GOOG_SPED_V1));
 }
 
+TEST_F(TransportDescriptionFactoryTest, AddsDtlsInStunIceOption) {
+  webrtc::TransportOptions options;
+  options.dtls_handshake_in_stun = true;
+  std::unique_ptr<TransportDescription> offer =
+      f1_.CreateOffer(options, nullptr, &ice_credentials_);
+  ASSERT_THAT(offer, NotNull());
+  EXPECT_TRUE(offer->HasOption("sped"));
+  std::unique_ptr<TransportDescription> answer =
+      f2_.CreateAnswer(offer.get(), options, true, nullptr, &ice_credentials_);
+  EXPECT_TRUE(answer->HasOption("sped"));
+
+  options.dtls_handshake_in_stun = false;
+  std::unique_ptr<TransportDescription> offer2 =
+      f1_.CreateOffer(options, nullptr, &ice_credentials_);
+  ASSERT_THAT(offer2, NotNull());
+  EXPECT_FALSE(offer2->HasOption("sped"));
+  options.dtls_handshake_in_stun = true;
+  std::unique_ptr<TransportDescription> answer2 =
+      f2_.CreateAnswer(offer2.get(), options, true, nullptr, &ice_credentials_);
+  EXPECT_TRUE(answer2->HasOption("sped"));
+}
+
 // Test CreateOffer with IceCredentialsIterator.
 TEST_F(TransportDescriptionFactoryTest, CreateOfferIceCredentialsIterator) {
   std::vector<webrtc::IceParameters> credentials = {
