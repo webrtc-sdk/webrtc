@@ -95,6 +95,8 @@ class ObjCEncodedImageBuffer : public webrtc::EncodedImageBufferInterface {
     self.timeStamp = encodedImage.RtpTimestamp();
     self.captureTimeMs = encodedImage.capture_time_ms_;
     self.ntpTimeMs = encodedImage.ntp_time_ms_;
+    self.receiveStartMs = encodedImage.timing_.receive_start_ms;
+    self.receiveFinishMs = encodedImage.timing_.receive_finish_ms;
     self.flags = encodedImage.timing_.flags;
     self.encodeStartMs = encodedImage.timing_.encode_start_ms;
     self.encodeFinishMs = encodedImage.timing_.encode_finish_ms;
@@ -125,6 +127,8 @@ class ObjCEncodedImageBuffer : public webrtc::EncodedImageBufferInterface {
   encodedImage.SetRtpTimestamp(self.timeStamp);
   encodedImage.capture_time_ms_ = self.captureTimeMs;
   encodedImage.ntp_time_ms_ = self.ntpTimeMs;
+  encodedImage.timing_.receive_start_ms = self.receiveStartMs;
+  encodedImage.timing_.receive_finish_ms = self.receiveFinishMs;
   encodedImage.timing_.flags = self.flags;
   encodedImage.timing_.encode_start_ms = self.encodeStartMs;
   encodedImage.timing_.encode_finish_ms = self.encodeFinishMs;
