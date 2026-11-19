@@ -568,6 +568,7 @@ class WebRtcVideoReceiveChannel : public MediaChannelUtil,
   void StartReceive(uint32_t ssrc) override;
   void StopReceive(uint32_t ssrc) override;
  private:
+  friend class WebRtcVideoReceiveChannelTestPeer;
   class WebRtcVideoReceiveStream;
   struct ChangedReceiverParameters {
     // These optionals are unset if not changed.
@@ -585,13 +586,12 @@ class WebRtcVideoReceiveChannel : public MediaChannelUtil,
   WebRtcVideoReceiveStream* FindReceiveStream(uint32_t ssrc)
       RTC_EXCLUSIVE_LOCKS_REQUIRED(thread_checker_);
 
-
   // Expected to be invoked once per packet that belongs to this channel that
   // can not be demuxed.
-  // Returns true if a new default stream has been created.
+  // Returns true if packet delivery should be retried.
   bool MaybeCreateDefaultReceiveStream(const RtpPacketReceived& parsed_packet)
       RTC_EXCLUSIVE_LOCKS_REQUIRED(thread_checker_);
-  void ReCreateDefaultReceiveStream(uint32_t ssrc,
+  bool ReCreateDefaultReceiveStream(uint32_t ssrc,
                                     std::optional<uint32_t> rtx_ssrc);
   // Add a receive stream. Used for testing.
   bool AddRecvStream(const StreamParams& sp, bool default_stream);
