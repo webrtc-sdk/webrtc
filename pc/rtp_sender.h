@@ -18,6 +18,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <atomic>
 #include <memory>
 #include <optional>
 #include <string>
@@ -368,6 +369,16 @@ class LocalAudioSinkAdapter : public AudioTrackSinkInterface,
   LocalAudioSinkAdapter();
   ~LocalAudioSinkAdapter() override;
 
+  // Reports where the local track's source gets its audio. Forwarded from
+  // AudioSourceInterface so the voice engine can keep AudioState from feeding
+  // device audio into custom-source streams. Written on the signaling thread
+  // (AudioRtpSender::SetSend) and read on the worker thread inside the same
+  // call's BlockingCall, which orders the write before the read; the atomic
+  // keeps the cross-thread access race-free.
+  void set_source_type(AudioSourceInterface::SourceType source_type) {
+    source_type_ = source_type;
+  }
+
  private:
   // AudioSinkInterface implementation.
   void OnData(const void* audio_data,
@@ -394,10 +405,17 @@ class LocalAudioSinkAdapter : public AudioTrackSinkInterface,
   // webrtc::AudioSource implementation.
   void SetSink(AudioSource::Sink* sink) override;
 
+  // webrtc::AudioSource implementation.
+  AudioSourceInterface::SourceType source_type() const override {
+    return source_type_;
+  }
+
   AudioSource::Sink* sink_;
   // Critical section protecting `sink_`.
   Mutex lock_;
   int num_preferred_channels_ = -1;
+  std::atomic<AudioSourceInterface::SourceType> source_type_{
+      AudioSourceInterface::SourceType::kAudioDeviceModule};
 };
 
 class AudioRtpSender : public DtmfProviderInterface, public RtpSenderBase {

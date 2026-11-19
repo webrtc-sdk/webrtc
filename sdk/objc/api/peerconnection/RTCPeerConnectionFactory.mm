@@ -21,6 +21,7 @@
 
 #import "RTCAudioSource+Private.h"
 #import "RTCAudioTrack+Private.h"
+#import "RTCCustomAudioSource+Private.h"
 #import "RTCMediaConstraints+Private.h"
 #import "RTCMediaStream+Private.h"
 #import "RTCPeerConnection+Private.h"
@@ -440,6 +441,23 @@ static webrtc::Environment CreateDefaultEnvironment() {
   webrtc::scoped_refptr<webrtc::AudioSourceInterface> source =
       _nativeFactory->CreateAudioSource(options);
   return [[RTC_OBJC_TYPE(RTCAudioSource) alloc] initWithFactory:self nativeAudioSource:source];
+}
+
+- (nullable RTC_OBJC_TYPE(RTCCustomAudioSource) *)customAudioSourceWithSampleRate:(int)sampleRate
+                                                                        channels:(NSUInteger)channels
+                                                                     queueSizeMs:(int)queueSizeMs {
+  if (!_env.has_value()) {
+    RTCLogError(@"customAudioSource: factory has no media environment");
+    return nil;
+  }
+  webrtc::scoped_refptr<webrtc::CustomAudioSource> source = webrtc::CustomAudioSource::Create(
+      sampleRate, channels, queueSizeMs, &_env->task_queue_factory());
+  if (!source) {
+    RTCLogError(@"customAudioSource: invalid arguments");
+    return nil;
+  }
+  return [[RTC_OBJC_TYPE(RTCCustomAudioSource) alloc] initWithFactory:self
+                                               nativeCustomAudioSource:source];
 }
 
 - (RTC_OBJC_TYPE(RTCAudioTrack) *)audioTrackWithTrackId:(NSString *)trackId {

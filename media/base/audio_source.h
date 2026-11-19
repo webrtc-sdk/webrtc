@@ -15,6 +15,8 @@
 #include <cstdint>
 #include <optional>
 
+#include "api/media_stream_interface.h"
+
 namespace webrtc {
 
 // Abstract interface for providing the audio data.
@@ -48,6 +50,13 @@ class AudioSource {
   // Sets a sink to the AudioSource. There can be only one sink connected
   // to the source at a time.
   virtual void SetSink(Sink* sink) = 0;
+
+  // Mirrors AudioSourceInterface::source_type() for the voice engine, which
+  // only sees this adapter. kAudioDeviceModule streams register with
+  // AudioState, kCustom streams do not.
+  virtual AudioSourceInterface::SourceType source_type() const {
+    return AudioSourceInterface::SourceType::kAudioDeviceModule;
+  }
 
  protected:
   virtual ~AudioSource() {}
