@@ -763,6 +763,12 @@ void WebRtcVoiceEngine::OnChannelMuteStateChange(bool may_start_recording) {
     apm_->set_output_will_be_muted(*apm_muted);
   }
 
+  // With device recording disabled through AudioState::SetRecording(false),
+  // the app owns capture: leave the recording device alone.
+  if (!audio_state_->recording_enabled()) {
+    return;
+  }
+
   const bool has_source = absl::c_any_of(
       send_channels_, [](const auto* channel) { return channel->HasSource(); });
   // The engine assumes that the ADM mute mode does not change at runtime. A
@@ -1612,7 +1618,8 @@ bool WebRtcVoiceSendChannel::SetSend(bool send) {
 
     // Initialize the ADM for recording (this may take time on some platforms,
     // e.g. Android).
-    if (options_.init_recording_on_send.value_or(true) &&
+    if (engine_->GetAudioState()->recording_enabled() &&
+        options_.init_recording_on_send.value_or(true) &&
         // InitRecording() may return an error if the ADM is already recording.
         !engine_->adm()->RecordingIsInitialized() &&
         !engine_->adm()->Recording()) {
